@@ -509,7 +509,7 @@ class RenderViews
         if ($primary === null || ($primary['href'] ?? '') === '' || ($primary['label'] ?? '') === '') {
             return '';
         }
-        return '<a class="btn btn--primary btn--sm" href="' . htmlspecialchars((string)$primary['href'], ENT_QUOTES, 'UTF-8') . '>'
+        return '<a class="btn btn--primary btn--sm" href="' . htmlspecialchars((string)$primary['href'], ENT_QUOTES, 'UTF-8') . '">'
             . htmlspecialchars((string)$primary['label'], ENT_QUOTES, 'UTF-8') . '</a>';
     }
 

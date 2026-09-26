@@ -53,7 +53,7 @@ TXT_49 = "Item Settings"
 TXT_50 = "Manage Item Types"
 TXT_51 = "Search Custom Fields and Item Types"
 TXT_52 = "Custom Fields and Item Types"
-TXT_53 = "Manage Custom Fields"
+TXT_53 = "Manage Fields"
 TXT_54 = "New Item Type"
 TXT_55 = "System Settings"
 TXT_56 = "Update"
@@ -689,6 +689,7 @@ TXT_688 = "No matching actions"
 TXT_689 = "No matches"
 TXT_690 = "No multi-level menus yet. Add a custom field with type Multi-Level Menu first."
 TXT_691 = "is used by existing items and was not deleted."
+TXT_692 = "Add New"
 ; ******************************************************************************;
 ;
 ; Adlexone Action Package language constants

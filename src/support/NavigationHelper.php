@@ -203,10 +203,11 @@ final class NavigationHelper
 
     public static function itemSettingsURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88, 'ic-custom-field-add'), $_SESSION['access_role_id'], 2);
+        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_fields', TXT_53, 'ic-manage-fields'), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_item_types', TXT_50, 'ic-manage-item-types'), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88, 'ic-custom-field-add'), $_SESSION['access_role_id'], 2);
         $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_item_type', TXT_85, 'ic-itemtype-add'), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
         $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_multilevel_menu_relationship', TXT_658, 'ic-multilevel-menu'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_fields_types', TXT_52, 'ic-manage-fields-types'), $_SESSION['access_role_id'], 2);
 
         return $html;
     }

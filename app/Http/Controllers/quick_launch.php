@@ -99,10 +99,11 @@ function showQuickLaunch()
 
 
 
-   $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=new_custom_field', TXT_88, 'URL'), $_SESSION['access_role_id'], 2);
+   $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=manage_fields', TXT_53, 'URL'), $_SESSION['access_role_id'], 2);
+    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=manage_item_types', TXT_50, 'URL'), $_SESSION['access_role_id'], 2);
+    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=new_custom_field', TXT_88, 'URL'), $_SESSION['access_role_id'], 2);
     $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=new_item_type', TXT_85, 'URL'),  $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
     $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=new_multilevel_menu_relationship', TXT_658, 'URL'), $_SESSION['access_role_id'], 2);
-   $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=manage_fields_types', TXT_52, 'URL'), $_SESSION['access_role_id'], 2);
 //
 ////    $imageURL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', '', 'launchURL', SET_IMAGE_PATH . 'manageItemTypes.png');
 ////    $URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', TXT_50, 'launchURL');

@@ -550,7 +550,7 @@ function addCustomField()
             $sql = "ALTER TABLE " . "items ADD custom_field_" . $id . " text";
             Database::query($sql, DSN, SET_SHOW_SQL);
         }
-        RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+        RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
         return;
     }
     RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_BASE_URL . '&option=new_custom_field', TXT_362));
@@ -591,7 +591,7 @@ function addItemType()
         // Insert form field values into row
         $sql = Database::sqlInsert('item_types', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
-        RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+        RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_item_types', TXT_362));
         return;
     }
     RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_BASE_URL . '&option=new_item_type', TXT_363));
@@ -650,21 +650,32 @@ function showSearchOptions(): void
  * Returns search results from a custom field or item type search.  Controller logic: field_type_search
  */
 /**
- * Custom fields and item types, each with edit and delete.
+ * Custom fields, with edit and delete.
  */
-function showFieldsAndTypes(): void
+function showFields(): void
 {
     $fieldRows = [];
     foreach (Database::buildArray(Database::sqlSelect('custom_fields', '*', 'ORDER BY custom_field_name ASC')) as $row) {
         $fieldRows[] = customFieldRecord($row);
     }
+
+    define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        ['title' => TXT_53, 'html' => fieldRecordList($fieldRows)],
+    ]));
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Item types, with edit and delete.
+ */
+function showItemTypes(): void
+{
     $typeRows = [];
     foreach (Database::buildArray(Database::sqlSelect('item_types', '*', 'ORDER BY item_type_name ASC')) as $row) {
         $typeRows[] = itemTypeRecord($row);
     }
 
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
-        ['title' => TXT_53, 'html' => fieldRecordList($fieldRows)],
         ['title' => TXT_50, 'html' => typeRecordList($typeRows)],
     ]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
@@ -678,7 +689,7 @@ function fieldRecordList(array $rows): string
     return RenderViews::buildRecordList([
         'column' => TXT_151,
         'searchLabel' => TXT_3,
-        'primary' => ['href' => ITEM_BASE_URL . '&option=new_custom_field', 'label' => TXT_88],
+        'primary' => ['href' => 'index.php?controller=administration_item_settings&option=new_custom_field', 'label' => TXT_692],
         'empty' => TXT_115,
         'noMatch' => TXT_689,
         'groups' => [['rows' => $rows]],
@@ -693,7 +704,7 @@ function typeRecordList(array $rows): string
     return RenderViews::buildRecordList([
         'column' => TXT_151,
         'searchLabel' => TXT_3,
-        'primary' => ['href' => ITEM_BASE_URL . '&option=new_item_type', 'label' => TXT_85],
+        'primary' => ['href' => 'index.php?controller=administration_item_settings&option=new_item_type', 'label' => TXT_692],
         'empty' => TXT_115,
         'noMatch' => TXT_689,
         'groups' => [['rows' => $rows]],
@@ -785,7 +796,7 @@ function showFieldTypeResults()
         $table = 'item_types';
     }
     if ($table === '') {
-        showFieldsAndTypes();
+        showFields();
         return;
     }
 
@@ -852,7 +863,7 @@ function updateItemType($itemTypeID)
     // Update form field values into row
     $sql = Database::sqlUpdate('item_types', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+    RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_item_types', TXT_362));
 }
 
 /**
@@ -875,7 +886,7 @@ function updateCustomField($customFieldID)
     // Update form field values into row
     $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+    RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
 }
 
 /**
@@ -933,7 +944,7 @@ function deleteCustomField(): void
 {
     $customFieldID = (string)($_GET['custom_field_id'] ?? '');
     if ($customFieldID === '' || !ctype_digit($customFieldID)) {
-        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
         return;
     }
 
@@ -941,7 +952,7 @@ function deleteCustomField(): void
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     $row = Database::fetchArray($result);
     if (!$row) {
-        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
         return;
     }
 
@@ -961,7 +972,7 @@ function deleteCustomField(): void
         }
     }
 
-    RenderViews::buildResponse($name . ' ' . TXT_47, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+    RenderViews::buildResponse($name . ' ' . TXT_47, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
 }
 
 /**
@@ -970,7 +981,7 @@ function deleteCustomField(): void
 function deleteItemType(): void
 {
     $itemTypeID = (string)($_GET['item_type_id'] ?? '');
-    $back = RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362);
+    $back = RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_item_types', TXT_362);
     if ($itemTypeID === '' || !ctype_digit($itemTypeID)) {
         RenderViews::buildResponse(TXT_115, $back);
         return;
@@ -1338,9 +1349,14 @@ switch (@$_GET['option']) {
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
         updateItemType($_POST['item_type_id']);
         break;
+    case 'manage_fields' :
     case 'manage_fields_types' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        showFieldsAndTypes();
+        showFields();
+        break;
+    case 'manage_item_types' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        showItemTypes();
         break;
     case 'delete_item_type' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);

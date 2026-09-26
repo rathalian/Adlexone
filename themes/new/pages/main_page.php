@@ -39,7 +39,7 @@
             ];
             $quickLaunch = ['label' => 'Quick Launch', 'href' => '?controller=quick_launch', 'icon' => 'ic-launch', 'controller' => 'quick_launch'];
             $manageItems = [
-                ['label' => 'Items and Fields', 'href' => '?controller=administration_item_settings&option=manage_fields_types', 'icon' => 'ic-manage-fields-types', 'controller' => 'administration_item_settings'],
+                ['label' => 'Items and Fields', 'href' => '?controller=administration_item_settings&option=manage_fields', 'icon' => 'ic-manage-fields', 'controller' => 'administration_item_settings'],
                 ['label' => 'Workflow', 'href' => '?controller=administration_actions&option=show_defined_actions', 'icon' => 'ic-manage-actions', 'controller' => 'administration_actions'],
                 ['label' => 'Security', 'href' => '?controller=administration_security&option=manage_users_groups', 'icon' => 'ic-manage-users', 'controller' => 'administration_security'],
                 ['label' => 'Settings', 'href' => '?controller=administration_settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'administration_settings'],
