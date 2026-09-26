@@ -1250,6 +1250,18 @@ function showMultiLevelMenuItems($multiLevelMenuID = '', $fieldValues = '')
         $savedLinks = [];
     }
     $itemCount = (int)$row['menu_levels'];
+    if ($itemCount < 1) {
+        $edit = RenderViews::buildURL(
+            ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . rawurlencode((string)$multiLevelMenuID),
+            TXT_626
+        );
+        define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+            'title' => TXT_666,
+            'html' => '<p>' . htmlspecialchars(TXT_669, ENT_QUOTES, 'UTF-8') . '</p><p>' . $edit . '</p>',
+        ]]));
+        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        return;
+    }
 
     $fields = [];
     $fields[''] = RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID);
