@@ -690,6 +690,7 @@ TXT_689 = "No matches"
 TXT_690 = "No multi-level menus yet. Add a custom field with type Multi-Level Menu first."
 TXT_691 = "is used by existing items and was not deleted."
 TXT_692 = "Manage Multi-Level Menu"
+TXT_693 = "Multi-Level Relationships"
 ; ******************************************************************************;
 ;
 ; Adlexone Action Package language constants

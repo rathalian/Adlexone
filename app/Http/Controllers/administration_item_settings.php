@@ -899,6 +899,11 @@ function customFieldRecord(array $row): array
             'tone' => 'quiet',
         ];
         $actions[] = [
+            'href' => ITEM_BASE_URL . '&option=new_multilevel_menu_relationship&multi_level_menu_id=' . $id,
+            'label' => TXT_693,
+            'tone' => 'quiet',
+        ];
+        $actions[] = [
             'href' => ITEM_BASE_URL . '&option=show_multilevel_menu&multi_level_menu_id=' . $id,
             'label' => TXT_660,
             'tone' => 'quiet',
@@ -1202,7 +1207,7 @@ function deleteItemType(): void
  * @param array|string $values Field values passed in for retaining form field values if an error occurred during entry.
  * @return void
  */
-function showMultiLevelMenu($multiLevelMenuID = '', $values = '', bool $returnToList = false)
+function showMultiLevelMenu($multiLevelMenuID = '', $values = '', bool $returnToList = false, bool $lockMenu = false)
 {
     $isNew = ($multiLevelMenuID === '');
 
@@ -1239,29 +1244,41 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = '', bool $returnTo
         }
     }
 
-    // Build select of available multi-level menus
-    $menuIDArray = [];
-    $menuNameArray = [];
-    $columnArray = ['custom_field_id', 'custom_field_name'];
-    $condition = "WHERE field_type = 'multiLevelMenu' and enabled = 'Yes'";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    while ($row = Database::fetchArray($result)) {
-        $menuIDArray[] = $row['custom_field_id'];
-        $menuNameArray[] = $row['custom_field_name'];
-    }
-    $selectedMenu = $fieldValues['custom_field_id'] ?? '';
-    if ($menuIDArray === []) {
-        $fieldSelect = '<div class="mlm-note">' . htmlspecialchars(TXT_690, ENT_QUOTES, 'UTF-8') . ' '
-            . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88)
-            . '</div>';
+    // A row action opens this form for one multi-level menu. Do not offer the others.
+    if ($lockMenu && (string)$multiLevelMenuID !== '') {
+        if (($fieldValues['field_type'] ?? '') !== 'multiLevelMenu') {
+            $message = htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8');
+            if ($returnToList) {
+                return '<p>' . $message . '</p>';
+            }
+            RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+            return;
+        }
+        $fieldSelect = htmlspecialchars((string)$fieldValues['custom_field_name'], ENT_QUOTES, 'UTF-8');
     } else {
-        $fieldSelect = RenderViews::buildSelectDropdown(
-            'multi_level_menu_id',
-            $menuIDArray,
-            $menuNameArray,
-            $selectedMenu
-        );
+        $menuIDArray = [];
+        $menuNameArray = [];
+        $columnArray = ['custom_field_id', 'custom_field_name'];
+        $condition = "WHERE field_type = 'multiLevelMenu' and enabled = 'Yes'";
+        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
+        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        while ($row = Database::fetchArray($result)) {
+            $menuIDArray[] = $row['custom_field_id'];
+            $menuNameArray[] = $row['custom_field_name'];
+        }
+        $selectedMenu = $fieldValues['custom_field_id'] ?? '';
+        if ($menuIDArray === []) {
+            $fieldSelect = '<div class="mlm-note">' . htmlspecialchars(TXT_690, ENT_QUOTES, 'UTF-8') . ' '
+                . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88)
+                . '</div>';
+        } else {
+            $fieldSelect = RenderViews::buildSelectDropdown(
+                'multi_level_menu_id',
+                $menuIDArray,
+                $menuNameArray,
+                $selectedMenu
+            );
+        }
     }
 
     $columnArray = ['*'];
@@ -1317,6 +1334,9 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = '', bool $returnTo
     if ($returnToList) {
         $formFields[TXT_659] .= RenderViews::buildHiddenInput('return_option', 'manage_fields_types');
     }
+    if ($lockMenu) {
+        $formFields[TXT_659] .= RenderViews::buildHiddenInput('lock_menu', '1');
+    }
     $formFields[''] = $customFieldsHtml;
 
     // Create form buttons
@@ -1344,7 +1364,8 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = '', bool $returnTo
 function addUpdateMultiLevelMenu($multiLevelMenuID)
 {
     $returnToList = (($_POST['return_option'] ?? '') === 'manage_fields_types');
-    unset($_POST['return_option']);
+    $lockMenu = (($_POST['lock_menu'] ?? '') === '1');
+    unset($_POST['return_option'], $_POST['lock_menu']);
 
     if ((string)$multiLevelMenuID === '') {
         if ($returnToList) {
@@ -1374,7 +1395,7 @@ function addUpdateMultiLevelMenu($multiLevelMenuID)
         showFieldsAndTypes();
         return;
     }
-    showMultiLevelMenu($multiLevelMenuID);
+    showMultiLevelMenu($multiLevelMenuID, '', false, $lockMenu);
 
 }
 
@@ -1570,7 +1591,7 @@ switch (@$_GET['option']) {
         break;
     case 'new_multilevel_menu_relationship' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);
-        showMultiLevelMenu();
+        showMultiLevelMenu((string)($_GET['multi_level_menu_id'] ?? ''), '', false, true);
         break;
     case 'add_multilevel_menu' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
