@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<application>
+	<name>Adlexone Helpdesk</name>
+	<image>helpdesk.png</image>
+	<help_text>
+		FlowIQ Help Desk is a tailored interface to help you
+		manage help Desk related items and actions.
+	</help_text>
+	<subcontroller>
+		<base_url>app_oneorzerohelpdesk_main</base_url>
+	</subcontroller>
+	<install_information>
+		<controllers>
+			app_oneorzerohelpdesk_main,app_oneorzerohelpdesk_manage
+		</controllers>
+		<pages></pages>
+	</install_information>
+</application>

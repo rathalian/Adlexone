@@ -1,0 +1,363 @@
+/* =========================================================
+   Adlexone Theme — Top nav (visible), Content Menu (mobile text link)
+   UPDATED: 2025-10-16 — align brand underline with stylised A,
+            gradient-underlined text links for Content/Top Menu,
+            no-whitespace stylised initial, dropdown flip
+   ========================================================= */
+
+:root{
+    --brand:#0ea5e9; --brand2:#2563eb;
+    --text:#0f172a; --panel:rgba(255,255,255,.94); --border:rgba(0,0,0,.06); --hover:rgba(15,23,42,.06);
+    --ring:rgba(59,130,246,.25);
+    --title:rgba(15,23,42,.78); --label:rgba(15,23,42,.74); --body:rgba(15,23,42,.86); --input:rgba(15,23,42,.84); --placeholder:rgba(15,23,42,.48);
+    --title-strip: color-mix(in srgb, var(--brand) 6%, white);
+    --title-strip-border: color-mix(in srgb, var(--brand2) 8%, rgba(0,0,0,.07));
+    --title-size:11.5px; --title-weight:700; --title-tracking:.045em;
+
+    --form-surface: color-mix(in srgb, #e0f2fe 35%, white);
+    --form-border: color-mix(in srgb, var(--brand2) 14%, rgba(0,0,0,.08));
+    --form-hover-shadow: 0 0 0 3px rgba(59,130,246,.10);
+}
+
+/* ---------- Base ---------- */
+*{box-sizing:border-box}
+html,body{height:100%;min-height:100vh}
+body{
+    margin:0;
+    font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+    color:var(--body);
+    background:linear-gradient(180deg, rgba(14,165,233,.10) 0%, rgba(37,99,235,.06) 300px, #fff 100%) fixed;
+    background-color:#f8fafc;
+}
+
+/* ---------- Brand bar & brand underline ---------- */
+.brandbar{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    box-shadow:0 10px 28px rgba(0,0,0,.08); position:sticky; top:12px; z-index:600;
+    margin:12px; padding:10px 14px; -webkit-backdrop-filter:blur(8px) saturate(1.05); backdrop-filter:blur(8px) saturate(1.05);
+    margin-bottom:20px; display:flex; align-items:center; gap:10px; position:relative;
+}
+.brandrow{ display:flex; align-items:center; gap:10px; flex:1 1 auto; min-width:0; position:relative; }
+/* Horizontal gradient rule under the brand row — STARTS at stylised A (set via JS var) */
+.brandrow::after{
+    content:""; position:absolute; left:var(--brandline-left,14px); right:14px; bottom:-6px; height:2px;
+    background:linear-gradient(90deg,var(--brand),var(--brand2));
+    -webkit-mask:linear-gradient(90deg,#000 0,#000 85%,transparent 100%);
+    mask:linear-gradient(90deg,#000 0,#000 85%,transparent 100%);
+    opacity:.95; pointer-events:none;
+}
+
+.brandwrap{ display:flex; align-items:center; gap:6px; } /* tighten A ↔ Adlexone */
+.logoA{ width:36px; height:36px; border-radius:8px; display:grid; place-items:center;
+    background:linear-gradient(135deg,var(--brand) 0%,var(--brand2) 100%); box-shadow:0 6px 18px rgba(37,99,235,.25); margin-right:0; }
+.logoA svg{ width:22px; height:22px; filter:drop-shadow(0 2px 8px rgba(0,0,0,.15)); }
+.brandtext{ font-weight:800; letter-spacing:.1px; font-size:19px; white-space:nowrap; margin-left:0; }
+.brandtext .title-static{
+    background:linear-gradient(90deg,var(--brand),var(--brand2));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+}
+
+/* If a legacy .underline divider exists in HTML, hide it to prevent double lines */
+.underline{ display:none !important; }
+
+/* ---------- Gradient-underlined inline links ---------- */
+.content-menu-link,
+.top-menu-link{
+    position:relative; display:inline-block; font-weight:700; text-decoration:none; color:inherit;
+    background-image:linear-gradient(90deg,var(--brand),var(--brand2));
+    background-repeat:no-repeat; background-position:0 100%; background-size:100% 2px;
+    padding-bottom:2px;
+}
+
+.content-menu-link{ display:none; }
+@media (max-width:960px){
+    .content-menu-link{ display:inline-block; }
+}
+
+/* ---------- Top navigation: visible, right aligned (hover dropdowns) ---------- */
+.topnav{
+    display:flex !important; align-items:center; gap:16px;
+    margin-left:auto; position:static; padding:0; background:transparent; border:0; box-shadow:none;
+}
+.topnav .menu{ position:relative; display:inline-block; }
+.topnav .menu__button{
+    position:relative; display:inline-flex; align-items:center; gap:8px;
+    padding:8px 12px; border-radius:10px; background:transparent; border:0; cursor:pointer;
+    color:rgba(15,23,42,.85);
+    font-size:var(--title-size); font-weight:var(--title-weight); letter-spacing:var(--title-tracking);
+    text-transform:uppercase;
+}
+.topnav .menu__button:hover{ background:var(--hover); }
+.chev{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; }
+
+.topnav .menu__panel{
+    display:none; position:absolute; top:100%; left:0;
+    min-width:220px; padding:8px; border-radius:12px; background:var(--panel);
+    border:1px solid var(--border); box-shadow:0 12px 24px rgba(0,0,0,.12); z-index:9999;
+    max-width:min(92vw,380px); overflow-wrap:anywhere;
+}
+.topnav .menu:hover > .menu__panel{ display:block; }
+
+/* dropdown links normal weight */
+.topnav .menu__item{
+    display:block; padding:10px 12px; border-radius:8px; text-decoration:none;
+    color:rgba(15,23,42,.9); font-weight:400; line-height:1.2;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px;
+}
+.topnav .menu__item:hover,.topnav .menu__item:focus-visible{ background:var(--hover); outline:none; }
+
+/* Flip inward if near viewport right edge (JS toggles this) */
+.topnav .menu__panel.is-flip{
+    left:auto; right:0; transform-origin:top right;
+}
+
+/* ---------- Layout spacing & grid ---------- */
+.wrap{
+    display:grid; grid-template-columns:1fr; gap:12px; padding:0 12px 12px;
+    min-height:calc(100vh - 100px); align-items:start;
+    background:radial-gradient(1400px 220px at 50% -80px, rgba(15,23,42,.05), transparent 60%); border-radius:12px;
+}
+.wrap.has-sidebar{ grid-template-columns:280px 1fr; }
+.wrap > * { min-width:0; }
+@media (max-width:960px){ .wrap, .wrap.has-sidebar{ grid-template-columns:1fr; } }
+
+/* ---------- Sidebar card ---------- */
+.sidebar{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, white), color-mix(in srgb, var(--panel) 88%, white)),
+    radial-gradient(1200px 300px at 0% -10%, rgba(15,23,42,.03), transparent 60%);
+    border:1px solid var(--border); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.07);
+    z-index:10; position:relative;
+}
+.side-actions{ display:grid; gap:8px; padding:12px; }
+.side-actions + .side-actions{ border-top:1px dashed rgba(15,23,42,.06); }
+.side-title, .card-title{
+    text-align:center; text-transform:uppercase;
+    font-size:var(--title-size); font-weight:var(--title-weight); letter-spacing:var(--title-tracking);
+    color:var(--title); background:linear-gradient(0deg, var(--title-strip), var(--title-strip));
+    border:1px solid var(--title-strip-border); border-radius:8px; padding:8px 10px; margin:6px 4px 10px;
+}
+
+/* ---------- Left nav items ---------- */
+.navbtn{
+    position:relative; display:flex; align-items:center; gap:10px;
+    padding:10px 12px 11px; border-radius:10px; text-decoration:none; color:rgba(15,23,42,.70); font-weight:600;
+}
+.navbtn:hover,.navbtn:focus-visible{ background:var(--hover); }
+.navbtn:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
+
+/* remove old blue rail */
+.navbtn::before{ display:none !important; }
+
+.navbtn.active,
+.navbtn[aria-current="page"]{ background:var(--hover); }
+
+/* CSS path if first letter is directly accessible */
+.navbtn.active::first-letter,
+.navbtn[aria-current="page"]::first-letter{
+    font-size:1.15em; font-weight:900; letter-spacing:0; color:transparent;
+    background:linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+    -webkit-background-clip:text; background-clip:text;
+}
+
+/* Stylised initial span injected by JS (robust path) */
+.navbtn .navcap{
+    font-size:1.15em; font-weight:900; letter-spacing:0; color:transparent;
+    background:linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+    -webkit-background-clip:text; background-clip:text;
+    margin-right:0; display:inline;
+}
+
+/* ---------- Main, cards, forms ---------- */
+.main{ padding:0; min-width:0; background:transparent; z-index:5; position:relative; }
+.card{ background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:0 10px 28px rgba(0,0,0,.08); }
+.grid{ display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.span-2{ grid-column:1 / -1; }
+@media (max-width:960px){ .grid{ grid-template-columns:1fr; } }
+
+.field{ display:grid; gap:6px; min-width:180px; }
+.field.is-inline{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:10px; }
+.label{
+    white-space: nowrap;            /* prevent wrapping */
+    overflow: hidden;               /* hide overflow if too long */
+    text-overflow: ellipsis;        /* show ellipsis when truncated */
+    display: block;                 /* ensure label sits above the control when layout stacks */
+    text-align: left;
+    font-weight: 500;
+}
+.input,.textarea,.select{
+    width:100%; background: var(--form-surface);
+    border:1px solid var(--form-border); border-radius:12px; padding:10px 12px; color:var(--input);
+    transition: box-shadow .15s, border-color .15s, background .15s;
+}
+.input::placeholder,.textarea::placeholder{ color:var(--placeholder); }
+.textarea{ min-height:120px; resize:vertical; }
+.input:hover,.textarea:hover,.select:hover{ border-color: color-mix(in srgb, var(--brand2) 55%, #ffffff); box-shadow: var(--form-hover-shadow); }
+.input:focus,.textarea:focus,.select:focus{ outline:none; border-color:var(--brand2); box-shadow:0 0 0 2px var(--ring); background:#fff; }
+
+.form-block{ background: color-mix(in srgb, var(--panel) 90%, white); border:1px solid var(--border); border-radius:14px; box-shadow: 0 6px 18px rgba(0,0,0,.06); padding:14px; }
+
+/* ---------- Links & tables ---------- */
+.moduleTable,.table{ width:100%; border-collapse:collapse; background:var(--panel); }
+.table thead th{
+    text-align:left; font:700 12px/1.2 system-ui; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--title); padding:10px 12px; background:var(--title-strip); border-bottom:1px solid var(--title-strip-border);
+}
+.table td, .table th{ padding:10px 12px; border-bottom:1px solid var(--border); }
+.table-bordered{ border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.table-striped tbody tr:nth-child(odd){ background:rgba(15,23,42,.02); }
+.table-hover tbody tr:hover{ background:var(--hover); }
+
+/* ====== MERGED: Inline action links (.URL) behaviour ====== */
+/* Default: normal weight */
+.URL{
+    color: rgba(15,23,42,.88);
+    font-weight: 400;              /* changed from 600 to 400 */
+    text-decoration:none;
+    position:relative;
+}
+/* Hover text color */
+.URL:hover{ color: rgba(15,23,42,.92); }
+
+/* Underline element — hidden until hover/focus */
+.URL::after{
+    content:""; position:absolute; left:0; right:0; bottom:-2px; height:2px;
+    background:linear-gradient(90deg,var(--brand),var(--brand2)); background-size:200% 100%;
+    -webkit-mask:linear-gradient(90deg,#000 0,#000 85%,transparent 100%); mask:linear-gradient(90deg,#000 0,#000 85%,transparent 100%);
+    opacity:0;                      /* changed from always visible to hidden by default */
+    transform:translateZ(0);
+    transition: opacity .15s;
+}
+/* Animate underline on hover/focus only */
+.URL:hover::after, .URL:focus-visible::after{
+    opacity:.95;
+    animation:sweep 3.2s linear infinite;
+}
+
+/* Active: when JS adds .is-current (option match), stylise first letter */
+.URL.is-current::first-letter{
+    font-size:1.05em; font-weight:900; color:transparent;
+    background:linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+    -webkit-background-clip:text; background-clip:text;
+}
+/* Robust path when JS injects a span for the first letter */
+.URL .urlcap{
+    font-size:1.05em; font-weight:900; color:transparent;
+    background:linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+    -webkit-background-clip:text; background-clip:text;
+    display:inline; margin-right:0; margin-left:5px;
+}
+
+/* Keep existing sweep animation for link underline */
+@keyframes sweep{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+
+/* ---------- Horizontal tiles ---------- */
+.horizontal-content-container{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; align-items:stretch;
+}
+.hcc-item{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 6px 16px rgba(0,0,0,.06); }
+.hcc-item img{ display:block; max-width:100%; height:auto; margin:6px auto 0; }
+
+/* ---------- Sidebar off-canvas (mobile only) ---------- */
+@media (max-width:960px){
+    .wrap.has-sidebar .sidebar{
+        position:fixed; top:74px; left:0; bottom:0; width:min(82vw,340px); max-width:90vw;
+        transform:translateX(-105%); transition:transform .22s ease, box-shadow .22s ease; box-shadow:0 10px 35px rgba(0,0,0,.18);
+        max-height: calc(100vh - 86px);
+        overflow-y: auto;
+        padding-bottom: 8px;
+    }
+    body.is-side-open .wrap.has-sidebar .sidebar{ transform:translateX(0); }
+    body.is-side-open .wrap.has-sidebar::after{
+        content:""; position:fixed; inset:0; background:rgba(0,0,0,.28); backdrop-filter:blur(1px); pointer-events:none;
+    }
+    .sidebar .side-actions:last-child{ margin-bottom:0 !important; padding-bottom:8px !important; }
+    .sidebar .side-actions > *:last-child{ margin-bottom:0 !important; }
+}
+
+/* ---------- Buttons (theme accents) ---------- */
+.btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px;
+    border-radius:12px; font-weight:700; color:var(--body);
+    border:1px solid color-mix(in srgb, var(--brand2) 24%, rgba(15,23,42,.14));
+    background:linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--brand) 8%, #fff) 100%);
+    box-shadow:0 2px 6px rgba(15,23,42,.08);
+    transition:border-color .15s, box-shadow .15s, transform .05s, background .15s;
+}
+.btn:hover{
+    border-color:color-mix(in srgb, var(--brand2) 42%, rgba(15,23,42,.18));
+    background:linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--brand) 12%, #fff) 100%);
+    box-shadow:0 6px 14px rgba(37,99,235,.16);
+}
+.btn:active{ transform:translateY(1px); }
+.btn:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
+.btn--outline{ background:#fff; color:var(--body); }
+.btn--primary{
+    color:#0f172a;
+    background:linear-gradient(90deg, color-mix(in srgb, var(--brand) 82%, #fff), color-mix(in srgb, var(--brand2) 82%, #fff));
+    border-color:transparent;
+    box-shadow:0 4px 12px rgba(37,99,235,.20);
+}
+.btn.-sm{ padding:8px 11px; border-radius:10px; font-weight:800; letter-spacing:.02em; }
+
+@media (max-width:960px){
+    #sidebar:target{ transform:translateX(0); }
+}
+
+/* ---------- Launchpad grid (auto + fixed) and spacing ---------- */
+.launchpad-grid {
+    display: grid;
+    gap: 16px;
+    align-items: stretch;
+}
+.launchpad-grid.-auto { --min: 150px; grid-template-columns: repeat(auto-fit, minmax(var(--min), 1fr)); }
+.launchpad-grid.-fixed { grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }
+.launchpad-grid .card.-full { grid-column: 1 / -1; }
+.launchpad-grid .card { height: 100%; display: flex; flex-direction: column; }
+.launchpad-grid .card__body { flex: 1 1 auto; }
+
+/* Ensure vertical space even at 1-column */
+.launchpad-grid { row-gap: var(--row-gap, 16px); column-gap: var(--col-gap, 16px); }
+@media (max-width: 640px) { .launchpad-grid { row-gap: 16px; } }
+@supports not (gap: 1rem) {
+    .launchpad-grid .card { margin-bottom: 16px; }
+    .launchpad-grid .card:last-child { margin-bottom: 0; }
+}
+.login-center {
+    display: flex;
+    align-items: top;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 1rem;
+}
+.login-card {
+    width: 100%;
+    max-width: 420px;
+}
+
+/* === Adlexone SVG Enhancements (bundle) === */
+.brand-underline{width:100%; height:4px; margin:8px 0 18px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.08));}
+.icon{width:16px; height:16px; opacity:.7; transition:opacity .15s ease, transform .15s ease;}
+/*.navbtn:hover .icon{opacity:1; transform: translateY(-1px);}*/
+/*.navbtn.is-active .label::first-letter{*/
+/*    font-weight:800;*/
+/*    background: linear-gradient(180deg,#7ac8ff,#8ea6ff);*/
+/*    -webkit-background-clip: text; color: transparent;*/
+/*}*/
+.divider{display:flex; align-items:center; gap:10px; margin:4px 0 12px; color:#556b7a;}
+.divider svg{flex:1;}
+.pill{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:4px 10px; background:rgba(122,200,255,.12);}
+.hero{
+    height:160px; border-radius:22px;
+    background:
+            radial-gradient(80% 120% at 10% -10%, rgba(255,255,255,.6), transparent 60%),
+            linear-gradient(120deg, rgba(122,200,255,.25), rgba(105,224,193,.18));
+    box-shadow: 0 12px 28px rgba(41,72,100,.10);
+}
+.menu{ background:#fff; border-radius:14px; box-shadow:0 16px 36px rgba(9,30,66,.12); padding:6px; display:inline-block; }
+.menu a{ display:block; padding:8px 10px; color:#284b63; text-decoration:none; font-weight:500; }
+.menu a:hover{ background: rgba(122,200,255,.10); }
+
+/* --- More menu essentials --- */
+.controller-more { position: relative; }
+.controller-more__menu[hidden] { display: none; }
+.controller-more__menu { margin-top: .25rem; }

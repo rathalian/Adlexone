@@ -1,0 +1,823 @@
+<?php
+declare(strict_types=1);
+/**
+ * Adlexone FlowIQ License Agreement 1.0
+ *
+ * 1. Copying the Adlexone FlowIQ software and distributing as your own software
+ *  without the written permission of Adlexone is forbidden under the terms of
+ *  the Adlexone FlowIQ License.
+ * 2. You may modify your copy of the Adlexone FlowIQ software, however where
+ *  Adlexone FlowIQ files contain the Adlexone FlowIQ license in the header of the file, the
+ *  Adlexone FlowIQ License header must remain.
+ * 3. Adlexone, and the copyright holders of the Adlexone FlowIQ, provide no
+ *  warranty for the data created or managed by your Adlexone FlowIQ installation.
+ * 4. Adlexone, and the copyright holders of the Adlexone FlowIQ, provide no
+ *  warranty for your Adlexone FlowIQ configuration or the hosting environment
+ *  your Adlexone FlowIQ installation operates in.
+ * 5. Adlexone, and the copyright holders of the Adlexone FlowIQ, provide no
+ *  warranty for the Adlexone FlowIQ where the software has been modified by
+ *  third parties (i.e. other than Adlexone), unless an agreement has been
+ *  reached with Adlexone.
+ * 6. By using the Adlexone FlowIQ, you are indicating your acceptance of the
+ *  stated Adlexone FlowIQ License terms and conditions.
+ *
+ * Contact info@oneorzero.com if you have any further licensing questions.
+ */
+
+use Adlexone\support\Database;
+use Adlexone\support\RenderViews;
+
+/**
+ * Controller specific constants
+ */
+define('SEC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_security');
+
+
+/** * Popuulates the left navigation buttons for the logic below;
+ */
+$navigationButtons = RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, TXT_28), $_SESSION['access_role_id'], 2);
+$navigationButtons .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(SEC_BASE_URL . '&option=new_user', TXT_33), $_SESSION['access_role_id'], 2);
+$navigationButtons .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(SEC_BASE_URL . '&option=new_group', TXT_34), $_SESSION['access_role_id'], 2);
+$html = RenderViews::buildLeftNavigationCard($navigationButtons);
+define('LEFT_NAVIGATION', $html);
+
+
+/** * Renders the left navigation card with the buttons defined above
+ */
+$leftNavigationCard = RenderViews::buildLeftNavigationCard($navigationButtons);
+/**
+ * Shows secured security options
+ */
+function showSecurityOptions(): void
+{
+    // Security Options
+    $fields[] = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), $_SESSION['access_role_id'], 2);
+    $fields[] = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), $_SESSION['access_role_id'], 2);
+    $fields[] .= RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), $_SESSION['access_role_id'], 2);
+    $html = RenderViews::buildFormSectionHeading(TXT_28);
+    $html .= RenderViews::buildFormFieldsGrid($fields);
+    define('BODY_CONTENT', $html);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Shows add and edit user pages. Controller logic: new_user, modify_user, admin_modify_user
+ *
+ * @param string $userID Users ID
+ * @param array $values Field values passed in via $_SESSION array for retaining form field values if error occurred during entry
+ * @param bool $adminEdit If TRUE the user is being edited by an administrator, if FALSE the user is updating their profile
+ */
+function showUser($userID = '', $values = [], $adminEdit = true)
+{
+
+        $fieldValues = $userID === '' ? $values : (Database::fetchArray(Database::query(
+            Database::sqlSelect('users', ['*'], "WHERE user_id = '$userID'"),
+            DSN,
+            SET_SHOW_SQL
+        )) ?? []);
+
+    $option = $userID === '' ? 'add_user' : 'update_user';
+    $html = RenderViews::buildStartForm(SEC_BASE_URL . '&option=' . $option, 'POST', 'form-horizontal');
+
+    $requiredInformation = [];
+    if ($adminEdit) {
+        $requiredInformation[TXT_149] = RenderViews::buildTextInput('user_name', @$fieldValues['user_name']);
+    } else {
+        $requiredInformation[TXT_149] = RenderViews::buildHiddenInput('user_name', @$fieldValues['user_name']) . @$fieldValues['user_name'];
+    }
+    $message = $userID !== '' ? TXT_159 : '';
+    $requiredInformation[TXT_165] = RenderViews::buildPasswordInput('password_ftype', '') . ' ' . $message;
+    if ($userID === '') {
+        $requiredInformation[TXT_166] = RenderViews::buildPasswordInput('password_confirm', '') . ' ' . $message;
+    }
+    $requiredInformation[TXT_167] = RenderViews::buildTextInput('first_name', @$fieldValues['first_name']);
+    $requiredInformation[TXT_168] = RenderViews::buildTextInput('last_name', @$fieldValues['last_name']);
+    $requiredInformation[TXT_169] = RenderViews::buildTextInput('email', @$fieldValues['email']);
+
+    if ($_SESSION['access_role_id'] > 0) {
+        $roleIDs = [1, 2, 3, 4, 5];
+        $roleNames = [TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
+    } else {
+        $roleIDs = [0, 1, 2, 3, 4, 5];
+        $roleNames = [TXT_190, TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
+    }
+
+    $requiredInformation[TXT_187] = RenderViews::outputIfRoleAllowed(
+        RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, @$fieldValues['role']),
+        $_SESSION['access_role_id'],
+        1
+    );
+    $requiredInformation[TXT_653] = RenderViews::outputIfRoleAllowed(
+        RenderViews::buildSelectDropdown('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
+        $_SESSION['access_role_id'],
+        1
+    );
+    if (empty($requiredInformation[TXT_187])) {
+        unset($requiredInformation[TXT_187]);
+    }
+    $html .= RenderViews::buildVerticalCards([
+        [
+            'title' => TXT_155,
+            'html' => RenderViews::buildFormFieldsGrid($requiredInformation)
+        ]
+    ]);
+
+    $userInformation = [
+        TXT_171 => RenderViews::buildTextInput('phone', @$fieldValues['phone']),
+        TXT_172 => RenderViews::buildTextArea('address', @$fieldValues['address'], SET_FORM_FIELD_HEIGHT),
+        TXT_173 => RenderViews::buildTextInput('city', @$fieldValues['city']),
+        TXT_174 => RenderViews::buildTextInput('state_province', @$fieldValues['state_province']),
+        TXT_175 => RenderViews::buildTextInput('zip_postal', @$fieldValues['zip_postal']),
+        TXT_176 => RenderViews::buildTextInput('country', @$fieldValues['country']),
+        TXT_177 => RenderViews::buildTextInput('website', @$fieldValues['website']),
+        TXT_178 => RenderViews::buildTextArea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT),
+        TXT_179 => RenderViews::buildTextInput('secret_question', @$fieldValues['secret_question']),
+        TXT_180 => RenderViews::buildTextInput('secret_answer', @$fieldValues['secret_answer']),
+    ];
+    $html .= RenderViews::buildVerticalCards([
+        [
+            'title' => TXT_156,
+            'html' => RenderViews::buildFormFieldsGrid($userInformation)
+        ]
+    ]);
+
+    $userPreferences = [];
+    if ($adminEdit) {
+        $themeArray = [];
+        foreach (scandir(THEME_PATH) as $themeName) {
+            if ($themeName !== '.' && $themeName !== '..' && is_dir(THEME_PATH . $themeName)) {
+                $themeArray[] = $themeName;
+            }
+        }
+        $theme = empty($fieldValues['theme']) ? SET_DEFAULT_THEME : $fieldValues['theme'];
+        $userPreferences[TXT_182] = RenderViews::buildSelectDropdown('theme', $themeArray, $themeArray, $theme);
+    }
+
+    $languageFileArray = [];
+    foreach (scandir(SET_INSTALL_PATH . 'translations/') as $languageFile) {
+        $filePath = SET_INSTALL_PATH . 'translations/' . $languageFile;
+        if (is_file($filePath) && preg_match('/\.lang\.php$/', $languageFile)) {
+            $languageFileArray[] = str_replace('.lang.php', '', $languageFile);
+        }
+    }
+    $language = empty($fieldValues['language']) ? SET_DEFAULT_LANGUAGE : $fieldValues['language'];
+    $userPreferences[TXT_181] = RenderViews::buildSelectDropdown('language', $languageFileArray, $languageFileArray, $language);
+
+    $directoryPath = 'app/http/controllers/applications/';
+    $applicationFileArray = [];
+    foreach (scandir($directoryPath) as $entry) {
+        $filePath = $directoryPath . $entry . '/' . $entry . '.xml';
+        if (is_file($filePath)) {
+            $applicationFileArray[] = $filePath;
+        }
+    }
+    $nameArray = [];
+    $baseURLArray = [];
+    if (!empty($applicationFileArray)) {
+        foreach ($applicationFileArray as $filename) {
+            $xmlContent = file_get_contents($filename);
+            if ($xmlContent === false) {
+                die("Cannot open " . $filename);
+            }
+            $xmlparser = xml_parser_create('UTF-8');
+            xml_parser_set_option($xmlparser, XML_OPTION_SKIP_WHITE, 1);
+            if (!xml_parse_into_struct($xmlparser, $xmlContent, $values)) {
+                die("Cannot parse XML in " . $filename);
+            }
+            xml_parser_free($xmlparser);
+            $name = '';
+            foreach ($values as $value) {
+                switch ($value['tag']) {
+                    case 'NAME':
+                        $nameArray[] = constant($value['value']);
+                        $name = $value['value'];
+                        break;
+                    case 'BASE_URL':
+                        $baseURLArray[] = $value['value'] . '}-{' . $name;
+                        break;
+                }
+            }
+        }
+    }
+    $application = empty($fieldValues['home_controller']) ? SET_DEFAULT_APPLICATION : $fieldValues['home_controller'] . '}-{' . @$fieldValues['home_controller_name'];
+    $userPreferences[TXT_297] = RenderViews::buildSelectDropdown('home_controller', $baseURLArray, $nameArray, $application);
+    $userPreferences[TXT_63] = RenderViews::buildSelectDropdown('show_header', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_header']);
+    $userPreferences[TXT_64] = RenderViews::buildSelectDropdown('show_graphics', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_graphics']);
+    $userPreferences[TXT_546] = RenderViews::buildSelectDropdown('show_hide', ['Yes', 'No'], [TXT_563, TXT_564], @$fieldValues['show_hide']);
+
+    $html .= RenderViews::buildVerticalCards([
+        [
+            'title' => TXT_157,
+            'html' => RenderViews::buildFormFieldsGrid($userPreferences)
+        ]
+    ]);
+
+    // Javascript field validation
+    if ($userID === '') {
+        $jsFieldNameArray = "['user_name','password_ftype','password_confirm','email','first_name','last_name']";
+        $jsRequiredMsgArray = "['" . TXT_471 . "','" . TXT_472 . "','" . TXT_473 . "','" . TXT_474 . "','" . TXT_549 . "','" . TXT_550 . "']";
+        $jsRequiredArray = "[true,true,true,true,true,true]";
+    } else {
+        $jsFieldNameArray = "['user_name','','','email','first_name','last_name']";
+        $jsRequiredMsgArray = "['" . TXT_470 . "','','','" . TXT_474 . "','" . TXT_549 . "','" . TXT_550 . "']";
+        $jsRequiredArray = "[true,false,false,true,true,true]";
+    }
+    $jsTestTypeArray = "['','','','email','','']";
+    $jsErrorMsgArray = "['','','','" . TXT_475 . "','','']";
+    $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+    $submitText = $userID !== '' ? TXT_74 : TXT_69;
+    $buttons = [
+        RenderViews::buildFormButton('submit', 'submit_button', $submitText, 'btn btn-default', $javascript),
+        RenderViews::buildHiddenInput('user_id', @$fieldValues['user_id'])
+    ];
+    $html .= RenderViews::buildEndFormWithButtons($buttons);
+
+    $heading = $userID !== '' ? ($adminEdit ? TXT_154 : TXT_148) : TXT_33;
+   define('BODY_CONTENT', $html);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Shows add and edit group pages.  Controller logic: new_group, modify_group
+ *
+ * @param string $groupID Groups ID
+ * @param string $values Field values passes in via $_SESSION array for retaining form field values if error occurred during entry
+ */
+function showGroup($groupID = '', $values = '')
+{
+    if ($groupID == '') {
+        $html = RenderViews::buildStartForm(SEC_BASE_URL . '&option=add_group', 'POST', 'form-horizontal');
+        // Used passed in values
+        $fieldValues = $values;
+    } else {
+        // Get group values from database
+        $columnArray = array('group_id', 'group_name', 'description', 'role');
+        $condition = "WHERE group_id = '$groupID'";
+        $sql = Database::sqlSelect('groups', $columnArray, $condition);
+        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $fieldValues = Database::fetchArray($result);
+        $html = RenderViews::buildStartForm(SEC_BASE_URL . '&option=update_group', 'POST', 'form-horizontal');
+    }
+    $tableRows = RenderViews::tableData('2', '', array('center'), '', 'tdcHeading', array(TXT_188), 'row');
+
+    $requiredInformation[TXT_150] = RenderViews::buildTextInput('group_name', @$fieldValues['group_name']);
+    $requiredInformation[TXT_186] = RenderViews::buildTextArea('description', @$fieldValues['description'], SET_FORM_FIELD_HEIGHT);
+    $roleIDs = array(1, 2, 3, 4, 5);
+    $roleNames = array(TXT_191, TXT_192, TXT_193, TXT_194, TXT_303);
+    $requiredInformation[TXT_187] = RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, @$fieldValues['role']);
+    $i = 0;
+    foreach ($requiredInformation as $name => $field) {
+        // $class = RenderViews::setOddEvenClass($a, 'trc1', 'trc2');
+        // $a in this case represents the defined variables above
+        $cellData = array('<strong>' . $name . '</strong>', $field);
+        $tableRows .= RenderViews::tableData('', array('30%', '70%'), '', '', 'tdc1', $cellData, 'row');
+        $i++;
+    }
+    $html .= RenderViews::buildHiddenInput('group_id', @$fieldValues['group_id']);
+    $jsFieldNameArray = "['group_name']";
+    $jsRequiredMsgArray = "['" . TXT_197 . "']";
+    $jsRequiredArray = "[true]";
+    $jsTestTypeArray = "['']";
+    $jsErrorMsgArray = "['']";
+    $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+    $buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript);
+    $buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
+    $endForm = RenderViews::buildEndFormWithButtons($buttonArray);
+    $tableRows .= RenderViews::tableData('', '', '', '', 'tdc1', array($endForm), 'row');
+    $html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
+    define('HEADING', ($groupID != '') ? TXT_185 : TXT_184);
+    define('BODY_CONTENT', $html);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+ /**
+        * Displays the user/group search form.
+        *
+        * This function renders a form allowing users to search for users or groups
+        * by specifying the type (user name, first name, last name, or group name),
+        * the operator (LIKE or =), and the search criteria. The form includes
+        * submit and reset buttons, and is displayed within a vertical card layout.
+        *
+        * The generated HTML is assigned to the BODY_CONTENT constant and the main
+        * page content is included using the current theme.
+        *
+        * @return void
+        */
+       function showUserGroupSearch()
+       {
+           // Setup form fields (labels and elements only)
+           $fields = [
+               TXT_596 => RenderViews::buildSelectDropdown(
+                   'type',
+                   ['user_name', 'first_name', 'last_name', 'group_name'],
+                   [TXT_76, TXT_77, TXT_78, TXT_79],
+                   SET_DEFAULT_ITEM_TYPE
+               ),
+               TXT_678 => RenderViews::buildSelectDropdown(
+                   'operator',
+                   ['LIKE', '='],
+                   [TXT_80, TXT_81],
+                   ''
+               ),
+               TXT_679 => RenderViews::buildTextInput('criteria', ''),
+           ];
+
+           // Buttons for submitting or resetting the form
+           $buttons = [
+               RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+               RenderViews::buildFormButton('reset', 'reset', TXT_75),
+           ];
+
+           // Define the content block for the form
+           $bodyBlock = [
+               [
+                   'title' => TXT_147,
+                   'html' => RenderViews::buildFormFieldsGrid($fields),
+               ]
+           ];
+
+           // Build the form HTML
+           $html = RenderViews::buildStartForm(
+               SEC_BASE_URL . '&option=user_group_search',
+               'POST',
+               'form-horizontal'
+           );
+           $html .= RenderViews::buildVerticalCards($bodyBlock);
+           $html .= RenderViews::buildEndFormWithButtons($buttons);
+
+           define('BODY_CONTENT', $html);
+           RenderViews::renderThemePage('main_page_content', SET_THEME);
+       }
+
+/**
+ * Adds user to database
+ */
+/**
+             * Adds a new user to the database after checking for duplicates.
+             *
+             * This function checks if a user with the given username already exists in the database.
+             * If no duplicate is found, it creates a new user with the provided data, including
+             * hashed password, home controller details, and settings. The user data is then inserted
+             * into the database. If a duplicate is found, an error message is displayed.
+             *
+             * @return void
+             */
+            function addUser()
+            {
+                // Check for duplicate user name
+                $userName = $_POST['user_name'] ?? '';
+                $sql = "SELECT user_name FROM users WHERE user_name = '$userName'";
+                $result = Database::query($sql, DSN, SET_SHOW_SQL);
+
+                if (Database::numRows($result) == 0) {
+                    // Prepare user data
+                    $userId = Database::newID('users', 'user_id');
+                    $password = md5($_POST['password_ftype'] ?? ''); // Consider password_hash for better security
+
+                    // Extract home controller details
+                    $controllerArray = explode('}-{', $_POST['home_controller'] ?? '');
+                    $homeController = $controllerArray[0] ?? '';
+                    $homeControllerName = $controllerArray[1] ?? '';
+
+                    // Determine settings based on 'show_hide' input
+                    $settings = ($_POST['show_hide'] ?? '') === "Yes" ? "{SHOW-HIDE=TRUE}" : "{SHOW-HIDE=FALSE}";
+
+                    // Build insert array with user data
+                    $insertData = [
+                        'user_id' => $userId,
+                        'user_name' => $userName,
+                        'password' => $password,
+                        'home_controller' => $homeController,
+                        'home_controller_name' => $homeControllerName,
+                        'settings' => $settings,
+                    ] + $_POST;
+
+                    // Remove unnecessary fields from the insert data
+                    unset($insertData['password_confirm'], $insertData['password_ftype'], $insertData['submit_button'], $insertData['reset'], $insertData['user_id'], $insertData['home_controller'], $insertData['show_hide']);
+
+                    // Insert user data into the database
+                    $sql = Database::sqlInsert('users', $insertData);
+                    Database::query($sql, DSN, SET_SHOW_SQL);
+
+                    // Show group membership for the newly added user
+                    showGroupMembership($userId);
+                } else {
+                    // Render duplicate user message
+                    $bodyBlock = [
+                        [
+                            'title' => TXT_139,
+                            'html' => RenderViews::showResponse(
+                                '<strong>' . htmlspecialchars($userName) . '</strong> ' . TXT_163,
+                                RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL')
+                            )
+                        ]
+                    ];
+                    $html = RenderViews::buildVerticalCards($bodyBlock);
+                    define('BODY_CONTENT', $html);
+                    RenderViews::renderThemePage('main_page_content', SET_THEME);
+                }
+            }
+
+/**
+         * Updates user information in the database.
+         *
+         * This function updates the details of a user identified by their user ID. It handles
+         * the extraction of home controller details, prevents unauthorized role modifications,
+         * updates user settings, and processes the provided form data to update the database.
+         * After the update, it renders a success message.
+         *
+         * @param string $userID The ID of the user to be updated.
+         */
+        function updateUser($userID)
+        {
+            // Extract home controller details from the POST data
+            [$homeController, $homeControllerName] = explode('}-{', $_POST['home_controller']);
+            $controllerFileArray = ['home_controller' => $homeController];
+            $controllerNameArray = ['home_controller_name' => $homeControllerName];
+
+            // Define the condition for the database update query
+            $condition = "WHERE user_id = '$userID'";
+
+            // Prevent role modification for users with insufficient access rights
+            if ($_SESSION['access_role_id'] > 2) {
+                unset($_POST['role']);
+            }
+
+            // Fetch the current settings for the user from the database
+            $row = Database::fetchArray(Database::query(
+                Database::sqlSelect('users', ['settings'], $condition),
+                DSN,
+                SET_SHOW_SQL
+            ))['settings'] ?? '';
+
+            // Update the 'show_hide' setting based on the POST data
+            $showHide = ($_POST['show_hide'] ?? '') === "Yes" ? "{SHOW-HIDE=TRUE}" : "{SHOW-HIDE=FALSE}";
+            $controllerFileArray['settings'] = str_replace(
+                ["{SHOW-HIDE=TRUE}", "{SHOW-HIDE=FALSE}"],
+                $showHide,
+                $row
+            );
+
+            // Remove the 'show_hide' field from the POST data
+            unset($_POST['show_hide']);
+
+            // Prepare the password for update if provided
+            $password = [];
+            if (!empty($_POST['password_ftype'])) {
+                $password['password'] = md5($_POST['password_ftype']);
+            }
+
+            // Remove unnecessary fields from the POST data
+            unset($_POST['password_ftype'], $_POST['submit_button'], $_POST['reset'], $_POST['user_id'], $_POST['home_controller']);
+
+            // Merge all data into a single array for the update
+            $columnArray = array_merge($password, $_POST, $controllerFileArray, $controllerNameArray);
+
+            // Execute the update query in the database
+            Database::query(Database::sqlUpdate('users', $columnArray, $condition), DSN, SET_SHOW_SQL);
+
+            // Render a success message after the update
+            RenderViews::buildResponse(
+                htmlspecialchars($_POST['user_name']) . ' ' . TXT_164,
+                RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL')
+            );
+        }
+
+/**
+ * Add group to database
+ */
+function addGroup()
+{
+    // Check for duplicate and error handling
+    $columnArray = array('group_name');
+    $condition = "WHERE group_name = '" . $_POST['group_name'] . "'";
+    $sql = Database::sqlSelect('groups', $columnArray, $condition);
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    if (Database::numRows($result) == 0) {
+        // Remove unwanted POST variables
+        unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id']);
+        // Set unique id
+        $array['group_id'] = Database::newID('groups', 'group_id');
+        // Build insert array
+        $columnArray = array_merge($array, $_POST);
+        // Insert form field values into row
+        $sql = Database::sqlInsert('groups', $columnArray);
+        Database::query($sql, DSN, SET_SHOW_SQL);
+        $html = RenderViews::showResponse('<strong>' . $_POST['group_name'] . '</strong> ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+        define('BODY_CONTENT', $html);
+    } else {
+        $html = RenderViews::showResponse('<strong>' . $_POST['group_name'] . '</strong> ' . TXT_198, RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
+        define('BODY_CONTENT', $html);
+    }
+    define('HEADING', TXT_139);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Updates group information.
+ *
+ * @param mixed $groupID Groups ID
+ */
+function updateGroup($groupID)
+{
+    // Remove unwanted POST variables
+    unset ($_POST['submit_button'], $_POST['reset']);
+    // Build insert array
+    $columnArray = $_POST;
+    // Set condition
+    $condition = "WHERE group_id = '$groupID'";
+    // Updates form field values into row
+    $sql = Database::sqlUpdate('groups', $columnArray, $condition);
+    Database::query($sql, DSN, SET_SHOW_SQL);
+    $html = RenderViews::showResponse('<strong>' . $_POST['group_name'] . '</strong> ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+    define('BODY_CONTENT', $html);
+    define('HEADING', TXT_139);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Updates group membership for user.
+ *
+ * @param mixed $userID User ID
+ */
+/**
+ * Updates group membership for a user.
+ *
+ * This function updates the group memberships for a given user by:
+ * - Removing any existing group memberships for the user.
+ * - Adding the new group memberships provided in the `$_POST` data.
+ * - Rendering a confirmation message to indicate the update was successful.
+ *
+ * @param mixed $userID The ID of the user whose group memberships are being updated.
+ *
+ * @return void
+ */
+function updateGroupMembership($userID)
+{
+    // Remove unwanted POST variables
+    unset($_POST['submit_button'], $_POST['reset']);
+
+    // Create a delimited string from selected groups
+    $groups = '}-{';
+    foreach ($_POST as $fieldValue) {
+        $groups .= $fieldValue . '}-{';
+    }
+
+    // Prepare the data for the database
+    $columnArray['groups'] = $groups;
+    $columnArray['user_id'] = $userID;
+
+    // Set the condition for the database query
+    $condition = "WHERE user_id = '$userID'";
+
+    // Delete existing group memberships for the user
+    $sql = Database::sqlDelete('group_members', $condition);
+    Database::query($sql, DSN, SET_SHOW_SQL);
+
+    // Insert the updated group memberships into the database
+    $sql = Database::sqlInsert('group_members', $columnArray);
+    Database::query($sql, DSN, SET_SHOW_SQL);
+
+    // Render a confirmation message
+    RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+}
+
+/**
+ * showUserGroupResults()
+ *
+ * This function handles the logic for displaying search results for users or groups
+ * based on the search criteria provided in the POST request. It dynamically builds
+ * the SQL query to fetch data from the `users` or `groups` table and renders the results
+ * in a vertical content block.
+ *
+ * Controller logic: user_group_search
+ *
+ * @return void
+ */
+function showUserGroupResults()
+{
+    // Determine the table to query based on the search type
+    if ($_POST['type'] == 'group_name') {
+        $table = 'groups'; // Query the groups table for group-related searches
+    } else {
+        $table = 'users'; // Query the users table for user-related searches
+    }
+
+    // Define the columns to select and the condition for the query
+    $columnArray = array('*'); // Select all columns
+    if ($_POST['operator'] == '=') {
+        // Exact match condition
+        $condition = "WHERE " . $_POST['type'] . " = '" . $_POST['criteria'] . "'";
+    } else {
+        // Partial match condition using LIKE
+        $condition = "WHERE " . $_POST['type'] . " LIKE '%" . $_POST['criteria'] . "%'";
+    }
+
+    // Execute the SQL query
+    $sql = Database::sqlSelect($table, $columnArray, $condition);
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+
+    // Check if there are any results
+    if (Database::numRows($result) == 0) {
+        // No results found, no additional processing needed
+    } else {
+        // Process each row in the result set
+        while ($row = Database::fetchArray($result)) {
+            // Render different URLs for users and groups
+            if ($table == 'users') {
+                // Generate action links for user-related results
+                $fields[$row['first_name'] . ' ' . $row['last_name']] =
+                    RenderViews::buildURL(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $row['user_id'], TXT_154, 'URL') . ' - ' .
+                    RenderViews::buildURL(SEC_BASE_URL . '&option=modify_group_membership&user_id=' . $row['user_id'], TXT_238, 'URL') . ' - ' .
+                    RenderViews::buildURL(SEC_BASE_URL . '&option=delete_user&user_id=' . $row['user_id'], TXT_47, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
+            } else {
+                // Generate action links for group-related results
+                $fields[$row['group_name']] =
+                    RenderViews::buildURL(SEC_BASE_URL . '&option=modify_group&group_id=' . $row['group_id'], TXT_36, 'URL') . ' - ' .
+                    RenderViews::buildURL(SEC_BASE_URL . '&option=delete_group&group_id=' . $row['group_id'], TXT_47, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
+            }
+        }
+
+        // Prepare the content block for rendering the results
+        $bodyBlock = [
+            [
+                'title' => TXT_113, // Title for the results section
+                'html' => RenderViews::buildFormFieldsGrid($fields), // Render the results in a grid layout
+            ]
+        ];
+
+        // Render the results in a vertical content block
+        $html = RenderViews::buildVerticalCards($bodyBlock);
+    }
+
+    // Define the BODY_CONTENT constant with the generated HTML
+    define('BODY_CONTENT', $html);
+
+    // Include the main page content file to display the results
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+/**
+ * deleteGroup()
+ *
+ * Deletes the selected group.  Controller logic: delete_group, delete_group_checked
+ *
+ * @param mixed $groupID Groups ID
+ * @param boolean $checked If true the user is deleted
+ */
+function deleteGroup($groupID = '')
+{
+    $sql = "DELETE FROM groups WHERE group_id='" . $groupID . "'";
+    Database::query($sql, DSN, SET_SHOW_SQL);
+    showUserGroupSearch();
+}
+
+/**
+ * deleteUser()
+ *
+ * Deletes the selected user. Controller logic: delete_user, delete_user_checked
+ *
+ * @param mixed $userID Users ID
+ * @param boolean $checked If true the user is deleted
+ */
+function deleteUser($userID = '')
+{
+
+    $sql = "DELETE FROM users WHERE user_id='" . $userID . "'";
+    Database::query($sql, DSN, SET_SHOW_SQL);
+    $sql = "DELETE FROM group_members WHERE user_id='" . $userID . "'";
+    Database::query($sql, DSN, SET_SHOW_SQL);
+    showUserGroupSearch();
+}
+
+/**
+ * Gets a the full list of security groups and sets the membship options for the user
+ *
+ * @param integer $userID Users ID
+ */
+function showGroupMembership($userID = '')
+{
+    // Fetch user name
+    $columnArray = array('user_name');
+    $condition = "WHERE user_id = '" . $userID . "'";
+    $sql = Database::sqlSelect('users', $columnArray, $condition);
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $row = Database::fetchArray($result);
+    $userName = $row['user_name'];
+
+    // Fetch group memberships
+    $columnArray = array('groups');
+    $condition = "WHERE user_id = '" . $userID . "'";
+    $sql = Database::sqlSelect('group_members', $columnArray, $condition);
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $row = Database::fetchArray($result);
+    $groupArray = explode('}-{', $row['groups']);
+
+    // Fetch all groups
+    $columnArray = array('group_id', 'group_name', 'description');
+    $sql = Database::sqlSelect('groups', $columnArray);
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+
+    $bodyBlocks = [];
+    if (Database::numRows($result) > 0) {
+        while ($row = Database::fetchArray($result)) {
+            $checked = in_array($row['group_id'], $groupArray) ? $row['group_id'] : '';
+            $checkbox = RenderViews::buildCheckBox($row['group_id'], $row['group_id'], $checked, 'form-control');
+            $bodyBlocks[] = [
+                'title' => $row['group_name'],
+                'html' => '<div>' . htmlspecialchars($row['description']) . '</div>' . $checkbox
+            ];
+        }
+        $formHtml = RenderViews::buildStartForm(SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID, 'POST', 'form-horizontal');
+        $formHtml .= RenderViews::buildVerticalCards($bodyBlocks);
+        $formHtml .= RenderViews::buildEndFormWithButtons([RenderViews::buildFormButton('submit', 'submit_button', TXT_74),RenderViews::buildFormButton('reset', 'reset', TXT_75)]);
+    } else {
+        $formHtml = TXT_342;
+    }
+
+    define('HEADING', TXT_239 . ': ' . $userName);
+    define('BODY_CONTENT', $formHtml);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+/**
+ * Logic to render the appropriate template or call wrapper functions
+ * Option is captured from the value selected via a hyperlink
+ */
+switch (@$_GET['option']) {
+    case 'manage_users_groups' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        showUserGroupSearch();
+        break;
+    case 'user_group_search' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        showUserGroupResults();
+        break;
+    case 'new_user' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        // Removes leading VBL_ from any session variables (used for form value persistence)
+        showUser('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
+        // Unset session variables starting with VBL_
+        $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+        break;
+    case 'admin_modify_user' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        showUser($_GET['user_id'], '', true);
+        break;
+    case 'modify_user' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+        showUser($_SESSION['access_user_id'], '', false);
+        break;
+    case 'new_group' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        // Removes leading VBL_ from any session variables (used for form value persistence)
+        showGroup('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
+        // Unset session variables starting with VBL_
+        $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+        break;
+    case 'add_user' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        addUser();
+        break;
+    case 'update_user' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+        updateUser($_POST['user_id']);
+        break;
+    case 'delete_user' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        deleteUser($_GET['user_id']);
+        break;
+    case 'add_group' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        addGroup();
+        break;
+    case 'modify_group' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        // Removes leading VBL_ from any session variables (used for form value persistence)
+        showGroup($_GET['group_id'], RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
+        // Unset session variables starting with VBL_
+        $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+        break;
+    case 'modify_group_membership' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        showGroupMembership($_GET['user_id']);
+        break;
+    case 'update_group_membership' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        updateGroupMembership($_GET['user_id']);
+        break;
+    case 'update_group' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        updateGroup($_POST['group_id']);
+        break;
+    case 'delete_group' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        deleteGroup($_GET['group_id']);
+        break;
+    default :
+        if ($_SESSION['access_role_id'] <= 1) {
+            showUserGroupSearch();
+        } else {
+            showUser($_SESSION['access_user_id'], '', false);
+        }
+        break;
+}
+?>

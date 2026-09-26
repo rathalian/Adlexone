@@ -1,0 +1,23 @@
+{
+  "name": "adlexone/adlexone",
+  "description": "Adlexone application and library code.",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.1",
+    "ext-pdo": "*",
+    "ext-dom": "*",
+    "ext-libxml": "*",
+    "ext-xml": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Adlexone\\App\\": "app/",
+      "Adlexone\\": "src/"
+    },
+    "classmap": ["app/http/controllers/", "src/"]
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+}

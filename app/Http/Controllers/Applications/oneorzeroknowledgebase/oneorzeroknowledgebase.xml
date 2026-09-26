@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<application>
+	<name>Adlexone Knowledgebase</name>
+	<image>kb.png</image>
+	<help_text>
+		FlowIQ Knowledge Base is a tailored interface to help
+		you
+		manage knowledge.
+	</help_text>
+	<subcontroller>
+		<base_url>app_oneorzeroknowledgebase_main</base_url>
+	</subcontroller>
+	<install_information>
+		<controllers>
+			app_oneorzeroknowledgebase_main,app_oneorzeroknowledgebase_manage
+		</controllers>
+		<pages></pages>
+	</install_information>
+</application>

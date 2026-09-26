@@ -1,0 +1,458 @@
+<?php
+
+use Adlexone\support\Database;
+use Adlexone\support\RenderViews;
+use Adlexone\support\Actions;
+
+/**
+ * action package specific constants
+ */
+if (!defined('NOT_BASE_URL')) {
+	define('NOT_BASE_URL', 'index.php?controller=administration_main&subcontroller=administration_actions');
+}
+/**
+ * * Shows the setup page for the trigger action for custom fields
+ *
+ * @param string $actionID
+ * @return
+ */
+function showSetupTriggerActionCustomField($actionID = '')
+{
+	// Get default field values if we use this form for updating the action
+	if ($actionID != '') {
+		// Get action information from database
+		$columnArray = array('*');
+		$condition = "WHERE action_id = '" . $actionID . "'";
+		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
+		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		$fieldValues = Database::fetchArray($result);
+		$action = NOT_BASE_URL . '&option=update_action&action_package=Action_Triggers&descriptor_name=TriggerActionCustomField&action_id=' . $actionID;
+	} else {
+		$action = NOT_BASE_URL . '&option=add_action&action_package=Action_Triggers&descriptor_name=TriggerActionCustomField';
+	}
+	$html = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
+	// Get custom field buildSelectDropdown
+	$columnArray = array('custom_field_id', 'custom_field_name', 'field_type');
+	$sql = Database::sqlSelect('custom_fields', $columnArray);
+	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	$i = 0;
+	while ($row = Database::fetchArray($result)) {
+		if ($row['field_type'] == 'workerField'){
+			$customFieldIDArray[$i] = 'worker_field_' . $row['custom_field_id'];
+		}elseif ($row['field_type'] == 'workerFieldMenu'){
+			$customFieldIDArray[$i] = 'worker_field_menu_' . $row['custom_field_id'];
+		}else{
+			$customFieldIDArray[$i] = 'custom_field_' . $row['custom_field_id'];
+		}
+		$customFieldNameArray[$i] = $row['custom_field_name'];
+		$i++;
+	} //
+	// Create the setup form
+	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
+	// Get list of existing actions defined
+	$columnArray = array('action_id', 'action_name');
+	$condition = "WHERE package_function <> 'TriggerActionCustomField' AND package_function <> 'TriggerActionSystemField'";//exclude these action types as they are this action package	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
+	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
+	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	while ($row = Database::fetchArray($result)) {
+		$actionIDArray[] = $row['action_id'];
+		$actionNameArray[] = $row['action_name'];
+	}
+	$actionField[ACT_PAK_14] = RenderViews::menu('action_data', $actionIDArray, $actionNameArray, @$fieldValues['action_data']);
+	$actionField[ACT_PAK_19] = RenderViews::menu('action_type', array('create_item_trigger_met', 'create_item_every_item', 'update_item_log_entry', 'update_item_trigger_met', 'update_item_any_trigger', 'update_item_all_met', 'item_attachment'), array(ACT_PAK_23, ACT_PAK_24, ACT_PAK_25, ACT_PAK_26, ACT_PAK_27, ACT_PAK_28, TXT_671), @$fieldValues['action_type']);
+	$conditionArrayPre = explode('}-{', @$fieldValues['action_condition_pre']);
+	$conditionArrayPost = explode('}-{', @$fieldValues['action_condition_post']);
+	$roleIDs = array(2, 3, 4, 5);
+	$roleNames = array(TXT_192, TXT_193, TXT_194, TXT_303);
+	$actionField[ACT_PAK_72] = RenderViews::menu('log_role', $roleIDs, $roleNames,@$conditionArrayPost[3]);
+	// Use SQL operators for pre action conditions
+	$operatorValues = array('=', '<>');
+	$operatorDisplayValues = array(TXT_81, TXT_318);
+	$customFieldMenuPre = RenderViews::menu('custom_field_pre', $customFieldIDArray, $customFieldNameArray, @$conditionArrayPre[0]);
+	$operatorMenuPre = RenderViews::menu('operator_pre', $operatorValues, $operatorDisplayValues, @$conditionArrayPre[1]);
+	$conditionPre = RenderViews::textBox('condition_pre', @$conditionArrayPre[2]);
+	$actionField[ACT_PAK_2] = $customFieldMenuPre . ' ' . $operatorMenuPre . ' ' . $conditionPre;
+	$customFieldMenuPost = RenderViews::menu('custom_field_post', $customFieldIDArray, $customFieldNameArray, @$conditionArrayPost[0]);
+	// Use PHP operators for trigger conditions
+	$operatorValues = array('==', '!=');
+	$operatorDisplayValues = array(TXT_81, TXT_318);
+	$operatorMenuPost = RenderViews::menu('operator_post', $operatorValues, $operatorDisplayValues, @$conditionArrayPost[1]);
+	$conditionPost = RenderViews::textBox('condition_post', @$conditionArrayPost[2]);
+	$actionField[ACT_PAK_10] = $customFieldMenuPost . ' ' . $operatorMenuPost . ' ' . $conditionPost;
+	$tableRows = '';
+	foreach($actionField as $name => $field) {
+		$cellData = array ('<strong>' . $name . '</strong>', $field);
+		$tableRows .= RenderViews::tableData($cellData, 'row', '', '', '', '', 'tdc1', '', '');
+	}
+	$html .= RenderViews::hiddenField('action_id', @$fieldValues['action_id']);
+	//Javascript field validation
+	$jsFieldNameArray = "['action_name']";
+	$jsTestTypeArray = "['']";
+	$jsErrorMsgArray = "['']";
+	$jsRequiredMsgArray = "['".ACT_PAK_36."']";
+	$jsRequiredArray = "[true]";
+	$javascript = "onClick=\"javascript:return fieldCheck('".TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";
+	$buttonArray[] = RenderViews::formButton('submit','submit_button',TXT_74,$javascript);
+	$buttonArray[] = RenderViews::formButton('reset','reset',TXT_75);
+	$endFormButtons = RenderViews::endFormButtons($buttonArray,'1','1');
+	$tableRows .= RenderViews::tableData(array($endFormButtons, 'row', '2', '', '', '', 'tdc1', '', ''), 'row');
+	$html .= RenderViews::table($tableRows, 'tableIndent', '95%', '0', '0', '0');
+	define('HEADING', ACT_PAK_13);
+	define('BODY_CONTENT', $html);
+	RenderViews::renderPage('main_page_content',  SET_THEME);
+}
+/**
+ * Add or update triggered action definition
+ *
+ * @param string $actionID
+ * @param mixed $add
+ * @return
+ */
+function addUpdateTriggerActionCustomField($actionID = '', $add = false)
+{
+	// Get default field values if we use this form for updating the action
+	if ($add == true) {
+		// Check for duplicate name
+		$columnArray = array('action_name');
+		$condition = "WHERE action_name = '" . $_POST['action_name'] . "'";
+		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
+		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		if (Database::numRows($result) > 0) {
+			$html = ACT_PAK_15;
+			$html = RenderViews::showResponse(ACT_PAK_15,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
+			define('HEADING', TXT_352);
+			define('BODY_CONTENT', $html);
+		} else {
+			// Add action to database
+			unset($columnArray);
+			$columnArray['action_id'] = Database::newID('action_definitions', 'action_id');
+			$columnArray['action_name'] = $_POST['action_name'];
+			$columnArray['enabled'] = $_POST['enabled'];
+			$columnArray['item_type_id'] = $_POST['item_type_id'] ;
+			$columnArray['action_condition_pre'] = $_POST['custom_field_pre'] . '}-{' . html_entity_decode($_POST['operator_pre'], ENT_COMPAT, 'UTF-8') . '}-{' . $_POST['condition_pre'];
+			$columnArray['action_condition_post'] = $_POST['custom_field_post'] . '}-{' . html_entity_decode($_POST['operator_post'], ENT_COMPAT, 'UTF-8') . '}-{' . $_POST['condition_post'].'}-{' . $_POST['log_role'];
+			$columnArray['action_type'] = $_POST['action_type'];
+			$columnArray['action_data'] = $_POST['action_data'];
+			$columnArray['package_file'] = 'Action_Triggers.actions.php';
+			$columnArray['package_function'] = 'TriggerActionCustomField';
+			$sql = Database::sqlInsert('action_definitions', $columnArray);
+			Database::query($sql, DSN, SET_SHOW_SQL);
+			$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_301,RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
+			define('HEADING', TXT_352);
+			define('BODY_CONTENT', $html);
+		}
+	} else {
+		$columnArray['action_name'] = $_POST['action_name'];
+		$columnArray['enabled'] = $_POST['enabled'];
+		$columnArray['item_type_id'] = $_POST['item_type_id'];
+		$columnArray['action_condition_pre'] = $_POST['custom_field_pre'] . '}-{' . html_entity_decode($_POST['operator_pre'], ENT_COMPAT, 'UTF-8') . '}-{' . $_POST['condition_pre'];
+		$columnArray['action_condition_post'] = $_POST['custom_field_post'] . '}-{' . html_entity_decode($_POST['operator_post'], ENT_COMPAT, 'UTF-8') . '}-{' . $_POST['condition_post'].'}-{' . $_POST['log_role'];
+		$columnArray['action_type'] = $_POST['action_type'];
+		$columnArray['action_data'] = $_POST['action_data'];
+		$columnArray['package_file'] = 'Action_Triggers.actions.php';
+		$columnArray['package_function'] = 'TriggerActionCustomField';
+		$condition = "WHERE action_id ='$actionID'";
+		$sql = Database::sqlUpdate('action_definitions', $columnArray, $condition);
+		Database::query($sql, DSN, SET_SHOW_SQL);
+		$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_164, RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
+		define('HEADING', TXT_352);
+		define('BODY_CONTENT', $html);
+	}
+	RenderViews::renderPage('main_page_content',  SET_THEME);
+}
+/**
+ * Executes an action based on the saved trigger action id
+ *
+ * @param integer $ Item Id
+ * @param array $preCondition Pre action condition array
+ * @param array $triggerCondition Pre action condition array
+ * @param string $actionParameters action action parameters
+ * @param array $actionData action data
+ * @param string $requestingAction Requesting Action allows the input of a specific action point for triggers etc (i.e. update_item, create_item)
+ * @return Boolean Return boolean vale to indicate action execution success
+ */
+function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $triggerCondition, $actionParameters, $actionData, $actionType,$requestingAction)
+{
+	// Set the conditionTrue variable to false and get our arguments ot prove otherwise
+	$conditionTrue = false;
+	// Get our pre and post condition arrays
+	$preConditionArray = explode ('}-{', $preCondition);
+	$triggerConditionArray = explode ('}-{', $triggerCondition);
+	// Start working with the logic
+	switch ($requestingAction) {
+		case 'create_item':
+			// Options called from the create item function
+			switch ($actionType) {
+				case 'create_item_every_item':
+					// Will always return true
+					$conditionTrue = true;
+					break;
+				case 'create_item_trigger_met':
+					// We evaluate using == and != and require the evaluation result
+					$conditionTrue = ($triggerConditionArray[1] == '==') ? @$dataArray[$triggerConditionArray[0]] == $triggerConditionArray[2] : @$dataArray[$triggerConditionArray[0]] != $triggerConditionArray[2];
+					break;
+			}
+			break;
+		case 'update_item':
+			// Options called from the update item function
+			switch ($actionType) {
+				case 'update_item_trigger_met':
+					// We evaluate trigger condition using == and != and require the evaluation result
+					$conditionTrue = ($triggerConditionArray[1] == '==') ? @$dataArray[$triggerConditionArray[0]] == $triggerConditionArray[2] : @$dataArray[$triggerConditionArray[0]] != $triggerConditionArray[2];
+					break;
+				case 'update_item_all_met':
+					$columnArray = array ('item_id');
+					// Get existing item data and evaluate pre condition
+					$condition = "WHERE ($preConditionArray[0] $preConditionArray[1] '$preConditionArray[2]') AND item_id='$itemID'";
+					$sql = Database::sqlSelect('items', $columnArray, $condition);
+					$result = Database::query($sql, DSN, SET_SHOW_SQL);
+					$preCheck = (Database::numRows($result) > 0) ? true : false;
+					// We evaluate trigger condition using == and != and require the evaluation result
+					$postCheck = ($triggerConditionArray[1] == '==') ? @$dataArray[$triggerConditionArray[0]] == $triggerConditionArray[2] : @$dataArray[$triggerConditionArray[0]] != $triggerConditionArray[2];
+					// Both must evaluate as true or we return false
+					$conditionTrue = ($preCheck == true AND $postCheck == true) ? true : false;
+					break;
+				case 'update_item_any_trigger':
+					$columnArray = array ($triggerConditionArray[0]);
+					// Get existing item data and evaluate pre condition
+					$condition = "WHERE item_id='$itemID'";
+					$sql = Database::sqlSelect('items', $columnArray, $condition);
+					$result = Database::query($sql, DSN, SET_SHOW_SQL);
+					$row = Database::fetchArray($result);
+					$conditionTrue = (@$dataArray[$triggerConditionArray[0]] != $row[$triggerConditionArray[0]]) ? true : false;
+					break;
+				case 'update_item_log_entry':
+						
+					if (($dataArray['role_id'] >= $triggerConditionArray[3]) AND $dataArray['log_entry'] != ''){
+						// returns true if the item log entry base viewer role id is equal or less than the action setting
+						$conditionTrue = true ;
+					}
+					break;
+			}
+			break;
+		case 'update_item_log_entry':
+			if (($dataArray['role_id'] >= $triggerConditionArray[3]) AND $dataArray['log_entry'] != ''){
+				// returns true if the item log entry base viewer role id is equal or less than the action setting
+				$conditionTrue = true ;
+			}
+			break;
+		case 'item_attachment':
+			$conditionTrue = true ;
+			break;
+				
+	}
+	// We've done our evaluation - now execute the reqired action
+	if ($conditionTrue == true) {
+		$columnArray = array ('*');
+		// Get all action information from actions triggered by this action
+		$condition = "WHERE action_id = '$actionData' AND enabled = 'Yes'";
+		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
+		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		while ($row = Database::fetchArray($result)) {
+			// Execute actions
+			require_once 'actions/' . $row['package_file'];
+			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
+			$functionName = 'execute' . $row['package_function'];
+			$functionName($itemID, $_POST, $row['action_condition_pre'], $row['action_condition_post'], $row['action_parameters'], $row['action_data']);
+		}
+		return true;
+	} else {
+		return false;
+	}
+}
+/**
+ * Shows the setup page for the trigger action for system fields
+ *
+ * @param string $actionID
+ * @return
+ */
+function showSetupTriggerActionSystemField($actionID = '')
+{
+	// Get default field values if we use this form for updating the action
+	if ($actionID != '') {
+		// Get action information from database
+		$columnArray = array('*');
+		$condition = "WHERE action_id = '" . $actionID . "'";
+		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
+		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		$fieldValues = Database::fetchArray($result);
+		$action = NOT_BASE_URL . '&option=update_action&action_package=Action_Triggers&descriptor_name=TriggerActionSystemField&action_id=' . $actionID;
+	} else {
+		$action = NOT_BASE_URL . '&option=add_action&action_package=Action_Triggers&descriptor_name=TriggerActionSystemField';
+	}
+	$html = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
+	// Create the setup form
+	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
+	// Get list of existing actions defined
+	$columnArray = array('action_id', 'action_name');
+	$condition = "WHERE package_function <> 'TriggerActionCustomField' AND package_function <> 'TriggerActionSystemField'";//exclude these action types as they are this action package	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
+	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
+	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	while ($row = Database::fetchArray($result)) {
+		$actionIDArray[] = $row['action_id'];
+		$actionNameArray[] = $row['action_name'];
+	}
+	$actionField[ACT_PAK_14] = RenderViews::menu('action_data', $actionIDArray, $actionNameArray, @$fieldValues['action_data']);
+	// Setup System Menu
+	$systemFieldValueArray[0] = 'item_title';
+	$systemFieldNameArray[0] = ACT_PAK_20;
+	$systemFieldValueArray[1] = 'creator_security';
+	$systemFieldNameArray[1] = ACT_PAK_67;
+	$systemFieldValueArray[2] = 'user_security';
+	$systemFieldNameArray[2] = ACT_PAK_44;
+	$systemFieldValueArray[3] = 'group_security';
+	$systemFieldNameArray[3] = ACT_PAK_45;
+	$actionField[ACT_PAK_46] = RenderViews::menu('system_field_pre', $systemFieldValueArray, $systemFieldNameArray, @$fieldValues['action_condition_pre']);
+	$tableRows = '';
+	foreach($actionField as $name => $field) {
+		$cellData = array ('<strong>' . $name . '</strong>', $field);
+		$tableRows .= RenderViews::tableData($cellData, 'row', '', '', '', '', 'tdc1', '', '');
+	}
+	$endFormButtons = RenderViews::hiddenField('action_id', @$fieldValues['action_id']);
+	//Javascript field validation
+	$jsFieldNameArray = "['action_name']";
+	$jsTestTypeArray = "['']";
+	$jsErrorMsgArray = "['']";
+	$jsRequiredMsgArray = "['".ACT_PAK_36."']";
+	$jsRequiredArray = "[true]";
+	$javascript = "onClick=\"javascript:return fieldCheck('".TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";
+	$buttonArray[] = RenderViews::formButton('submit','submit_button',TXT_74,$javascript);
+	$buttonArray[] = RenderViews::formButton('reset','reset',TXT_75);
+	$endFormButtons = RenderViews::endFormButtons($buttonArray, '1','1');
+	$tableRows .= RenderViews::tableData(array($endFormButtons, 'row', '2', '', '', '', 'tdc1', '', ''), 'row');
+	$html .= RenderViews::table($tableRows, 'tableIndent', '95%', '0', '0', '0');
+	define('HEADING', ACT_PAK_47);
+	define('BODY_CONTENT', $html);
+	RenderViews::renderPage('main_page_content',  SET_THEME);
+}
+/**
+ * Add or update triggered action definition
+ *
+ * @param string $actionID
+ * @param mixed $add
+ * @return
+ */
+function addUpdateTriggerActionSystemField($actionID = '', $add = false)
+{
+	// Get default field values if we use this form for updating the action
+	if ($add == true) {
+		// Check for duplicate name
+		$columnArray = array('action_name');
+		$condition = "WHERE action_name = '" . $_POST['action_name'] . "'";
+		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
+		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		if (Database::numRows($result) > 0) {
+			$html = ACT_PAK_15;
+			$html = RenderViews::showResponse(ACT_PAK_15,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
+			define('HEADING', TXT_352);
+			define('BODY_CONTENT', $html);
+		} else {
+			// Add action to database
+			unset($columnArray);
+			$columnArray['action_id'] = Database::newID('action_definitions', 'action_id');
+			$columnArray['action_name'] = $_POST['action_name'] ;
+			$columnArray['item_type_id'] = $_POST['item_type_id'] ;
+			$columnArray['action_condition_pre'] = $_POST['system_field_pre'];
+			$columnArray['action_data'] = $_POST['action_data'];
+			$columnArray['enabled'] = $_POST['enabled'];
+			$columnArray['action_type'] = 'update_item';
+			$columnArray['package_file'] = 'Action_Triggers.actions.php';
+			$columnArray['package_function'] = 'TriggerActionSystemField';
+			$sql = Database::sqlInsert('action_definitions', $columnArray);
+			Database::query($sql, DSN, SET_SHOW_SQL);
+			$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_301,RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
+			define('HEADING', TXT_352);
+			define('BODY_CONTENT', $html);
+		}
+	} else {
+		$columnArray['action_name'] = $_POST['action_name'] ;
+		$columnArray['item_type_id'] = $_POST['item_type_id'] ;
+		$columnArray['action_condition_pre'] = $_POST['system_field_pre'];
+		$columnArray['enabled'] = $_POST['enabled'];
+		$columnArray['action_data'] = $_POST['action_data'];
+		$columnArray['action_type'] = 'update_item';
+		$columnArray['package_file'] = 'Action_Triggers.actions.php';
+		$columnArray['package_function'] = 'TriggerActionSystemField';
+		$condition = "WHERE action_id ='$actionID'";
+		$sql = Database::sqlUpdate('action_definitions', $columnArray, $condition);
+		Database::query($sql, DSN, SET_SHOW_SQL);
+		$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_164, RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
+		define('HEADING', TXT_352);
+		define('BODY_CONTENT', $html);
+	}
+	RenderViews::renderPage('main_page_content',  SET_THEME);
+}
+/**
+ * Executes an action based on the saved trigger action id
+ *
+ * @param integer $ Item Id
+ * @param array $preCondition Pre action condition array
+ * @param array $triggerCondition Pre action condition array
+ * @param string $actionParameters action action parameters
+ * @param array $actionData action data
+ * @param string $requestingAction Requesting Action allows the input of a specific action point for triggers etc (i.e. update_item, create_item)
+ * @return Boolean Return boolean vale to indicate action execution success
+ */
+function executeTriggerActionSystemField($itemID, $dataArray, $preCondition, $triggerCondition = '', $actionParameters = '', $actionData = '', $actionType = '',$requestingAction = '')
+{
+	// Set the conditionTrue variable to false and get our arguments ot prove otherwise
+	$conditionTrue = false;
+	// Get existing item information - the update
+	$columnArray = array('item_title','creator_security','user_security','group_security');
+	$condition = "WHERE item_id = '$itemID'";
+	$sql = Database::sqlSelect('items', $columnArray, $condition);
+	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	$row = Database::fetchArray($result);
+	switch ($preCondition) {
+		case 'item_title':
+			if ($row['item_title'] != $dataArray['item_title']){
+				$conditionTrue = true;
+			}
+			break;
+		case 'creator_security':
+			if ($row['creator_security'] != $dataArray['creator_security']){
+				$conditionTrue = true;
+			}
+			break;
+		case 'user_security':
+			if ($row['user_security'] != $dataArray['user_security']){
+				$conditionTrue = true;
+			}
+			break;
+		case 'group_security':
+			if ($row['group_security'] != $dataArray['group_security']){
+				$conditionTrue = true;
+			}
+			break;
+	}
+	// We've done our evaluation - now execute the reqired action
+	if ($conditionTrue == true) {
+		$columnArray = array ('*');
+		// Get all action information from actions triggered by this action
+		$condition = "WHERE action_id = '$actionData'";
+		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
+		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		while ($row = Database::fetchArray($result)) {
+			// Execute actions
+			require_once 'actions/' . $row['package_file'];
+			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
+			$functionName = 'execute' . $row['package_function'];
+			$functionName($itemID, $_POST, $row['action_condition_pre'], $row['action_condition_post'], $row['action_parameters'], $row['action_data']);
+		}
+		return true;
+	} else {
+		return false;
+	}
+}
+/**
+ * action Descriptors provide the base action name and associated information to the
+ * administration_actions controller file so it can create a package actions list
+ */
+//Custom Field Trigger Action
+$actionName['TriggerActionCustomField'] = ACT_PAK_13;
+$actionDescription['TriggerActionCustomField'] = ACT_PAK_16;
+//System Field Trigger Action
+$actionName['TriggerActionSystemField'] = ACT_PAK_34;
+$actionDescription['TriggerActionSystemField'] = ACT_PAK_48;
+
+?>

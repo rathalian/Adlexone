@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <!-- Core / Helpdesk -->
+    <symbol id="ic-helpdesk" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7v3H3v4h6v-7H8V9a4 4 0 1 1 8 0v1h-1v7h6v-4h-2V9a7 7 0 0 0-7-7z"/></symbol>
+    <symbol id="ic-announcements" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v4a2 2 0 0 0 2 2h2l2 4h2l-2-4h3V8H7a2 2 0 0 0-2 2H3zm14-6-6 3v10l6 3V4z"/></symbol>
+    <symbol id="ic-search" viewBox="0 0 24 24"><path fill="currentColor" d="M10 18a8 8 0 1 1 5.3-14.1l6.4 6.4-1.4 1.4-6.4-6.4A8 8 0 0 1 10 18z"/></symbol>
+    <symbol id="ic-hd-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.9 7.9 0 0 0 .1-2l2.1-1.6-2-3.5-2.5.7a7.6 7.6 0 0 0-1.7-1l-.3-2.5H9l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.5-.7-2 3.5 2.1 1.6a7.9 7.9 0 0 0 .1 2L2.5 14.6l2 3.5 2.5-.7a7.6 7.6 0 0 0 1.7 1l.3 2.5h4.2l.3-2.5a7.6 7.6 0 0 0 1.7-1l2.5.7 2-3.5L19.4 13zm-7.4 2.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></symbol>
+    <symbol id="ic-more" viewBox="0 0 24 24"><path fill="currentColor" d="M5 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></symbol>
+    <symbol id="ic-create-ticket" viewBox="0 0 24 24"><path fill="currentColor" d="M3 7h18v4h-2a2 2 0 1 0 0 4h2v4H3v-4h2a2 2 0 1 0 0-4H3z"/></symbol>
+    <symbol id="ic-quick-search" viewBox="0 0 24 24"><path fill="currentColor" d="M11 2 4 13h6l-1 9 7-11h-6zM17 15l5 5-1.5 1.5-5-5z"/></symbol>
+    <symbol id="ic-my-ticket-searches" viewBox="0 0 24 24"><path fill="currentColor" d="M10 4l2 2h8v4h-2V8H4v12h8v2H2V4zM20 14a4 4 0 1 1-3.2 6.4l-2.1 2.1-1.4-1.4 2.1-2.1A4 4 0 0 1 20 14z"/></symbol>
+    <symbol id="ic-create-ticket-search" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5h18v2H3zM8 11h8v2H8zM11 16h2v3h3v2h-3v3h-2v-3H8v-2h3z"/></symbol>
+
+    <!-- Knowledgebase -->
+    <symbol id="ic-knowledgebase" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h10a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4V4zm6 3h6v2h-6V7zM6 7h2v10a2 2 0 0 0 2 2H6V7z"/></symbol>
+    <symbol id="ic-new-article" viewBox="0 0 24 24"><path fill="currentColor" d="M5 3h12l2 2v12a4 4 0 0 1-4 4H5zM8 7h8v2H8zM8 11h8v2H8zM8 15h6v2H8z"/><path fill="currentColor" d="M19 3v4h4V5l-2-2z"/></symbol>
+    <symbol id="ic-subjects" viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v3H4zM4 10h10v3H4zM4 15h16v3H4z"/></symbol>
+    <symbol id="ic-article-search" viewBox="0 0 24 24"><path fill="currentColor" d="M5 3h12l2 2v8h-2V6H7v12h5v2H5z"/><path fill="currentColor" d="M17 14a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm5 7-3-3"/></symbol>
+    <symbol id="ic-kb-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h10a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path fill="currentColor" d="M19.4 13a7.9 7.9 0 0 0 .1-2l2.1-1.6-2-3.5-2.5.7a7.6 7.6 0 0 0-1.7-1l-.3-2.5H9"/></symbol>
+
+    <!-- Manage Custom Fields and Item Types -->
+    <symbol id="ic-manage-fields-types" viewBox="0 0 24 24"><path fill="currentColor" d="M3 4h10v6H3zM3 12h10v8H3zM15 4h6v6h-6zM15 12h6v8h-6z"/><path fill="currentColor" d="M6 7h4v2H6zM6 15h4v2H6z"/></symbol>
+    <symbol id="ic-item-mgmt" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v6H4zM4 12h16v8H4zM7 7h4v2H7zM7 15h4v2H7z"/></symbol>
+    <symbol id="ic-custom-field-add" viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h10v4H4zM4 11h10v4H4zM4 17h10v4H4z"/><path fill="currentColor" d="M18 13h2v3h3v2h-3v3h-2v-3h-3v-2h3z"/></symbol>
+    <symbol id="ic-itemtype-add" viewBox="0 0 24 24"><path fill="currentColor" d="M5 6h6v6H5zM13 6h6v6h-6zM5 14h6v6H5z"/><path fill="currentColor" d="M16 16h2v2h2v2h-2v2h-2v-2h-2v-2h2z"/></symbol>
+    <symbol id="ic-multilevel-menu" viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h6v3H4zM4 10h6v3H4zM4 15h6v3H4zM12 6h8v2h-8zM12 11h5v2h-5zM12 16h8v2h-8z"/></symbol>
+
+    <!-- System / App Settings -->
+    <symbol id="ic-system-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v4H4zM4 10h16v10H4zM7 7h4v2H7z"/></symbol>
+    <symbol id="ic-adlexone-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7zM7 9h10v2H7zM7 13h6v2H7z"/></symbol>
+    <symbol id="ic-inbound-email" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5h18v14H3z"/><path fill="currentColor" d="M3 7l9 6 9-6"/><path fill="currentColor" d="M12 13v7l3-3h-2l-1 1-1-1H9z"/></symbol>
+    <symbol id="ic-ldap" viewBox="0 0 24 24"><path fill="currentColor" d="M10 3h4v4h-4zM4 11h4v4H4zM16 11h4v4h-4zM10 17h4v4h-4z"/><path fill="none" stroke="currentColor" stroke-width="2" d="M12 7v4M8 15h8M12 15v2"/></symbol>
+    <symbol id="ic-autologon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 1 5 5v1h2l-3 4-3-4h2V7a3 3 0 1 0-6 0v2H7V7a5 5 0 0 1 5-5z"/><path fill="currentColor" d="M4 12h16v8H4zM8 16h8v2H8z"/></symbol>
+    <symbol id="ic-advanced" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 9 8l-7 1 5 5-1 7 6-3 6 3-1-7 5-5-7-1z"/></symbol>
+    <symbol id="ic-data-sharing" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm10 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path fill="currentColor" d="M9 10l6 2-6 2"/></symbol>
+    <symbol id="ic-data-source" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6c0-2 4-4 8-4s8 2 8 4-4 4-8 4-8-2-8-4zm0 6c0 2 4 4 8 4s8-2 8-4v4c0 2-4 4-8 4s-8-2-8-4v-4z"/></symbol>
+    <symbol id="ic-server" viewBox="0 0 24 24"><path fill="currentColor" d="M3 4h18v6H3zM3 14h18v6H3zM6 7h2v2H6zM6 17h2v2H6z"/></symbol>
+
+    <!-- Launch / Open in new -->
+    <symbol id="ic-launch" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="12" height="12" rx="2"/>
+        <path d="M9 15L20 4"/>
+        <path d="M14 4h6v6"/>
+    </symbol>
+
+    <!-- Logoff / Sign out -->
+    <symbol id="ic-logoff" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="10" height="16" rx="2"/>
+        <circle cx="11" cy="12" r="1"/>
+        <path d="M14 12h6"/>
+        <path d="M18 8l4 4-4 4"/>
+    </symbol>
+
+</svg>

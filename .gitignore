@@ -1,0 +1,26 @@
+# Real config files contain credentials; templates live in config.example/
+config/**/*.json
+
+# Runtime data
+storage/database/*.sqlite
+storage/database/*.sqlite-wal
+storage/database/*.sqlite-shm
+storage/attachments/*
+!storage/attachments/.gitkeep
+writeable/
+
+# Logs
+error_log
+**/error_log
+*.log
+
+# Tooling
+composer.phar
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp

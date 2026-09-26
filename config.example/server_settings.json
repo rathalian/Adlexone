@@ -1,0 +1,18 @@
+{
+    "SET_INIT_ID":  "",
+    "SET_CACHED":  "Off",
+    "SET_DB_TYPE":  "mysql",
+    "SET_DRIVER":  "",
+    "SET_DATABASE_HOST":  "localhost",
+    "SET_DATABASE_PORT":  "3306",
+    "SET_DATABASE_NAME":  "aims3",
+    "SET_DATABASE_USER":  "",
+    "SET_DATABASE_PWD":  "",
+    "SET_SMTP_HOST":  "smtp.gmail.com",
+    "SET_SMTP_PORT":  "587",
+    "SET_SMTP_REPLY":  "",
+    "SET_SMTP_AUTHENTICATION":  "Yes",
+    "SET_SMTP_TLS":  "Yes",
+    "SET_SMTP_USER":  "",
+    "SET_SMTP_PASSWORD":  ""
+}
