@@ -1,0 +1,15 @@
+{
+  "name": "adlexone-flowiq",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "install": "composer install --no-interaction --prefer-dist",
+  "start": "bash .cursor/prepare-runtime.sh",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "php -S 0.0.0.0:8000",
+      "description": "FlowIQ on port 8000"
+    }
+  ]
+}
