@@ -77,21 +77,21 @@ CREATE TABLE IF NOT EXISTS aims_custom_fields (
 INSERT INTO aims_custom_fields (custom_field_id, custom_field_name, field_type, default_value, sub_menu, enabled, field_reference, data, validation_type, required) VALUES
 (6, 'Ticket Category', 'subMenuChild', '', 0, 'Yes', 6, '', NULL, NULL),
 (7, 'Ticket Group', 'subMenu', '', 6, 'Yes', 7, '', NULL, NULL),
-(1, 'Description', 'buildTextArea', '', 0, 'Yes', 1, NULL, NULL, NULL),
-(2, 'Priority', 'buildSelectDropdown', 'Please Select', 0, 'Yes', 2, NULL, NULL, NULL),
-(3, 'Status', 'buildSelectDropdown', 'Please Select', 0, 'Yes', 3, NULL, NULL, NULL),
-(4, 'Severity', 'buildSelectDropdown', 'Please Select', 0, 'Yes', 4, NULL, NULL, NULL),
-(5, 'Project', 'buildSelectDropdown', 'Please Select', 0, 'Yes', 5, NULL, NULL, NULL),
-(8, 'Cost Center', 'buildSelectDropdown', '', 0, 'Yes', 8, '', '', 'No'),
-(9, 'Job Code', 'buildSelectDropdown', '', 0, 'Yes', 9, '', '', 'No'),
-(10, 'Fixed Cost', 'buildSelectDropdown', '', 0, 'Yes', 10, '', '', 'No'),
+(1, 'Description', 'textArea', '', 0, 'Yes', 1, NULL, NULL, NULL),
+(2, 'Priority', 'menu', 'Please Select', 0, 'Yes', 2, NULL, NULL, NULL),
+(3, 'Status', 'menu', 'Please Select', 0, 'Yes', 3, NULL, NULL, NULL),
+(4, 'Severity', 'menu', 'Please Select', 0, 'Yes', 4, NULL, NULL, NULL),
+(5, 'Project', 'menu', 'Please Select', 0, 'Yes', 5, NULL, NULL, NULL),
+(8, 'Cost Center', 'menu', '', 0, 'Yes', 8, '', '', 'No'),
+(9, 'Job Code', 'menu', '', 0, 'Yes', 9, '', '', 'No'),
+(10, 'Fixed Cost', 'menu', '', 0, 'Yes', 10, '', '', 'No'),
 (11, 'Time Spent (Minutes)', 'workerField', '', 0, 'Yes', 11, '', 'numeric', 'No'),
 (12, 'Categories', 'subMenuChild', '', 0, 'Yes', 12, '', '', 'Yes'),
 (13, 'Category Group', 'subMenu', '', 12, 'Yes', 13, '', '', 'Yes'),
-(14, 'Subject', 'buildSelectDropdown', '', 0, 'Yes', 14, '', '', 'Yes'),
-(15, 'Article Summary', 'buildTextArea', '', 0, 'Yes', 15, '', '', 'Yes'),
-(16, 'Keywords', 'buildTextInput', '', 0, 'Yes', 16, '', '', 'No'),
-(17, 'Featured Article', 'buildSelectDropdown', 'No', 0, 'Yes', 17, '', '', 'Yes');
+(14, 'Subject', 'menu', '', 0, 'Yes', 14, '', '', 'Yes'),
+(15, 'Article Summary', 'textArea', '', 0, 'Yes', 15, '', '', 'Yes'),
+(16, 'Keywords', 'textBox', '', 0, 'Yes', 16, '', '', 'No'),
+(17, 'Featured Article', 'menu', 'No', 0, 'Yes', 17, '', '', 'Yes');
 
 -- aims_custom_field_menu_values
 CREATE TABLE IF NOT EXISTS aims_custom_field_menu_values (

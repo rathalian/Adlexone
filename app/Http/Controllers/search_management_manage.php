@@ -74,26 +74,23 @@ function updateKnoweldgeCount($knowledgeIds)
  */
 function showQuickSearch()
 {
-    $html = RenderViews::buildStartForm('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=quick_search', 'POST', 'form-horizontal');
-    $field[TXT_682] = RenderViews::buildSelectDropdown('search_type', array('item_id', 'item_title', 'log_entries'), array(TXT_102, TXT_84, TXT_601), '') . ' ';
-    $field[TXT_683] = RenderViews::buildTextInput('search_value', '') . ' ';
     $jsFieldNameArray = "['search_value']";
     $jsTestTypeArray = "['']";
     $jsErrorMsgArray = "['']";
     $jsRequiredMsgArray = "['" . TXT_206 . "']";
     $jsRequiredArray = "[true]";
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
-    $field[] = RenderViews::buildHiddenInput('search', 'Search');
-    $html .= RenderViews::buildFormFieldsGrid($field);
-    $button[] = RenderViews::buildFormButton('submit', 'search', TXT_3, '', $javascript);
-    $html .= RenderViews::buildEndFormWithButtons($button);
-    $bodyBlocks = [];
-    $bodyBlocks[] = [
-        'title' => TXT_376,
-        'html' => $html,
-        'full' => true,
+    $fields = [
+        TXT_682 => RenderViews::buildSelectDropdown('search_type', array('item_id', 'item_title', 'log_entries'), array(TXT_102, TXT_84, TXT_601), ''),
+        TXT_683 => RenderViews::buildTextInput('search_value', ''),
+        '' => RenderViews::buildHiddenInput('search', 'Search'),
     ];
-    define('BODY_CONTENT', RenderViews::buildVerticalCards($bodyBlocks));
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_376,
+        'index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=quick_search',
+        $fields,
+        [RenderViews::buildFormButton('submit', 'search', TXT_3, $javascript)]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -158,7 +155,7 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
         $bodyBlocks = [
             [
                 'title' => RenderViews::languageAlias('LA_44', 'TXT_44'),
-                'html' => RenderViews::showResponse(TXT_115),
+                'html' => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8'),
                 'full' => true,
             ],
         ];
@@ -792,13 +789,9 @@ function showItems1($itemIDArray, $itemID = '', $orderSQL = '',  $userID = '', $
 		$html .= $headHtml;
 		$html .= '</form>';
 	}else{
-		$tableHeadings = array (RenderViews::getLanguageConstant('LA_102', 'TXT_102'),RenderViews::getLanguageConstant('LA_84', 'TXT_84'),TXT_225,RenderViews::getLanguageConstant('LA_226', 'TXT_226'),TXT_388);
-		$html = RenderViews::tbStartTable('table');
-		$html .= RenderViews::tbTableHeadings($tableHeadings);
-		$html .= RenderViews::tbTableRows(array(TXT_115,'','','',''));
-		$html .= RenderViews::endTable();
-
-		//$html = RenderViews::table('100%','0','1','0','',$tableRows);
+		$html = RenderViews::buildFormFieldsGrid([
+			RenderViews::getLanguageConstant('LA_102', 'TXT_102') => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8'),
+		]);
 
 	}
 	if (defined('APP_COUNT_ITEM_TYPE') && count($knowledgeArticlesArray) > 0) {
@@ -849,10 +842,7 @@ function searchResults($sql = '')
         if (($_POST['search_type'] == 'quick_search' || $_POST['search_type'] = 'show_search_results') && $_POST['sess'] != '') {
             $_POST['search'] = 'log_entries';
         } else {
-            $html = RenderViews::showResponse(TXT_548);
-            define('BODY_CONTENT', $html);
-            define('HEADING', TXT_307);
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
+            RenderViews::buildResponse(TXT_548);
             return;
         }
     }
@@ -1020,8 +1010,7 @@ if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['
 //            $imagesFolder = THEME_PATH . $theme . '/images/';
 //            $imageHTML = '<img src="' . $imagesFolder . $buildImage . '"> ';
 //        }
-        echo RenderViews::buildFormSectionHeading(TXT_354);
-        echo RenderViews::buildFormFieldsGrid([TXT_375]);
+        RenderViews::buildResponse(TXT_354, TXT_375);
         // $html .= RenderViews::tableData('2', '', 'left', '', $titleClass, array($imageHTML . '&nbsp;' . TXT_354), 'row');
         //$html .= RenderViews::tableData('', '', 'left', '', $contentClass, array($text), 'row');
         //  $html .= RenderViews::endTable();
@@ -1088,12 +1077,14 @@ function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescriptio
     $sql = "SELECT user FROM saved_searches WHERE search_name = '$searchName' AND user = '$userID'";
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     if (Database::numRows($result) > 0) {
-        $html = RenderViews::showResponse(TXT_311, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
-    } elseif ($searchName == '') {
-        $html = RenderViews::showResponse(TXT_367, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
-    } else {
-        // Add to database and return success message
-        $columnArray['search_id'] = Database::newID('saved_searches', 'search_id');
+        RenderViews::buildResponse(TXT_311, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
+        return;
+    }
+    if ($searchName == '') {
+        RenderViews::buildResponse(TXT_367, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
+        return;
+    }
+    $columnArray['search_id'] = Database::newID('saved_searches', 'search_id');
         if ($security == 'all') {
             $columnArray['user'] = 'all';
         } elseif ($security == 'mine') {
@@ -1108,11 +1099,7 @@ function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescriptio
         $sql = Database::sqlInsert('saved_searches', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
         // Success messagae
-        $html = RenderViews::showResponse(TXT_25, RenderViews::buildURL('javascript: history.go(-1)', TXT_404, 'URL'));
-    }
-    define('BODY_CONTENT', $html);
-    define('HEADING', TXT_307);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse(TXT_25, RenderViews::buildURL('javascript: history.go(-1)', TXT_404, 'URL'));
 }
 
 function savedSearch($searchID, $userID, $global = false, $rss = false)
@@ -1285,12 +1272,12 @@ function showCustomFieldsAsList($itemTypeID = '', $fieldData = '', $dispRows = '
         $fieldData[] = RenderViews::buildCheckBox('disp_custom_field_' . $row[0], false, true, 'form-control');
         $fieldData[] = RenderViews::buildRadioButton('sort_field', 'sort_custom_field_' . $row[0], '', '');
         if (count($fieldData) == 9) {
-            $dispRows .= RenderViews::tableData('1', array("15%", "10%", "10%", "10%", "10%", "10%", "10%", "10%", "15%"), array('right', 'center', 'left', 'right', 'center', 'left', 'right', 'center', 'left'), '', 'tdc1', $fieldData, 'row');
+            $dispRows .= '<div class="group-security-list">' . implode('', $fieldData) . '</div>';
             unset($fieldData);
         }
     }
-    if (isset($fieldData)) {
-        $dispRows .= RenderViews::tableData('1', array("15%", "10%", "10%", "10%", "10%", "10%", "10%", "10%", "15%"), array('right', 'center', 'left', 'right', 'center', 'left', 'right', 'center', 'left'), '', 'tdc1', $fieldData, 'row');
+    if (isset($fieldData) && is_array($fieldData)) {
+        $dispRows .= '<div class="group-security-list">' . implode('', $fieldData) . '</div>';
     }
 
     return $dispRows;
@@ -1403,18 +1390,12 @@ function showAdvancedItemSearch($filter = '')
     $andOrDisplayValues = array(TXT_109, TXT_110);
     $eventId = (isset($_GET['event_id'])) ? '&event_id=' . $_GET['event_id'] : '';
 
-    // Start the form
-    $html = RenderViews::buildStartForm('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=show_search_results' . $eventId, 'POST', 'form-horizontal');
-
-
-    // System Criteria Section
     $styleAdvanceUser = (Database::sqlLookup('users', 'WHERE user_id = ' . $_SESSION['access_user_id'] . ' AND settings LIKE "%{SHOW-HIDE=TRUE}%"', DSN, SET_SHOW_SQL)) ? "" : 'style="display:none;"';
 
-    // Define fields for system criteria
-    // Item Types Section
-    $searchCriteria[TXT_99] = showItemTypeMenu($filter);
-    $searchCriteria[TXT_102] = RenderViews::buildSelectDropdown('id_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildTextInput('item_id', '') . RenderViews::buildSelectDropdown('id_andor', $andOrValues, $andOrDisplayValues, '');
-    $searchCriteria[TXT_84] = RenderViews::buildSelectDropdown('item_title_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildTextInput('item_title', '') . RenderViews::buildSelectDropdown('title_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields = [];
+    $fields[TXT_99] = showItemTypeMenu($filter);
+    $fields[TXT_102] = RenderViews::buildSelectDropdown('id_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildTextInput('item_id', '') . RenderViews::buildSelectDropdown('id_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_84] = RenderViews::buildSelectDropdown('item_title_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildTextInput('item_title', '') . RenderViews::buildSelectDropdown('title_andor', $andOrValues, $andOrDisplayValues, '');
 
     // Populate users dropdown
     $sql = "select user_id, user_name FROM users ORDER BY user_name ASC";
@@ -1425,30 +1406,19 @@ function showAdvancedItemSearch($filter = '')
     }
 
     // Add user-related fields to system criteria
-    $searchCriteria[TXT_551] = RenderViews::buildSelectDropdown('security_creators_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildSelectDropdown('creator_security', array_keys($listValues), array_values($listValues), '') . RenderViews::buildSelectDropdown('security_creators_andor', $andOrValues, $andOrDisplayValues, '');
-    $searchCriteria[TXT_269] = RenderViews::buildSelectDropdown('security_users_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildSelectDropdown('user_security', array_keys($listValues), array_values($listValues), '') . RenderViews::buildSelectDropdown('security_users_andor', $andOrValues, $andOrDisplayValues, '');
-    $searchCriteria[TXT_79] = RenderViews::buildSelectDropdown('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), '') . showSecurityGroups() . RenderViews::buildSelectDropdown('security_groups_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_551] = RenderViews::buildSelectDropdown('security_creators_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildSelectDropdown('creator_security', array_keys($listValues), array_values($listValues), '') . RenderViews::buildSelectDropdown('security_creators_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_269] = RenderViews::buildSelectDropdown('security_users_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildSelectDropdown('user_security', array_keys($listValues), array_values($listValues), '') . RenderViews::buildSelectDropdown('security_users_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_79] = RenderViews::buildSelectDropdown('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), '') . showSecurityGroups() . RenderViews::buildSelectDropdown('security_groups_andor', $andOrValues, $andOrDisplayValues, '');
 
-    $html .= RenderViews::buildFormFieldsGrid($searchCriteria);
+    $fields[TXT_406] = RenderViews::buildSelectDropdown('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('hour_range_operator', array('<=', '=', '>='), array(TXT_111, TXT_81, TXT_405), '>=') . ' ' . RenderViews::buildTextInput('hour_range', '', '30', true) . ' ' . RenderViews::buildSelectDropdown('hour_range_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_103 . ' 1'] = RenderViews::buildSelectDropdown('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>=') . ' ' . RenderViews::buildTextInput('date_1', '') . ' ' . RenderViews::buildSelectDropdown('date_andor_1', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_103 . ' 2'] = RenderViews::buildSelectDropdown('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<=') . ' ' . RenderViews::buildTextInput('date_2', '') . ' ' . RenderViews::buildSelectDropdown('date_andor_2', $andOrValues, $andOrDisplayValues, '');
+    $fields[TXT_407] = 'dd-mm-yyyy hh:mm:ss';
 
-    // Date Criteria Section
-    $html .= RenderViews::buildFormSectionHeading(TXT_406);
-    $dateFields[TXT_419] = RenderViews::buildSelectDropdown('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('hour_range_operator', array('<=', '=', '>='), array(TXT_111, TXT_81, TXT_405), '>=') . ' ' . RenderViews::buildTextInput('hour_range', '', '30', true) . ' ' . RenderViews::buildSelectDropdown('hour_range_andor', $andOrValues, $andOrDisplayValues, '');
-    $dateFields[] = RenderViews::buildSelectDropdown('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>=') . ' ' . RenderViews::buildTextInput('date_1', '') . ' ' . RenderViews::buildSelectDropdown('date_andor_1', $andOrValues, $andOrDisplayValues, '');
-    $dateFields[] = RenderViews::buildSelectDropdown('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<=') . ' ' . RenderViews::buildTextInput('date_2', '') . ' ' . RenderViews::buildSelectDropdown('date_andor_2', $andOrValues, $andOrDisplayValues, '');
-    $dateFields[] = TXT_407 . ' -  dd-mm-yyyy hh:mm:ss';
-
-    $html .= RenderViews::buildFormFieldsGrid($dateFields);
-
-   // Custom Fields Section
-    $html .= RenderViews::buildFormSectionHeading(TXT_106);
     $postedItemTypeID = (isset($_POST['item_type_id'])) ? $_POST['item_type_id'] : $filter;
-    $html .= showCustomFields($postedItemTypeID);
+    $fields[TXT_106] = showCustomFields($postedItemTypeID);
 
-    // Display Fields and Sort Section
-    $html .= RenderViews::buildFormSectionHeading(TXT_527);
-    $sortFields[TXT_258] = RenderViews::buildRadioButton('sortOrder', 'ascending', 'ascending', '') . ' ' . RenderViews::buildRadioButton('sortOrder', 'descending', '', '');
-    $html .= RenderViews::buildFormFieldsGrid($sortFields);
+    $fields[TXT_258] = RenderViews::buildRadioButton('sortOrder', 'ascending', 'ascending', '') . ' ' . RenderViews::buildRadioButton('sortOrder', 'descending', '', '');
 
     // Display fields grid
     $fieldData = [
@@ -1462,20 +1432,15 @@ function showAdvancedItemSearch($filter = '')
         RenderViews::buildCheckBox('disp_create_date', 'true', 'true'),
         RenderViews::buildRadioButton('sort_field', 'sort_create_date', '', '')
     ];
-    $html .= RenderViews::renderHorizontalList($fieldData);
+    $fields[TXT_527] = RenderViews::renderHorizontalList($fieldData);
 
-    // Favourite Search Section
-    $html .= RenderViews::buildFormSectionHeading(RenderViews::getLanguageConstant('LA_307', 'TXT_307'));
-    $favFields = [
-        RenderViews::getLanguageConstant('LA_310', 'TXT_310') => RenderViews::buildTextInput('search_name', ''),
-        RenderViews::getLanguageConstant('LA_312', 'TXT_312') => RenderViews::buildTextArea('search_description', '', SET_FORM_FIELD_HEIGHT)
-    ];
+    $fields[RenderViews::getLanguageConstant('LA_310', 'TXT_310')] = RenderViews::buildTextInput('search_name', '');
+    $fields[RenderViews::getLanguageConstant('LA_312', 'TXT_312')] = RenderViews::buildTextArea('search_description', '', SET_FORM_FIELD_HEIGHT);
     if ($_SESSION['access_role_id'] <= '1') {
-        $favFields[TXT_403] = RenderViews::buildSelectDropdown('security', array('mine', 'all', 'system'), array(TXT_402, TXT_401, TXT_482), '1');
+        $fields[TXT_403] = RenderViews::buildSelectDropdown('security', array('mine', 'all', 'system'), array(TXT_402, TXT_401, TXT_482), '1');
     } else {
-        $html .= RenderViews::buildHiddenInput('security', 'mine');
+        $fields[''] = RenderViews::buildHiddenInput('security', 'mine');
     }
-    $html .= RenderViews::buildFormFieldsGrid($favFields);
 
     // Application Menu
     $directory = opendir('app/http/controllers/applications/');
@@ -1509,36 +1474,29 @@ function showAdvancedItemSearch($filter = '')
             }
         }
     }
-    $applicationMenu = RenderViews::buildSelectDropdown('application', $baseURLArray, $nameArray, $_GET['controller']);
-    $html .= RenderViews::buildFormFieldsGrid([TXT_350 => $applicationMenu]);
+    $fields[TXT_350] = RenderViews::buildSelectDropdown('application', $baseURLArray, $nameArray, $_GET['controller']);
 
-    // SQL free form area for admin only
     if ($_SESSION['access_role_id'] == 0) {
-        $html .= RenderViews::buildFormFieldsGrid([TXT_421 => RenderViews::buildTextArea('sql_query', '', SET_FORM_FIELD_HEIGHT)]);
+        $fields[TXT_421] = RenderViews::buildTextArea('sql_query', '', SET_FORM_FIELD_HEIGHT);
     }
 
-    // Buttons
     $jsFieldNameArray = "['search_name']";
     $jsTestTypeArray = "['']";
     $jsErrorMsgArray = "['']";
     $jsRequiredMsgArray = "['" . TXT_367 . "']";
     $jsRequiredArray = "[true]";
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
-    $submitButton = RenderViews::buildFormButton('submit', 'search', TXT_3) . ' ';
-    $resetButton = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-    $saveButton = RenderViews::buildFormButton('submit', 'new_favourite', TXT_309, $javascript);
 
-    $html .= RenderViews::buildEndFormWithButtons([$submitButton, $resetButton, $saveButton]);
-
-    $bodyBlocks[] = [
-        'title' => TXT_96,
-        'html' => $html,
-        'full' => true,
-    ];
-    $bodyContent = RenderViews::buildVerticalCards($bodyBlocks);
-    // Define constants for the page content and heading
-    define('BODY_CONTENT', $bodyContent);
-    // define('HEADING', RenderViews::getLanguageConstant('LA_96', 'TXT_96'));
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_96,
+        'index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=show_search_results' . $eventId,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'search', TXT_3),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+            RenderViews::buildFormButton('submit', 'new_favourite', TXT_309, $javascript),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -1558,29 +1516,19 @@ function editSavedSearch($id)
     }
 
     $action = 'index.php?controller=' . ($_GET['controller'] ?? '') . '&subcontroller=search_management_manage&option=update_saved_search&id=' . $id;
-    $html = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
-
-    // Build form fields using the new grid pattern
-    $fields = [];
-    $fields[TXT_627] = RenderViews::buildTextInput('search_name', $row['search_name']);
-    $fields[TXT_628] = RenderViews::buildTextArea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT);
-
-    $html .= RenderViews::buildFormFieldsGrid($fields);
-
-    // Buttons
-    $submit = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-    $reset = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-    $html .= RenderViews::buildEndFormWithButtons([$submit, $reset]);
-
-    // Render as a vertical card (consistent with other views)
-    $bodyBlocks[] = [
-        'title' => TXT_628 . ' - ' . $row['search_name'],
-        'html'  => $html,
-        'full'  => true,
+    $fields = [
+        TXT_627 => RenderViews::buildTextInput('search_name', $row['search_name']),
+        TXT_628 => RenderViews::buildTextArea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT),
     ];
-
-    define('BODY_CONTENT', RenderViews::buildVerticalCards($bodyBlocks));
-    define('HEADING', TXT_628 . ' - ' . $row['search_name']);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_628 . ' - ' . $row['search_name'],
+        $action,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -1603,7 +1551,8 @@ function updateSavedSearch($id)
 switch (@$_GET['option']) {
     case 'show_item_search' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-        @$filter = (stristr($_GET['item_types'], ',')) ? explode(',', $_GET['item_types']) : $_GET['item_types'];
+        $itemTypes = $_GET['item_types'] ?? '';
+        $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
         showAdvancedItemSearch($filter);
         break;
     case 'show_search_results' :

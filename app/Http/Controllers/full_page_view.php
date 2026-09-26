@@ -24,6 +24,7 @@
  */
 
 use Adlexone\support\Database;
+use Adlexone\support\FieldTypes;
 use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
 
@@ -113,7 +114,6 @@ function printItem($itemID)
 		} // while
 		$itemField[TXT_270] = $groupMembership;
 		$itemField[TXT_84] = $itemFields['item_title'];
-		$tableRows = RenderViews::tableData('2', '', array('left'), '', 'tdcHeadingBottomBorder', array (TXT_624.": ".$itemFields['item_id'] .' - ' . $itemTypeName), 'row');
 		// Setup custom field display
 		$columnArray = array ('custom_field_id');
 		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
@@ -125,6 +125,7 @@ function printItem($itemID)
 			$sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
 			$result = Database::query($sql, DSN, SET_SHOW_SQL);
 			$row = Database::fetchArray($result);
+			$row['field_type'] = FieldTypes::normalise($row['field_type']);
 			if ($row['enabled'] != 'Yes'){
 				continue;
 			}
@@ -133,27 +134,25 @@ function printItem($itemID)
 			}
 			// Override database value if values have already been selected
 			$value = @$itemFields['custom_field_' . $row['custom_field_id']];
-			if ($row['field_type'] == 'buildTextArea'){
+			if ($row['field_type'] == FieldTypes::TEXT_AREA){
 				$value = str_replace("\n", "<br />", $value);
 				$value = '<br />'.$value.'<br /><br />';
 			}
 			$itemField[$row['custom_field_name']] = $value;
 
 		}
+		$displayFields = [];
 		foreach ($itemField as $name => $field) {
-			$cellData = array ('<strong>' . $name . '</strong>', $field);
-			$tableRows .= RenderViews::tableData('', array('20%', '80%'), array('left', 'left'), '', array('tdc1BottomBorder', 'tdc1BottomBorder'), $cellData, 'row');
+			$displayFields[$name] = '<div>' . $field . '</div>';
 		}
-		$html = '';
-		//Get item time
+		$html = RenderViews::buildFormFieldsGrid($displayFields);
 		$sql = "SELECT sum(minutes) AS total_minutes FROM timemanager_time_table WHERE item_id = '$itemID'";
 		$result = Database::query($sql, DSN, SET_SHOW_SQL);
 		$timeRow = Database::fetchArray($result);
-		if ($timeRow['total_minutes'] > 0){
-			$tableRows .= RenderViews::tableData('2', '', array('left'), '', 'tdcHeadingBottomBorder', array (TXT_640), 'row');
-			$tableRows .= RenderViews::tableData('', array('20%', '80%'), array('left', 'left'), '', array('tdform', 'tdformIndent'), array(TXT_639,$timeRow['total_minutes']), 'row');
+		if ($timeRow && $timeRow['total_minutes'] > 0){
+			$html .= RenderViews::buildFormFieldsGrid([TXT_639 => htmlspecialchars((string)$timeRow['total_minutes'], ENT_QUOTES, 'UTF-8')]);
 		}
-		$tableRows .= RenderViews::tableData('2', '', array('left'), '', 'tdcHeadingBottomBorder', array (TXT_601), 'row');
+		$logHtml = '';
 		// Get item log information from database
 		$columnArray = array ('*');
 		$condition = "WHERE item_id = '" . $itemID . "' ORDER BY log_item_sequence DESC";
@@ -170,6 +169,7 @@ function printItem($itemID)
 					$resultUser = Database::query($sql, DSN, SET_SHOW_SQL);
 					$rowUser = Database::fetchArray($resultUser);
 				}
+				$role = '';
 				switch ($row['role_id']) {
 					case 0:
 						$role = TXT_190;
@@ -190,21 +190,21 @@ function printItem($itemID)
 						$role = TXT_303;
 						break;
 				}
-				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $rowUser['user_name'] . '(' . $rowUser['first_name'] . ' ' . $rowUser['last_name'] . ' - ' . $role . ')';
-				$tableRows .= RenderViews::tableData('2', '', 'left', 'trc1', '', array ($heading), 'row');
-				$text = eregi_replace("\n", "<br>", $row['log_text']);
-				$text = eregi_replace("  ", "&nbsp;&nbsp;", $text);
-				$tableRows .= RenderViews::tableData('2', '', 'left', 'trc2', '', array ($text), 'row');
+				$userName = htmlspecialchars((string)($rowUser['user_name'] ?? ''), ENT_QUOTES, 'UTF-8');
+				$firstName = htmlspecialchars((string)($rowUser['first_name'] ?? ''), ENT_QUOTES, 'UTF-8');
+				$lastName = htmlspecialchars((string)($rowUser['last_name'] ?? ''), ENT_QUOTES, 'UTF-8');
+				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . htmlspecialchars((string)$role, ENT_QUOTES, 'UTF-8') . ')</i></strong>';
+				$text = nl2br(htmlspecialchars((string)$row['log_text'], ENT_QUOTES, 'UTF-8'));
+				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
 			}
 		}
-		$html .= RenderViews::table('95%', '0', '5', '0', 'tcBorder', $tableRows);
-		//define('HEADING', RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName);
-		define('FULL_PAGE_CONTENT', $html);
+		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([
+			['title' => TXT_624 . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName, 'html' => $html],
+			['title' => TXT_601, 'html' => $logHtml],
+		]));
 		RenderViews::renderThemePage('full_page_view',  SET_THEME);
 	}else{
-		// Not allowed
-		$html = RenderViews::showResponse(TXT_452);
-		define('BODY_CONTENT', $html);
+		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_452, 'html' => '']]));
 		RenderViews::renderThemePage('full_page_view',  SET_THEME);
 	}
 }
@@ -222,8 +222,7 @@ switch (@$_GET['option']) {
 		break;
 	default :
 		// Not allowed
-		$html = RenderViews::showResponse(TXT_623);
-		define('FULL_PAGE_CONTENT', $html);
+		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_623, 'html' => '']]));
 		RenderViews::renderThemePage('full_page_view',  SET_THEME);
 }
 ?>

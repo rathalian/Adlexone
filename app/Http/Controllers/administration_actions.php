@@ -25,6 +25,15 @@
 
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
+use Adlexone\support\RenderNavigation;
+
+/**
+ * Left navigation card: icon plus blue capital on the current item, matching System Settings.
+ */
+$controllers = RenderNavigation::build([
+    'Workflow' => RenderNavigation::workflowURLs(),
+]);
+define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
 
 /**
  * Controller specific constants
@@ -35,17 +44,10 @@ define('ACT_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcont
  */
 function showSettingsOptions (): void
 {
-	// Security Options
-	$securityOption = RenderViews::buildURL(ACT_BASE_URL . '&option=show_action_packages', TXT_255, 'URL') . '<br>';
-	// Secure for users for role 1 (Users) and above
-	$tableRows = RenderViews::outputIfRoleAllowed(RenderViews::tableData('', '', '', '', 'tdc1', array($securityOption), 'row'), $_SESSION['access_role_id'], 1);
-	$securityOption = RenderViews::buildURL(ACT_BASE_URL . '&option=show_defined_actions', TXT_411, 'URL') . '<br>';
-	// Secure for users for role 0 (Viewers) and above
-	$tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('', '', '', '', 'tdc1', array($securityOption), 'row'), $_SESSION['access_role_id'], 1);
-	$html = RenderViews::table('100%', '0', '5', '0', 'tcNavigationBorder', $tableRows);
-	// Show page
-	define('HEADING', TXT_128);
-	define('BODY_CONTENT', $html);
+	$html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(ACT_BASE_URL . '&option=show_action_packages', TXT_255), $_SESSION['access_role_id'], 1);
+	$html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL(ACT_BASE_URL . '&option=show_defined_actions', TXT_411), $_SESSION['access_role_id'], 1);
+
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_128, 'html' => $html]]));
 	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
@@ -97,22 +99,24 @@ function showactionPackages(): void
 
 function showPackageactionList($actionPackage): void
 {
-	// Setup a list of actions for the selected package
-	require_once  'actions/' . $actionPackage . '.actions.php';
-	// $actionName and $description are arrays set in the action package file
-	$tableRows = '';
-    $actionName = '';
-    foreach($actionName as $descriptorName => $value) {
-		// Create action URL and information for user
-		$actionName = RenderViews::buildURL(ACT_BASE_URL . '&option=new_action&action_package=' . $actionPackage . '&descriptor_name=' . $descriptorName, $value, 'URL');
-		$description = $actionDescription[$descriptorName];
-		$tableRows .= RenderViews::tbTableRows(array($actionName));
-		$tableRows .= RenderViews::tbTableRows(array($description));
+	require_once 'actions/' . $actionPackage . '.actions.php';
+	$html = '';
+	$names = (isset($actionName) && is_array($actionName)) ? $actionName : [];
+	$descriptions = (isset($actionDescription) && is_array($actionDescription)) ? $actionDescription : [];
+	foreach ($names as $descriptorName => $value) {
+		$url = RenderViews::buildURL(ACT_BASE_URL . '&option=new_action&action_package=' . $actionPackage . '&descriptor_name=' . $descriptorName, (string)$value, '', 'URL');
+		$html .= RenderViews::buildFormFieldsGrid([
+			TXT_299 => $url,
+			'' => htmlspecialchars((string)($descriptions[$descriptorName] ?? ''), ENT_QUOTES, 'UTF-8'),
+		]);
+		$html .= RenderViews::buildHorizontalSeparator();
 	}
-	$html = RenderViews::tbTable($tableRows, 'table table-bordered table-striped', '100%');
-	define('HEADING', TXT_253 . ' - ' . str_replace('_', ' ', $actionPackage));
-	define('BODY_CONTENT', $html);
-	RenderViews::renderThemePage('main_page_content',  SET_THEME);
+	if ($html === '') {
+		$html = htmlspecialchars(TXT_412, ENT_QUOTES, 'UTF-8');
+	}
+	$title = TXT_253 . ' - ' . str_replace('_', ' ', (string)$actionPackage);
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => $title, 'html' => $html]]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 function showDefinedactions ()
 {
@@ -121,36 +125,28 @@ function showDefinedactions ()
 	$condition = 'ORDER BY package_file ASC';
 	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	if (Database::numRows($result) == 0){
-		$tableRows = RenderViews::tableData('3', '', '', 'trc1', 'tdc1', array(TXT_412), 'row');
-	}else{
-		$i = 0;
+	$canDelete = $_SESSION['access_role_id'] <= 1;
+
+	if (Database::numRows($result) == 0) {
+		$html = htmlspecialchars(TXT_412, ENT_QUOTES, 'UTF-8');
+	} else {
+		$html = '';
 		while ($row = Database::fetchArray($result)) {
-			// Create action URL with ID to update the action
-			$actionArray[] = RenderViews::buildURL(ACT_BASE_URL . '&option=defined_action&action_id=' . $row['action_id'], $row['action_name'], 'URL');
-			$actionArray[] = str_replace('_',' ', str_replace('.actions.php','' , $row['package_file'])).'-'.$row['package_function'];
-			if ($_SESSION['access_role_id'] <=1){
-				$actionArray[] = RenderViews::buildURL(ACT_BASE_URL . '&option=delete_action&action_id=' . $row['action_id'], TXT_315, 'URL','','onClick="javascript:return confirm(\''.TXT_400.'\')"');
-				if($i == 0){
-					$tableRows = RenderViews::tableData('', '', '', '', 'tdcHeading', array(TXT_299,TXT_250,TXT_388), 'row');
-				}
-				$class = RenderViews::setOddEvenClass($i, 'trc1', 'trc2');
-				$tableRows .= RenderViews::tableData('', '', '', '', $class, $actionArray, 'row');
-			}else{
-				if ($i == 0){
-					$tableRows = RenderViews::tableData('', '', '', '', 'tdcHeading', array(TXT_299,TXT_250,TXT_388), 'row');
-				}
-				$class = RenderViews::setOddEvenClass($i, 'trc1', 'trc2');
-				$tableRows .= RenderViews::tableData('', '', '', '', $class, $actionArray, 'row');
+			$package = str_replace('_', ' ', str_replace('.actions.php', '', (string)$row['package_file'])) . ' - ' . $row['package_function'];
+			$fields = [
+				TXT_299 => RenderViews::buildURL(ACT_BASE_URL . '&option=defined_action&action_id=' . $row['action_id'], (string)$row['action_name'], '', 'URL'),
+				TXT_250 => htmlspecialchars($package, ENT_QUOTES, 'UTF-8'),
+			];
+			if ($canDelete) {
+				$fields[TXT_388] = RenderViews::buildURL(ACT_BASE_URL . '&option=delete_action&action_id=' . $row['action_id'], TXT_315, '', 'URL', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
 			}
-			$i++;
-			unset($actionArray);
+			$html .= RenderViews::buildFormFieldsGrid($fields);
+			$html .= RenderViews::buildHorizontalSeparator();
 		}
 	}
-	$html = RenderViews::table('100%', '0', '5', '0', 'tcBorder', $tableRows);
-	define('HEADING', TXT_83);
-	define('BODY_CONTENT', $html);
-	RenderViews::renderThemePage('main_page_content',  SET_THEME);
+
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_83, 'html' => $html]]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 function showDefinedaction ($actionID)
 {

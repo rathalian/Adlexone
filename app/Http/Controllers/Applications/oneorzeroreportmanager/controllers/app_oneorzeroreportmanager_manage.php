@@ -28,120 +28,84 @@ define('OOZ_REP_SUB_URL', 'index.php?controller=app_oneorzeroreportmanager_main&
  */
 function showMyReports($manage = '')
 {
-	// Get data from database and create statistics table
-	// Get favourite searches
 	$sql = "SELECT * FROM " . OOZ_SET_TABLE_PREFIX . "ooz_reportmanager_reports";
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	$headingRow = RenderViews::tableData('', '', 'left', '', array('tdcHeadingBottomBorder'), array (APP_TXT_10), 'row');
-	$html = RenderViews::table('98%', '0', '0', '0', '', $headingRow);
-	if (DB::numRows($result) == 0) {
-		$tableRows = RenderViews::tableData('2', '', 'left', '', 'tdNavigationInsetShaded', array(APP_TXT_11), 'row', '', 'saved_searches');
-	} else {
-		$i = 0;
+	$html = '';
+	$found = false;
+	if (DB::numRows($result) > 0) {
 		while ($row = DB::fetchArray($result)) {
 			$condition = "WHERE user_id='" . $_SESSION['access_user_id'] . "'";
 			$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'group_members', array('groups'), $condition);
 			$groupResult = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
 			$groupRow = DB::fetchArray($groupResult);
-			if (in_array($row['security_group'], explode('}-{', $groupRow['groups']))) {
-				if ($manage == '') {
-					@$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=get_csv&id=' . $row['report_id'], APP_TXT_20 . ' - ', 'URL');
-					$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=show_graph&id=' . $row['report_id'], APP_TXT_21 , 'URL');
-				}
-				if ($manage == 'Yes') {
-					@$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=edit_report&id=' . $row['report_id'], APP_TXT_32 . ' - ', 'URL');
-					$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=delete_report&id=' . $row['report_id'], APP_TXT_25, 'URL','','onClick="javascript:return confirm(\''.OOZ_TXT_400.'\')"');
-				}
-				$urlArray[$i] = $nameURL;
-				$nameArray[$i] = '<strong>' . $row['report_name'] . '</strong>';
-				unset($nameURL);
-				$i++;
+			if (!in_array($row['security_group'], explode('}-{', (string)($groupRow['groups'] ?? '')))) {
+				continue;
 			}
-		}
-		$cellCount = count(@$nameArray);
-		if ($cellCount == 1) {
-			$tableRows = RenderViews::tableData('', array('20%','80%'), array('left','left'), '', 'tdNavigationInsetShaded',array($urlArray[0],$nameArray[0]), 'row');
-		} else {
-			$i = 0;
-			$tableRows = '';
-			if (is_array(@$nameArray)){
-				foreach($nameArray as $name) {
-					$class = RenderViews::setOddEvenClass($i, 'tdc2', 'tdc1');
-					$tableRows .= RenderViews::tableData('', array('20%','80%'), array('left','left'), '', $class, array($urlArray[$i],$name), 'row');
-					$i++;
-				}
-			}else{
-				$tableRows .= RenderViews::tableData('', '', array('left'), '', 'tdc2', array(APP_TXT_36), 'row');
+			$found = true;
+			$nameURL = '';
+			if ($manage == '') {
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=get_csv&id=' . $row['report_id'], APP_TXT_20 . ' - ', '', 'URL');
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=show_graph&id=' . $row['report_id'], APP_TXT_21, '', 'URL');
 			}
+			if ($manage == 'Yes') {
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=edit_report&id=' . $row['report_id'], APP_TXT_32 . ' - ', '', 'URL');
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=delete_report&id=' . $row['report_id'], APP_TXT_25, '', 'URL', 'onClick="javascript:return confirm(\'' . OOZ_TXT_400 . '\')"');
+			}
+			$html .= RenderViews::buildFormFieldsGrid([
+				APP_TXT_3 => '<strong>' . htmlspecialchars((string)$row['report_name'], ENT_QUOTES, 'UTF-8') . '</strong>',
+				'' => $nameURL,
+			]);
+			$html .= RenderViews::buildHorizontalSeparator();
 		}
 	}
-
-	$html .= RenderViews::table('98%', '0', '0', '0', '', $tableRows);
+	if (!$found) {
+		$html = RenderViews::buildFormFieldsGrid(['' => APP_TXT_11]);
+	}
+	$card = RenderViews::buildVerticalCards([['title' => APP_TXT_10, 'html' => $html]]);
 	if ($manage == 'Yes') {
-		define ('OOZ_HEADING', APP_TXT_29);
-		define ('OOZ_BODY', $html);
-		RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
-	} else {
-		return $html;
+		define('BODY_CONTENT', $card);
+		RenderViews::renderThemePage('main_page_content', SET_THEME);
+		return;
 	}
+	return $card;
 }
 function showMyMultiReports($manage = '')
 {
 	$sql = "SELECT * FROM " . OOZ_SET_TABLE_PREFIX . "ooz_reportmanager_multi";
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	$headingRow = RenderViews::tableData('', '', 'left', '', array('tdcHeadingBottomBorder'), array (APP_TXT_41), 'row');
-	$html = RenderViews::table('98%', '0', '0', '0', '', $headingRow);
-	if (DB::numRows($result) == 0) {
-		$tableRows = RenderViews::tableData('2', '', 'left', '', 'tdNavigationInsetShaded', array(APP_TXT_11), 'row');
-	} else {
-		$i = 0;
+	$html = '';
+	$found = false;
+	if (DB::numRows($result) > 0) {
 		while ($row = DB::fetchArray($result)) {
 			$condition = "WHERE user_id='" . $_SESSION['access_user_id'] . "'";
 			$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'group_members', array('groups'), $condition);
 			$groupResult = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
 			$groupRow = DB::fetchArray($groupResult);
-			if (in_array($row['security_group'], explode('}-{', $groupRow['groups']))) {
-				if ($manage == '') {
-					//$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=get_csv&id=' . $row['report_id'], APP_TXT_20 . ' - ', 'URL');
-					@$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=show_multi_graph&id=' . $row['report_id'], APP_TXT_40 , 'URL');
-				}
-				if ($manage == 'Yes') {
-					@$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=edit_multi_report&id=' . $row['report_id'], APP_TXT_32 . ' - ', 'URL');
-					$nameURL .= RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=delete_multi_report&id=' . $row['report_id'], APP_TXT_25, 'URL','','onClick="javascript:return confirm(\''.OOZ_TXT_400.'\')"');
-				}
-				$urlArray[$i] = $nameURL;
-				$nameArray[$i] = '<strong>' . $row['report_name'] . '</strong>';
-				unset($nameURL);
-				$i++;
+			if (!in_array($row['security_group'], explode('}-{', (string)($groupRow['groups'] ?? '')))) {
+				continue;
 			}
-		}
-		$cellCount = count(@$nameArray);
-		if ($cellCount == 1) {
-			$tableRows = RenderViews::tableData('', array('20%','80%'), array('left','left'), '', 'tdNavigationInsetShaded',array($urlArray[0],$nameArray[0]), 'row');
-		} else {
-			$i = 0;
-			$tableRows = '';
-			if (is_array(@$nameArray)){
-				foreach($nameArray as $name) {
-					$class = RenderViews::setOddEvenClass($i, 'tdc2', 'tdc1');
-					$tableRows .= RenderViews::tableData('', array('20%','80%'), array('left','left'), '', $class, array($urlArray[$i],$name), 'row');
-					$i++;
-				}
-			}else{
-				$tableRows .= RenderViews::tableData('', '', array('left'), '', 'tdc2', array(APP_TXT_36), 'row');
+			$found = true;
+			$nameURL = '';
+			if ($manage == '') {
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=show_multi_graph&id=' . $row['report_id'], APP_TXT_40, '', 'URL');
 			}
+			if ($manage == 'Yes') {
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=edit_multi_report&id=' . $row['report_id'], APP_TXT_32 . ' - ', '', 'URL');
+				$nameURL .= RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=app_oneorzeroreportmanager_manage&option=delete_multi_report&id=' . $row['report_id'], APP_TXT_25, '', 'URL', 'onClick="javascript:return confirm(\'' . OOZ_TXT_400 . '\')"');
+			}
+			$html .= RenderViews::buildFormFieldsGrid([
+				APP_TXT_3 => '<strong>' . htmlspecialchars((string)$row['report_name'], ENT_QUOTES, 'UTF-8') . '</strong>',
+				'' => $nameURL,
+			]);
+			$html .= RenderViews::buildHorizontalSeparator();
 		}
 	}
-	$html .= RenderViews::table('98%', '0', '0', '0', '', $tableRows);
-	if ($manage == 'Yes') {
-		define ('OOZ_HEADING', APP_TXT_38);
-		define ('OOZ_BODY', $html);
-		RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
-	} else {
-		define ('OOZ_HEADING', APP_TXT_39);
-		define ('OOZ_BODY', $html);
-		RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
+	if (!$found) {
+		$html = RenderViews::buildFormFieldsGrid(['' => ($manage == 'Yes' ? APP_TXT_36 : APP_TXT_11)]);
 	}
+	$title = ($manage == 'Yes') ? APP_TXT_38 : APP_TXT_39;
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => $title, 'html' => $html]]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 function deleteReport($id)
 {
@@ -197,132 +161,99 @@ function showModules(): void
  */
 function showReport($id = '')
 {
-	if ($id == '') {
-		$html = RenderViews::buildStartForm(OOZ_REP_SUB_URL . '&option=add_report');
-	} else {
+	$formAction = OOZ_REP_SUB_URL . '&option=add_report';
+	$fieldValues = [];
+	if ($id != '') {
 		$columnArray = array ('*');
 		$condition = "WHERE report_id = '$id'";
 		$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'ooz_reportmanager_reports', $columnArray, $condition);
 		$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
 		$fieldValues = DB::fetchArray($result);
-		$html = RenderViews::buildStartForm(OOZ_REP_SUB_URL . '&option=update_report&id=' . $id);
+		$formAction = OOZ_REP_SUB_URL . '&option=update_report&id=' . $id;
 	}
-	$tableRows = RenderViews::tableData('2', '', array('center'), '', 'tdcHeading', array(APP_TXT_9), 'row');
-	$reportFields[APP_TXT_3] = RenderViews::textBox('report_name', @$fieldValues['report_name'], OOZ_SET_FORM_FIELD_WIDTH, 'formField');
-	// Build group menu
+	$reportFields[APP_TXT_3] = RenderViews::buildTextInput('report_name', @$fieldValues['report_name']);
 	$columnArray = array('group_id', 'group_name');
 	$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'groups', $columnArray);
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	// Create group array then render menu
 	while ($row = DB::fetchArray($result)) {
 		$groupValue[] = $row['group_id'];
 		$groupName[] = $row['group_name'];
 	}
-	$reportFields[APP_TXT_4] = RenderViews::menu('security_group' , $groupValue, $groupName, @$fieldValues['security_group'], 'formField');
+	$reportFields[APP_TXT_4] = RenderViews::buildSelectDropdown('security_group' , $groupValue ?? [], $groupName ?? [], @$fieldValues['security_group']);
 	$columnArray = array('search_id', 'search_name');
 	$condition = "WHERE application = 'app_oneorzeroreportmanager_main'";
 	$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'saved_searches', $columnArray, $condition);
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	$searchCount = DB::numRows($result);
 	$savedSearches = '';
-	if ($searchCount > 0) {
+	if (DB::numRows($result) > 0) {
 		while ($row = DB::fetchArray($result)) {
-			$savedSearches .= RenderViews::checkBox('search_' . $row['search_id'], $row['search_id'], in_array($row['search_id'], explode('}-{', @$fieldValues['saved_searches'])), 'formField') . ' ' . $row['search_name'] . '<br>';
+			$selected = in_array($row['search_id'], explode('}-{', @$fieldValues['saved_searches'])) ? $row['search_id'] : '';
+			$savedSearches .= RenderViews::buildCheckBox('search_' . $row['search_id'], $row['search_id'], $selected) . ' ' . $row['search_name'] . '<br>';
 		}
 	} else {
 		$savedSearches = APP_TXT_6;
 	}
 	$reportFields[APP_TXT_5] = $savedSearches;
-	$i = 0;
-	foreach ($reportFields as $name => $field) {
-		$cellData = array ('<strong>' . $name . '</strong>', $field);
-		$tableRows .= RenderViews::tableData('', array('30%', '70%'), '', '' , 'tdc1', $cellData, 'row');
-		$i++;
-	}
-	$jsFieldNameArray = "['report_name']";
-	$jsTestTypeArray = "['']";
-	$jsErrorMsgArray = "['']";
-	$jsRequiredMsgArray = "['". APP_TXT_17."']";
-	$jsRequiredArray = "[true]";
-	$javascript = "onClick=\"javascript:return fieldCheck('".OOZ_TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";	
-	$endTable = RenderViews::hiddenField('report_id', $id);
-	$buttonArray[] = RenderViews::formButton('submit','submit_button',OOZ_TXT_74,'formButton',$javascript);
-	$buttonArray[] = RenderViews::formButton('reset','reset',OOZ_TXT_75,'formButton');
-	$endTable .= RenderViews::endFormButtons($buttonArray);
-	$tableRows .= RenderViews::tableData('2', '', '', '' , 'tdc1', array($endTable), 'row');
-	$html .= RenderViews::table('95%', '0', '5', '0', 'tableIndent', $tableRows);
-	if ($id == '') {
-		define('OOZ_HEADING', APP_TXT_7);
-	} else {
-		define('OOZ_HEADING', APP_TXT_8);
-	}
-	define('OOZ_BODY', $html);
-	RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
+	$reportFields[''] = RenderViews::buildHiddenInput('report_id', $id);
+	$javascript = "onClick=\"javascript:return fieldCheck('".OOZ_TXT_468."',[''],['report_name'],[''],['". APP_TXT_17."'],[true]);\"";
+	define('BODY_CONTENT', RenderViews::buildForm(
+		$id == '' ? APP_TXT_7 : APP_TXT_8,
+		$formAction,
+		$reportFields,
+		[
+			RenderViews::buildFormButton('submit','submit_button',OOZ_TXT_74,$javascript),
+			RenderViews::buildFormButton('reset','reset',OOZ_TXT_75),
+		]
+	));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 function showMultiReport($id = '')
 {
-	if ($id == '') {
-		$html = RenderViews::buildStartForm(OOZ_REP_SUB_URL . '&option=add_multi_report');
-	} else {
+	$formAction = OOZ_REP_SUB_URL . '&option=add_multi_report';
+	$fieldValues = [];
+	if ($id != '') {
 		$columnArray = array ('*');
 		$condition = "WHERE report_id = '$id'";
 		$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'ooz_reportmanager_multi', $columnArray, $condition);
 		$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
 		$fieldValues = DB::fetchArray($result);
-		$html = RenderViews::buildStartForm(OOZ_REP_SUB_URL . '&option=update_multi_report&id=' . $id);
+		$formAction = OOZ_REP_SUB_URL . '&option=update_multi_report&id=' . $id;
 	}
-	$tableRows = RenderViews::tableData('2', '', array('center'), '', 'tdcHeading', array(APP_TXT_9), 'row');
-	$reportFields[APP_TXT_3] = RenderViews::textBox('report_name', @$fieldValues['report_name'], OOZ_SET_FORM_FIELD_WIDTH, 'formField');
-	// Build group menu
+	$reportFields[APP_TXT_3] = RenderViews::buildTextInput('report_name', @$fieldValues['report_name']);
 	$columnArray = array('group_id', 'group_name');
 	$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'groups', $columnArray);
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	// Create group array then render menu
 	while ($row = DB::fetchArray($result)) {
 		$groupValue[] = $row['group_id'];
 		$groupName[] = $row['group_name'];
 	}
-	$reportFields[APP_TXT_4] = RenderViews::menu('security_group' , $groupValue, $groupName, @$fieldValues['security_group'], 'formField');
+	$reportFields[APP_TXT_4] = RenderViews::buildSelectDropdown('security_group' , $groupValue ?? [], $groupName ?? [], @$fieldValues['security_group']);
 	$columnArray = array('report_id', 'report_name');
 	$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'ooz_reportmanager_reports', $columnArray);
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	$searchCount = DB::numRows($result);
 	$reports = '';
-	if ($searchCount > 0) {
+	if (DB::numRows($result) > 0) {
 		$reportArray = explode('}-{',@$fieldValues['bound_reports']);
 		while ($row = DB::fetchArray($result)) {
 			$value = (in_array($row['report_id'], $reportArray)) ? $row['report_id'] : '' ;
-			@$reports .= RenderViews::checkBox('bind_report_' . $row['report_id'], $row['report_id'], $value, 'formField') . ' ' . $row['report_name'] . '<br>';
+			$reports .= RenderViews::buildCheckBox('bind_report_' . $row['report_id'], $row['report_id'], $value) . ' ' . $row['report_name'] . '<br>';
 		}
 	} else {
 		$reports = APP_TXT_6;
 	}
 	$reportFields[APP_TXT_5] = $reports;
-	$i = 0;
-	foreach ($reportFields as $name => $field) {
-		$cellData = array ('<strong>' . $name . '</strong>', $field);
-		$tableRows .= RenderViews::tableData('', array('30%', '70%'), '', '' , 'tdc1', $cellData, 'row');
-		$i++;
-	}
-	$endTable = RenderViews::hiddenField('report_id', $id);
-	$jsFieldNameArray = "['report_name']";
-	$jsTestTypeArray = "['']";
-	$jsErrorMsgArray = "['']";
-	$jsRequiredMsgArray = "['". APP_TXT_17."']";
-	$jsRequiredArray = "[true]";
-	$javascript = "onClick=\"javascript:return fieldCheck('".OOZ_TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";	
-	$buttonArray[] = RenderViews::formButton('submit','submit_button',OOZ_TXT_74,'formButton',$javascript);
-	$buttonArray[] = RenderViews::formButton('reset','reset',OOZ_TXT_75,'formButton');
-	$endTable .= RenderViews::endFormButtons($buttonArray);
-	$tableRows .= RenderViews::tableData('2', '', '', '' , 'tdc1', array($endTable), 'row');
-	$html .= RenderViews::table('95%', '0', '5', '0', 'tableIndent', $tableRows);
-	if ($id == '') {
-		define('OOZ_HEADING', APP_TXT_7);
-	} else {
-		define('OOZ_HEADING', APP_TXT_8);
-	}
-	define('OOZ_BODY', $html);
-	RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
+	$reportFields[''] = RenderViews::buildHiddenInput('report_id', $id);
+	$javascript = "onClick=\"javascript:return fieldCheck('".OOZ_TXT_468."',[''],['report_name'],[''],['". APP_TXT_17."'],[true]);\"";
+	define('BODY_CONTENT', RenderViews::buildForm(
+		$id == '' ? APP_TXT_7 : APP_TXT_8,
+		$formAction,
+		$reportFields,
+		[
+			RenderViews::buildFormButton('submit','submit_button',OOZ_TXT_74,$javascript),
+			RenderViews::buildFormButton('reset','reset',OOZ_TXT_75),
+		]
+	));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
  * addUpdateReport()
@@ -424,27 +355,22 @@ function addUpdateMultiReport($id = '')
  */
 function showReportCriteria($userID)
 {
-	// Start table
-
-	$headingRow = RenderViews::tableData('', '', 'left', '', array('tdcHeadingBottomBorder'), array (APP_TXT_28), 'row');
-	$html = RenderViews::table('98%', '0', '0', '0', '', $headingRow);
 	$sql = "SELECT * FROM " . OOZ_SET_TABLE_PREFIX . "saved_searches WHERE user = '$userID' OR user = 'all' or user = 'system' AND application='app_oneorzeroreportmanager_main'";
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	$tableRows = '';
+	$html = '';
 	if (DB::numRows($result) > 0) {
 		while ($row = DB::fetchArray($result)) {
-			$searchUrl = $row['search_name'];
-			$deleteUrl = RenderViews::url('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=delete_saved_search&id=' . $row['search_id'], APP_TXT_25, 'URL');
-			$savedSearch = $searchUrl . ' (' . $deleteUrl . ')<br>' . $row['search_description'];
-			$tableRows .= RenderViews::tableData('', '', '', '', 'tdNavigationInsetShaded', array($savedSearch), 'row');
+			$deleteUrl = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=delete_saved_search&id=' . $row['search_id'], APP_TXT_25, '', 'URL');
+			$html .= RenderViews::buildFormFieldsGrid([
+				$row['search_name'] => $deleteUrl . '<br>' . htmlspecialchars((string)$row['search_description'], ENT_QUOTES, 'UTF-8'),
+			]);
+			$html .= RenderViews::buildHorizontalSeparator();
 		}
 	} else {
-		$tableRows = RenderViews::tableData('', '', '', '', 'tdNavigationInsetShaded', array(APP_TXT_6), 'row');
+		$html = RenderViews::buildFormFieldsGrid(['' => APP_TXT_6]);
 	}
-	$html .= RenderViews::table('100%', '0', '5', '0', 'tcBorder', $tableRows);
-	define('OOZ_BODY', $html);
-	define('OOZ_HEADING', APP_TXT_5);
-	RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => APP_TXT_28, 'html' => $html]]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
  * buildReport()
@@ -476,31 +402,32 @@ function buildReport($reportCriteriaArray)
 }
 function horizontalGraph($criteriaCountArray, $reportName)
 {
-	// Sort array and reverse to get highest value
+	if (!is_array($criteriaCountArray) || $criteriaCountArray === []) {
+		return '';
+	}
 	$hightestCount = max($criteriaCountArray);
-	// Create horizontal graph using criteria Attay
-	$tableRows = '';
+	$html = '';
 	$totalCount = 0;
-	foreach($criteriaCountArray as $key => $value) {
+	foreach ($criteriaCountArray as $value) {
 		$totalCount = $totalCount + $value;
 	}
-	foreach($criteriaCountArray as $key => $value) {
-		if ($hightestCount == 0) {
+	foreach ($criteriaCountArray as $key => $value) {
+		if ($hightestCount == 0 || $totalCount == 0) {
 			$percent = 0;
+			$reportPercentage = 0;
 		} else {
 			$percent = round(($value / $hightestCount) * 100);
-			// if less than one percent but there is a value to show then set to one percent so that the link will display
-			if ($percent <= 1 && $value >= 1) $percent = 1;
-		} // if total
-		$width = $percent * 0.95; // so graph does not fill entire cell
-		$graphRow = RenderViews::tableData('', '', '', '', 'tdHorizontalGraph', array(''), 'row');
-		$reportPercentage = round($value / $totalCount * 100);
-		$countRow = '<strong>' . $reportPercentage.'% ('.$value . ')</strong>';
-		$graphTable = RenderViews::table($width . '%', '0', '0', '0', '', $graphRow) ;
-		$tableRows .= RenderViews::tableData('', array('30%', '10%', '60%'), '', '', 'tdc1', array($key, $countRow, $graphTable), 'row');
+			if ($percent <= 1 && $value >= 1) {
+				$percent = 1;
+			}
+			$reportPercentage = round($value / $totalCount * 100);
+		}
+		$bar = '<div style="height:0.75rem;width:' . (int)$percent . '%;background:#2563eb;"></div>';
+		$countRow = '<strong>' . $reportPercentage . '% (' . $value . ')</strong>';
+		$html .= RenderViews::buildFormFieldsGrid([
+			(string)$key => $countRow . $bar,
+		]);
 	}
-	$html = RenderViews::table('100%', '0', '5', '0', 'tcBorder', $tableRows);
-
 	return $html;
 }
 /**
@@ -543,9 +470,8 @@ function getReport($type, $id)
 		break;
 		case 'graph': ;
 		$html = horizontalGraph($criteriaCountArray, $reportName);
-		define ('OOZ_HEADING', APP_TXT_22 . ' - ' . $reportName);
-		define ('OOZ_BODY', $html);
-		RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
+		define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => APP_TXT_22 . ' - ' . $reportName, 'html' => $html]]));
+		RenderViews::renderThemePage('main_page_content', SET_THEME);
 
 		break;
 		default: ;
@@ -567,19 +493,20 @@ function showMultiReportGraph($id, $type = '')
 	}
 	$sql = DB::sqlSelect(OOZ_SET_TABLE_PREFIX . 'ooz_reportmanager_reports', array('report_id','report_name', 'saved_searches'), $condition);
 	$result = DB::query($sql, DSN, OOZ_SET_SHOW_SQL);
-	$tableRows = '';
-	while($row = DB::fetchArray($result)){
+	$html = '';
+	while ($row = DB::fetchArray($result)) {
 		$reportCriteriaArray = explode('}-{', $row['saved_searches']);
 		$criteriaCountArray = buildReport($reportCriteriaArray);
-		$graph = horizontalGraph($criteriaCountArray,'');
-		$csvURL = RenderViews::url(OOZ_REP_BASE_URL.'&subcontroller=app_oneorzeroreportmanager_manage&option=get_csv&id='.$row['report_id'],APP_TXT_20,'URL');
-		$tableRows .= RenderViews::tableData('', '', '', '', 'tdcHeadingBottomBorder', array($row['report_name'].' - '.$csvURL), 'row');
-		$tableRows .= RenderViews::tableData('', '', '', '', '', array($graph), 'row');
+		$graph = horizontalGraph($criteriaCountArray, '');
+		$csvURL = RenderViews::buildURL(OOZ_REP_BASE_URL . '&subcontroller=app_oneorzeroreportmanager_manage&option=get_csv&id=' . $row['report_id'], APP_TXT_20, '', 'URL');
+		$html .= RenderViews::buildFormFieldsGrid([
+			$row['report_name'] => $csvURL,
+		]);
+		$html .= $graph;
+		$html .= RenderViews::buildHorizontalSeparator();
 	}
-	$html = RenderViews::table('100%', '0', '0', '0', '', $tableRows) ;
-	define ('OOZ_HEADING', APP_TXT_42);
-	define ('OOZ_BODY', $html);
-	RenderViews::renderPage('all_actions', OOZ_SET_INSTALL_PATH, OOZ_SET_LANGUAGE, OOZ_SET_THEME, OOZ_SET_CACHED);
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => APP_TXT_42, 'html' => $html]]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
  * Logic to render the appropriate template or call wrapper functions

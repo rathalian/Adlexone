@@ -24,14 +24,15 @@
  */
 
 use Adlexone\support\Database;
+use Adlexone\support\FieldTypes;
 use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
 
 /**
- * Build the left navigation for the Helpdesk application using RenderNavigation.
+ * Build the left navigation for Items and Fields using RenderNavigation.
  */
 $controllers = RenderNavigation::build([
-    'Helpdesk' => RenderNavigation::itemSettingsURLs(),
+    'Items and Fields' => RenderNavigation::itemSettingsURLs(),
 ]);
 define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
 /**
@@ -67,29 +68,24 @@ define('ITEM_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcon
 function showCustomField($customFieldID = '', $values = '')
 {
     if ($customFieldID == '') {
-        $html = RenderViews::buildStartForm('index.php?controller=administration_item_settings&option=add_custom_field', 'POST', 'form-horizontal');
+        $formAction = 'index.php?controller=administration_item_settings&option=add_custom_field';
         $fieldValues = $values;
+        $title = TXT_62;
     } else {
-        // Get group values from database
         $columnArray = array('*');
         $condition = "WHERE custom_field_id = '$customFieldID'";
         $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
         $result = Database::query($sql, DSN, SET_SHOW_SQL);
         $fieldValues = Database::fetchArray($result);
-        $html = RenderViews::buildStartForm('index.php?controller=administration_item_settings&option=update_custom_field', 'POST', 'form-horizontal');
-    }
-    if ($customFieldID != '') {
+        $formAction = 'index.php?controller=administration_item_settings&option=update_custom_field';
         $title = TXT_285;
-    } else {
-        $title = TXT_62;
     }
 
-    //$tableRows = RenderViews::tableData('2', '', array('center'), '', 'tdcHeading', array(TXT_208), 'row');
     $fields[TXT_86] = RenderViews::buildTextInput('custom_field_name', @$fieldValues['custom_field_name']);
     $fields[TXT_210] = RenderViews::buildTextInput('default_value', @$fieldValues['default_value']);
-    $fieldTypes = array('buildTextInput', 'password', 'buildTextArea', 'buildSelectDropdown', 'subMenu', 'hidden', 'subMenuChild', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu', 'dataSourceMenu', 'multiLevelMenu');
+    $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'subMenu', 'hidden', 'subMenuChild', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu', 'dataSourceMenu', 'multiLevelMenu');
     $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_280, TXT_216, TXT_413, TXT_478, TXT_479, TXT_490, TXT_501, TXT_637, TXT_659);
-    $fields[TXT_65] = RenderViews::buildSelectDropdown('field_type', $fieldTypes, $fieldNames, @$fieldValues['field_type']);
+    $fields[TXT_65] = RenderViews::buildSelectDropdown('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
     $multiLevelURL = (@$fieldValues['field_type'] == 'multiLevelMenu') ? RenderViews::buildURL(ITEM_BASE_URL . '&option=show_multilevel_menu&multi_level_menu_id=' . $customFieldID, TXT_660, 'URL', '') . ' - ' . RenderViews::buildURL(ITEM_BASE_URL . '&option=show_multilevel_menu_items&multi_level_menu_id=' . $customFieldID, TXT_666, 'URL', '') : '';
     $fields[TXT_669] = RenderViews::buildTextInput('menu_levels', @$fieldValues['menu_levels']);
     //lookup data source names
@@ -121,24 +117,23 @@ function showCustomField($customFieldID = '', $values = '')
     }
     $fields[TXT_281] = RenderViews::buildSelectDropdown('sub_menu', $valueArray, $nameArray, @$fieldValues['sub_menu']) . ' * ' . TXT_282;
     $fields[TXT_90] = RenderViews::buildSelectDropdown('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
-    $fields[] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
-    //Javascript field validation
+    $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
     $jsFieldNameArray = "['custom_field_name']";
     $jsTestTypeArray = "['']";
     $jsErrorMsgArray = "['']";
     $jsRequiredMsgArray = "['" . TXT_217 . "']";
     $jsRequiredArray = "[true]";
     $javascript = "onClick=\"javascript:return subMenuCheck('" . TXT_541 . "','" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
-    //$tableRows .= RenderViews::tableData('2', '', '', '' , 'tdc1', array($endForm), 'row');
-    $html .= RenderViews::buildFormFieldsGrid($fields);
-    $html .= RenderViews::buildEndFormWithButtons([RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript), RenderViews::buildFormButton('reset', 'reset', TXT_75)]);
 
-    $bodyBlock[] = [
-        'title' => $title,
-        'html' => $html,
-    ];
-    $body = RenderViews::buildVerticalCards($bodyBlock);
-    define('BODY_CONTENT', $body);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        $title,
+        $formAction,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -149,34 +144,46 @@ function showCustomField($customFieldID = '', $values = '')
  */
 function modifyMenuValues($customFieldID)
 {
-    $html = RenderViews::buildStartForm('index.php?controller=administration_item_settings&option=add_update_menu_value', 'POST', 'form-horizontal');
-    $tableRows = RenderViews::tableData('', array('50%', '50%'), '', '', 'tdcHeading', array(TXT_288, TXT_72), 'row');
-    // Get custom field information
     $columnArray = array('*');
     $condition = "WHERE custom_field_id = '$customFieldID'";
     $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
+
+    $rows = '';
     while ($menuRow = Database::fetchArray($result)) {
-        // Build buildSelectDropdown and sub buildSelectDropdown item array
-        $cellData[] = RenderViews::buildTextInput($menuRow['menu_value_id'], $menuRow['menu_value'], '', 'form-control') . RenderViews::buildHiddenInput('menu_value_old_id_' . $menuRow['menu_value_id'], $menuRow['menu_value']);
-        $cellData[] = RenderViews::buildURL(ITEM_BASE_URL . '&option=delete_menu_value&menu_value_id=' . $menuRow['menu_value_id'] . '&custom_field_id=' . $customFieldID, TXT_47, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
-        $tableRows .= RenderViews::tableData('', '', '', '', 'tdc1', $cellData, 'row');
-        unset($cellData);
+        $input = RenderViews::buildTextInput((string)$menuRow['menu_value_id'], $menuRow['menu_value'])
+            . RenderViews::buildHiddenInput('menu_value_old_id_' . $menuRow['menu_value_id'], $menuRow['menu_value']);
+        $delete = RenderViews::buildURL(
+            ITEM_BASE_URL . '&option=delete_menu_value&menu_value_id=' . $menuRow['menu_value_id'] . '&custom_field_id=' . $customFieldID,
+            TXT_47,
+            '',
+            'URL',
+            'onClick="javascript:return confirm(\'' . TXT_400 . '\')"'
+        );
+        $rows .= '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0.75rem;align-items:center;margin-bottom:0.5em;">'
+            . '<span>' . $input . '</span>' . $delete . '</div>';
     }
-    $html .= RenderViews::table('100%', '0', '5', '0', 'tcBorder', $tableRows);
-    $html .= '<br>';
-    $tableRows = RenderViews::tableData('2', '', 'left', '', 'tdcHeading', array(TXT_292), 'row');
-    $cellData = array('<strong>' . TXT_293 . '</strong>: ' . RenderViews::buildTextInput('menu_value', ''));
-    $tableRows .= RenderViews::tableData('', array('100%'), array('left'), '', 'tdc1', $cellData, 'row');
-    $html .= RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
-    $buttonArray[] = RenderViews::buildFormButton('submit', 'add_new', TXT_545);
-    $buttonArray[] = RenderViews::buildFormButton('submit', 'update_existing', TXT_542);
-    $buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-    $endForm = RenderViews::buildEndFormWithButtons($buttonArray, '1');
-    $tableRows .= RenderViews::tableData('2', '', '', '', 'tdc1', array($endForm), 'row');
-    $html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-    define('HEADING', $heading);
-    define('BODY_CONTENT', $html);
+    if ($rows === '') {
+        $rows = htmlspecialchars(TXT_366, ENT_QUOTES, 'UTF-8');
+    }
+
+    $fields = [];
+    $fields[TXT_288] = '<div style="flex:1 1 100%">' . $rows . '</div>';
+    $fields[TXT_292] = RenderViews::buildTextInput('menu_value', '');
+    $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
+
+    $buttons = [
+        RenderViews::buildFormButton('submit', 'add_new', TXT_545),
+        RenderViews::buildFormButton('submit', 'update_existing', TXT_542),
+        RenderViews::buildFormButton('reset', 'reset', TXT_75),
+    ];
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_287,
+        'index.php?controller=administration_item_settings&option=add_update_menu_value',
+        $fields,
+        $buttons
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -187,31 +194,37 @@ function modifyMenuValues($customFieldID)
  */
 function modifyMenuValueFilters($customFieldID)
 {
-    $html = RenderViews::buildStartForm('index.php?controller=administration_item_settings&option=update_menu_value_filter', 'POST', 'form-horizontal');
-    $tableRows = RenderViews::tableData('', array('30%', '70%'), '', '', 'tdcHeading', array(TXT_288, TXT_295), 'row');
-    // Get buildSelectDropdown and sub buildSelectDropdown values
     $columnArray = array('menu_value_id', 'menu_value', 'sub_menu_values');
     $condition = "WHERE custom_field_id = '" . $customFieldID . "'";
     $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    // Build table containing buildSelectDropdown values, and list of sub buildSelectDropdown values for each
+
+    $fields = [];
     while ($row = Database::fetchArray($result)) {
-        $cellData[] = '<strong>' . $row['menu_value'] . '</strong>';
-        $cellData[] = render::textArea($row['menu_value_id'], $row['sub_menu_values'], SET_FORM_FIELD_HEIGHT);
-        $tableRows .= RenderViews::tableData('', array('30%', '70%'), '', '', 'tdc1', $cellData, 'row');
-        unset($cellData);
+        $label = (string)$row['menu_value'];
+        if (array_key_exists($label, $fields)) {
+            $label .= ' (' . $row['menu_value_id'] . ')';
+        }
+        $fields[$label] = RenderViews::buildTextArea(
+            (string)$row['menu_value_id'],
+            (string)$row['sub_menu_values'],
+            (string)SET_FORM_FIELD_HEIGHT
+        );
     }
-    $tableRows .= RenderViews::tableData('', array('30%', '70%'), '', '', 'tdc1', array('', TXT_410), 'row');
-    $endForm = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
-    $buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-    $endForm = RenderViews::buildEndFormWithButtons($buttonArray);
+    $fields[''] = '<p>' . htmlspecialchars(TXT_410, ENT_QUOTES, 'UTF-8') . '</p>'
+        . RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
 
-    $tableRows .= RenderViews::tableData('', '', '', '', 'tdc1', array($endForm), 'row');
-    $html .= RenderViews::table('95%', '0', '5', '0', 'tableIndent', $tableRows);
+    $buttons = [
+        RenderViews::buildFormButton('submit', 'submit_button', TXT_56),
+        RenderViews::buildFormButton('reset', 'reset', TXT_75),
+    ];
 
-    define('HEADING', TXT_291);
-    define('BODY_CONTENT', $html);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_291,
+        'index.php?controller=administration_item_settings&option=update_menu_value_filter',
+        $fields,
+        $buttons
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -249,7 +262,8 @@ function addUpdateMenuValue($customFieldID)
         }
         foreach ($_POST as $key => $value) {
             //Check each custom field for updates
-            if (is_int($key)) {
+            // Posted field names are strings; menu value ids are numeric
+            if (ctype_digit((string)$key)) {
                 if ($key != $_POST['menu_value_old_id_' . $key]) {
                     //Update buildSelectDropdown value table
                     $columnArray['menu_value'] = $value;
@@ -312,7 +326,7 @@ function deleteMenuValue($menuValueID, $customFieldID)
  * @param array $values Field values passes in via $_SESSION array for retaining form field values if error occurred during entry
  * @return
  */
-function showItemType($itemTypeID, $values)
+function showItemType($itemTypeID, $values = [])
 {
     $isNew = ($itemTypeID == '');
     $action = $isNew ? 'index.php?controller=administration_item_settings&option=add_item_type' : 'index.php?controller=administration_item_settings&option=update_item_type';
@@ -327,10 +341,6 @@ function showItemType($itemTypeID, $values)
         $fieldValues = Database::fetchArray($result);
     }
 
-    // Start form
-    $formHtml = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
-
-    // Basic fields
     $fields = [];
     $fields[TXT_87] = RenderViews::buildTextInput('item_type_name', $fieldValues['item_type_name'] ?? '');
 
@@ -352,26 +362,22 @@ function showItemType($itemTypeID, $values)
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
 
     $groupMembershipArray = explode('}-{', (string)($fieldValues['group_security'] ?? ''));
-    $groupMembershipHtml = '';
-
+    $groupMembershipHtml = '<div class="group-security-list">';
     while ($row = Database::fetchArray($result)) {
-        $isChecked = in_array($row['group_id'], $groupMembershipArray, true);
-        $checkedValue = $isChecked ? $row['group_id'] : '';
-
-        $nameEscaped = htmlspecialchars($row['group_name'], ENT_QUOTES, 'UTF-8');
-
-        // Render checkbox with no label text so only the input appears on the right
-        $checkboxHtml = RenderViews::buildCheckBox('group_' . $row['group_id'], $row['group_id'], $checkedValue, 'form-control', '');
-
-        // Each group on its own line; name bold left, checkbox right, then an explicit line break
-        $groupMembershipHtml .= '<div style="display:flex;justify-content:space-between;align-items:center;">' . $nameEscaped . '' . $checkboxHtml . '</div><br />';
+        $isChecked = in_array((string)$row['group_id'], $groupMembershipArray, true);
+        $checkedValue = $isChecked ? (string)$row['group_id'] : '';
+        $groupMembershipHtml .= RenderViews::buildCheckBox(
+            'group_' . $row['group_id'],
+            (string)$row['group_id'],
+            $checkedValue,
+            'checkbox',
+            (string)$row['group_name']
+        );
     }
+    $groupMembershipHtml .= '</div>';
 
-    $fields[TXT_71] = $groupMembershipHtml;
-
-
-    // Enabled select
     $fields[TXT_90] = RenderViews::buildSelectDropdown('enabled', ['Yes', 'No'], [TXT_93, TXT_94], $fieldValues['enabled'] ?? '');
+    $fields[TXT_71] = $groupMembershipHtml;
 
     // Custom fields selection (preserve ordering for existing item types)
     if ($isNew) {
@@ -400,66 +406,99 @@ function showItemType($itemTypeID, $values)
         }
     }
 
-    // Query enabled custom fields
+    $fieldTypeLabels = [
+        FieldTypes::TEXT_BOX => TXT_211,
+        'password' => TXT_214,
+        FieldTypes::TEXT_AREA => TXT_212,
+        FieldTypes::MENU => TXT_213,
+        'subMenu' => TXT_280,
+        'hidden' => TXT_216,
+        'subMenuChild' => TXT_413,
+        'URL' => TXT_478,
+        'dynamicURL' => TXT_479,
+        'workerField' => TXT_490,
+        'workerFieldMenu' => TXT_501,
+        'dataSourceMenu' => TXT_637,
+        'multiLevelMenu' => TXT_659,
+    ];
+
     $columnArray = ['*'];
     $condition = "WHERE enabled = 'Yes' ORDER BY custom_field_name";
     $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $fieldCount = Database::numRows($result);
 
-    $menuValues = [0 => 0];
-    $displayValues = [0 => TXT_409];
-    for ($i = 1; $i <= $fieldCount; $i++) {
-        $menuValues[$i] = $i;
-        $displayValues[$i] = $i;
-    }
-    // Build enabled custom fields list as block rows
-    $rows = [];
-    $firstDropdown = true;
-
+    $availableItems = '';
+    $selectedItems = [];
     while ($row = Database::fetchArray($result)) {
-        $isChecked = in_array($row['custom_field_id'], $customFieldArray, true);
-        $checkedValue = $isChecked ? $row['custom_field_id'] : '';
-
-        $sortValue = $customFieldSortArray['field_order_' . $row['custom_field_id']] ?? '';
-
-        $checkbox = RenderViews::buildCheckBox(
-            'custom_field_id_' . $row['custom_field_id'],
-            $row['custom_field_id'],
-            $checkedValue,
-            'form-control',
-            ''  // label handled separately
-        );
-
-        $select = RenderViews::buildSelectDropdown(
-            'custom_field_sort_' . $row['custom_field_id'],
-            $menuValues,
-            $displayValues,
-            $sortValue
-        );
-
-        $nameEscaped = htmlspecialchars($row['custom_field_name'], ENT_QUOTES, 'UTF-8');
-
-        // Use margin spacing for the first row and modest spacing for others
-        $rowStyle = $firstDropdown ? ' style="margin:1em 0;"' : ' style="margin-bottom:0.5em;"';
-
-        $rows[] = '<div class="field-row"' . $rowStyle . '>'
-            . '<span class="cf-name">' . $nameEscaped . '</span> '
-            . $checkbox . ' '
-            . '<span class="cf-enabled">' . htmlspecialchars('(enabled)', ENT_QUOTES, 'UTF-8') . '</span> '
-            . $select
-            . '</div>';
-
-        $firstDropdown = false;
+        $fieldId = (string)$row['custom_field_id'];
+        $isSelected = isset($customFieldArray[$fieldId]) || in_array($fieldId, $customFieldArray, true);
+        $order = (int)($customFieldSortArray['field_order_' . $fieldId] ?? 0);
+        $typeKey = FieldTypes::normalise((string)$row['field_type']);
+        $typeLabel = $fieldTypeLabels[$typeKey] ?? $typeKey;
+        $itemHtml = '<li class="field-picker-item">'
+            . '<label class="checkbox"><input type="checkbox" name="custom_field_id_' . $fieldId . '" value="' . $fieldId . '"' . ($isSelected ? ' checked' : '') . '> '
+            . '<span>' . htmlspecialchars((string)$row['custom_field_name'], ENT_QUOTES, 'UTF-8') . '</span> '
+            . '<span class="field-picker-type">' . htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8') . '</span></label>'
+            . '<span class="field-picker-moves">'
+            . '<button type="button" class="btn field-picker-move" data-move="up">' . htmlspecialchars(TXT_686, ENT_QUOTES, 'UTF-8') . '</button>'
+            . '<button type="button" class="btn field-picker-move" data-move="down">' . htmlspecialchars(TXT_687, ENT_QUOTES, 'UTF-8') . '</button>'
+            . '</span>'
+            . '<input type="hidden" name="custom_field_sort_' . $fieldId . '" value="' . ($isSelected ? $order : 0) . '">'
+            . '</li>';
+        if ($isSelected) {
+            $selectedItems[] = ['order' => $order > 0 ? $order : PHP_INT_MAX, 'name' => (string)$row['custom_field_name'], 'html' => $itemHtml];
+        } else {
+            $availableItems .= $itemHtml;
+        }
     }
+    usort($selectedItems, static function (array $a, array $b): int {
+        return $a['order'] <=> $b['order'] ?: strcasecmp($a['name'], $b['name']);
+    });
+    $selectedHtml = implode('', array_column($selectedItems, 'html'));
 
-    $customFieldsHtml = '<div class="custom-fields-list">' . implode("\n", $rows) . '</div>';
-    $fields[TXT_222] = $customFieldsHtml;
+    $pickerHtml = '<div class="field-picker">'
+        . '<div><div class="label">' . htmlspecialchars(TXT_684, ENT_QUOTES, 'UTF-8') . '</div><ul id="availableFields" class="field-picker-list">' . $availableItems . '</ul></div>'
+        . '<div><div class="label">' . htmlspecialchars(TXT_685, ENT_QUOTES, 'UTF-8') . '</div><ul id="selectedFields" class="field-picker-list">' . $selectedHtml . '</ul></div>'
+        . '</div>'
+        . '<script>
+(function () {
+  var available = document.getElementById("availableFields");
+  var selected = document.getElementById("selectedFields");
+  if (!available || !selected) return;
+  function renumber() {
+    selected.querySelectorAll(".field-picker-item").forEach(function (li, i) {
+      var order = li.querySelector("input[type=hidden]");
+      if (order) order.value = String(i + 1);
+    });
+    available.querySelectorAll("input[type=hidden]").forEach(function (order) { order.value = "0"; });
+  }
+  function place(event) {
+    var box = event.target;
+    if (!box || box.type !== "checkbox") return;
+    var li = box.closest(".field-picker-item");
+    (box.checked ? selected : available).appendChild(li);
+    renumber();
+  }
+  available.addEventListener("change", place);
+  selected.addEventListener("change", place);
+  selected.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-move]");
+    if (!button) return;
+    var li = button.closest(".field-picker-item");
+    if (button.getAttribute("data-move") === "up" && li.previousElementSibling) {
+      selected.insertBefore(li, li.previousElementSibling);
+    } else if (button.getAttribute("data-move") === "down" && li.nextElementSibling) {
+      selected.insertBefore(li.nextElementSibling, li);
+    }
+    renumber();
+  });
+  renumber();
+})();
+</script>';
 
-    // Hidden field
-    $fields[] = RenderViews::buildHiddenInput('item_type_id', $itemTypeID);
+    $fields[TXT_222] = $pickerHtml;
+    $fields[''] = RenderViews::buildHiddenInput('item_type_id', $itemTypeID);
 
-    // Javascript field validation setup (preserved)
     $jsFieldNameArray = "['item_type_name']";
     $jsTestTypeArray = "['']";
     $jsErrorMsgArray = "['']";
@@ -467,25 +506,15 @@ function showItemType($itemTypeID, $values)
     $jsRequiredArray = "[true]";
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-    // Buttons
-    $buttons = [];
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript);
-    $buttons[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-
-    // Render fields grid and buttons
-    $formHtml .= RenderViews::buildFormFieldsGrid($fields);
-    $formHtml .= RenderViews::buildEndFormWithButtons($buttons, 1, 1);
-
-    // Wrap in a content block and render as vertical card to keep page layout consistent
-    $bodyBlock[] = [
-        'title' => $isNew ? TXT_85 : TXT_286,
-        'html' => $formHtml,
-    ];
-    $body = RenderViews::buildVerticalCards($bodyBlock);
-
-    // Set heading and body and include page
-    //define('HEADING', $isNew ? TXT_85 : TXT_286);
-    define('BODY_CONTENT', $body);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        $isNew ? TXT_85 : TXT_286,
+        $action,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -521,14 +550,10 @@ function addCustomField()
             $sql = "ALTER TABLE " . "items ADD custom_field_" . $id . " text";
             Database::query($sql, DSN, SET_SHOW_SQL);
         }
-        $html = RenderViews::showResponse('<strong>' . $_POST['custom_field_name'] . '</strong> ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL, TXT_362, 'URL'));
-        define('BODY_CONTENT', $html);
-    } else {
-        $html = RenderViews::showResponse($_POST['custom_field_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_BASE_URL . '&option=new_custom_field', TXT_362, 'URL'));
-        define('BODY_CONTENT', $html);
+        RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+        return;
     }
-    define('HEADING', TXT_139);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_BASE_URL . '&option=new_custom_field', TXT_362));
 }
 
 /**
@@ -549,47 +574,27 @@ function addItemType()
         // Set new id
         $array['item_type_id'] = Database::newID('item_types', 'item_type_id');
         // Setup the item type custom fields db update
-        $i = 0;
-        foreach ($_POST as $key => $value) {
-            // Custom field check boxes are the only numeric form fields
-            if (stristr($key, 'custom_field_id')) {
-                // Build insert array
-                $customFieldArray['item_type_id'] = $array['item_type_id'];
-                $customFieldArray['custom_field_id'] = $value;
-                $customFieldArray['custom_field_order'] = $_POST['custom_field_sort_' . $value];
-                // Insert form field values into row
-                $sql = Database::sqlInsert('item_type_custom_fields', $customFieldArray);
-                Database::query($sql, DSN, SET_SHOW_SQL);
-                // Posted field is not longer required
-                unset($_POST[$key]);
-            }
-            // Build group membership delimited string
-            if (stristr($key, 'group_')) {
-                if ($i == 0) {
-                    $array['group_security'] = '}-{' . $value . '}-{';
-                } else {
-                    $array['group_security'] .= $value . '}-{';
-                }
-                unset ($_POST[$key]);
-                $i++;
-            }
-            if (stristr($key, 'custom_field_sort')) {
-                unset ($_POST[$key]);
-            }
+        $selectedFields = selectedCustomFieldsFromPost();
+        foreach ($selectedFields as $fieldId => $order) {
+            $customFieldArray = [
+                'item_type_id' => $array['item_type_id'],
+                'custom_field_id' => $fieldId,
+                'custom_field_order' => $order,
+            ];
+            $sql = Database::sqlInsert('item_type_custom_fields', $customFieldArray);
+            Database::query($sql, DSN, SET_SHOW_SQL);
         }
+        $array['group_security'] = groupSecurityFromPost();
+        stripItemTypeFormFields();
         // Build insert array
         $columnArray = array_merge($array, $_POST);
         // Insert form field values into row
         $sql = Database::sqlInsert('item_types', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
-        $html = RenderViews::showResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL, TXT_362, 'URL'));
-        define('BODY_CONTENT', $html);
-    } else {
-        $html = RenderViews::showResponse($_POST['item_type_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_BASE_URL . '&option=new_item_type', TXT_363, 'URL'));
-        define('BODY_CONTENT', $html);
+        RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+        return;
     }
-    define('HEADING', TXT_85);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_BASE_URL . '&option=new_item_type', TXT_363));
 }
 
 /**
@@ -605,25 +610,20 @@ function addItemType()
  */
 function showSearchOptions(): void
 {
-    // Build individual form controls (values and labels come from language constants)
-    $searchOptions = RenderViews::buildSelectDropdown(
+    $formFields = [];
+    $formFields[TXT_682] = RenderViews::buildSelectDropdown(
         'type',
         ['custom_field_name', 'item_type_name'],
         [TXT_86, TXT_87],
         ''
     );
-    $searchOperator = RenderViews::buildSelectDropdown(
+    $formFields[TXT_678] = RenderViews::buildSelectDropdown(
         'operator',
         ['LIKE', '='],
         [TXT_80, TXT_81],
         ''
     );
-    $searchCriteria = RenderViews::buildTextInput('criteria', '');
-
-    // Compose labelled fields for RenderViews::buildForm
-    // Omit the old buildFormSectionHeading; use the form title parameter instead.
-    $formFields = [];
-    $formFields[TXT_82] = '<div>' . $searchOptions . ' ' . $searchOperator . ' ' . $searchCriteria . '</div>';
+    $formFields[TXT_82] = RenderViews::buildTextInput('criteria', '');
 
     // Create form buttons
     $buttons = [];
@@ -674,10 +674,18 @@ function showFieldTypeResults()
         while ($row = Database::fetchArray($result)) {
             // RenderViews table data differently for user and group search results
             if ($table == 'custom_fields') {
+                $row['field_type'] = FieldTypes::normalise($row['field_type']);
                 $fields[TXT_151] = '<strong>' . $row['custom_field_name'] . ' (' . $row['field_type'] . ')' . '</strong>';
                 $fields[TXT_426] = ($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') ? 'worker_field_' . $row['custom_field_id'] : 'custom_field_' . $row['custom_field_id'];
-                $action = '<a href ="' . ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $row['custom_field_id'] . '" class="URL">' . TXT_224 . '</a>  ';
-                if ($row['field_type'] == 'buildSelectDropdown' or $row['field_type'] == 'subMenu' or $row['field_type'] == 'workerFieldMenu') {
+                $action = RenderViews::buildURL(ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $row['custom_field_id'], TXT_224);
+                $action .= ' - ' . RenderViews::buildURL(
+                    ITEM_BASE_URL . '&option=delete_custom_field&custom_field_id=' . $row['custom_field_id'],
+                    TXT_47,
+                    '',
+                    'URL',
+                    'onClick="javascript:return confirm(\'' . TXT_400 . '\')"'
+                );
+                if ($row['field_type'] == FieldTypes::MENU or $row['field_type'] == 'subMenu' or $row['field_type'] == 'workerFieldMenu') {
                     $action .= ' - <a href ="' . ITEM_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $row['custom_field_id'] . '" class="URL">' . TXT_287 . '</a>  ';
                 }
                 if ($row['field_type'] == 'subMenu') {
@@ -725,54 +733,32 @@ function updateItemType($itemTypeID)
 {
     // Remove unwanted POST variables
     unset ($_POST['submit_button'], $_POST['reset']);
+    $selectedFields = selectedCustomFieldsFromPost();
+    $groupSecurity = groupSecurityFromPost();
+    stripItemTypeFormFields();
     // Remove all existing custom field table entries and then re add changed selection
     $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
     $sql = Database::sqlDelete('item_type_custom_fields', $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    $i = 0;
-    foreach ($_POST as $key => $value) {
-        // Custom field check boxes are the only numeric form fields
-        if (stristr($key, 'custom_field_id_')) {
-            // Build insert array
-            $customFieldArray['item_type_id'] = $itemTypeID;
-            $customFieldArray['custom_field_id'] = $value;
-            $customFieldArray['custom_field_order'] = $_POST['custom_field_sort_' . $value];
-            // Insert form field values into row
-            $sql = Database::sqlInsert('item_type_custom_fields', $customFieldArray);
-            Database::query($sql, DSN, SET_SHOW_SQL);
-            // Posted field is not longer required
-            unset ($_POST['custom_field_id_' . $value]);
-            unset($_POST['custom_field_sort_' . $value]);
-        }
-        // Build group membership delimited string
-        if (stristr($key, 'group_')) {
-            if ($i == 0) {
-                $securityArray['group_security'] = '}-{' . $value . '}-{';
-            } else {
-                $securityArray['group_security'] .= $value . '}-{';
-            }
-            unset ($_POST[$key]);
-            $i++;
-        }        //Handle sort fields not related to selected custom fields
-        if (stristr($key, 'custom_field_sort_')) {
-            unset ($_POST[$key]);
-        }
+    foreach ($selectedFields as $fieldId => $order) {
+        $customFieldArray = [
+            'item_type_id' => $itemTypeID,
+            'custom_field_id' => $fieldId,
+            'custom_field_order' => $order,
+        ];
+        $sql = Database::sqlInsert('item_type_custom_fields', $customFieldArray);
+        Database::query($sql, DSN, SET_SHOW_SQL);
     }
-    // Build insert array
-    if (isset($securityArray['group_security'])) {
-        $columnArray = array_merge($_POST, $securityArray);
-    } else {
-        $columnArray = $_POST;
+    $columnArray = $_POST;
+    if ($groupSecurity !== '') {
+        $columnArray['group_security'] = $groupSecurity;
     }
     // Set condition
     $condition = "WHERE item_type_id = '$itemTypeID'";
     // Update form field values into row
     $sql = Database::sqlUpdate('item_types', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    $html = RenderViews::showResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL, TXT_362, 'URL'));
-    define('BODY_CONTENT', $html);
-    define('HEADING', TXT_139);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
 }
 
 /**
@@ -795,10 +781,93 @@ function updateCustomField($customFieldID)
     // Update form field values into row
     $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    $html = RenderViews::showResponse('<strong>' . $_POST['custom_field_name'] . '</strong> ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL, TXT_362, 'URL'));
-    define('BODY_CONTENT', $html);
-    define('HEADING', TXT_139);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL, TXT_362));
+}
+
+/**
+ * Checked custom fields from the item-type form, read before any POST keys are removed.
+ * Sort inputs can arrive before their checkbox, so the order is captured up front.
+ *
+ * @return array<string, string> custom field id => sort order
+ */
+function selectedCustomFieldsFromPost(): array
+{
+    $selected = [];
+    foreach ($_POST as $key => $value) {
+        if (str_starts_with((string)$key, 'custom_field_id_') && $value !== '' && $value !== '0') {
+            $order = $_POST['custom_field_sort_' . $value] ?? '0';
+            $selected[(string)$value] = ($order === '' ? '0' : (string)$order);
+        }
+    }
+    return $selected;
+}
+
+/**
+ * Group ids posted as group_{id}, in the }-{id}-{ storage format.
+ */
+function groupSecurityFromPost(): string
+{
+    $security = '';
+    $i = 0;
+    foreach ($_POST as $key => $value) {
+        if (str_starts_with((string)$key, 'group_') && $value !== '') {
+            $security .= ($i === 0 ? '}-{' : '') . $value . '}-{';
+            $i++;
+        }
+    }
+    return $security;
+}
+
+/**
+ * Drop checkbox, sort and group inputs so they are not written onto item_types.
+ */
+function stripItemTypeFormFields(): void
+{
+    foreach (array_keys($_POST) as $key) {
+        if (str_starts_with((string)$key, 'custom_field_id_')
+            || str_starts_with((string)$key, 'custom_field_sort_')
+            || str_starts_with((string)$key, 'group_')) {
+            unset($_POST[$key]);
+        }
+    }
+}
+
+/**
+ * Deletes a custom field, its menu values, item-type links, and the items column when one was added.
+ */
+function deleteCustomField(): void
+{
+    $customFieldID = (string)($_GET['custom_field_id'] ?? '');
+    if ($customFieldID === '' || !ctype_digit($customFieldID)) {
+        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+        return;
+    }
+
+    $sql = Database::sqlSelect('custom_fields', '*', "WHERE custom_field_id = '" . $customFieldID . "'");
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $row = Database::fetchArray($result);
+    if (!$row) {
+        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+        return;
+    }
+
+    $name = (string)$row['custom_field_name'];
+    $type = (string)$row['field_type'];
+    $condition = "WHERE custom_field_id = '" . $customFieldID . "'";
+    Database::query(Database::sqlDelete('custom_field_menu_values', $condition), DSN, SET_SHOW_SQL);
+    Database::query(Database::sqlDelete('item_type_custom_fields', $condition), DSN, SET_SHOW_SQL);
+    Database::query(Database::sqlDelete('custom_fields', $condition), DSN, SET_SHOW_SQL);
+
+    $addsColumn = !in_array($type, ['workerField', 'workerFieldMenu', 'multiLevelMenu'], true);
+    if ($addsColumn) {
+        $column = 'custom_field_' . $customFieldID;
+        $existing = Database::buildArray("SELECT name FROM pragma_table_info('items') WHERE name = '" . $column . "'");
+        if ($existing !== []) {
+            Database::query('ALTER TABLE items DROP COLUMN ' . Database::escapeIdentifier($column), DSN, SET_SHOW_SQL);
+        }
+    }
+
+    RenderViews::buildResponse($name . ' ' . TXT_47, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
 }
 
 
@@ -879,7 +948,7 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
 
     // Build sort value arrays for dropdowns
     $columnArray = ['*'];
-    $condition = "WHERE enabled = 'Yes' AND field_type = 'buildSelectDropdown'";
+    $condition = "WHERE enabled = 'Yes' AND field_type IN (" . FieldTypes::sqlInList(FieldTypes::MENU) . ")";
     $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     $fieldCount = Database::numRows($result) ?: 0;
@@ -935,9 +1004,7 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
     // Build form fields for RenderViews::buildForm
     $formFields = [];
 
-    // Use the old buildFormSectionHeading method (keeps legacy appearance)
-    // Include hidden id adjacent to the heading so it's inside the form
-    $formFields[''] = RenderViews::buildFormSectionHeading(TXT_662) . RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID);
+    $formFields[''] = RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID);
 
     $formFields[TXT_659] = $fieldSelect;
     $formFields[TXT_665] = $customFieldsHtml;
@@ -987,63 +1054,74 @@ function showMultiLevelMenuItems($multiLevelMenuID = '', $fieldValues = '')
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     $row = Database::fetchArray($result);
 
-    if ($row['menu_relationship'] == '') {
-        $html = RenderViews::showResponse(TXT_667);
-    } else {
-        $html = RenderViews::buildStartForm('index.php?controller=administration_item_settings&option=update_multilevel_menu_items', 'POST', 'form-horizontal');
-        $tableRows = '';
-        $customFieldArray = array_filter(explode('}-{', $row['menu_relationship']));
-
-        foreach ($customFieldArray as $key => $value) {
-            if ($value != '') {
-                $fieldArray = explode(',', $value);
-                $customFieldIDArray[$fieldArray[0]] = $fieldArray[1];
-            }
-        }
-        //Sort custom fields by level
-        asort($customFieldIDArray);
-        $arrayInt = 1;
-        $fieldArray = unserialize($row['menu_value_links']);
-        $itemCount = $row['menu_levels'];
-        foreach ($customFieldIDArray as $key => $value) {
-            $columnArray = array('menu_value_id', 'menu_value');
-            $condition = "WHERE custom_field_id = '$key'";
-            $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            while ($row = Database::fetchArray($result)) {
-                $idArray[] = $row['menu_value_id'];
-                $nameArray[] = $row['menu_value'];
-            }
-            $i = 1;
-            $menuHTML = '';
-            while ($i <= $itemCount) {
-                $fieldValue = (isset($fieldArray[$i][$key])) ? $fieldArray[$i][$key] : '';
-                //echo $fieldValue;
-                $menuHTML .= RenderViews::buildSelectDropdown('custom_field_id_' . $key . '-' . $i, $idArray, $nameArray, $fieldValue) . ' - ' . $i . '<br>';
-                $i++;
-            }
-            $tableColumnArray[] = $menuHTML;
-            $columnArray = array('custom_field_name');
-            $condition = "WHERE custom_field_id = '" . $key . "'";
-            $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            $row = Database::fetchArray($result);
-            $headingColumnArray[] = '<strong>' . TXT_668 . ' ' . $arrayInt . ':' . $row['custom_field_name'] . '</strong>';
-            unset($idArray, $nameArray);
-            $arrayInt++;
-        }
-        $html .= RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID);
-
-        $tableRows .= RenderViews::tableData('2', '', '', '', 'tdc1', $headingColumnArray, 'row');
-        $tableRows .= RenderViews::tableData('2', '', '', '', 'tdc1', $tableColumnArray, 'row');
-        $buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-        $buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-        $endForm = RenderViews::buildEndFormWithButtons($buttonArray);
-        $tableRows .= RenderViews::tableData('2', '', '', '', 'tdc1', array($endForm), 'row');
-        $html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
+    if (!$row || ($row['menu_relationship'] ?? '') === '') {
+        define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+            'title' => TXT_666,
+            'html' => htmlspecialchars(TXT_667, ENT_QUOTES, 'UTF-8'),
+        ]]));
+        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        return;
     }
-    define('HEADING', TXT_666);
-    define('BODY_CONTENT', $html);
+
+    $customFieldIDArray = [];
+    foreach (array_filter(explode('}-{', $row['menu_relationship'])) as $value) {
+        $parts = explode(',', $value);
+        if (($parts[0] ?? '') !== '') {
+            $customFieldIDArray[$parts[0]] = $parts[1] ?? '0';
+        }
+    }
+    asort($customFieldIDArray);
+
+    $links = $row['menu_value_links'];
+    $savedLinks = (is_string($links) && $links !== '') ? @unserialize($links) : [];
+    if (!is_array($savedLinks)) {
+        $savedLinks = [];
+    }
+    $itemCount = (int)$row['menu_levels'];
+
+    $fields = [];
+    $fields[''] = RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID);
+    $level = 1;
+    foreach ($customFieldIDArray as $key => $value) {
+        $idArray = [];
+        $nameArray = [];
+        $columnArray = array('menu_value_id', 'menu_value');
+        $condition = "WHERE custom_field_id = '$key'";
+        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
+        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        while ($menuRow = Database::fetchArray($result)) {
+            $idArray[] = $menuRow['menu_value_id'];
+            $nameArray[] = $menuRow['menu_value'];
+        }
+
+        $menuHTML = '';
+        for ($i = 1; $i <= $itemCount; $i++) {
+            $fieldValue = $savedLinks[$i][$key] ?? '';
+            $menuHTML .= RenderViews::buildSelectDropdown('custom_field_id_' . $key . '-' . $i, $idArray, $nameArray, $fieldValue)
+                . ' <span>' . $i . '</span><br>';
+        }
+
+        $columnArray = array('custom_field_name');
+        $condition = "WHERE custom_field_id = '" . $key . "'";
+        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
+        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $nameRow = Database::fetchArray($result);
+        $label = TXT_668 . ' ' . $level . ': ' . ($nameRow['custom_field_name'] ?? '');
+        $fields[$label] = '<div style="flex:1 1 100%">' . $menuHTML . '</div>';
+        $level++;
+    }
+
+    $buttons = [
+        RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+        RenderViews::buildFormButton('reset', 'reset', TXT_75),
+    ];
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_666,
+        'index.php?controller=administration_item_settings&option=update_multilevel_menu_items',
+        $fields,
+        $buttons
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -1168,7 +1246,7 @@ switch (@$_GET['option']) {
         break;
     default :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        showItemSettingsOptions();
+        showSearchOptions();
         break;
 }
 ?>

@@ -38,10 +38,8 @@ function showUser($userID = '',$itemID = '')
 	$attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
 	$itemURL = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&item_id='.$itemID.$logEntry . $attachments,TXT_621.' - '.TXT_398.' '.$itemID,'URL');
 	if ($userID == '') {
-		$html = RenderViews::showResponse(TXT_620);
-		define('BODY_CONTENT', $html);
-		define('HEADING', $itemURL);
-		RenderViews::renderThemePage('main_page_content',  SET_THEME);
+		RenderViews::buildResponse(TXT_620, $itemURL);
+		return;
 	} else {
 		// Get custom fields from database
 		$columnArray = array ('*');

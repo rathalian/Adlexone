@@ -1,0 +1,30 @@
+---
+description: Use RenderViews::buildForm for new or updated PHP forms. Exemplar is showSearchOptions() in administration_item_settings.php.
+globs: "**/*.php"
+alwaysApply: false
+---
+
+# Form rendering
+
+Use `RenderViews::buildForm()` for new forms and when touching an existing form. Do not assemble forms with `buildStartForm()`, `buildFormFieldsGrid()`, or `buildEndFormWithButtons()` unless you are only patching a file that has not been migrated yet.
+
+Do not set the `HEADING` constant. Pass the card title as the first argument to `buildForm()`. Do not use `buildFormSectionHeading()`.
+
+## Pattern
+
+1. Build `$fields` as `label => RenderViews::build*()` HTML.
+2. Build `$buttons` with `RenderViews::buildFormButton()`.
+3. Call `buildForm($title, $actionUrl, $fields, $buttons)`.
+4. `define('BODY_CONTENT', $html)` then `RenderViews::renderThemePage('main_page_content', SET_THEME)`.
+
+`buildForm()` returns HTML. It does not set `BODY_CONTENT`.
+
+Hidden fields use an empty label: `$fields[''] = RenderViews::buildHiddenInput(...)`.
+
+Field helpers: `buildTextInput`, `buildTextArea`, `buildSelectDropdown`, `buildPasswordInput`, `buildCheckBox`, `buildRadioButton`, `buildHiddenInput`, `buildFileInput`, `buildDateInputFields`.
+
+## Exemplar
+
+`showSearchOptions()` in `app/Http/Controllers/administration_item_settings.php`.
+
+Same shape: `showUserGroupSearch()` in `administration_security.php`, `showactionPackages()` in `administration_actions.php`.

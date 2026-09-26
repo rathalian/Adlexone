@@ -30,7 +30,6 @@ function showSetupTriggerActionCustomField($actionID = '')
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Action_Triggers&descriptor_name=TriggerActionCustomField';
 	}
-	$html = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
 	// Get custom field buildSelectDropdown
 	$columnArray = array('custom_field_id', 'custom_field_name', 'field_type');
 	$sql = Database::sqlSelect('custom_fields', $columnArray);
@@ -58,48 +57,39 @@ function showSetupTriggerActionCustomField($actionID = '')
 		$actionIDArray[] = $row['action_id'];
 		$actionNameArray[] = $row['action_name'];
 	}
-	$actionField[ACT_PAK_14] = RenderViews::menu('action_data', $actionIDArray, $actionNameArray, @$fieldValues['action_data']);
-	$actionField[ACT_PAK_19] = RenderViews::menu('action_type', array('create_item_trigger_met', 'create_item_every_item', 'update_item_log_entry', 'update_item_trigger_met', 'update_item_any_trigger', 'update_item_all_met', 'item_attachment'), array(ACT_PAK_23, ACT_PAK_24, ACT_PAK_25, ACT_PAK_26, ACT_PAK_27, ACT_PAK_28, TXT_671), @$fieldValues['action_type']);
+	$actionField[ACT_PAK_14] = RenderViews::buildSelectDropdown('action_data', $actionIDArray, $actionNameArray, @$fieldValues['action_data']);
+	$actionField[ACT_PAK_19] = RenderViews::buildSelectDropdown('action_type', array('create_item_trigger_met', 'create_item_every_item', 'update_item_log_entry', 'update_item_trigger_met', 'update_item_any_trigger', 'update_item_all_met', 'item_attachment'), array(ACT_PAK_23, ACT_PAK_24, ACT_PAK_25, ACT_PAK_26, ACT_PAK_27, ACT_PAK_28, TXT_671), @$fieldValues['action_type']);
 	$conditionArrayPre = explode('}-{', @$fieldValues['action_condition_pre']);
 	$conditionArrayPost = explode('}-{', @$fieldValues['action_condition_post']);
 	$roleIDs = array(2, 3, 4, 5);
 	$roleNames = array(TXT_192, TXT_193, TXT_194, TXT_303);
-	$actionField[ACT_PAK_72] = RenderViews::menu('log_role', $roleIDs, $roleNames,@$conditionArrayPost[3]);
-	// Use SQL operators for pre action conditions
+	$actionField[ACT_PAK_72] = RenderViews::buildSelectDropdown('log_role', $roleIDs, $roleNames,@$conditionArrayPost[3]);
 	$operatorValues = array('=', '<>');
 	$operatorDisplayValues = array(TXT_81, TXT_318);
-	$customFieldMenuPre = RenderViews::menu('custom_field_pre', $customFieldIDArray, $customFieldNameArray, @$conditionArrayPre[0]);
-	$operatorMenuPre = RenderViews::menu('operator_pre', $operatorValues, $operatorDisplayValues, @$conditionArrayPre[1]);
-	$conditionPre = RenderViews::textBox('condition_pre', @$conditionArrayPre[2]);
-	$actionField[ACT_PAK_2] = $customFieldMenuPre . ' ' . $operatorMenuPre . ' ' . $conditionPre;
-	$customFieldMenuPost = RenderViews::menu('custom_field_post', $customFieldIDArray, $customFieldNameArray, @$conditionArrayPost[0]);
-	// Use PHP operators for trigger conditions
+	$actionField[ACT_PAK_2] = RenderViews::buildSelectDropdown('custom_field_pre', $customFieldIDArray, $customFieldNameArray, @$conditionArrayPre[0])
+		. ' ' . RenderViews::buildSelectDropdown('operator_pre', $operatorValues, $operatorDisplayValues, @$conditionArrayPre[1])
+		. ' ' . RenderViews::buildTextInput('condition_pre', @$conditionArrayPre[2]);
 	$operatorValues = array('==', '!=');
-	$operatorDisplayValues = array(TXT_81, TXT_318);
-	$operatorMenuPost = RenderViews::menu('operator_post', $operatorValues, $operatorDisplayValues, @$conditionArrayPost[1]);
-	$conditionPost = RenderViews::textBox('condition_post', @$conditionArrayPost[2]);
-	$actionField[ACT_PAK_10] = $customFieldMenuPost . ' ' . $operatorMenuPost . ' ' . $conditionPost;
-	$tableRows = '';
-	foreach($actionField as $name => $field) {
-		$cellData = array ('<strong>' . $name . '</strong>', $field);
-		$tableRows .= RenderViews::tableData($cellData, 'row', '', '', '', '', 'tdc1', '', '');
-	}
-	$html .= RenderViews::hiddenField('action_id', @$fieldValues['action_id']);
-	//Javascript field validation
+	$actionField[ACT_PAK_10] = RenderViews::buildSelectDropdown('custom_field_post', $customFieldIDArray, $customFieldNameArray, @$conditionArrayPost[0])
+		. ' ' . RenderViews::buildSelectDropdown('operator_post', $operatorValues, $operatorDisplayValues, @$conditionArrayPost[1])
+		. ' ' . RenderViews::buildTextInput('condition_post', @$conditionArrayPost[2]);
+	$actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 	$jsFieldNameArray = "['action_name']";
 	$jsTestTypeArray = "['']";
 	$jsErrorMsgArray = "['']";
 	$jsRequiredMsgArray = "['".ACT_PAK_36."']";
 	$jsRequiredArray = "[true]";
 	$javascript = "onClick=\"javascript:return fieldCheck('".TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";
-	$buttonArray[] = RenderViews::formButton('submit','submit_button',TXT_74,$javascript);
-	$buttonArray[] = RenderViews::formButton('reset','reset',TXT_75);
-	$endFormButtons = RenderViews::endFormButtons($buttonArray,'1','1');
-	$tableRows .= RenderViews::tableData(array($endFormButtons, 'row', '2', '', '', '', 'tdc1', '', ''), 'row');
-	$html .= RenderViews::table($tableRows, 'tableIndent', '95%', '0', '0', '0');
-	define('HEADING', ACT_PAK_13);
-	define('BODY_CONTENT', $html);
-	RenderViews::renderPage('main_page_content',  SET_THEME);
+	define('BODY_CONTENT', RenderViews::buildForm(
+		ACT_PAK_13,
+		$action,
+		$actionField,
+		[
+			RenderViews::buildFormButton('submit','submit_button',TXT_74,$javascript),
+			RenderViews::buildFormButton('reset','reset',TXT_75),
+		]
+	));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
  * Add or update triggered action definition
@@ -280,8 +270,6 @@ function showSetupTriggerActionSystemField($actionID = '')
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Action_Triggers&descriptor_name=TriggerActionSystemField';
 	}
-	$html = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
-	// Create the setup form
 	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
 	// Get list of existing actions defined
 	$columnArray = array('action_id', 'action_name');
@@ -292,38 +280,27 @@ function showSetupTriggerActionSystemField($actionID = '')
 		$actionIDArray[] = $row['action_id'];
 		$actionNameArray[] = $row['action_name'];
 	}
-	$actionField[ACT_PAK_14] = RenderViews::menu('action_data', $actionIDArray, $actionNameArray, @$fieldValues['action_data']);
-	// Setup System Menu
-	$systemFieldValueArray[0] = 'item_title';
-	$systemFieldNameArray[0] = ACT_PAK_20;
-	$systemFieldValueArray[1] = 'creator_security';
-	$systemFieldNameArray[1] = ACT_PAK_67;
-	$systemFieldValueArray[2] = 'user_security';
-	$systemFieldNameArray[2] = ACT_PAK_44;
-	$systemFieldValueArray[3] = 'group_security';
-	$systemFieldNameArray[3] = ACT_PAK_45;
-	$actionField[ACT_PAK_46] = RenderViews::menu('system_field_pre', $systemFieldValueArray, $systemFieldNameArray, @$fieldValues['action_condition_pre']);
-	$tableRows = '';
-	foreach($actionField as $name => $field) {
-		$cellData = array ('<strong>' . $name . '</strong>', $field);
-		$tableRows .= RenderViews::tableData($cellData, 'row', '', '', '', '', 'tdc1', '', '');
-	}
-	$endFormButtons = RenderViews::hiddenField('action_id', @$fieldValues['action_id']);
-	//Javascript field validation
+	$actionField[ACT_PAK_14] = RenderViews::buildSelectDropdown('action_data', $actionIDArray, $actionNameArray, @$fieldValues['action_data']);
+	$systemFieldValueArray = ['item_title', 'creator_security', 'user_security', 'group_security'];
+	$systemFieldNameArray = [ACT_PAK_20, ACT_PAK_67, ACT_PAK_44, ACT_PAK_45];
+	$actionField[ACT_PAK_46] = RenderViews::buildSelectDropdown('system_field_pre', $systemFieldValueArray, $systemFieldNameArray, @$fieldValues['action_condition_pre']);
+	$actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 	$jsFieldNameArray = "['action_name']";
 	$jsTestTypeArray = "['']";
 	$jsErrorMsgArray = "['']";
 	$jsRequiredMsgArray = "['".ACT_PAK_36."']";
 	$jsRequiredArray = "[true]";
 	$javascript = "onClick=\"javascript:return fieldCheck('".TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";
-	$buttonArray[] = RenderViews::formButton('submit','submit_button',TXT_74,$javascript);
-	$buttonArray[] = RenderViews::formButton('reset','reset',TXT_75);
-	$endFormButtons = RenderViews::endFormButtons($buttonArray, '1','1');
-	$tableRows .= RenderViews::tableData(array($endFormButtons, 'row', '2', '', '', '', 'tdc1', '', ''), 'row');
-	$html .= RenderViews::table($tableRows, 'tableIndent', '95%', '0', '0', '0');
-	define('HEADING', ACT_PAK_47);
-	define('BODY_CONTENT', $html);
-	RenderViews::renderPage('main_page_content',  SET_THEME);
+	define('BODY_CONTENT', RenderViews::buildForm(
+		ACT_PAK_47,
+		$action,
+		$actionField,
+		[
+			RenderViews::buildFormButton('submit','submit_button',TXT_74,$javascript),
+			RenderViews::buildFormButton('reset','reset',TXT_75),
+		]
+	));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
  * Add or update triggered action definition

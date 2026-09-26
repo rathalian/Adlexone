@@ -34,35 +34,13 @@ use Adlexone\support\RenderViews;
  */
 function showControllerMenu (): string
 {
-    // Profile options
-    $tableRows = RenderViews::tableData('', '', 'center', '', array('tdTopLeft', 'tdLeftNavTopMiddle', 'tdTopRight'), array('', TXT_24, ''), 'row');
-    $image = RenderViews::buildImage(SET_IMAGE_PATH . 'profile.png', SET_SHOW_IMAGES);
-	$URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=modify_user', TXT_24, 'URLNav');
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNavLast', array($image.$URL), 'row'), $_SESSION['access_role_id'], 5);
-    // IMS options
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'center', '', 'tdLeftNavShaded', array(TXT_380), 'row'), $_SESSION['access_role_id'], 1);
-	$image = RenderViews::buildImage(SET_IMAGE_PATH . 'key.png', SET_SHOW_IMAGES);
-	$URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security', TXT_28, 'URLNav');
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNav', array($image.$URL), 'row'), $_SESSION['access_role_id'], 1);
-	$image = RenderViews::buildImage(SET_IMAGE_PATH . 'itemSettings.png', SET_SHOW_IMAGES);
-    $URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', TXT_49, 'URLNav');
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNav', array($image.$URL), 'row'), $_SESSION['access_role_id'], 1);
-	$image = RenderViews::buildImage(SET_IMAGE_PATH . 'actions.png', SET_SHOW_IMAGES);
-    $URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_actions', TXT_128, 'URLNav');
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNavLast', array($image.$URL), 'row'), $_SESSION['access_role_id'], 1);
-    // System options
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'center', '', 'tdLeftNavShaded', array(TXT_381), 'row'), $_SESSION['access_role_id'], 1);
-    $image = RenderViews::buildImage(SET_IMAGE_PATH . 'settings.png', SET_SHOW_IMAGES);
-	$URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_settings', TXT_55, 'URLNav');
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNav', array($image.$URL), 'row'), $_SESSION['access_role_id'], 1);
-	$image = RenderViews::buildImage(SET_IMAGE_PATH . 'procedures.png', SET_SHOW_IMAGES);
-    $URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_procedures', TXT_230, 'URLNav');
-    $tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNavLast', array($image.$URL), 'row'), $_SESSION['access_role_id'], 0);
-    // Bottom Cell
-    $tableRows .= RenderViews::tableData('3', '', 'left', '', 'tdLeftNavBottom', array('&nbsp;'), 'row');
-    $html = RenderViews::table('200', '0', '0', '0', '', $tableRows);
-
-   return $html;
+    $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=modify_user', TXT_24, 'URL'), $_SESSION['access_role_id'], 5);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security', TXT_28, 'URL'), $_SESSION['access_role_id'], 1);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', TXT_49, 'URL'), $_SESSION['access_role_id'], 1);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_actions', TXT_128, 'URL'), $_SESSION['access_role_id'], 1);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_settings', TXT_55, 'URL'), $_SESSION['access_role_id'], 1);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_procedures', TXT_230, 'URL'), $_SESSION['access_role_id'], 0);
+    return $html;
 }
 /**
  * SubController()

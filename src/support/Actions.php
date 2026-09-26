@@ -86,13 +86,12 @@ class Actions {
 	 * @return Opening action header
 	 */
 	public static function startNewAction($actionID = '', $fieldValues = '', $showItemTypes = true, $showEnabled = true){
-		// Create standard notification opening form fields
-		$actionField[TXT_299] = RenderViews::textBox('action_name', $fieldValues['action_name']);
+		$fieldValues = is_array($fieldValues) ? $fieldValues : [];
+		$actionField[TXT_299] = RenderViews::buildTextInput('action_name', $fieldValues['action_name'] ?? '');
 		if($showEnabled){
-			$actionField[TXT_451] = RenderViews::menu('enabled', array('Yes','No'), array(TXT_93,TXT_94), $fieldValues['enabled'], 'form-control');
+			$actionField[TXT_451] = RenderViews::buildSelectDropdown('enabled', array('Yes','No'), array(TXT_93,TXT_94), $fieldValues['enabled'] ?? '');
 		}
 		if ($showItemTypes) {
-			// Get action information from database
 			$columnArray = array('item_type_id', 'item_type_name');
 			$sql = Database::sqlSelect('item_types', $columnArray);
 			$result = Database::query($sql, DSN, SET_SHOW_SQL);
@@ -102,7 +101,7 @@ class Actions {
 				$typeIDArray[] = $row['item_type_id'];
 				$typeValueArray[] = $row['item_type_name'];
 			}
-			$actionField[TXT_300] = RenderViews::menu('item_type_id', $typeIDArray, $typeValueArray, $fieldValues['item_type_id'], 'form-control') . '&nbsp;&nbsp;*' . TXT_95;
+			$actionField[TXT_300] = RenderViews::buildSelectDropdown('item_type_id', $typeIDArray, $typeValueArray, $fieldValues['item_type_id'] ?? '') . ' * ' . TXT_95;
 		}
 		return $actionField;
 	}

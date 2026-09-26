@@ -36,52 +36,37 @@ define('POR_BASE_URL', 'index.php?controller='.$_GET['controller'].'&subcontroll
 function showAdminPortal (){
 
 	// User Information
-	$sql = "SELECT COUNT(*) FROM users WHERE role = '0'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$oozGlobalAdminCount = Database::firstResult($result);
-	$sql = "SELECT COUNT(*) FROM users WHERE role = '1'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$oozAdminCount = Database::firstResult($result);
-	$sql = "SELECT COUNT(*) FROM users WHERE role = '2'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$adminCount = Database::firstResult($result);
-	$sql = "SELECT COUNT(*) FROM users WHERE role = '3'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$managerCount = Database::firstResult($result);
-	$sql = "SELECT COUNT(*) FROM users WHERE role = '4'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$userCount = Database::firstResult($result);
-	$sql = "SELECT COUNT(*) FROM users WHERE role = '5'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$viewerCount = Database::firstResult($result);
-	$userRow = RenderViews::tableData('2', '', 'left', '', array('tdcHeadingBottomBorder'), array (TXT_428), 'row');
-	$userRow .= RenderViews::tableData('', array('50%','50%'), array('left','left'), '', array('tdc2','tdc2'), array (TXT_430.': <strong>' .$oozGlobalAdminCount.'</strong>',TXT_431.': <strong>' .$oozAdminCount.'</strong>'), 'row');
-	$userRow .= RenderViews::tableData('', array('50%','50%'), array('left','left'), '', array('tdc2','tdc2'), array (TXT_432.': <strong>' .$adminCount.'</strong>',TXT_433.': <strong>' .$managerCount.'</strong>'), 'row');
-	$userRow .= RenderViews::tableData('', array('50%','50%'), array('left','left'), '', array('tdc2','tdc2'), array (TXT_434.': <strong>' .$userCount.'</strong>',TXT_435.': <strong>' .$viewerCount.'</strong>'), 'row');
-	$html = RenderViews::table('100%', '0', '0', '0', '', $userRow);
-	$sql = "SHOW TABLE STATUS";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$fragmentated = 'No';
-	$databaseSize = '';
-	while($row = mysql_fetch_array($result)){
-		$databaseSize = $databaseSize + ($row['Data_length']+$row['Index_length']);
-		if ($row['Data_free'] > 0 AND ($row['Data_free'] > ($row['Data_length'] * 0.2))){//20% fragmentation
-			$fragmentated = 'Yes';//Override
-		}
-	}
-	$dataInfoRow = RenderViews::tableData('2', '', 'left', '', array('tdcHeadingBottomBorder'), array (TXT_437), 'row');
-	$dataInfoRow .= RenderViews::tableData('', array('50%','50%'), array('left','left'), '', array('tdc2','tdc2'), array (TXT_439.': <strong>'.round($databaseSize/1024,2).'</strong>',TXT_438.': <strong>'.$fragmentated.'</strong>'), 'row');
-	$sql = "SELECT COUNT(*) FROM items";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$rowCount = Database::firstResult($result);
-	$dataInfoRow .= RenderViews::tableData('', array('50%','50%'), array('left','left'), '', array('tdc2','tdc2'), array (TXT_440.': <strong>'.$rowCount.'</strong>',TXT_441.': <strong>'.count(glob(SET_ATTACHMENTS_PATH.'*')).'</strong>'), 'row');
-	$html .= RenderViews::table('100%', '0', '0', '0', '', $dataInfoRow);
-	$portalRow = RenderViews::tableData('', array('90%'), array('center'), '', array('moduleContainer'), array($html), 'row');
-	$portalHTML = RenderViews::table('100%', '0', '0', '0', '', $portalRow);
-	// Show page
-	define('HEADING', TXT_429);
-	define('BODY_CONTENT', $portalHTML);
-	RenderViews::renderThemePage('main_page_content',  SET_LANGUAGE, SET_THEME);
+	$count = static function (string $sql): string {
+		$row = Database::firstResult($sql, DSN);
+		return (string)($row ? reset($row) : 0);
+	};
+	$oozGlobalAdminCount = $count("SELECT COUNT(*) FROM users WHERE role = '0'");
+	$oozAdminCount = $count("SELECT COUNT(*) FROM users WHERE role = '1'");
+	$adminCount = $count("SELECT COUNT(*) FROM users WHERE role = '2'");
+	$managerCount = $count("SELECT COUNT(*) FROM users WHERE role = '3'");
+	$userCount = $count("SELECT COUNT(*) FROM users WHERE role = '4'");
+	$viewerCount = $count("SELECT COUNT(*) FROM users WHERE role = '5'");
+	$users = RenderViews::buildFormFieldsGrid([
+		TXT_430 => htmlspecialchars((string)$oozGlobalAdminCount, ENT_QUOTES, 'UTF-8'),
+		TXT_431 => htmlspecialchars((string)$oozAdminCount, ENT_QUOTES, 'UTF-8'),
+		TXT_432 => htmlspecialchars((string)$adminCount, ENT_QUOTES, 'UTF-8'),
+		TXT_433 => htmlspecialchars((string)$managerCount, ENT_QUOTES, 'UTF-8'),
+		TXT_434 => htmlspecialchars((string)$userCount, ENT_QUOTES, 'UTF-8'),
+		TXT_435 => htmlspecialchars((string)$viewerCount, ENT_QUOTES, 'UTF-8'),
+	]);
+	$sqliteFile = substr(DSN, strlen('sqlite:'));
+	$databaseSize = is_file($sqliteFile) ? round(filesize($sqliteFile) / 1024, 2) : 0;
+	$rowCount = $count("SELECT COUNT(*) FROM items");
+	$data = RenderViews::buildFormFieldsGrid([
+		TXT_439 => htmlspecialchars((string)$databaseSize, ENT_QUOTES, 'UTF-8'),
+		TXT_440 => htmlspecialchars((string)$rowCount, ENT_QUOTES, 'UTF-8'),
+		TXT_441 => htmlspecialchars((string)count(glob(SET_ATTACHMENTS_PATH . '*')), ENT_QUOTES, 'UTF-8'),
+	]);
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([
+		['title' => TXT_428, 'html' => $users],
+		['title' => TXT_437, 'html' => $data],
+	]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
  * Logic to render the appropriate template or call wrapper functions

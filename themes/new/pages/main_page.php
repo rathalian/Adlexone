@@ -46,11 +46,11 @@
                     </svg>
                 </button>
                 <div class="menu__panel" role="menu">
-                    <a role="menuitem" class="menu__item" href="/apps/helpdesk"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-item-mgmt"></use></svg> Items and Fields</a>
-                    <a role="menuitem" class="menu__item" href="/apps/reports"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-item-mgmt"></use></svg> Workflow</a>
-                    <a role="menuitem" class="menu__item" href="/apps/knowledge"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-item-mgmt"></use></svg> Security</a>
-                    <a role="menuitem" class="menu__item" href="/apps/reports"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-system-settings"></use></svg> Settings</a>
-                 <a role="menuitem" class="menu__item" href="?action=logoff" ><svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg> Logout</a
+                    <a role="menuitem" class="menu__item" href="?controller=administration_item_settings&amp;option=manage_fields_types"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-item-mgmt"></use></svg> Items and Fields</a>
+                    <a role="menuitem" class="menu__item" href="?controller=administration_actions&amp;option=show_defined_actions"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-item-mgmt"></use></svg> Workflow</a>
+                    <a role="menuitem" class="menu__item" href="?controller=administration_security&amp;option=manage_users_groups"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-item-mgmt"></use></svg> Security</a>
+                    <a role="menuitem" class="menu__item" href="?controller=administration_settings&amp;option=adlexone_settings"><svg class ="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-system-settings"></use></svg> Settings</a>
+                    <a role="menuitem" class="menu__item" href="?action=logoff"><svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg> Logout</a>
                 </div>
             </div>
 <!--            <div class="">-->

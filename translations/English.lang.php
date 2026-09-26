@@ -681,6 +681,10 @@ TXT_680 = "Show Announcement ID"
 TXT_681 = "Show Announcements"
 TXT_682 = "Search Type"
 TXT_683 = "Search Value"
+TXT_684 = "Available"
+TXT_685 = "On this item type"
+TXT_686 = "Move up"
+TXT_687 = "Move down"
 ; ******************************************************************************;
 ;
 ; Adlexone Action Package language constants

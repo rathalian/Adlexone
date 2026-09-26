@@ -25,10 +25,9 @@
 /**
  * Required Libraries
  */
-require_once 'src/support/RenderViews.php';
-require_once 'src/support/Abstract/' . SET_DB_TYPE . '_wrap.class.php';
-require_once 'src/support/actions.class.php';
-require_once 'src/support/communications.class.php';
+use Adlexone\support\Database;
+use Adlexone\support\RenderViews;
+use Adlexone\support\Actions;
 
 /**
  * action package specific constants
@@ -50,10 +49,7 @@ function showSetupAddTime($actionID = '')
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Time_Manager&descriptor_name=AddTime';
 	}
-	$html = RenderViews::startForm($action, 'POST', 'form-horizontal');
-	// Create the setup form
 	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
-	// Create item list
 	$columnArray = array('custom_field_id','custom_field_name');
 	$condition = "WHERE field_type LIKE 'worker%'";
 	$sql = Database::sqlSelect('custom_fields', $columnArray,$condition);
@@ -62,28 +58,24 @@ function showSetupAddTime($actionID = '')
 		$idArray[] = $row['custom_field_id'];
 		$nameArray[] = $row['custom_field_name'];
 	}
-	$actionField[ACT_PAK_65] = RenderViews::menu('custom_field_id', $idArray, $nameArray, @$fieldValues['action_parameters']).' * '.ACT_PAK_66;
-	$tableRows = '';
-	foreach($actionField as $name => $field) {
-		$cellData = array ('<strong>' . $name . '</strong>', $field);
-		$tableRows .= RenderViews::tableData($cellData, 'row', '', '', '', '', 'tdc1', '', '');
-	}
-	$html .= RenderViews::hiddenField('action_id', @$fieldValues['action_id']);
-	//Javascript field validation
+	$actionField[ACT_PAK_65] = RenderViews::buildSelectDropdown('custom_field_id', $idArray ?? [], $nameArray ?? [], @$fieldValues['action_parameters']).' * '.ACT_PAK_66;
+	$actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 	$jsFieldNameArray = "['action_name']";
 	$jsTestTypeArray = "['']";
 	$jsErrorMsgArray = "['']";
 	$jsRequiredMsgArray = "['".ACT_PAK_36."']";
 	$jsRequiredArray = "[true]";
 	$javascript = "onClick=\"javascript:return fieldCheck('".TXT_468."',".$jsTestTypeArray.",".$jsFieldNameArray.",".$jsErrorMsgArray.",".$jsRequiredMsgArray.",".$jsRequiredArray.");\"";
-	$buttonArray[] = RenderViews::formButton('submit','submit_button',TXT_74,$javascript);
-	$buttonArray[] = RenderViews::formButton('reset','reset',TXT_75);
-	$endFormButtons = RenderViews::endFormButtons($buttonArray,'1');
-	$tableRows .= RenderViews::tableData(array($endFormButtons, 'row', '2', '', '', '', 'tdc1', '', ''), 'row');
-	$html .= RenderViews::table($tableRows, 'tableIndent', '95%', '0', '0', '0');
-	define('HEADING', ACT_PAK_63);
-	define('BODY_CONTENT', $html);
-	RenderViews::renderPage('main_page_content',  SET_THEME);
+	define('BODY_CONTENT', RenderViews::buildForm(
+		ACT_PAK_63,
+		$action,
+		$actionField,
+		[
+			RenderViews::buildFormButton('submit','submit_button',TXT_74,$javascript),
+			RenderViews::buildFormButton('reset','reset',TXT_75),
+		]
+	));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 function addUpdateAddTime($actionID = '', $add = false)
 {

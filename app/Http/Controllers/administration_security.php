@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
+use Adlexone\support\RenderNavigation;
 
 /**
  * Controller specific constants
@@ -33,30 +34,22 @@ use Adlexone\support\RenderViews;
 define('SEC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_security');
 
 
-/** * Popuulates the left navigation buttons for the logic below;
+/**
+ * Left navigation card: icon plus blue capital on the current item, matching System Settings.
  */
-$navigationButtons = RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, TXT_28), $_SESSION['access_role_id'], 2);
-$navigationButtons .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(SEC_BASE_URL . '&option=new_user', TXT_33), $_SESSION['access_role_id'], 2);
-$navigationButtons .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(SEC_BASE_URL . '&option=new_group', TXT_34), $_SESSION['access_role_id'], 2);
-$html = RenderViews::buildLeftNavigationCard($navigationButtons);
-define('LEFT_NAVIGATION', $html);
-
-
-/** * Renders the left navigation card with the buttons defined above
- */
-$leftNavigationCard = RenderViews::buildLeftNavigationCard($navigationButtons);
+$controllers = RenderNavigation::build([
+    'Security' => RenderNavigation::securityManagementURLs(),
+]);
+define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
 /**
  * Shows secured security options
  */
 function showSecurityOptions(): void
 {
-    // Security Options
-    $fields[] = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), $_SESSION['access_role_id'], 2);
-    $fields[] = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), $_SESSION['access_role_id'], 2);
-    $fields[] .= RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), $_SESSION['access_role_id'], 2);
-    $html = RenderViews::buildFormSectionHeading(TXT_28);
-    $html .= RenderViews::buildFormFieldsGrid($fields);
-    define('BODY_CONTENT', $html);
+    $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), $_SESSION['access_role_id'], 2);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), $_SESSION['access_role_id'], 2);
+    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), $_SESSION['access_role_id'], 2);
+    define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_28, 'html' => $html]]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -77,22 +70,21 @@ function showUser($userID = '', $values = [], $adminEdit = true)
         )) ?? []);
 
     $option = $userID === '' ? 'add_user' : 'update_user';
-    $html = RenderViews::buildStartForm(SEC_BASE_URL . '&option=' . $option, 'POST', 'form-horizontal');
 
-    $requiredInformation = [];
+    $fields = [];
     if ($adminEdit) {
-        $requiredInformation[TXT_149] = RenderViews::buildTextInput('user_name', @$fieldValues['user_name']);
+        $fields[TXT_149] = RenderViews::buildTextInput('user_name', @$fieldValues['user_name']);
     } else {
-        $requiredInformation[TXT_149] = RenderViews::buildHiddenInput('user_name', @$fieldValues['user_name']) . @$fieldValues['user_name'];
+        $fields[TXT_149] = RenderViews::buildHiddenInput('user_name', @$fieldValues['user_name']) . @$fieldValues['user_name'];
     }
     $message = $userID !== '' ? TXT_159 : '';
-    $requiredInformation[TXT_165] = RenderViews::buildPasswordInput('password_ftype', '') . ' ' . $message;
+    $fields[TXT_165] = RenderViews::buildPasswordInput('password_ftype', '') . ' ' . $message;
     if ($userID === '') {
-        $requiredInformation[TXT_166] = RenderViews::buildPasswordInput('password_confirm', '') . ' ' . $message;
+        $fields[TXT_166] = RenderViews::buildPasswordInput('password_confirm', '') . ' ' . $message;
     }
-    $requiredInformation[TXT_167] = RenderViews::buildTextInput('first_name', @$fieldValues['first_name']);
-    $requiredInformation[TXT_168] = RenderViews::buildTextInput('last_name', @$fieldValues['last_name']);
-    $requiredInformation[TXT_169] = RenderViews::buildTextInput('email', @$fieldValues['email']);
+    $fields[TXT_167] = RenderViews::buildTextInput('first_name', @$fieldValues['first_name']);
+    $fields[TXT_168] = RenderViews::buildTextInput('last_name', @$fieldValues['last_name']);
+    $fields[TXT_169] = RenderViews::buildTextInput('email', @$fieldValues['email']);
 
     if ($_SESSION['access_role_id'] > 0) {
         $roleIDs = [1, 2, 3, 4, 5];
@@ -102,44 +94,33 @@ function showUser($userID = '', $values = [], $adminEdit = true)
         $roleNames = [TXT_190, TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
     }
 
-    $requiredInformation[TXT_187] = RenderViews::outputIfRoleAllowed(
+    $fields[TXT_187] = RenderViews::outputIfRoleAllowed(
         RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, @$fieldValues['role']),
         $_SESSION['access_role_id'],
         1
     );
-    $requiredInformation[TXT_653] = RenderViews::outputIfRoleAllowed(
+    $fields[TXT_653] = RenderViews::outputIfRoleAllowed(
         RenderViews::buildSelectDropdown('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
         $_SESSION['access_role_id'],
         1
     );
-    if (empty($requiredInformation[TXT_187])) {
-        unset($requiredInformation[TXT_187]);
+    if (empty($fields[TXT_187])) {
+        unset($fields[TXT_187]);
     }
-    $html .= RenderViews::buildVerticalCards([
-        [
-            'title' => TXT_155,
-            'html' => RenderViews::buildFormFieldsGrid($requiredInformation)
-        ]
-    ]);
+    if (empty($fields[TXT_653])) {
+        unset($fields[TXT_653]);
+    }
 
-    $userInformation = [
-        TXT_171 => RenderViews::buildTextInput('phone', @$fieldValues['phone']),
-        TXT_172 => RenderViews::buildTextArea('address', @$fieldValues['address'], SET_FORM_FIELD_HEIGHT),
-        TXT_173 => RenderViews::buildTextInput('city', @$fieldValues['city']),
-        TXT_174 => RenderViews::buildTextInput('state_province', @$fieldValues['state_province']),
-        TXT_175 => RenderViews::buildTextInput('zip_postal', @$fieldValues['zip_postal']),
-        TXT_176 => RenderViews::buildTextInput('country', @$fieldValues['country']),
-        TXT_177 => RenderViews::buildTextInput('website', @$fieldValues['website']),
-        TXT_178 => RenderViews::buildTextArea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT),
-        TXT_179 => RenderViews::buildTextInput('secret_question', @$fieldValues['secret_question']),
-        TXT_180 => RenderViews::buildTextInput('secret_answer', @$fieldValues['secret_answer']),
-    ];
-    $html .= RenderViews::buildVerticalCards([
-        [
-            'title' => TXT_156,
-            'html' => RenderViews::buildFormFieldsGrid($userInformation)
-        ]
-    ]);
+    $fields[TXT_171] = RenderViews::buildTextInput('phone', @$fieldValues['phone']);
+    $fields[TXT_172] = RenderViews::buildTextArea('address', @$fieldValues['address'], SET_FORM_FIELD_HEIGHT);
+    $fields[TXT_173] = RenderViews::buildTextInput('city', @$fieldValues['city']);
+    $fields[TXT_174] = RenderViews::buildTextInput('state_province', @$fieldValues['state_province']);
+    $fields[TXT_175] = RenderViews::buildTextInput('zip_postal', @$fieldValues['zip_postal']);
+    $fields[TXT_176] = RenderViews::buildTextInput('country', @$fieldValues['country']);
+    $fields[TXT_177] = RenderViews::buildTextInput('website', @$fieldValues['website']);
+    $fields[TXT_178] = RenderViews::buildTextArea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT);
+    $fields[TXT_179] = RenderViews::buildTextInput('secret_question', @$fieldValues['secret_question']);
+    $fields[TXT_180] = RenderViews::buildTextInput('secret_answer', @$fieldValues['secret_answer']);
 
     $userPreferences = [];
     if ($adminEdit) {
@@ -189,7 +170,7 @@ function showUser($userID = '', $values = [], $adminEdit = true)
             foreach ($values as $value) {
                 switch ($value['tag']) {
                     case 'NAME':
-                        $nameArray[] = constant($value['value']);
+                        $nameArray[] = defined($value['value']) ? constant($value['value']) : $value['value'];
                         $name = $value['value'];
                         break;
                     case 'BASE_URL':
@@ -205,14 +186,11 @@ function showUser($userID = '', $values = [], $adminEdit = true)
     $userPreferences[TXT_64] = RenderViews::buildSelectDropdown('show_graphics', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_graphics']);
     $userPreferences[TXT_546] = RenderViews::buildSelectDropdown('show_hide', ['Yes', 'No'], [TXT_563, TXT_564], @$fieldValues['show_hide']);
 
-    $html .= RenderViews::buildVerticalCards([
-        [
-            'title' => TXT_157,
-            'html' => RenderViews::buildFormFieldsGrid($userPreferences)
-        ]
-    ]);
+    foreach ($userPreferences as $label => $element) {
+        $fields[$label] = $element;
+    }
+    $fields[''] = RenderViews::buildHiddenInput('user_id', @$fieldValues['user_id']);
 
-    // Javascript field validation
     if ($userID === '') {
         $jsFieldNameArray = "['user_name','password_ftype','password_confirm','email','first_name','last_name']";
         $jsRequiredMsgArray = "['" . TXT_471 . "','" . TXT_472 . "','" . TXT_473 . "','" . TXT_474 . "','" . TXT_549 . "','" . TXT_550 . "']";
@@ -226,14 +204,17 @@ function showUser($userID = '', $values = [], $adminEdit = true)
     $jsErrorMsgArray = "['','','','" . TXT_475 . "','','']";
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
     $submitText = $userID !== '' ? TXT_74 : TXT_69;
-    $buttons = [
-        RenderViews::buildFormButton('submit', 'submit_button', $submitText, 'btn btn-default', $javascript),
-        RenderViews::buildHiddenInput('user_id', @$fieldValues['user_id'])
-    ];
-    $html .= RenderViews::buildEndFormWithButtons($buttons);
-
     $heading = $userID !== '' ? ($adminEdit ? TXT_154 : TXT_148) : TXT_33;
-   define('BODY_CONTENT', $html);
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        $heading,
+        SEC_BASE_URL . '&option=' . $option,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', $submitText, $javascript),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -245,48 +226,36 @@ function showUser($userID = '', $values = [], $adminEdit = true)
  */
 function showGroup($groupID = '', $values = '')
 {
-    if ($groupID == '') {
-        $html = RenderViews::buildStartForm(SEC_BASE_URL . '&option=add_group', 'POST', 'form-horizontal');
-        // Used passed in values
-        $fieldValues = $values;
+    $isNew = ($groupID == '');
+    if ($isNew) {
+        $fieldValues = is_array($values) ? $values : [];
+        $action = SEC_BASE_URL . '&option=add_group';
     } else {
-        // Get group values from database
         $columnArray = array('group_id', 'group_name', 'description', 'role');
         $condition = "WHERE group_id = '$groupID'";
         $sql = Database::sqlSelect('groups', $columnArray, $condition);
         $result = Database::query($sql, DSN, SET_SHOW_SQL);
         $fieldValues = Database::fetchArray($result);
-        $html = RenderViews::buildStartForm(SEC_BASE_URL . '&option=update_group', 'POST', 'form-horizontal');
+        $action = SEC_BASE_URL . '&option=update_group';
     }
-    $tableRows = RenderViews::tableData('2', '', array('center'), '', 'tdcHeading', array(TXT_188), 'row');
-
-    $requiredInformation[TXT_150] = RenderViews::buildTextInput('group_name', @$fieldValues['group_name']);
-    $requiredInformation[TXT_186] = RenderViews::buildTextArea('description', @$fieldValues['description'], SET_FORM_FIELD_HEIGHT);
     $roleIDs = array(1, 2, 3, 4, 5);
     $roleNames = array(TXT_191, TXT_192, TXT_193, TXT_194, TXT_303);
-    $requiredInformation[TXT_187] = RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, @$fieldValues['role']);
-    $i = 0;
-    foreach ($requiredInformation as $name => $field) {
-        // $class = RenderViews::setOddEvenClass($a, 'trc1', 'trc2');
-        // $a in this case represents the defined variables above
-        $cellData = array('<strong>' . $name . '</strong>', $field);
-        $tableRows .= RenderViews::tableData('', array('30%', '70%'), '', '', 'tdc1', $cellData, 'row');
-        $i++;
-    }
-    $html .= RenderViews::buildHiddenInput('group_id', @$fieldValues['group_id']);
-    $jsFieldNameArray = "['group_name']";
-    $jsRequiredMsgArray = "['" . TXT_197 . "']";
-    $jsRequiredArray = "[true]";
-    $jsTestTypeArray = "['']";
-    $jsErrorMsgArray = "['']";
-    $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
-    $buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript);
-    $buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-    $endForm = RenderViews::buildEndFormWithButtons($buttonArray);
-    $tableRows .= RenderViews::tableData('', '', '', '', 'tdc1', array($endForm), 'row');
-    $html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-    define('HEADING', ($groupID != '') ? TXT_185 : TXT_184);
-    define('BODY_CONTENT', $html);
+    $fields = [
+        TXT_150 => RenderViews::buildTextInput('group_name', $fieldValues['group_name'] ?? ''),
+        TXT_186 => RenderViews::buildTextArea('description', $fieldValues['description'] ?? '', SET_FORM_FIELD_HEIGHT),
+        TXT_187 => RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, $fieldValues['role'] ?? ''),
+    ];
+    $fields[] = RenderViews::buildHiddenInput('group_id', $fieldValues['group_id'] ?? '');
+    $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
+    define('BODY_CONTENT', RenderViews::buildForm(
+        $isNew ? TXT_184 : TXT_185,
+        $action,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -329,23 +298,12 @@ function showGroup($groupID = '', $values = '')
            ];
 
            // Define the content block for the form
-           $bodyBlock = [
-               [
-                   'title' => TXT_147,
-                   'html' => RenderViews::buildFormFieldsGrid($fields),
-               ]
-           ];
-
-           // Build the form HTML
-           $html = RenderViews::buildStartForm(
+           define('BODY_CONTENT', RenderViews::buildForm(
+               TXT_147,
                SEC_BASE_URL . '&option=user_group_search',
-               'POST',
-               'form-horizontal'
-           );
-           $html .= RenderViews::buildVerticalCards($bodyBlock);
-           $html .= RenderViews::buildEndFormWithButtons($buttons);
-
-           define('BODY_CONTENT', $html);
+               $fields,
+               $buttons
+           ));
            RenderViews::renderThemePage('main_page_content', SET_THEME);
        }
 
@@ -403,18 +361,11 @@ function showGroup($groupID = '', $values = '')
                     showGroupMembership($userId);
                 } else {
                     // Render duplicate user message
-                    $bodyBlock = [
-                        [
-                            'title' => TXT_139,
-                            'html' => RenderViews::showResponse(
-                                '<strong>' . htmlspecialchars($userName) . '</strong> ' . TXT_163,
-                                RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL')
-                            )
-                        ]
-                    ];
-                    $html = RenderViews::buildVerticalCards($bodyBlock);
-                    define('BODY_CONTENT', $html);
-                    RenderViews::renderThemePage('main_page_content', SET_THEME);
+                    RenderViews::buildResponse(
+                        $userName . ' ' . TXT_163,
+                        RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL')
+                    );
+                    return;
                 }
             }
 
@@ -478,9 +429,10 @@ function showGroup($groupID = '', $values = '')
 
             // Render a success message after the update
             RenderViews::buildResponse(
-                htmlspecialchars($_POST['user_name']) . ' ' . TXT_164,
+                ($_POST['user_name'] ?? '') . ' ' . TXT_164,
                 RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL')
             );
+            return;
         }
 
 /**
@@ -503,14 +455,10 @@ function addGroup()
         // Insert form field values into row
         $sql = Database::sqlInsert('groups', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
-        $html = RenderViews::showResponse('<strong>' . $_POST['group_name'] . '</strong> ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
-        define('BODY_CONTENT', $html);
-    } else {
-        $html = RenderViews::showResponse('<strong>' . $_POST['group_name'] . '</strong> ' . TXT_198, RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
-        define('BODY_CONTENT', $html);
+        RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+        return;
     }
-    define('HEADING', TXT_139);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_198, RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
 }
 
 /**
@@ -529,10 +477,7 @@ function updateGroup($groupID)
     // Updates form field values into row
     $sql = Database::sqlUpdate('groups', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    $html = RenderViews::showResponse('<strong>' . $_POST['group_name'] . '</strong> ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
-    define('BODY_CONTENT', $html);
-    define('HEADING', TXT_139);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
 }
 
 /**
@@ -727,14 +672,23 @@ function showGroupMembership($userID = '')
                 'html' => '<div>' . htmlspecialchars($row['description']) . '</div>' . $checkbox
             ];
         }
-        $formHtml = RenderViews::buildStartForm(SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID, 'POST', 'form-horizontal');
-        $formHtml .= RenderViews::buildVerticalCards($bodyBlocks);
-        $formHtml .= RenderViews::buildEndFormWithButtons([RenderViews::buildFormButton('submit', 'submit_button', TXT_74),RenderViews::buildFormButton('reset', 'reset', TXT_75)]);
+        $fields = [];
+        foreach ($bodyBlocks as $block) {
+            $fields[$block['title']] = $block['html'];
+        }
+        $formHtml = RenderViews::buildForm(
+            TXT_239 . ': ' . $userName,
+            SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID,
+            $fields,
+            [
+                RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+                RenderViews::buildFormButton('reset', 'reset', TXT_75),
+            ]
+        );
     } else {
-        $formHtml = TXT_342;
+        $formHtml = RenderViews::buildVerticalCards([['title' => TXT_239 . ': ' . $userName, 'html' => TXT_342]]);
     }
 
-    define('HEADING', TXT_239 . ': ' . $userName);
     define('BODY_CONTENT', $formHtml);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }

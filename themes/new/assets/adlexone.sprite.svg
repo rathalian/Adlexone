@@ -35,6 +35,15 @@
     <symbol id="ic-data-source" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6c0-2 4-4 8-4s8 2 8 4-4 4-8 4-8-2-8-4zm0 6c0 2 4 4 8 4s8-2 8-4v4c0 2-4 4-8 4s-8-2-8-4v-4z"/></symbol>
     <symbol id="ic-server" viewBox="0 0 24 24"><path fill="currentColor" d="M3 4h18v6H3zM3 14h18v6H3zM6 7h2v2H6zM6 17h2v2H6z"/></symbol>
 
+    <!-- Security -->
+    <symbol id="ic-manage-users" viewBox="0 0 24 24"><path fill="currentColor" d="M8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm7.5-1a2.5 2.5 0 1 0-2.5-2.5A2.5 2.5 0 0 0 15.5 10zM2 19v-1c0-2.5 2.7-4.5 6-4.5s6 2 6 4.5v1zm12.2-.2c.2-1.6 1.6-3.1 4-3.6A2.4 2.4 0 0 0 15.5 13c.4 0 .8 0 1.2.1C19.4 14 22 16 22 18.2V19h-7.8z"/></symbol>
+    <symbol id="ic-new-user" viewBox="0 0 24 24"><path fill="currentColor" d="M9 11a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 9 11zM2 20v-1.2C2 15.6 5 13.5 9 13.5s7 2.1 7 5.3V20z"/><path fill="currentColor" d="M18 11h2v2h2v2h-2v2h-2v-2h-2v-2h2z"/></symbol>
+    <symbol id="ic-new-group" viewBox="0 0 24 24"><path fill="currentColor" d="M7.5 10a2.5 2.5 0 1 0-2.5-2.5A2.5 2.5 0 0 0 7.5 10zm6-1a2 2 0 1 0-2-2 2 2 0 0 0 2 2zM2 18v-1c0-2 2.2-3.5 5.5-3.5.8 0 1.5.1 2.2.4A4.6 4.6 0 0 0 8 17.2V18zm7 0v-.6c0-1.8 1.8-3.2 4.2-3.4"/><path fill="currentColor" d="M17 12h2v2h2v2h-2v2h-2v-2h-2v-2h2z"/></symbol>
+
+    <!-- Workflow -->
+    <symbol id="ic-manage-actions" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v4H4zM4 10h16v4H4zM4 16h10v4H4z"/></symbol>
+    <symbol id="ic-new-action" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5h11v3H3zM3 10.5h11v3H3zM3 16h7v3H3z"/><path fill="currentColor" d="M17 12h2v2h2v2h-2v2h-2v-2h-2v-2h2z"/></symbol>
+
     <!-- Launch / Open in new -->
     <symbol id="ic-launch" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -299,6 +299,22 @@ body{
 }
 .btn.-sm{ padding:8px 11px; border-radius:10px; font-weight:800; letter-spacing:.02em; }
 
+.group-security-list{ display:flex; flex-direction:column; gap:8px; flex:1 1 100%; }
+.group-security-list .checkbox{ display:flex; align-items:center; gap:8px; }
+.field-picker{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.field-picker-list{
+    list-style:none; margin:8px 0 0; padding:8px; min-height:160px;
+    border:1px solid var(--form-border); border-radius:12px; background:var(--form-surface);
+}
+.field-picker-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 4px; }
+.field-picker-item .checkbox{ display:flex; align-items:center; gap:8px; min-width:0; }
+.field-picker-type{ color:var(--placeholder); font-size:12px; }
+.field-picker-moves{ display:flex; gap:6px; flex:0 0 auto; }
+.field-picker-move{ padding:6px 8px; font-size:12px; font-weight:600; }
+#availableFields .field-picker-moves{ display:none; }
+.field-picker-actions{ margin-top:16px; }
+@media (max-width:960px){ .field-picker{ grid-template-columns:1fr; } }
+
 @media (max-width:960px){
     #sidebar:target{ transform:translateX(0); }
 }

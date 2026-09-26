@@ -419,17 +419,11 @@ function editAnnouncement($id)
     }
 
     // Build form using new render pattern
-    $action = 'index.php?controller=app_oneorzerohelpdesk_main&option=update_announcement';
-    $html = RenderViews::buildStartForm($action, 'POST', 'form-horizontal');
-
-    $fields = [];
-    $fields[TXT_346] = RenderViews::buildTextInput('subject', $row['subject'], '');
-    $fields[TXT_347] = RenderViews::buildTextArea('message', $row['message'], SET_FORM_FIELD_HEIGHT);
-
-    // Hidden id
-    $html .= RenderViews::buildHiddenInput('id', (string) $id);
-
-    // Client-side validation JS (keeps existing fieldCheck contract)
+    $fields = [
+        TXT_346 => RenderViews::buildTextInput('subject', $row['subject'], ''),
+        TXT_347 => RenderViews::buildTextArea('message', $row['message'], SET_FORM_FIELD_HEIGHT),
+        '' => RenderViews::buildHiddenInput('id', (string) $id),
+    ];
     $jsFieldNameArray = "['subject']";
     $jsTestTypeArray = "['']";
     $jsErrorMsgArray = "['']";
@@ -437,18 +431,15 @@ function editAnnouncement($id)
     $jsRequiredArray = "[true]";
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-    $submit = RenderViews::buildFormButton('submit', 'submit_button', TXT_348, $javascript);
-    $reset  = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-
-    $html .= RenderViews::buildFormFieldsGrid($fields);
-    $html .= RenderViews::buildEndFormWithButtons([$submit, $reset]);
-
-    $bodyBlock[] = [
-        'title' => TXT_349,
-        'html'  => $html,
-    ];
-
-    define('BODY_CONTENT', RenderViews::buildVerticalCards($bodyBlock));
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_349,
+        'index.php?controller=app_oneorzerohelpdesk_main&option=update_announcement',
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_348, $javascript),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 function updateAnnouncement()
@@ -747,22 +738,15 @@ function showHelpdeskSettings()
     $fields[APP_HDSK_TXT_74] = RenderViews::buildTextInput('HELPDESK_SET_RESULT_COUNT', HELPDESK_SET_RESULT_COUNT);
     $fields[APP_HDSK_TXT_57] = RenderViews::buildSelectDropdown('HELPDESK_SET_DEFAULT_SCREEN', array('portal', 'quick_launch'), array(APP_HDSK_TXT_55, APP_HDSK_TXT_56), HELPDESK_SET_DEFAULT_SCREEN);
 
-    // Start the form and render the fields
-    $html = RenderViews::buildStartForm('index.php?controller=app_oneorzerohelpdesk_main&option=update_helpdesk_settings', 'POST');
-    $html .= RenderViews::buildFormFieldsGrid($fields);
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', APP_HDSK_TXT_76);
-    $buttons[] =  RenderViews::buildFormButton('reset', 'reset', APP_HDSK_TXT_77);
-    $html .= RenderViews::buildEndFormWithButtons($buttons);
-    $bodyBlock[] = [
-        'title' => APP_HDSK_TXT_31,
-        'html' => $html
-    ];
-
-    // Render the content block vertically and define the BODY_CONTENT constant
-    $bodyContent = RenderViews::buildVerticalCards($bodyBlock);
-    define('BODY_CONTENT', $bodyContent);
-
-    // Include the main page template
+    define('BODY_CONTENT', RenderViews::buildForm(
+        APP_HDSK_TXT_31,
+        'index.php?controller=app_oneorzerohelpdesk_main&option=update_helpdesk_settings',
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', APP_HDSK_TXT_76),
+            RenderViews::buildFormButton('reset', 'reset', APP_HDSK_TXT_77),
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 

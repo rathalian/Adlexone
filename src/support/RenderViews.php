@@ -57,32 +57,28 @@ class RenderViews
      * @param array $buttons An array of buttons to be included at the bottom of the form.
      *                       Each button is represented as an HTML string.
      *                       Example: ['<button ...>', '<button ...>']
+     * @param array $options Optional form tag attributes: method, enctype, name, id.
      *
-     * @return string This method does not return a value. Instead, it defines the `BODY_CONTENT`
-     *              constant with the generated HTML and includes the main page layout.
+     * @return string The form HTML wrapped in a vertical card. Does not set BODY_CONTENT.
      */
-    public static function buildForm(string $formTitle, string $formActionURL, array $fields, array $buttons): string
+    public static function buildForm(string $formTitle, string $formActionURL, array $fields, array $buttons, array $options = []): string
     {
-        // Start building the form HTML with the opening <form> tag
-        $html = self::buildStartForm($formActionURL, 'post');
-
-        // Render the form fields in a grid layout
+        $html = self::buildStartForm(
+            $formActionURL,
+            (string)($options['method'] ?? 'post'),
+            (string)($options['name'] ?? ''),
+            (string)($options['id'] ?? ''),
+            (string)($options['enctype'] ?? 'application/x-www-form-urlencoded')
+        );
         $html .= self::buildFormFieldsGrid($fields);
-
-        // Add the form buttons and close the <form> tag
         $html .= self::buildEndFormWithButtons($buttons);
 
-        // Wrap the form in a vertical card layout for better visual structure
-        $bodyBlocks = [
+        return self::buildVerticalCards([
             [
-                'title' => $formTitle, // Title of the card
-                'html' => $html,      // Form HTML content
+                'title' => $formTitle,
+                'html' => $html,
             ],
-        ];
-
-        // Generate the final HTML for the vertical card layout and return it to the calling method
-        return self::buildVerticalCards($bodyBlocks);
-
+        ]);
     }
 
     /**
@@ -116,7 +112,7 @@ class RenderViews
      *
      * @return void
      */
-    public static function includeControllerFile(string $controller, string $defaultPage): void
+    public static function includeControllerFile(?string $controller, string $defaultPage): void
     {
         // Use defaultPage if controller is null or empty
         $controller = $controller ?? $defaultPage;
@@ -307,12 +303,13 @@ class RenderViews
      * @param string $id (Optional) The id attribute of the form. Defaults to an empty string.
      * @return string The generated HTML for the opening `<form>` tag.
      */
-    public static function buildStartForm(string $action, string $method, string $name = '', string $id = ''): string
+    public static function buildStartForm(string $action, string $method, string $name = '', string $id = '', string $enctype = 'application/x-www-form-urlencoded'): string
     {
         return sprintf(
-            '<form action="%s" method="%s" enctype="application/x-www-form-urlencoded" name="%s" id="%s">',
+            '<form action="%s" method="%s" enctype="%s" name="%s" id="%s">',
             htmlspecialchars($action, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($method, ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($enctype, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($id, ENT_QUOTES, 'UTF-8')
         );
@@ -424,10 +421,10 @@ class RenderViews
      * @param string $other Additional attributes for the `<select>` element (e.g., JavaScript).
      * @return string The generated HTML for the dropdown list.
      */
-    public static function buildSelectDropdown(string $name, array $values, array $displayValues, mixed $selectedValue, string $other = ''): string
+    public static function buildSelectDropdown(string $name, ?array $values, ?array $displayValues, mixed $selectedValue, string $other = ''): string
     {
         $html = "<select name=\"{$name}\" class=\"select\" {$other}>";
-        if (!is_array($values)) {
+        if (empty($values)) {
             $html .= '<option value="" selected>' . TXT_366 . '</option>';
         } else {
             foreach ($values as $i => $value) {
@@ -757,6 +754,13 @@ class RenderViews
      * ic-itemtype-add             (Add Item Type)
      * ic-multilevel-menu          (Add Multi-Level Menu Relationships)
      * ic-manage-fields-types      (Manage Custom Fields and Item Types)
+     *
+     * ic-manage-users             (Manage Users and Groups)
+     * ic-new-user                 (New User)
+     * ic-new-group                (New Security Group)
+     *
+     * ic-manage-actions           (Manage Actions)
+     * ic-new-action               (New Action)
      *
      * ic-adlexone-settings        (Adlexone Settings)
      * ic-inbound-email            (Inbound Email Settings)

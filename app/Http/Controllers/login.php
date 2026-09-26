@@ -259,50 +259,41 @@ function determineUserRole(array $user): int
      */
     function showLoginData()
     {
-        $html = RenderViews::buildStartForm('index.php', 'POST');
-        $bodyBlocks = [];
-        $fields = [];
         if (!isset($_POST['Register'])) {
-            $fields[TXT_38] = RenderViews::buildTextInput('access_user_name', '', TXT_38);
-            $fields[TXT_39] = RenderViews::buildPasswordInput('access_password', '');
-            $formFields = RenderViews::buildFormFieldsGrid($fields);
-            $endFormWithButtons = (ALLOW_USER_REG == "yes")
-                ? RenderViews::buildEndFormWithButtons([RenderViews::buildFormButton('submit', 'Login', TXT_543), RenderViews::buildFormButton('submit', 'Register', TXT_630)])
-                : RenderViews::buildEndFormWithButtons([RenderViews::buildFormButton('submit', 'Login', TXT_543)]);
-            $bodyBlocks[] = [
-                'title' => TXT_543,
-                'html' => $formFields . $endFormWithButtons,
-                'full' => false
+            $fields = [
+                TXT_38 => RenderViews::buildTextInput('access_user_name', '', TXT_38),
+                TXT_39 => RenderViews::buildPasswordInput('access_password', ''),
             ];
+            $buttons = [RenderViews::buildFormButton('submit', 'Login', TXT_543)];
+            if (ALLOW_USER_REG == "yes") {
+                $buttons[] = RenderViews::buildFormButton('submit', 'Register', TXT_630);
+            }
+            return RenderViews::buildForm(TXT_543, 'index.php', $fields, $buttons);
         }
 
         if ((ALLOW_USER_REG == "yes") && isset($_POST['Register'])) {
-            $fields[TXT_38] = RenderViews::buildTextInput('new_username', '', TXT_38);
-            $fields[TXT_39] = RenderViews::buildPasswordInput('new_password', '');
-            $fields[TXT_166] = RenderViews::buildPasswordInput('new_confirm', '');
-            $fields[TXT_167] = RenderViews::buildTextInput('new_firstname', '', TXT_167);
-            $fields[TXT_168] = RenderViews::buildTextInput('new_lastname', '', TXT_168);
-            $fields[TXT_169] = RenderViews::buildTextInput('new_email', '', TXT_169);
             $uniqueID = time() . rand(10, 20) . rand(30, 40);
-            $fields[TXT_615] = RenderViews::buildTextInput('new_unique', '', TXT_615);
-            $fields[TXT_606] = $uniqueID;
-            $fields[] = RenderViews::buildHiddenInput('CODE', base64_encode($uniqueID)) . RenderViews::buildHiddenInput('CREATE_USER', 'TRUE');
-            $formFields = RenderViews::buildFormFieldsGrid($fields);
-            $endFormWithButtons = RenderViews::buildEndFormWithButtons([RenderViews::buildFormButton(
-                'submit',
-                'NewLogon',
-                TXT_673,
-                'onClick="javascript:return fieldCheck(\'' . TXT_468 . '\',[\'\',\'\',\'\',\'email\',\'\'],[\'new_username\',\'new_firstname\',\'new_lastname\',\'new_email\',\'new_unique\'],[\'\',\'\',\'\',\'' . TXT_475 . '\',\'\'],[\'' . TXT_471 . '\',\'' . TXT_549 . '\',\'' . TXT_550 . '\',\'' . TXT_474 . '\',\'' . TXT_609 . '\'],[true,true,true,true,true])"')]);
-            $bodyBlocks[] = [
-                'title' => TXT_673,
-                'html' => $formFields . $endFormWithButtons,
-                'full' => false
+            $fields = [
+                TXT_38 => RenderViews::buildTextInput('new_username', '', TXT_38),
+                TXT_39 => RenderViews::buildPasswordInput('new_password', ''),
+                TXT_166 => RenderViews::buildPasswordInput('new_confirm', ''),
+                TXT_167 => RenderViews::buildTextInput('new_firstname', '', TXT_167),
+                TXT_168 => RenderViews::buildTextInput('new_lastname', '', TXT_168),
+                TXT_169 => RenderViews::buildTextInput('new_email', '', TXT_169),
+                TXT_615 => RenderViews::buildTextInput('new_unique', '', TXT_615),
+                TXT_606 => $uniqueID,
+                '' => RenderViews::buildHiddenInput('CODE', base64_encode($uniqueID)) . RenderViews::buildHiddenInput('CREATE_USER', 'TRUE'),
             ];
+            $javascript = 'onClick="javascript:return fieldCheck(\'' . TXT_468 . '\',[\'\',\'\',\'\',\'email\',\'\'],[\'new_username\',\'new_firstname\',\'new_lastname\',\'new_email\',\'new_unique\'],[\'\',\'\',\'\',\'' . TXT_475 . '\',\'\'],[\'' . TXT_471 . '\',\'' . TXT_549 . '\',\'' . TXT_550 . '\',\'' . TXT_474 . '\',\'' . TXT_609 . '\'],[true,true,true,true,true])"';
+            return RenderViews::buildForm(
+                TXT_673,
+                'index.php',
+                $fields,
+                [RenderViews::buildFormButton('submit', 'NewLogon', TXT_673, $javascript)]
+            );
         }
 
-        $html .= RenderViews::buildHorizontalCards($bodyBlocks);
-
-        return $html;
+        return '';
     }
 
     /**

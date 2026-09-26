@@ -147,83 +147,68 @@ function showAdlexoneSettings(): void
 
 function showDataSourceSettings(): void
 {
-    $html = RenderViews::buildStartForm('index.php?controller=administration_settings&option=update_data_source_settings', 'POST', 'form-horizontal');
-
-    $i = 1;
-    $fields[] = RenderViews::buildTextInput('SET_DS_DATA_SOURCE_COUNT', SET_DS_DATA_SOURCE_COUNT) . ' * ' . TXT_633;
-    $bodyBlock[] = [
-        'title' => TXT_632,
-        'html' => RenderViews::buildFormFieldsGrid($fields),
+    $fields = [
+        TXT_632 => RenderViews::buildTextInput('SET_DS_DATA_SOURCE_COUNT', SET_DS_DATA_SOURCE_COUNT) . ' * ' . TXT_633,
     ];
-    $html .= RenderViews::buildVerticalCards($bodyBlock);
-    unset($fields, $bodyBlock);
-
+    $i = 1;
     while ($i <= SET_DS_DATA_SOURCE_COUNT) {
-        $html .= RenderViews::buildFormSectionHeading(TXT_638 . ' ' . $i);
-        $fields[TXT_636] = RenderViews::buildTextInput('SET_DS_NAME_' . $i, SET_DS_NAME_ . $i);
-        $fields[TXT_458] = RenderViews::buildSelectDropdown('SET_DS_DB_TYPE_' . $i, array('mysql'), array('MySQL - Version 4 and 5'), SET_DS_DB_TYPE_ . $i);
-        $fields[TXT_459] = RenderViews::buildTextInput('SET_DS_DRIVER_' . $i, 'SET_DRIVER_' . $i, '40', 'form-control');
-        $fields[TXT_460] = RenderViews::buildTextInput('SET_DS_DATABASE_HOST_' . $i, SET_DS_DATABASE_HOST_ . $i);
-        $fields[TXT_461] = RenderViews::buildTextInput('SET_DS_DATABASE_PORT_' . $i, SET_DS_DATABASE_PORT_ . $i);
-        $fields[TXT_462] = RenderViews::buildTextInput('SET_DS_DATABASE_NAME_' . $i, SET_DS_DATABASE_NAME_ . $i);
-        $fields[TXT_464] = RenderViews::buildTextInput('SET_DS_DATABASE_USER_' . $i, SET_DS_DATABASE_USER_ . $i);
-        $fields[TXT_465] = RenderViews::buildPasswordInput('SET_DS_DATABASE_PWD_' . $i, SET_DS_DATABASE_PWD_ . $i);
-        $fields[TXT_423] = RenderViews::buildTextArea('SET_DS_SQL_' . $i, SET_DS_SQL_ . $i, SET_FORM_FIELD_HEIGHT);
-        $bodyBlock[] = [
-            'title' => TXT_638 . ' ' . $i,
-            'html' => RenderViews::buildFormFieldsGrid($fields),
-        ];
-        $html .= RenderViews::buildVerticalCards($bodyBlock);
-        unset($fields);
+        $prefix = TXT_638 . ' ' . $i . ' — ';
+        $fields[$prefix . TXT_636] = RenderViews::buildTextInput('SET_DS_NAME_' . $i, defined('SET_DS_NAME_' . $i) ? constant('SET_DS_NAME_' . $i) : '');
+        $fields[$prefix . TXT_458] = RenderViews::buildSelectDropdown('SET_DS_DB_TYPE_' . $i, array('mysql'), array('MySQL - Version 4 and 5'), defined('SET_DS_DB_TYPE_' . $i) ? constant('SET_DS_DB_TYPE_' . $i) : '');
+        $fields[$prefix . TXT_459] = RenderViews::buildTextInput('SET_DS_DRIVER_' . $i, defined('SET_DS_DRIVER_' . $i) ? constant('SET_DS_DRIVER_' . $i) : '');
+        $fields[$prefix . TXT_460] = RenderViews::buildTextInput('SET_DS_DATABASE_HOST_' . $i, defined('SET_DS_DATABASE_HOST_' . $i) ? constant('SET_DS_DATABASE_HOST_' . $i) : '');
+        $fields[$prefix . TXT_461] = RenderViews::buildTextInput('SET_DS_DATABASE_PORT_' . $i, defined('SET_DS_DATABASE_PORT_' . $i) ? constant('SET_DS_DATABASE_PORT_' . $i) : '');
+        $fields[$prefix . TXT_462] = RenderViews::buildTextInput('SET_DS_DATABASE_NAME_' . $i, defined('SET_DS_DATABASE_NAME_' . $i) ? constant('SET_DS_DATABASE_NAME_' . $i) : '');
+        $fields[$prefix . TXT_464] = RenderViews::buildTextInput('SET_DS_DATABASE_USER_' . $i, defined('SET_DS_DATABASE_USER_' . $i) ? constant('SET_DS_DATABASE_USER_' . $i) : '');
+        $fields[$prefix . TXT_465] = RenderViews::buildPasswordInput('SET_DS_DATABASE_PWD_' . $i, defined('SET_DS_DATABASE_PWD_' . $i) ? constant('SET_DS_DATABASE_PWD_' . $i) : '');
+        $fields[$prefix . TXT_423] = RenderViews::buildTextArea('SET_DS_SQL_' . $i, defined('SET_DS_SQL_' . $i) ? constant('SET_DS_SQL_' . $i) : '', SET_FORM_FIELD_HEIGHT);
         $i++;
     }
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $html .= RenderViews::buildEndFormWithButtons($buttons);
-    define('BODY_CONTENT', $html);
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_632,
+        'index.php?controller=administration_settings&option=update_data_source_settings',
+        $fields,
+        [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 function showLDAPSettings(): void
 {
-    $html = RenderViews::buildStartForm('index.php?controller=administration_settings&option=update_ldap_settings', 'POST', 'form-horizontal');
+    $fields = [
+        TXT_484 => RenderViews::buildSelectDropdown('SET_LDAP_ENABLED', array('Yes', 'No'), array(TXT_499, TXT_500), SET_LDAP_ENABLED),
+        TXT_483 => RenderViews::buildTextInput('SET_LDAP_SEARCH_COUNT', SET_LDAP_SEARCH_COUNT) . ' * ' . TXT_503,
+    ];
     $i = 1;
-    $fields[TXT_484] = RenderViews::buildSelectDropdown('SET_LDAP_ENABLED', array('Yes', 'No'), array(TXT_499, TXT_500), SET_LDAP_ENABLED);
-    $fields[TXT_483] = RenderViews::buildTextInput('SET_LDAP_SEARCH_COUNT', SET_LDAP_SEARCH_COUNT) . ' * ' . TXT_503;
-    $html .= RenderViews::buildFormFieldsGrid($fields);
-    unset($fields);
     while ($i <= SET_LDAP_SEARCH_COUNT) {
-        $html .= RenderViews::buildFormSectionHeading(TXT_485 . ' ' . $i);
-        $fields[TXT_496] = RenderViews::buildSelectDropdown('SET_LDAP_ADLDAP_' . $i, array('AD', 'LDAP'), array(TXT_494, TXT_495), SET_LDAP_ADLDAP_ . $i);
-        $fields[TXT_486] = RenderViews::buildTextInput('SET_LDAP_SERVER_NAME_' . $i, SET_LDAP_SERVER_NAME_ . $i);
-        $fields[TXT_487] = RenderViews::buildSelectDropdown('SET_LDAP_SSL_' . $i, array('No', 'Yes'), array(TXT_94, TXT_93), SET_LDAP_SSL_ . $i);
-        $fields[TXT_491] = RenderViews::buildTextInput('SET_LDAP_DOMAIN_NAME_' . $i, SET_LDAP_DOMAIN_NAME_ . $i);
-        $fields[TXT_493] = RenderViews::buildTextInput('SET_LDAP_BASE_DN_' . $i, SET_LDAP_BASE_DN_ . $i);
-        $fields[TXT_488] = RenderViews::buildTextInput('SET_LDAP_USERNAME_' . $i, SET_LDAP_USERNAME_ . $i);
-        $fields[TXT_489] = RenderViews::buildPasswordInput('SET_LDAP_PASSWORD_' . $i, SET_LDAP_PASSWORD_ . $i);
+        $prefix = TXT_485 . ' ' . $i . ' — ';
+        $fields[$prefix . TXT_496] = RenderViews::buildSelectDropdown('SET_LDAP_ADLDAP_' . $i, array('AD', 'LDAP'), array(TXT_494, TXT_495), defined('SET_LDAP_ADLDAP_' . $i) ? constant('SET_LDAP_ADLDAP_' . $i) : '');
+        $fields[$prefix . TXT_486] = RenderViews::buildTextInput('SET_LDAP_SERVER_NAME_' . $i, defined('SET_LDAP_SERVER_NAME_' . $i) ? constant('SET_LDAP_SERVER_NAME_' . $i) : '');
+        $fields[$prefix . TXT_487] = RenderViews::buildSelectDropdown('SET_LDAP_SSL_' . $i, array('No', 'Yes'), array(TXT_94, TXT_93), defined('SET_LDAP_SSL_' . $i) ? constant('SET_LDAP_SSL_' . $i) : '');
+        $fields[$prefix . TXT_491] = RenderViews::buildTextInput('SET_LDAP_DOMAIN_NAME_' . $i, defined('SET_LDAP_DOMAIN_NAME_' . $i) ? constant('SET_LDAP_DOMAIN_NAME_' . $i) : '');
+        $fields[$prefix . TXT_493] = RenderViews::buildTextInput('SET_LDAP_BASE_DN_' . $i, defined('SET_LDAP_BASE_DN_' . $i) ? constant('SET_LDAP_BASE_DN_' . $i) : '');
+        $fields[$prefix . TXT_488] = RenderViews::buildTextInput('SET_LDAP_USERNAME_' . $i, defined('SET_LDAP_USERNAME_' . $i) ? constant('SET_LDAP_USERNAME_' . $i) : '');
+        $fields[$prefix . TXT_489] = RenderViews::buildPasswordInput('SET_LDAP_PASSWORD_' . $i, defined('SET_LDAP_PASSWORD_' . $i) ? constant('SET_LDAP_PASSWORD_' . $i) : '');
         $columnArray = array('group_id', 'group_name');
         $sql = Database::sqlSelect('groups', $columnArray);
         $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $idArray[] = '';
-        $nameArray[] = TXT_651;
+        $idArray = [''];
+        $nameArray = [TXT_651];
         while ($row = Database::fetchArray($result)) {
             $idArray[] = $row['group_id'];
             $nameArray[] = $row['group_name'];
         }
-        $fields[TXT_618] = RenderViews::buildSelectDropdown('SET_LDAP_DEFAULT_GROUP_' . $i, $idArray, $nameArray, SET_LDAP_DEFAULT_GROUP_ . $i);
-        $bodyBlock[] = [
-            'title' => TXT_485 . ' ' . $i,
-            'html' => RenderViews::buildFormFieldsGrid($fields),
-        ];
-        $html .= RenderViews::buildVerticalCards($bodyBlock);
-
-        unset($idArray, $nameArray, $fields);
+        $fields[$prefix . TXT_618] = RenderViews::buildSelectDropdown('SET_LDAP_DEFAULT_GROUP_' . $i, $idArray, $nameArray, defined('SET_LDAP_DEFAULT_GROUP_' . $i) ? constant('SET_LDAP_DEFAULT_GROUP_' . $i) : '');
         $i++;
     }
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $html .= RenderViews::buildEndFormWithButtons($buttons);
 
-    define('HEADING', TXT_43);
-    define('BODY_CONTENT', $html);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_43,
+        'index.php?controller=administration_settings&option=update_ldap_settings',
+        $fields,
+        [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -234,7 +219,7 @@ function showAdvancedSettings(): void
     $fields[TXT_351] = RenderViews::buildSelectDropdown('SET_SHOW_SQL', array('Yes', 'No'), array(TXT_93, TXT_94), SET_SHOW_SQL);
     $fields[TXT_205] = RenderViews::buildSelectDropdown('SET_ERROR_REPORTING_LEVEL', array('6135', '6143'), array(TXT_504, TXT_207), SET_ERROR_REPORTING_LEVEL);
     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    RenderViews::buildForm(TXT_130,'index.php?controller=administration_settings&option=update_advanced_settings',$fields,$buttons);
+    $bodyContent = RenderViews::buildForm(TXT_130,'index.php?controller=administration_settings&option=update_advanced_settings',$fields,$buttons);
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -253,38 +238,30 @@ function showAutologonSettings(): void
 
 function showDataSharingSettings(): void
 {
-    $html = RenderViews::buildStartForm('index.php?controller=administration_settings&option=update_data_sharing_settings', 'POST', 'form-horizontal');
+    $fields = [
+        TXT_427 => RenderViews::buildTextInput('DATA_LINK_COUNT', DATA_LINK_COUNT),
+    ];
     $i = 1;
-    $fields[] = RenderViews::buildTextInput('DATA_LINK_COUNT', DATA_LINK_COUNT);
-          $bodyBlock[] = [
-              'title' => TXT_427,
-              'html' => RenderViews::buildFormFieldsGrid($fields),
-          ];
-    $html .= RenderViews::buildVerticalCards($bodyBlock);
-    unset($fields, $bodyBlock);
-
     while ($i <= DATA_LINK_COUNT) {
-        $fields[TXT_416] = RenderViews::buildTextInput('TOKEN_' . $i, constant('TOKEN_' . $i));
-        $fields[TXT_425] = RenderViews::buildTextInput('IP_ADDRESS_' . $i, constant('IP_ADDRESS_' . $i));
-        $fields[TXT_423] = RenderViews::buildTextArea('SQL_QUERY_' . $i, constant('SQL_QUERY_' . $i), SET_FORM_FIELD_HEIGHT) . '<br />' . TXT_424;
-        $bodyBlock[] = [
-            'title' => TXT_422 . ' ' . $i,
-            'html' => RenderViews::buildFormFieldsGrid($fields),
-        ];
-        $html .= RenderViews::buildHorizontalCards($bodyBlock) . '<br />';
-        unset($fields, $bodyBlock);
+        $prefix = TXT_422 . ' ' . $i . ' — ';
+        $fields[$prefix . TXT_416] = RenderViews::buildTextInput('TOKEN_' . $i, defined('TOKEN_' . $i) ? constant('TOKEN_' . $i) : '');
+        $fields[$prefix . TXT_425] = RenderViews::buildTextInput('IP_ADDRESS_' . $i, defined('IP_ADDRESS_' . $i) ? constant('IP_ADDRESS_' . $i) : '');
+        $fields[$prefix . TXT_423] = RenderViews::buildTextArea('SQL_QUERY_' . $i, defined('SQL_QUERY_' . $i) ? constant('SQL_QUERY_' . $i) : '', SET_FORM_FIELD_HEIGHT) . '<br />' . TXT_424;
         $i++;
     }
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $html .= RenderViews::buildEndFormWithButtons($buttons);
-    define('BODY_CONTENT', $html);
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_427,
+        'index.php?controller=administration_settings&option=update_data_sharing_settings',
+        $fields,
+        [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 function showEmailSettings(): void
 {
-    $html = RenderViews::buildStartForm('index.php?controller=administration_settings&option=update_email_settings', 'POST', 'form-horizontal');
-
+    $fields = [];
     $fields[TXT_645] = RenderViews::buildTextInput('SET_SMTP_HOST', SET_SMTP_HOST);
     $fields[TXT_646] = RenderViews::buildTextInput('SET_SMTP_PORT', SET_SMTP_PORT);
     $fields[TXT_647] = RenderViews::buildTextInput('SET_SMTP_REPLY', SET_SMTP_REPLY);
@@ -292,8 +269,10 @@ function showEmailSettings(): void
     $fields[TXT_672] = RenderViews::buildSelectDropdown('SET_SMTP_TLS', array('Yes', 'No'), array(TXT_93, TXT_94), SET_SMTP_TLS);
     $fields[TXT_649] = RenderViews::buildTextInput('SET_SMTP_USER', SET_SMTP_USER);
     $fields[TXT_650] = RenderViews::buildPasswordInput('SET_SMTP_PASSWORD', SET_SMTP_PASSWORD);
-    $fields[TXT_566] = RenderViews::buildTextInput('EMAIL_COUNT', EMAIL_COUNT);
-    $fields[TXT_416] = RenderViews::buildTextInput('TOKEN', TOKEN);
+    $emailCount = defined('EMAIL_COUNT') ? (int) constant('EMAIL_COUNT') : 0;
+    $token = defined('TOKEN') ? (string) constant('TOKEN') : '';
+    $fields[TXT_566] = RenderViews::buildTextInput('EMAIL_COUNT', (string)$emailCount);
+    $fields[TXT_416] = RenderViews::buildTextInput('TOKEN', $token);
 
     $protocol = (isset($_SERVER['HTTPS']) and ($_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] == 1)) ? 'https://' : 'http://';
     $port = ($_SERVER['SERVER_PORT'] != '80') ? ':' . $_SERVER['SERVER_PORT'] : '';
@@ -302,16 +281,10 @@ function showEmailSettings(): void
         $fields[TXT_589] = $url;
     }
     $fields[TXT_590] = TXT_591 . ' ' . SET_INSTALL_PATH . 'external_scripts/email.php';
-    $outboundBodyBlock[] = [
-        'title' => TXT_30,
-        'html' => RenderViews::buildFormFieldsGrid($fields),
-    ];
-    $html .= RenderViews::buildVerticalCards($outboundBodyBlock) . '<br />';
-    unset($fields);
 
     $i = 1;
 
-    while ($i <= EMAIL_COUNT) {
+    while ($i <= $emailCount) {
 
         // Get all item item definitions from database
         $columnArray = array('item_type_id', 'item_type_name');
@@ -324,7 +297,8 @@ function showEmailSettings(): void
             $listDisplayValues[] = $row['item_type_name'];
         }
 
-        $fields[TXT_568] = RenderViews::buildSelectDropdown('ITEM_TYPE_ID_' . $i, $listValues, $listDisplayValues, constant('ITEM_TYPE_ID_' . $i));
+        $prefix = TXT_567 . ' ' . $i . ' — ';
+        $fields[$prefix . TXT_568] = RenderViews::buildSelectDropdown('ITEM_TYPE_ID_' . $i, $listValues, $listDisplayValues, defined('ITEM_TYPE_ID_' . $i) ? constant('ITEM_TYPE_ID_' . $i) : '');
         $columnArray = array('custom_field_id', 'custom_field_name');
         $condition = "ORDER BY custom_field_name ASC";
         $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
@@ -338,14 +312,14 @@ function showEmailSettings(): void
             $customFieldNameArray[] = $row['custom_field_name'];
         }
 
-        $fields[TXT_597] = RenderViews::buildSelectDropdown('EMAIL_BODY_CONTENT_CUSTOM_FIELD_ID_' . $i, $customFieldIDArray, $customFieldNameArray, constant('EMAIL_BODY_CONTENT_CUSTOM_FIELD_ID_' . $i));
-        $fields[TXT_572] = RenderViews::buildSelectDropdown('SERVER_TYPE_' . $i, array('pop3'), array(TXT_569), constant('SERVER_TYPE_' . $i));
-        $fields[TXT_487] = RenderViews::buildSelectDropdown('SSL_TYPE_' . $i, array('none', 'SSL', 'TLS'), array(TXT_596, TXT_594, TXT_595), constant('SSL_TYPE_' . $i));
-        $fields[TXT_579] = RenderViews::buildTextInput('MAIL_HOST_NAME_' . $i, constant('MAIL_HOST_NAME_' . $i));
-        $fields[TXT_571] = RenderViews::buildTextInput('MAIL_HOST_PORT_' . $i, constant('MAIL_HOST_PORT_' . $i));
-        $fields[TXT_580] = RenderViews::buildTextInput('MAIL_USER_' . $i, constant('MAIL_USER_' . $i));
-        $fields[TXT_581] = RenderViews::buildPasswordInput('MAIL_PASSWORD_' . $i, constant('MAIL_PASSWORD_' . $i));
-        $fields[TXT_575] = RenderViews::buildSelectDropdown('MATCH_METHOD_' . $i, array('domain', 'email'), array(TXT_576, TXT_577), constant('MATCH_METHOD_' . $i));
+        $fields[$prefix . TXT_597] = RenderViews::buildSelectDropdown('EMAIL_BODY_CONTENT_CUSTOM_FIELD_ID_' . $i, $customFieldIDArray, $customFieldNameArray, defined('EMAIL_BODY_CONTENT_CUSTOM_FIELD_ID_' . $i) ? constant('EMAIL_BODY_CONTENT_CUSTOM_FIELD_ID_' . $i) : '');
+        $fields[$prefix . TXT_572] = RenderViews::buildSelectDropdown('SERVER_TYPE_' . $i, array('pop3'), array(TXT_569), defined('SERVER_TYPE_' . $i) ? constant('SERVER_TYPE_' . $i) : '');
+        $fields[$prefix . TXT_487] = RenderViews::buildSelectDropdown('SSL_TYPE_' . $i, array('none', 'SSL', 'TLS'), array(TXT_596, TXT_594, TXT_595), defined('SSL_TYPE_' . $i) ? constant('SSL_TYPE_' . $i) : '');
+        $fields[$prefix . TXT_579] = RenderViews::buildTextInput('MAIL_HOST_NAME_' . $i, defined('MAIL_HOST_NAME_' . $i) ? constant('MAIL_HOST_NAME_' . $i) : '');
+        $fields[$prefix . TXT_571] = RenderViews::buildTextInput('MAIL_HOST_PORT_' . $i, defined('MAIL_HOST_PORT_' . $i) ? constant('MAIL_HOST_PORT_' . $i) : '');
+        $fields[$prefix . TXT_580] = RenderViews::buildTextInput('MAIL_USER_' . $i, defined('MAIL_USER_' . $i) ? constant('MAIL_USER_' . $i) : '');
+        $fields[$prefix . TXT_581] = RenderViews::buildPasswordInput('MAIL_PASSWORD_' . $i, defined('MAIL_PASSWORD_' . $i) ? constant('MAIL_PASSWORD_' . $i) : '');
+        $fields[$prefix . TXT_575] = RenderViews::buildSelectDropdown('MATCH_METHOD_' . $i, array('domain', 'email'), array(TXT_576, TXT_577), defined('MATCH_METHOD_' . $i) ? constant('MATCH_METHOD_' . $i) : '');
         $columnArray = array('user_id', 'user_name');
         $condition = "ORDER BY user_name ASC";
         $sql = Database::sqlSelect('users', $columnArray, $condition);
@@ -356,8 +330,8 @@ function showEmailSettings(): void
             $userIDArray[] = $row['user_id'];
             $userArray[] = $row['user_name'];
         }
-        $fields[TXT_578] = RenderViews::buildSelectDropdown('USER_ID_' . $i, $userIDArray, $userArray, constant('USER_ID_' . $i));
-        $fields[TXT_269] = RenderViews::buildSelectDropdown('OWNER_' . $i, array_merge(array(''), $userIDArray), array_merge(array(TXT_267), $userArray), constant('OWNER_' . $i));
+        $fields[$prefix . TXT_578] = RenderViews::buildSelectDropdown('USER_ID_' . $i, $userIDArray, $userArray, defined('USER_ID_' . $i) ? constant('USER_ID_' . $i) : '');
+        $fields[$prefix . TXT_269] = RenderViews::buildSelectDropdown('OWNER_' . $i, array_merge(array(''), $userIDArray), array_merge(array(TXT_267), $userArray), defined('OWNER_' . $i) ? constant('OWNER_' . $i) : '');
 // Show available custom fields (render a semantic table of names)
         $columnArray = array('custom_field_id', 'custom_field_name');
         $condition = "ORDER BY custom_field_id ASC";
@@ -367,10 +341,9 @@ function showEmailSettings(): void
         while ($row = Database::fetchArray($result)) {
             $dynamicValues .= 'CUSTOM_FIELD_' . $row['custom_field_id'] . ' (' . $row['custom_field_name'] . '), ';
         }
-        $fields[TXT_655] = RenderViews::buildTextArea('SUBJECT_MATCH_' . $i, constant('SUBJECT_MATCH_' . $i), SET_FORM_FIELD_HEIGHT) . '<br>* ' . TXT_657;
-        $fields[TXT_582] = RenderViews::buildTextArea('CUSTOM_FIELD_POPULATION_' . $i, constant('CUSTOM_FIELD_POPULATION_' . $i), SET_FORM_FIELD_HEIGHT);
-        //$fields[''] = TXT_584 . '<br>* ' . TXT_585 . '<br><br><strong>' . TXT_583 . '</strong>';
-        $fields[TXT_583] = $dynamicValues;
+        $fields[$prefix . TXT_655] = RenderViews::buildTextArea('SUBJECT_MATCH_' . $i, defined('SUBJECT_MATCH_' . $i) ? constant('SUBJECT_MATCH_' . $i) : '', SET_FORM_FIELD_HEIGHT) . '<br>* ' . TXT_657;
+        $fields[$prefix . TXT_582] = RenderViews::buildTextArea('CUSTOM_FIELD_POPULATION_' . $i, defined('CUSTOM_FIELD_POPULATION_' . $i) ? constant('CUSTOM_FIELD_POPULATION_' . $i) : '', SET_FORM_FIELD_HEIGHT);
+        $fields[$prefix . TXT_583] = $dynamicValues;
         $optionArray = array('creator', 'owner', 'creator_owner', 'creator_groups', 'owner_groups', 'creator_owner_groups', 'groups');
         $displayNameArray = array(TXT_587, TXT_588, TXT_589, TXT_590, TXT_591, TXT_592, TXT_593);
         // Get list of existing email notification actions defined
@@ -386,23 +359,17 @@ function showEmailSettings(): void
             $actionNameArray[] = $row['action_name'];
         }
 
-        $fields[TXT_573] = RenderViews::buildSelectDropdown('ACTION_NAME_CREATE_' . $i, $actionIDArray, $actionNameArray, constant('ACTION_NAME_CREATE_' . $i));
-        $fields[TXT_574] = RenderViews::buildSelectDropdown('ACTION_NAME_UPDATE_' . $i, $actionIDArray, $actionNameArray, constant('ACTION_NAME_UPDATE_' . $i));
+        $fields[$prefix . TXT_573] = RenderViews::buildSelectDropdown('ACTION_NAME_CREATE_' . $i, $actionIDArray ?? [], $actionNameArray ?? [], defined('ACTION_NAME_CREATE_' . $i) ? constant('ACTION_NAME_CREATE_' . $i) : '');
+        $fields[$prefix . TXT_574] = RenderViews::buildSelectDropdown('ACTION_NAME_UPDATE_' . $i, $actionIDArray ?? [], $actionNameArray ?? [], defined('ACTION_NAME_UPDATE_' . $i) ? constant('ACTION_NAME_UPDATE_' . $i) : '');
         $i++;
-        $inboundBodyBlock[] = [
-            'title' => TXT_567 . ' ' . ($i - 1),
-            'html' => RenderViews::buildFormFieldsGrid($fields),
-        ];
-        $html .= RenderViews::buildVerticalCards($inboundBodyBlock) . '<br />';
-
-        unset($fields);
-
     }
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $html .= RenderViews::buildEndFormWithButtons($buttons);
 
-    define('HEADING', TXT_565);
-    define('BODY_CONTENT', $html);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_565,
+        'index.php?controller=administration_settings&option=update_email_settings',
+        $fields,
+        [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 

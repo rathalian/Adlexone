@@ -86,161 +86,122 @@ function showPublicItems() {
 }
 
 function showHelpdeskModules() {
-	$html = '';
-		$savedSearch[] = showTopX();
-		$tableRows = RenderViews::tbTableRows($savedSearch);
-		$html .= RenderViews::table('100%', '0', '0', '0', 'moduleTable', $tableRows) . '<br>';
-		$modules[] = showSavedSearches();
-		$modules[] = showAnnouncementSummary();
-		$tableRows = RenderViews::tbTableRows($modules);
-		$html .= RenderViews::tbTable($tableRows, 'table table-bordered', '100%');
-		$i = 0;
-		foreach ($modules as $cell) {
-			$cellData[] = $cell;
-			$i++;
-			if ($i == 2) {
-				$tableRows = RenderViews::tbTableRows($cellData);
-				$html .= RenderViews::tbTable($tableRows, 'table table-bordered', '100%');
-				$i = 0;
-				unset($cellData);
-			}
-		}
-	define('HEADING', APP_TXT_65);
+	$html = showTopX();
+	$html .= RenderViews::buildHorizontalCards([
+		['title' => APP_TXT_5, 'html' => showSavedSearches()],
+	], 2);
 	define('BODY_CONTENT', $html);
-	RenderViews::renderThemePage('main_page_content',  SET_THEME);
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 function showHelpdeskQuickLaunch() {
+	$blocks = [];
 	if ($_SESSION['access_role_id'] < 5) {
-		$imageURL = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'newTicketBig.png');
-		$text = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE, APP_TXT_59, 'URLHeading') . '<br />' . APP_TXT_58;
-		$tableRows = RenderViews::tableData('', array('64px', '100%'), array('left', 'left'), '', array('tdc1Top', 'tdc1Top'), array($imageURL, $text), 'row');
-		$modules[] = RenderViews::table('100%', '0', '10', '0', '', $tableRows);
+		$blocks[] = [
+			'title' => APP_TXT_59,
+			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'newTicketBig.png')
+				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE, APP_TXT_59, 'URLHeading')
+				. '<br>' . APP_TXT_58,
+		];
 	}
-
-	$imageURL = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_saved_searches', '', 'launchURL', SET_IMAGE_PATH . 'savedSearchBig.png');
-	$text = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_saved_searches', APP_TXT_60, 'URLHeading') . '<br />' . APP_TXT_66;
-	$tableRows = RenderViews::tableData('', array('64px', '100%'), array('left', 'left'), '', array('tdc1Top', 'tdc1Top'), array($imageURL, $text), 'row');
-	$modules[] = RenderViews::table('100%', '0', '10', '0', '', $tableRows);
-
-	$imageURL = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_quick_search', '', 'launchURL', SET_IMAGE_PATH . 'searchBig.png');
-	$text = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_quick_search', APP_TXT_62, 'URLHeading') . '<br />' . APP_TXT_63;
-	$tableRows = RenderViews::tableData('', array('64px', '100%'), array('left', 'left'), '', array('tdc1Top', 'tdc1Top'), array($imageURL, $text), 'row');
-	$modules[] = RenderViews::table('100%', '0', '10', '0', '', $tableRows);
-
+	$blocks[] = [
+		'title' => APP_TXT_60,
+		'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_saved_searches', '', 'launchURL', SET_IMAGE_PATH . 'savedSearchBig.png')
+			. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_saved_searches', APP_TXT_60, 'URLHeading')
+			. '<br>' . APP_TXT_66,
+	];
+	$blocks[] = [
+		'title' => APP_TXT_62,
+		'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_quick_search', '', 'launchURL', SET_IMAGE_PATH . 'searchBig.png')
+			. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_quick_search', APP_TXT_62, 'URLHeading')
+			. '<br>' . APP_TXT_63,
+	];
 	if ($_SESSION['access_role_id'] < 5) {
-		$imageURL = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'advancedSearchBig.png');
-		$text = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE, APP_TXT_61, 'URLHeading') . '<br />' . APP_TXT_64;
-		$tableRows = RenderViews::tableData('', array('64px', '100%'), array('left', 'left'), '', array('tdc1Top', 'tdc1Top'), array($imageURL, $text), 'row');
-		$modules[] = RenderViews::table('100%', '0', '10', '0', '', $tableRows);
-
-		$imageURL = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_announcements', '', 'launchURL', SET_IMAGE_PATH . 'announcementsBig.png');
-		$text = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_announcements', APP_TXT_68, 'URLHeading') . '<br />' . APP_TXT_69;
-		$tableRows = RenderViews::tableData('', array('64px', '100%'), array('left', 'left'), '', array('tdc1Top', 'tdc1Top'), array($imageURL, $text), 'row');
-		$modules[] = RenderViews::table('100%', '0', '10', '0', '', $tableRows);
+		$blocks[] = [
+			'title' => APP_TXT_61,
+			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'advancedSearchBig.png')
+				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE, APP_TXT_61, 'URLHeading')
+				. '<br>' . APP_TXT_64,
+		];
+		$blocks[] = [
+			'title' => APP_TXT_68,
+			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_announcements', '', 'launchURL', SET_IMAGE_PATH . 'announcementsBig.png')
+				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_announcements', APP_TXT_68, 'URLHeading')
+				. '<br>' . APP_TXT_69,
+		];
 	}
+	$blocks[] = [
+		'title' => APP_TXT_55,
+		'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_portal', '', 'launchURL', SET_IMAGE_PATH . 'portalBig.png')
+			. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_portal', APP_TXT_55, 'URLHeading')
+			. '<br>' . APP_TXT_71,
+	];
 
-	$imageURL = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_portal', '', 'launchURL', SET_IMAGE_PATH . 'portalBig.png');
-	$text = RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_portal', APP_TXT_55, 'URLHeading') . '<br />' . APP_TXT_71;
-	$tableRows = RenderViews::tableData('', array('64px', '100%'), array('left', 'left'), '', array('tdc1Top', 'tdc1Top'), array($imageURL, $text), 'row');
-	$modules[] = RenderViews::table('100%', '0', '10', '0', '', $tableRows);
-
-	$html = '';
-	if (count($modules) == 1) {
-		$tableRows = RenderViews::tableData('', array('100%'), array('left'), '', '', $modules, 'row');
-		$html .= RenderViews::table('33%', '0', '0', '0', '', $tableRows);
-	} else {
-		$i = 0;
-		$moduleCount = count($modules);
-		$count = 1;
-		foreach ($modules as $cell) {
-			$cellData[] = $cell;
-			$i++;
-			if ($i == 3) {
-				$tableRows = RenderViews::tableData('', array('33%', '33%', '33%'), array('center', 'center', 'center'), '', '', $cellData, 'row');
-				$html .= RenderViews::table('100%', '0', '0', '0', '', $tableRows);
-				$i = 0;
-				unset($cellData);
-			} elseif (($moduleCount == $count) AND (count($cellData) == 2)) {
-				$tableRows = RenderViews::tableData('', array('50%', '50%'), array('center', 'center'), '', '', $cellData, 'row');
-				$html .= RenderViews::table('66%', '0', '0', '0', '', $tableRows);
-				unset($cellData);
-			} elseif (($moduleCount == $count) AND (count($cellData) == 1)) {
-				$tableRows = RenderViews::tableData('', array('100%'), array('left'), '', '', $cellData, 'row');
-				$html .= RenderViews::table('33%', '0', '0', '0', '', $tableRows);
-				unset($cellData);
-			}
-			$count++;
-		}
-	}
-
+	$html = RenderViews::buildHorizontalCards($blocks, 3);
 	if (is_numeric(HELPDESK_SET_SAVED_SEARCH)) {
-		$savedSearch[] = showTopX();
-		$tableRows = RenderViews::tableData('2', array('95%'), array('center'), '', '', $savedSearch, 'row');
-		$html .= '<br>';
-		$html .= RenderViews::table('100%', '0', '0', '0', '', $tableRows);
+		$html .= showTopX();
 	}
-
-	define('HEADING', APP_TXT_70);
 	define('BODY_CONTENT', $html);
-	RenderViews::renderThemePage('main_page_content',  SET_THEME);
-
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 function showAnnouncementItem($id = '') {
-	// Grab data from database
 	$sql = "SELECT * FROM announcements WHERE id='" . $id . "'";
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
 	$row = Database::fetchArray($result);
 	$heading = date(SET_DATE_FORMAT, $row[1]) . ': ' . $row[4];
-	$tableRows = RenderViews::tableData('', array('100%'), array('left'), '', array('tdc1'), array($row[2]), 'row');
-	$html = RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-	define('HEADING', $heading);
-	define('BODY_CONTENT', $html);
-	RenderViews::renderThemePage('main_page_content',  SET_THEME);
+	define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+		'title' => $heading,
+		'html' => RenderViews::buildFormFieldsGrid([
+			'' => str_replace("\n", '<br />', (string)$row[2]),
+		]),
+	]]));
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 function showUserItems($userID = '') {
-	// Grab data from database
 	$sql = "SELECT * FROM announcements";
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$tableRows = '';
-	$html = '';
+	$list = '';
 	while ($row = Database::fetchArray($result)) {
-		// Only show delete to Adlexone Administrator and above
-		if ($_SESSION['access_role_id'] < 2) {// anything less than 2 is an administrator
-			$editURL = '- (' . RenderViews::buildURL(CONTROLLER_BASEURL . '&option=edit_announcement&id=' . $row['id'], APP_TXT_22, 'URL') . ')';
-			$deleteURL = ' (' . RenderViews::buildURL(CONTROLLER_BASEURL . '&option=delete_announcement&id=' . $row['id'], TXT_47, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"') . ')';
+		$actions = '';
+		if ($_SESSION['access_role_id'] < 2) {
+			$actions = RenderViews::buildURL(CONTROLLER_BASEURL . '&option=edit_announcement&id=' . $row['id'], APP_TXT_22, '', 'URL')
+				. ' ' . RenderViews::buildURL(CONTROLLER_BASEURL . '&option=delete_announcement&id=' . $row['id'], TXT_47, '', 'URL', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
 		}
-		$tableRows .= RenderViews::tableData('2', '', 'left', 'tdcHeading', 'tdc1BottomBorder', array('&nbsp;' . $row['subject'] . ' (' . date(SET_DATE_FORMAT, $row['time']) . ')' . @$editURL . @$deleteURL), 'row');
-		$tableRows .= RenderViews::tableData('2', '', 'left', '', 'tdc1Padded', array(str_replace("\n", "<br />", $row['message'])), 'row');
+		$fields = [
+			TXT_346 => htmlspecialchars((string)$row['subject'], ENT_QUOTES, 'UTF-8') . ' (' . date(SET_DATE_FORMAT, $row['time']) . ')',
+			TXT_347 => str_replace("\n", '<br />', (string)$row['message']),
+		];
+		if ($actions !== '') {
+			$fields[TXT_388] = $actions;
+		}
+		$list .= RenderViews::buildFormFieldsGrid($fields);
+		$list .= RenderViews::buildHorizontalSeparator();
 	}
-	$html .= RenderViews::table('100%', '0', '0', '0', '', $tableRows);
+	$html = RenderViews::buildVerticalCards([['title' => TXT_344, 'html' => $list]]);
 	$javascript = "";
 	// Show add new announcement to managers (3) and above only
-	if ($_SESSION['access_role_id'] <= 3) {// anything less than 2 is an administrator
-		$html .= '<br />';
-		$html .= RenderViews::buildStartForm(CONTROLLER_BASEURL . '&option=add_announcement', 'POST', 'form-horizontal');
-		$tableRows = RenderViews::tableData('2', '', 'left', '', 'tdcHeadingBottomBorder', array(TXT_344), 'column');
-		$cellData[TXT_346] = RenderViews::buildTextInput('subject', '');
-		$cellData[TXT_347] = RenderViews::buildTextArea('message', '');
+	if ($_SESSION['access_role_id'] <= 3) {
 		$jsFieldNameArray = "['subject']";
 		$jsTestTypeArray = "['']";
 		$jsErrorMsgArray = "['']";
 		$jsRequiredMsgArray = "['" . TXT_547 . "']";
 		$jsRequiredArray = "[true]";
 		$javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
-		foreach ($cellData as $name => $field) {
-			$cellData = array($name, $field);
-			$tableRows .= RenderViews::tableData('', array('1%', '99%'), array('left', 'left'), '', array('tdform', 'tdformIndent'), $cellData, 'row');
-		}
-		$buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_345, $javascript);
-		$buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-		$endFormButtons = RenderViews::buildEndFormWithButtons($buttonArray);
-		$tableRows .= RenderViews::tableData('2', '', array('left'), '', 'tdc1', array($endFormButtons), 'row');
-		$html .= RenderViews::table('100%', '0', '0', '0', '', $tableRows);
+		$html .= RenderViews::buildForm(
+			TXT_344,
+			CONTROLLER_BASEURL . '&option=add_announcement',
+			[
+				TXT_346 => RenderViews::buildTextInput('subject', ''),
+				TXT_347 => RenderViews::buildTextArea('message', ''),
+			],
+			[
+				RenderViews::buildFormButton('submit', 'submit_button', TXT_345, $javascript),
+				RenderViews::buildFormButton('reset', 'reset', TXT_75),
+			]
+		);
 	}
-	define('HEADING', APP_TXT_6);
 	define('BODY_CONTENT', $html);
 	RenderViews::renderThemePage('main_page_content',  SET_THEME);
 }
@@ -253,35 +214,32 @@ function showUserItems($userID = '') {
 function deleteAnnouncement($id) {
 	$sql = "DELETE FROM announcements WHERE id = '$id'";
 	Database::query($sql, DSN, SET_SHOW_SQL);
-	showAnnouncements();
+	showUserItems();
 }
 
 function editAnnouncement($id) {
 	$sql = "SELECT subject, message FROM announcements WHERE id = '$id'";
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
 	$row = Database::fetchArray($result);
-	$html = RenderViews::buildStartForm(CONTROLLER_BASEURL . '&option=update_announcement', 'POST', 'form-horizontal');
-	$tableRows = RenderViews::tableData('2', '', 'left', '', 'tdcHeading', array(TXT_344), 'column');
-	$cellData[TXT_346] = RenderViews::buildTextInput('subject', $row['subject'], '', 'form-control');
-	$cellData[TXT_347] = RenderViews::buildTextArea('message', $row['message'], SET_FORM_FIELD_HEIGHT);
-	foreach ($cellData as $name => $field) {
-		$cellData = array('<strong>' . $name . '</strong>', $field);
-		$tableRows .= RenderViews::tableData('', array('1%', '99%'), array('left', 'left'), '', array('tdform', 'tdformIndent'), $cellData, 'row');
-	}
-	$html .= RenderViews::buildHiddenInput('id', $id);
 	$jsFieldNameArray = "['subject']";
 	$jsTestTypeArray = "['']";
 	$jsErrorMsgArray = "['']";
 	$jsRequiredMsgArray = "['" . TXT_547 . "']";
 	$jsRequiredArray = "[true]";
 	$javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
-	$buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_348, $javascript);
-	$buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-	$endFormButtons = RenderViews::buildEndFormWithButtons($buttonArray, '1');
-	$tableRows .= RenderViews::tableData('2', '', array('left'), '', 'tdc1', array($endFormButtons), 'row');
-	$html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-	define('HEADING', TXT_349);
-	define('BODY_CONTENT', $html);
+	define('BODY_CONTENT', RenderViews::buildForm(
+		TXT_349,
+		CONTROLLER_BASEURL . '&option=update_announcement',
+		[
+			TXT_346 => RenderViews::buildTextInput('subject', $row['subject']),
+			TXT_347 => RenderViews::buildTextArea('message', $row['message'], SET_FORM_FIELD_HEIGHT),
+			'' => RenderViews::buildHiddenInput('id', $id),
+		],
+		[
+			RenderViews::buildFormButton('submit', 'submit_button', TXT_348, $javascript),
+			RenderViews::buildFormButton('reset', 'reset', TXT_75),
+		]
+	));
 	RenderViews::renderThemePage('main_page_content',  SET_THEME);
 }
 
@@ -292,7 +250,7 @@ function updateAnnouncement() {
 	$condition = "WHERE id ='{$_POST['id']}'";
 	$sql = Database::sqlUpdate('announcements', $columnArray, $condition);
 	Database::query($sql, DSN, SET_SHOW_SQL);
-	showAnnouncements();
+	showUserItems();
 }
 
 /**
@@ -301,32 +259,20 @@ function updateAnnouncement() {
  * @return Saved searches table
  */
 function showSavedSearches() {
-	// Get data from database and create statistics table
-	// Get favourite searches
 	$sql = "SELECT * FROM saved_searches WHERE (user ='" . $_SESSION['access_user_id'] . "' OR user = 'all' OR user = 'system') AND application = 'app_oneorzerohelpdesk_main' ORDER BY search_name ASC";
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$headerRow = RenderViews::tableData('', '', 'left', '', array('tdcHeadingBottomBorder'), array(APP_TXT_5), 'row');
-	$html = RenderViews::table('98%', '0', '0', '0', '', $headerRow);
 	if (Database::numRows($result) == 0) {
-		$tableRows = RenderViews::tableData('3', '', 'left', '', 'tdNavigationInsetShaded', array(APP_TXT_40), 'row', '', 'saved_searches');
-	} else {
-		$tableRows = '';
-		while ($row = Database::fetchArray($result)) {
-			//			$searchResult = Database::query($row['saved_search_sql'], DSN, SET_SHOW_SQL);
-			//			$searchCount = Database::numRows($searchResult);
-			if ($row['user'] == 'all') {
-				$url = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&global=1&id=' . $row['search_id'], $row['search_name'] . ' (' . TXT_408 . ')', 'URL');
-			} else {
-				$url = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['search_id'], $row['search_name'], 'URL');
-			}
-			//			if ($_SESSION['access_role_id'] <= 3){ //Managers and above can see count
-			//				$buildURL .= ': (<strong>' . $searchCount . '</strong>)';
-			//			}
-			$tableRows .= RenderViews::tableData('3', '', 'left', '', 'tdc1BottomBorder', array($url), 'row', '', 'saved_searches');
-		}
+		return RenderViews::buildFormFieldsGrid(['' => APP_TXT_40]);
 	}
-	$html .= RenderViews::table('98%', '0', '0', '0', '', $tableRows);
-
+	$html = '';
+	while ($row = Database::fetchArray($result)) {
+		if ($row['user'] == 'all') {
+			$url = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&global=1&id=' . $row['search_id'], $row['search_name'] . ' (' . TXT_408 . ')', '', 'URL');
+		} else {
+			$url = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['search_id'], $row['search_name'], '', 'URL');
+		}
+		$html .= RenderViews::buildFormFieldsGrid(['' => $url]);
+	}
 	return $html;
 }
 
@@ -341,7 +287,9 @@ function showTopX() {
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
 	$row = Database::fetchArray($result);
 	//Set heading
-	if ($row['saved_search_sql'] != '') {
+	$columnArray = [];
+	$headTitle = [];
+	if (is_array($row) && ($row['saved_search_sql'] ?? '') != '') {
 		$savedSearch2 = substr($row['saved_search_sql'], 6);
 		$orderSQL = (stripos($savedSearch2, "order by")) ? substr($savedSearch2, strripos($savedSearch2, "order by") + 8) : "";
 		$savedSearch2 = substr($savedSearch2, 0, strripos($savedSearch2, "from"));
@@ -383,12 +331,10 @@ function showTopX() {
 	$show = RenderViews::buildURL('#', TXT_373, 'URL', '', 'onclick="showRow(\'top_ten\');return false;"');
 	$hide = RenderViews::buildURL('#', TXT_374, 'URL', '', 'onclick="hideRow(\'top_ten\');return false;"');
 
-	$html = RenderViews::tbStartTable('table table-bordered table-striped table-hover');
-	$html .= RenderViews::tbTableHeadings(array(APP_TXT_53 . ' ' . HELPDESK_SET_RESULT_COUNT . ' - ' . $row['search_name'] . ' (' . $show . '\\' . $hide . ' ' . APP_TXT_67 . ')'), '', count(@$headTitle));
-
-	$html .= (count(@$headTitle) > 0) ? RenderViews::tbTableHeadings(@$headTitle) : '';
-	if (Database::numRows($result) == 0) {
-		$html .= RenderViews::tbTableRows(array(APP_TXT_54));
+	$searchName = is_array($row) ? (string)($row['search_name'] ?? '') : '';
+	$html = '';
+	if (!is_array($row) || Database::numRows($result) == 0) {
+		$html = RenderViews::buildFormFieldsGrid(['' => APP_TXT_54]);
 	} else {
 		//Execute saved search SQL
 		$sql = str_replace('session_user', $_SESSION['access_user_id'], $row['saved_search_sql']);
@@ -472,20 +418,28 @@ function showTopX() {
 					}
 				}
 			}
-			if ($allowedAccess == true) {
-				if ($i < HELPDESK_SET_RESULT_COUNT) {
-					$html .= RenderViews::tbTableRows($cellData, 'top_ten');
-				} else {
-					$html .= RenderViews::tbTableRows($cellData, 'top_ten');
+			if ($allowedAccess == true && $i < (int)HELPDESK_SET_RESULT_COUNT) {
+				$fields = [];
+				foreach ($cellData as $index => $cell) {
+					$label = (string)($headTitle[$index] ?? $index);
+					if ($label === '' || array_key_exists($label, $fields)) {
+						$label .= ' ' . $index;
+					}
+					$fields[$label] = (string)$cell;
 				}
+				$html .= RenderViews::buildFormFieldsGrid($fields);
+				$html .= RenderViews::buildHorizontalSeparator();
 				$i++;
 			}
 			unset($cellData);
 		}
 	}
-	$html .= RenderViews::endTable();
-
-	return $html;
+	$title = APP_TXT_53 . ' ' . HELPDESK_SET_RESULT_COUNT . ' - ' . $searchName;
+	$controls = '<div>' . $show . ' \\ ' . $hide . ' ' . APP_TXT_67 . '</div>';
+	if ($html === '') {
+		$html = RenderViews::buildFormFieldsGrid(['' => APP_TXT_54]);
+	}
+	return RenderViews::buildVerticalCards([['title' => $title, 'html' => $controls . $html]]);
 }
 
 function showSearchItems($id, $userID, $rss = false) {
@@ -545,21 +499,15 @@ function showHelpdeskSettings() {
 	$fields[APP_TXT_51] = RenderViews::buildSelectDropdown('HELPDESK_SET_SAVED_SEARCH', $listValues, $listDisplayValues, $settings['HELPDESK_SET_SAVED_SEARCH']);
 	$fields[APP_TXT_72] = RenderViews::buildTextInput('HELPDESK_SET_RESULT_COUNT', $settings['HELPDESK_SET_RESULT_COUNT']);
 	$fields[APP_TXT_57] = RenderViews::buildSelectDropdown('HELPDESK_SET_DEFAULT_SCREEN', array('portal', 'quick_launch'), array(APP_TXT_55, APP_TXT_56), $settings['HELPDESK_SET_DEFAULT_SCREEN']);
-	// Create two column table with heading
-	$html = RenderViews::buildStartForm(CONTROLLER_BASEURL . '&option=update_helpdesk_settings', 'POST', 'form-horizontal');
-	$tableRows = '';
-	foreach ($fields as $name => $field) {
-		// $a in this case represents the defined variables above
-		$cellData = array($name, $field);
-		$tableRows .= RenderViews::tableData('', array('1%', '99%'), array('left', 'left'), '', array('tdform', 'tdformIndent'), $cellData, 'row');
-	}
-	$buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-	$buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-	$endFormButtons = RenderViews::buildEndFormWithButtons($buttonArray, '1');
-	$tableRows .= RenderViews::tableData('2', '', array('left'), '', 'tdc1', array($endFormButtons), 'row');
-	$html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-	define('HEADING', APP_TXT_31);
-	define('BODY_CONTENT', $html);
+	define('BODY_CONTENT', RenderViews::buildForm(
+		APP_TXT_31,
+		CONTROLLER_BASEURL . '&option=update_helpdesk_settings',
+		$fields,
+		[
+			RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+			RenderViews::buildFormButton('reset', 'reset', TXT_75),
+		]
+	));
 	RenderViews::renderThemePage('main_page_content',  SET_THEME);
 }
 
@@ -604,7 +552,7 @@ switch (@$_GET['option']) {
 		break;
 	case 'show_announcements' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-		showAnnouncements();
+		showUserItems();
 		break;
 	case 'add_announcement' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);

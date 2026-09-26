@@ -27,6 +27,7 @@
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 use Adlexone\support\Actions;
+use Adlexone\support\FieldTypes;
 
 /**
  * Controller Constants
@@ -164,22 +165,24 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
     $newsort = "";
     $result = Database::query($origSQL, DSN, SET_SHOW_SQL);
 
-    // Create Table and populate with data (and formatting)
-    // Set required style info
+    $listHtml = '';
+    $sortLinks = '';
     if ($countrecs > 1) {
-        $tableHeadings = array(RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4), RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4), RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4), RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4), TXT_388);
-    } else {
-        $tableHeadings = array(RenderViews::getLanguageConstant('LA_102', 'TXT_102'), RenderViews::getLanguageConstant('LA_84', 'TXT_84'), TXT_225, RenderViews::getLanguageConstant('LA_226', 'TXT_226'), TXT_388);
+        $sortLinks = '<div>'
+            . RenderViews::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4)
+            . ' '
+            . RenderViews::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4)
+            . ' '
+            . RenderViews::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4)
+            . ' '
+            . RenderViews::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4)
+            . '</div>';
     }
 
-    $i = 0;
-    //Open the table and render the headings
-//    $html = RenderViews::tbStartTable('table table-bordered table-striped table-hover');
-//    $html .= RenderViews::tbTableHeadings($tableHeadings);
     if (Database::numRows($result) > 0) {
         $itemTypeID = '';
+        $itemTypeName = '';
         while ($row = Database::fetchArray($result)) {
-            $cellData[] = $row['item_id'];
             if ($row['item_title'] == '') {
                 $title = TXT_357;
             } else {
@@ -187,45 +190,35 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
             }
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-            $cellData[] = '<a href ="' . MAN_BASE_URL . '&option=show_item&item_id=' . $row['item_id'] . $logEntry . $attachments . '" class="URL">' . $title . '</a>';
-            $cellData[] = date(SET_DATE_FORMAT, $row['create_date']);
-            // Get item type name from database
-            if ($itemTypeID != $row['item_type_id']) {// We don't need to recheck as the last check was for the same item type id
+            if ($itemTypeID != $row['item_type_id']) {
                 $columnArray = array('item_type_name');
                 $condition = "WHERE item_type_id = '" . $row['item_type_id'] . "'";
                 $sql = Database::sqlSelect('item_types', $columnArray, $condition);
                 $itemTypeResult = Database::query($sql, DSN, SET_SHOW_SQL);
                 $itemTypeRow = Database::fetchArray($itemTypeResult);
                 $itemTypeName = $itemTypeRow['item_type_name'];
-                //We set this so we can use it later if the next check is the same item type
-                $cellData[] = $itemTypeName;
                 $itemTypeID = $row['item_type_id'];
-            } else {
-                $cellData[] = $itemTypeName;
             }
-            //			$itemTypeRow = Database::fetchArray($itemTypeResult);
-            //			$cellData[] = $itemTypeRow['item_type_name'];
-            // Setup actions and secure
-            // $action .= RenderViews::outputIfRoleAllowed('<a href ="index.php?controller='.$_GET['controller'].'&subcontroller=action_management_manage&option=trigger_actions&item_id=' . $row[0] . '" class="URL">' . TXT_242 . '</a> - ',$_SESSION['access_role_id'], 2);
             $action = RenderViews::outputIfRoleAllowed('<a href="' . MAN_BASE_URL . '&option=show_attachments&item_id=' . $row['item_id'] . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
             $action .= RenderViews::outputIfRoleAllowed(' - <a href="' . MAN_BASE_URL . '&option=change_security&item_id=' . $row['item_id'] . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
             $action .= RenderViews::outputIfRoleAllowed(' - <a href ="' . MAN_BASE_URL . '&option=log_entry&item_id=' . $row['item_id'] . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
             $action .= RenderViews::outputIfRoleAllowed(' - ' . RenderViews::buildURL('index.php?controller=full_page_view&option=print_item&item_id=' . $row['item_id'], TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
             $action .= RenderViews::outputIfRoleAllowed(' - <a href ="' . MAN_BASE_URL . '&option=delete_item&item_id=' . $row['item_id'] . TXT_400 . 'null">' . TXT_315 . '</a>', $_SESSION['access_role_id'], 2);
-            $cellData[] = $action;
-            //RenderViews table rows
-            $html .= RenderViews::tbTableRows($cellData);
-            $i++;
-            unset($cellData, $action);
+            $listHtml .= RenderViews::buildFormFieldsGrid([
+                RenderViews::getLanguageConstant('LA_102', 'TXT_102') => (string)$row['item_id'],
+                RenderViews::getLanguageConstant('LA_84', 'TXT_84') => '<a href ="' . MAN_BASE_URL . '&option=show_item&item_id=' . $row['item_id'] . $logEntry . $attachments . '" class="URL">' . $title . '</a>',
+                TXT_225 => date(SET_DATE_FORMAT, $row['create_date']),
+                RenderViews::getLanguageConstant('LA_226', 'TXT_226') => (string)$itemTypeName,
+                TXT_388 => $action,
+            ]);
+            $listHtml .= RenderViews::buildHorizontalSeparator();
+            unset($action);
         }
     } else {
-        $html .= RenderViews::tbTableRows(array(TXT_115));
+        $listHtml = RenderViews::buildFormFieldsGrid(['' => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8')]);
     }
-    $html .= RenderViews::buildStartForm('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=my_items', 'POST', 'form-horizontal');
-    //End the table
-    $html .= RenderViews::endTable();
-    unset($cellData);
-    //Displa y next/prev buildSelectDropdown
+    $paginationHTML = '';
+    $hidden = '';
     if ($countBoolean) {
         $paginationHTML = '<div class="pagination pagination-centered "><ul>';
         $pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
@@ -254,20 +247,24 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
         }
         if ($itemID == '') {
             $paginationHTML .= '</ul></div>';
-            $html .= $paginationHTML;
-            $html .= RenderViews::buildHiddenInput('pageset', $pageset);
+            $hidden .= RenderViews::buildHiddenInput('pageset', (string)$pageset);
         }
     }
     if ($itemID == '') {
         $_SESSION['item_sql'] = $origSQL;
-        $html .= RenderViews::buildHiddenInput('currsort', $newsort);
-        //$html .= RenderViews::buildHiddenInput('sess',htmlentities($origSQL,ENT_COMPAT, 'UTF-8'));
-        $html .= RenderViews::buildHiddenInput('search', @$pageset);
-        $html .= RenderViews::buildHiddenInput('countrecs', $countrecs);
-        $html .= RenderViews::buildHiddenInput('search_type', @$_GET['option']);
+        $hidden .= RenderViews::buildHiddenInput('currsort', (string)$newsort);
+        $hidden .= RenderViews::buildHiddenInput('search', (string)($pageset ?? ''));
+        $hidden .= RenderViews::buildHiddenInput('countrecs', (string)$countrecs);
+        $hidden .= RenderViews::buildHiddenInput('search_type', (string)($_GET['option'] ?? ''));
     }
 
-    define('HEADING', RenderViews::getLanguageConstant('LA_44', 'TXT_44'));
+    $html = RenderViews::buildForm(
+        RenderViews::getLanguageConstant('LA_44', 'TXT_44'),
+        'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=my_items',
+        ['' => $sortLinks . $listHtml . ($paginationHTML ?? '') . ($hidden ?? '')],
+        [],
+        ['name' => 'repform', 'id' => 'repform']
+    );
     define('BODY_CONTENT', $html);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -285,8 +282,6 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
 
 function showItemTypes($defaultItemType = '')
 {
-    $bodyBlocks = [];
-    $formHtml = RenderViews::buildStartForm(MAN_BASE_URL . '&option=new_item', 'POST', 'form-horizontal');
     $fields = [];
 
     // Get all item types
@@ -350,22 +345,17 @@ function showItemTypes($defaultItemType = '')
 
     if (!$noItemTypes) {
         $fields[RenderViews::getLanguageConstant('LA_66', 'TXT_66')] = RenderViews::buildSelectDropdown('item_type_id', $valueArray, $displayArray, $defaultItemType);
-
-        $formHtml .= RenderViews::buildFormFieldsGrid($fields);
-        $buttons[''] = RenderViews::buildFormButton('submit', 'submit_button', TXT_69);
-        $formHtml .= RenderViews::buildEndFormWithButtons($buttons);
-        $bodyBlocks[] = [
-            'title' => RenderViews::getLanguageConstant('LA_46', 'TXT_46'),
-            'html' => $formHtml,
-            'full' => true,
-        ];
-    } else {
-        RenderViews::buildResponse(TXT_341);
+        define('BODY_CONTENT', RenderViews::buildForm(
+            RenderViews::getLanguageConstant('LA_46', 'TXT_46'),
+            MAN_BASE_URL . '&option=new_item',
+            $fields,
+            [RenderViews::buildFormButton('submit', 'submit_button', TXT_69)]
+        ));
+        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        return;
     }
 
-    //define('HEADING', RenderViews::getLanguageConstant('LA_46', 'TXT_46'));
-    define('BODY_CONTENT', RenderViews::buildVerticalCards($bodyBlocks));
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    RenderViews::buildResponse(TXT_341);
 }
 
 
@@ -534,6 +524,7 @@ function showItemAdd($itemTypeID, $values)
         $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
         $result = Database::query($sql, DSN, SET_SHOW_SQL);
         $row = Database::fetchArray($result);
+        $row['field_type'] = FieldTypes::normalise($row['field_type']);
         if ($row['enabled'] != 'Yes') {
             continue;
         }
@@ -613,7 +604,7 @@ function showItemAdd($itemTypeID, $values)
             }
         }
         switch ($row['field_type']) {
-            case 'buildTextInput' :
+            case FieldTypes::TEXT_BOX :
                 $fields[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $defaultValue);
                 break;
             case 'password' :
@@ -622,10 +613,10 @@ function showItemAdd($itemTypeID, $values)
             case 'hidden' :
                 $fields[$row['custom_field_name']] = RenderViews::buildHiddenInput('custom_field_' . $row['custom_field_id'], $defaultValue);
                 break;
-            case 'buildTextArea' :
+            case FieldTypes::TEXT_AREA :
                 $fields[$row['custom_field_name']] = RenderViews::buildTextArea('custom_field_' . $row['custom_field_id'], $defaultValue, SET_FORM_FIELD_HEIGHT);
                 break;
-            case 'buildSelectDropdown' :
+            case FieldTypes::MENU :
                 // Get any menus values
                 $columnArray = array('menu_value');
                 $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
@@ -801,7 +792,7 @@ function showItemAdd($itemTypeID, $values)
 
                 }
                 break;
-            case 'buildCheckBox' :
+            case FieldTypes::CHECK_BOX :
                 $fields[$row['custom_field_name']] = RenderViews::buildCheckBox('custom_field_' . $row['custom_field_id'], $row['custom_field_id'], '');
                 break;
             case 'URL' :
@@ -1090,6 +1081,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
                 $result = Database::query($sql, DSN, SET_SHOW_SQL);
                 $row = Database::fetchArray($result);
+                $row['field_type'] = FieldTypes::normalise($row['field_type']);
                 if ($row['enabled'] != 'Yes') {
                     continue;
                 }
@@ -1173,7 +1165,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 }
 
                 if (($itemRole >= 4) and ($row['field_type'] != 'fieldSeparator')) {//Users and viewers can read only so we override the field type
-                    if ($row['field_type'] != 'buildTextArea') {
+                    if ($row['field_type'] != FieldTypes::TEXT_AREA) {
                         $hiddenValue = $value;
                         $fieldType = 'text';
                     } else {
@@ -1189,7 +1181,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                     case 'text' :
                         $itemField[$row['custom_field_name']] = $value . RenderViews::buildHiddenInput('custom_field_' . $row['custom_field_id'], $hiddenValue);
                         break;
-                    case 'buildTextInput' :
+                    case FieldTypes::TEXT_BOX :
                         $itemField[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $value);
                         break;
                     case 'password' :
@@ -1198,10 +1190,10 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                     case 'hidden' :
                         $itemField[$row['custom_field_name']] = RenderViews::buildHiddenInput('custom_field_' . @$row['custom_field_id'], $value);
                         break;
-                    case 'buildTextArea' :
+                    case FieldTypes::TEXT_AREA :
                         $itemField[$row['custom_field_name']] = RenderViews::buildTextArea('custom_field_' . $row['custom_field_id'], $value, SET_FORM_FIELD_HEIGHT);
                         break;
-                    case 'buildSelectDropdown' :
+                    case FieldTypes::MENU :
                         // Get any menus values
                         $columnArray = array('menu_value');
                         $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
@@ -1387,7 +1379,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                         }
                         break;
 
-                    case 'buildCheckBox' :
+                    case FieldTypes::CHECK_BOX :
                         $itemField[$row['custom_field_name']] = RenderViews::buildCheckBox('custom_field_' . $row['custom_field_id'], $value, $row['custom_field_id'], 'form-control');
                         break;
                     case 'URL' :
@@ -1544,10 +1536,8 @@ function addItem()
     // Return to the form if dynamic actions are still occurring, such as sub buildSelectDropdown selection etc
     if (!isset($_POST['item_type_id'])) {
         // halt adding the item as we may have shortcutted here
-        $html = RenderViews::showResponse(TXT_535, '');
-        define('HEADING', TXT_218);
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        RenderViews::buildResponse(TXT_535);
+        return;
     } elseif (!isset($_POST['submit_button'])) {
         // Reload form setting values based on posted form values, triggered from javascript submits
         showItemAdd($_POST['item_type_id'], $_POST);
@@ -1601,11 +1591,8 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
             Database::query($sql, DSN, SET_SHOW_SQL);
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            $html = RenderViews::showResponse(TXT_450, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
-            define('HEADING', TXT_449);
-            define('BODY_CONTENT', $html);
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
-            break;
+            RenderViews::buildResponse(TXT_450, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
+            return;
 
         case 'copy' :
             //Copies existing data to new item
@@ -1667,12 +1654,8 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            $html = RenderViews::showResponse(TXT_392, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $newItemColumnArray['item_id'] . $logEntry . $attachments, TXT_262, 'URL'));
-            define('HEADING', TXT_449);
-            define('BODY_CONTENT', $html);
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
-
-            break;
+            RenderViews::buildResponse(TXT_392, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $newItemColumnArray['item_id'] . $logEntry . $attachments, TXT_262, 'URL'));
+            return;
     }
 
     //Copy to another item
@@ -1686,10 +1669,8 @@ function updateItem($itemID)
     // Return to the form if dynamic actions are still occurring, such as sub buildSelectDropdown selection etc
     if (!isset($_POST['item_type_id'])) {
         // halt adding the item as we may have shortcutted here
-        $html = RenderViews::showResponse(TXT_535, '');
-        define('HEADING', TXT_218);
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        RenderViews::buildResponse(TXT_535);
+        return;
     } elseif (!isset($_POST['submit_button'])) {
         // Reload form setting values based on posted form values, triggered from javascript submits
         showItem($_POST['item_id'], $_POST, $_GET['log_entry'], $_GET['attachments']);
@@ -1716,14 +1697,9 @@ function updateItem($itemID)
         Database::query($sql, DSN, SET_SHOW_SQL);
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
         $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-        if ($_POST['item_title'] != '') {
-            $html = RenderViews::showResponse(TXT_263, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
-        } else {
-            $html = RenderViews::showResponse(TXT_272, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
-        }
-        define('HEADING', RenderViews::getLanguageConstant('LA_48', 'TXT_48'));
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        $message = ($_POST['item_title'] != '') ? TXT_263 : TXT_272;
+        RenderViews::buildResponse($message, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
+        return;
     }
 }
 
@@ -1734,32 +1710,35 @@ function updateItem($itemID)
  */
 function showLogEntry($itemID)
 {
-    // Create form
-    $html = RenderViews::buildStartForm(MAN_BASE_URL . '&option=add_log_entry', 'POST', 'form-horizontal');
     $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
     $url = RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $showLog . $attachments, TXT_385, 'URL');
     $logField[RenderViews::getLanguageConstant('LA_244', 'TXT_244')] = RenderViews::buildTextArea('log_entry', '', SET_FORM_FIELD_HEIGHT);
     $roleIDs = array(2, 3, 4, 5);
     $roleNames = array(TXT_192, TXT_193, TXT_194, TXT_303);
-    $logField[TXT_469] = RenderViews::buildSelectDropdown('role_id', $roleIDs, $roleNames, 5) . ' - ' . TXT_470;
-    $logField[''] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-    $html .= RenderViews::buildFormFieldsGrid($logField);
+    $logField[TXT_469] = '<div>' . RenderViews::buildSelectDropdown('role_id', $roleIDs, $roleNames, 5)
+        . '<div class="field-picker-type">' . htmlspecialchars(TXT_470, ENT_QUOTES, 'UTF-8') . '</div></div>';
+
+    $logField[''] = $url;
     $columnArray = array('*');
     $condition = "WHERE item_id = '" . $itemID . "'";
     $sql = Database::sqlSelect('items', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $hidden = '';
     while ($row = Database::fetchArray($result)) {
         foreach ($row as $key => $value) {
             if (!is_numeric($key) and $value != '') {
-                $html .= RenderViews::buildHiddenInput($key, $value);
+                $hidden .= RenderViews::buildHiddenInput($key, $value);
             }
         }
     }
-    $html .= RenderViews::endForm();
-    $html .= showItemLog($itemID);
-    define('BODY_CONTENT', $html);
-    define('HEADING', RenderViews::getLanguageConstant('LA_243', 'TXT_243') . ' - ' . $url);
+    $logField[' '] = $hidden;
+    define('BODY_CONTENT', RenderViews::buildForm(
+        RenderViews::getLanguageConstant('LA_243', 'TXT_243'),
+        MAN_BASE_URL . '&option=add_log_entry',
+        $logField,
+        [RenderViews::buildFormButton('submit', 'submit_button', TXT_74)]
+    ) . showItemLog($itemID));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -1801,10 +1780,8 @@ function addLogEntry($itemID, $showInformation = true, $executeAction = true)
     if ($showInformation == true) {
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
         $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-        $html = RenderViews::showResponse(TXT_248, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
-        define('HEADING', RenderViews::getLanguageConstant('LA_243', 'TXT_243'));
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        RenderViews::buildResponse(TXT_248, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
+        return;
     }
 }
 
@@ -2152,57 +2129,53 @@ function addAttachment($itemID, $showAttachments = true, $executeAction = true)
 
 function showAttachments($itemID)
 {
-    //Show attachments in table
-    if ($_SESSION['access_role_id'] <= 2) {
-        $headingArray = array(TXT_394, TXT_395, TXT_396, TXT_397, TXT_198);
-    } else {
-        $headingArray = array(TXT_394, TXT_395, TXT_396, TXT_397);
-    }
-    $tableRows = RenderViews::tableData('', '', '', '', 'tdcHeading', $headingArray, 'row');
+    $canDelete = $_SESSION['access_role_id'] <= 2;
     $sql = "SELECT * FROM item_attachments WHERE item_id = '$itemID'";
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     if (Database::numRows($result) == 0) {
-        if ($_SESSION['access_role_id'] <= 2) {
-            $tableRows .= RenderViews::tableData('5', '', 'left', 'trc1', '', array(TXT_399), 'row');
-        } else {
-            $tableRows .= RenderViews::tableData('4', '', 'left', 'trc1', '', array(TXT_399), 'row');
-        }
+        $table = '<p>' . htmlspecialchars(TXT_399, ENT_QUOTES, 'UTF-8') . '</p>';
     } else {
-        $i = 0;
+        $table = '';
         while ($row = Database::fetchArray($result)) {
-            $fileNameURL = RenderViews::buildURL(MAN_BASE_URL . '&option=download_attachment&id=' . $row['id'], str_replace('_', ' ', substr($row['file_name'], 11)), 'URL');
-            $deleteURL = RenderViews::buildURL(MAN_BASE_URL . '&option=delete_attachment&item_id=' . $itemID . '&id=' . $row['id'], TXT_47, 'URL');
-            if ($_SESSION['access_role_id'] <= 2) {
-                $attachmentArray = array($fileNameURL, $row['file_type'], $row['file_size'] / 1000, date(SET_DATE_FORMAT, $row['create_date']), $deleteURL);
-            } else {
-                $attachmentArray = array($fileNameURL, $row['file_type'], $row['file_size'] / 1000, date(SET_DATE_FORMAT, $row['create_date']));
+            $fileNameURL = RenderViews::buildURL(MAN_BASE_URL . '&option=download_attachment&id=' . $row['id'], str_replace('_', ' ', substr($row['file_name'], 11)), '', 'URL');
+            $deleteURL = RenderViews::buildURL(
+                MAN_BASE_URL . '&option=delete_attachment&item_id=' . $itemID . '&id=' . $row['id'],
+                TXT_47,
+                '',
+                'URL',
+                'onClick="javascript:return confirm(\'' . TXT_400 . '\')"'
+            );
+            $fields = [
+                TXT_394 => $fileNameURL,
+                TXT_395 => htmlspecialchars((string)$row['file_type'], ENT_QUOTES, 'UTF-8'),
+                TXT_396 => htmlspecialchars((string)($row['file_size'] / 1000), ENT_QUOTES, 'UTF-8'),
+                TXT_397 => htmlspecialchars(date(SET_DATE_FORMAT, $row['create_date']), ENT_QUOTES, 'UTF-8'),
+            ];
+            if ($canDelete) {
+                $fields[TXT_198] = $deleteURL;
             }
-            $class = RenderViews::setOddEvenClass($i, 'trc1', 'trc2');
-            $tableRows .= RenderViews::tableData('', '', 'left', $class, '', $attachmentArray, 'row');
-            $i++;
+            $table .= RenderViews::buildFormFieldsGrid($fields);
+            $table .= RenderViews::buildHorizontalSeparator();
         }
     }
-    $html = RenderViews::buildStartForm(MAN_BASE_URL . '&option=add_attachment&item_id=' . $itemID, 'POST', 'form-horizontal', '', '', 'multipart/form-data');
-    $html .= RenderViews::table('100%', '0', '5', '0', 'tcBorder', $tableRows);
-    $tableRows = RenderViews::tableData('2', '', array('left'), '', 'tdcHeading', array(TXT_393), 'row');
-    $attachmentField = RenderViews::buildFileInput('attachment', SET_MAX_ATTACHMENT * 1000000, '', 'form-control');
-    $tableRows .= RenderViews::tableData('', '', array('left'), '', 'tdc1', array($attachmentField), 'row');
-    $html .= '
-<br>
-';
-    $html .= RenderViews::table('100%', '0', '5', '0', 'tcBorder', $tableRows);
-    $buttonArray[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-    $buttonArray[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-    $endForm = RenderViews::buildEndFormWithButtons($buttonArray);
-    $tableRows = RenderViews::tableData('', '', '', '', 'tdc1', array($endForm), 'row');
-    $html .= RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-    $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-    $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
+
     $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
     $url = RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $showLog . $attachments, TXT_385, 'URL');
-    define('HEADING', TXT_389 . ' - ' . $url);
-    define('BODY_CONTENT', $html);
+    $fields = [
+        '' => '<div>' . $url . '</div>' . $table,
+        TXT_393 => RenderViews::buildFileInput('attachment', (string)(SET_MAX_ATTACHMENT * 1000000)),
+    ];
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_389,
+        MAN_BASE_URL . '&option=add_attachment&item_id=' . $itemID,
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ],
+        ['enctype' => 'multipart/form-data']
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 

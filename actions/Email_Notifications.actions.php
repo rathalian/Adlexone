@@ -71,10 +71,6 @@ function showSetupSendEmail($actionID = ''): void
         $action = NOT_BASE_URL . '&option=add_action&action_package=Email_Notifications&descriptor_name=SendEmail';
     }
 
-    // Start the form
-    $html = RenderViews::buildStartForm($action, 'POST', 'addUpdateactionForm');
-
-    // Create the setup form fields
     $actionField = Actions::startNewAction($actionID, @$fieldValues, false, false);
 
     // Parse action data for default values
@@ -96,19 +92,9 @@ function showSetupSendEmail($actionID = ''): void
     $actionField[TXT_649] = RenderViews::buildTextInput('username', @$fieldValueArray[4]);
     $actionField[TXT_650] = RenderViews::buildPasswordInput('password', @$fieldValueArray[5]);
     $actionField[ACT_PAK_9] = RenderViews::buildTextInput('subject', $fieldValueArray[1]);
-    $actionField[ACT_PAK_7] = RenderViews::buildTextInput('email_contents', $fieldValueArray[2], 15, 100, 'formField');
+    $actionField[ACT_PAK_7] = RenderViews::buildTextArea('email_contents', $fieldValueArray[2], '15');
+    $actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 
-    // Generate table rows for the form fields
-    $tableRows = '';
-    foreach ($actionField as $name => $field) {
-        $cellData = array('<strong>' . $name . '</strong>', $field);
-        $tableRows .= RenderViews::tableData($cellData, 'row', '', '', '', '', 'tdc1', '', '');
-    }
-
-    // Add hidden field for action ID
-    $html .= RenderViews::hiddenField('action_id', @$fieldValues['action_id']);
-
-    // Show available dynamic fields
     $sql = "SHOW COLUMNS FROM items";
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     $excludeArray = array('create_date', 'core_log_updated', 'item_type_id', 'creator_security', 'user_security', 'group_security');
@@ -118,9 +104,8 @@ function showSetupSendEmail($actionID = ''): void
             @$dynamicValues .= ', ' . strtoupper($row[0]);
         }
     }
-    $tableRows .= RenderViews::tableData(array('<strong>' . ACT_PAK_60 . '</strong>', $dynamicValues, 'row', '', '', '', '', 'tdc1', '', ''), 'row');
+    $actionField[ACT_PAK_60] = $dynamicValues;
 
-    // Add JavaScript field validation
     $jsFieldNameArray = "['action_name','from_address','email_addresses','subject','email_contents']";
     $jsTestTypeArray = "['','email','','','']";
     $jsErrorMsgArray = "['','" . ACT_PAK_41 . "','','','']";
@@ -128,19 +113,16 @@ function showSetupSendEmail($actionID = ''): void
     $jsRequiredArray = "[true,true,false,true,true]";
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-    // Add form buttons
-    $buttonArray[] = RenderViews::formButton('submit', 'submit_button', TXT_74, 'buildFormButton', $javascript);
-    $buttonArray[] = RenderViews::formButton('reset', 'reset', TXT_75, 'buildFormButton');
-    $endFormButtons = RenderViews::endFormButtons($buttonArray);
-    $tableRows .= RenderViews::tableData(array($endFormButtons, 'row', '2', '', '', '', 'tdc1', '', ''), 'row');
-
-    // Render the form table
-    $html .= RenderViews::table($tableRows, 'tableIndent', '95%', '0', '5', '0');
-
-    // Define page content and render the page
-    define('HEADING', ACT_PAK_6);
-    define('BODY_CONTENT', $html);
-    RenderViews::renderPage('main_page_content', SET_THEME);
+    define('BODY_CONTENT', RenderViews::buildForm(
+        ACT_PAK_6,
+        $action,
+        $actionField,
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 /**
