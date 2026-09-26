@@ -479,7 +479,7 @@ final class NavigationHelper
             $id = 'lp-more-' . self::slug($title) . '-' . substr(md5($title . count($links)), 0, 6);
 
             $html .= '<div class="controller-more">'
-                . '<button class="btn -sm controller-more__toggle" type="button" aria-expanded="false" aria-controls="' . $id . '">More</button>'
+                . '<button class="btn btn--sm controller-more__toggle" type="button" aria-expanded="false" aria-controls="' . $id . '">More</button>'
                 . '<div id="' . $id . '" class="controller-more__menu" hidden>';
             foreach ($rest as $lnk) {
                 $html .= self::a($lnk, 'controller-more__item URL') . '<br>';

@@ -35,7 +35,7 @@ define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
 // Check if a subcontroller is specified in the request
 if (!empty($_GET['subcontroller'])) {
     // Construct the file path for the subcontroller
-    $subcontrollerFile = SET_INSTALL_PATH . 'app/http/controllers/' . $_GET['subcontroller'] . '.php';
+    $subcontrollerFile = SET_INSTALL_PATH . 'app/Http/Controllers/' . basename((string)$_GET['subcontroller']) . '.php';
 
     // Include the subcontroller file if it exists
     if (file_exists($subcontrollerFile)) {

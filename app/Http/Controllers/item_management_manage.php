@@ -891,7 +891,7 @@ function showItemAdd($itemTypeID, $values)
     }
 
     $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_57, 'btn btn-default', $javascript);
+    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_57, $javascript);
     $bodyContent = RenderViews::buildForm(RenderViews::getLanguageConstant('LA_67', 'TXT_67') . ' - ' . $itemTypeName,MAN_BASE_URL. '&option=add_item',$fields,$buttons);
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
