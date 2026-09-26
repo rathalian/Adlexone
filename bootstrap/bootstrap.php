@@ -101,7 +101,7 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     $_SESSION['secure_id'] = md5(substr(md5(uniqid(rand(), true)), 0, 20));
     SharedMethods::loadConstantFromIni(SET_INSTALL_PATH . 'translations/' . SET_DEFAULT_LANGUAGE . '.lang.php');
     define('SET_THEME', SET_DEFAULT_THEME);
-    include 'app/http/controllers/login.php';
+    include 'app/Http/Controllers/login.php';
 
 } else {
     // Handle accessing the root / with session variables still set
@@ -139,8 +139,8 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
 
     if (@$_GET['controller'] === 'full_page_view') {
-        include 'app/http/controllers/full_page_view.php';
+        include 'app/Http/Controllers/full_page_view.php';
     } else {
-        include 'app/http/controllers/main.php';
+        include 'app/Http/Controllers/main.php';
     }
 }

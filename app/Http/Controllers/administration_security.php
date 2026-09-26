@@ -144,7 +144,7 @@ function showUser($userID = '', $values = [], $adminEdit = true)
     $language = empty($fieldValues['language']) ? SET_DEFAULT_LANGUAGE : $fieldValues['language'];
     $userPreferences[TXT_181] = RenderViews::buildSelectDropdown('language', $languageFileArray, $languageFileArray, $language);
 
-    $directoryPath = 'app/http/controllers/applications/';
+    $directoryPath = 'app/Http/Controllers/Applications/';
     $applicationFileArray = [];
     foreach (scandir($directoryPath) as $entry) {
         $filePath = $directoryPath . $entry . '/' . $entry . '.xml';
