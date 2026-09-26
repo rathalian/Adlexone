@@ -691,6 +691,9 @@ TXT_690 = "No multi-level menus yet. Add a custom field with type Multi-Level Me
 TXT_691 = "is used by existing items and was not deleted."
 TXT_692 = "Manage Multi-Level Menu"
 TXT_693 = "Multi-Level Relationships"
+TXT_694 = "Parent"
+TXT_695 = "Top level"
+TXT_696 = "A menu is one list. Give a value a parent and the same menu becomes multi-level."
 ; ******************************************************************************;
 ;
 ; Adlexone Action Package language constants

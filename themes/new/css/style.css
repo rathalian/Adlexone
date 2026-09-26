@@ -319,6 +319,12 @@ body{
 .mlm-fields td:last-child,
 .mlm-fields th:last-child{ width:12rem; }
 .mlm-fields .select{ width:12rem; min-width:0; }
+.menu-tree{ width:100%; }
+.field.is-inline:has(.menu-tree){ align-items:flex-start; flex-direction:column; }
+.menu-tree__row{ display:grid; grid-template-columns:minmax(0,1.4fr) minmax(8rem,1fr) auto; gap:0.75rem; align-items:center; margin:0 0 0.5rem; }
+.menu-tree__hint{ margin:0 0 0.75rem; }
+.menu-levels{ display:flex; flex-direction:column; gap:0.5rem; width:100%; }
+.menu-levels select{ max-width:28rem; }
 .mlm-summary{ margin:0 0 16px; }
 .mlm-summary p{ margin:0 0 6px; }
 .mlm-summary ol{ margin:0 0 12px 1.25rem; }
