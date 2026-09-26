@@ -22,6 +22,12 @@ define('SET_INSTALL_PATH', $baseDir);
 define('SET_CONFIGURATION_PATH', $baseDir . 'config' . DIRECTORY_SEPARATOR);
 define('SET_ATTACHMENTS_PATH', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
 define('DSN', 'sqlite:' . $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
+
+try {
+    \Adlexone\support\Menus::ensureReady();
+} catch (\Throwable $e) {
+    error_log('Menu schema upgrade failed: ' . $e->getMessage());
+}
 define('SET_WRITEABLE_DIRECTORY', $baseDir . 'writeable' . DIRECTORY_SEPARATOR);
 
 /**

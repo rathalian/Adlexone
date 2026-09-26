@@ -25,8 +25,11 @@
 
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
+use Adlexone\support\Menus;
 use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
+
+Menus::ensureReady();
 
 /**
  * Build the left navigation for Items and Fields using RenderNavigation.
@@ -83,11 +86,12 @@ function showCustomField($customFieldID = '', $values = '')
 
     $fields[TXT_86] = RenderViews::buildTextInput('custom_field_name', @$fieldValues['custom_field_name']);
     $fields[TXT_210] = RenderViews::buildTextInput('default_value', @$fieldValues['default_value']);
-    $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'subMenu', 'hidden', 'subMenuChild', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu', 'dataSourceMenu', 'multiLevelMenu');
-    $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_280, TXT_216, TXT_413, TXT_478, TXT_479, TXT_490, TXT_501, TXT_637, TXT_659);
+    $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'hidden', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu', 'dataSourceMenu');
+    $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_216, TXT_478, TXT_479, TXT_490, TXT_501, TXT_637);
     $fields[TXT_65] = RenderViews::buildSelectDropdown('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
-    $multiLevelURL = (@$fieldValues['field_type'] == 'multiLevelMenu') ? RenderViews::buildURL(ITEM_BASE_URL . '&option=show_multilevel_menu&multi_level_menu_id=' . $customFieldID, TXT_660, 'URL', '') . ' - ' . RenderViews::buildURL(ITEM_BASE_URL . '&option=show_multilevel_menu_items&multi_level_menu_id=' . $customFieldID, TXT_666, 'URL', '') : '';
-    $fields[TXT_669] = RenderViews::buildTextInput('menu_levels', @$fieldValues['menu_levels']);
+    if ($customFieldID !== '' && in_array(FieldTypes::normalise((string)@$fieldValues['field_type']), [FieldTypes::MENU, 'workerFieldMenu'], true)) {
+        $fields[TXT_287] = RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_menu&custom_field_id=' . rawurlencode((string)$customFieldID), TXT_287);
+    }
     //lookup data source names
     $i = 1;
     if (defined('SET_DS_DATA_SOURCE_COUNT')) {
@@ -103,19 +107,14 @@ function showCustomField($customFieldID = '', $values = '')
     $validationTypes = array(NULL, 'numeric', 'string', 'alphanumeric', 'date', 'time', 'datetime', 'ip', 'email');
     $validationNames = array(TXT_525, TXT_507, TXT_508, TXT_509, TXT_510, TXT_511, TXT_512, TXT_513, TXT_514);
     $fields[TXT_506] = RenderViews::buildSelectDropdown('validation_type', $validationTypes, $validationNames, @$fieldValues['validation_type']);
-    // Setup list of custom fields that can be sub menus
-    $columnArray = array('custom_field_name', 'custom_field_id');
-    $condition = "WHERE enabled = 'Yes' AND (field_type = 'subMenuChild') AND custom_field_id <> '$customFieldID'";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    // Set default value
-    $valueArray[] = '0';
-    $nameArray[] = TXT_283;
-    while ($row = Database::fetchArray($result)) {
-        $valueArray[] = $row['custom_field_id'];
-        $nameArray[] = $row['custom_field_name'];
+    $parentValues = ['0'];
+    $parentNames = [TXT_694];
+    foreach (Menus::candidateParents((int)$customFieldID) as $menuField) {
+        $parentValues[] = (string)$menuField['custom_field_id'];
+        $parentNames[] = (string)$menuField['custom_field_name'];
     }
-    $fields[TXT_281] = RenderViews::buildSelectDropdown('sub_menu', $valueArray, $nameArray, @$fieldValues['sub_menu']) . ' * ' . TXT_282;
+    $fields[TXT_693] = RenderViews::buildSelectDropdown('parent_field_id', $parentValues, $parentNames, (string)($fieldValues['parent_field_id'] ?? '0'))
+        . '<div class="field-picker-type">' . htmlspecialchars(TXT_695, ENT_QUOTES, 'UTF-8') . '</div>';
     $fields[TXT_90] = RenderViews::buildSelectDropdown('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
     $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
     $jsFieldNameArray = "['custom_field_name']";
@@ -123,7 +122,7 @@ function showCustomField($customFieldID = '', $values = '')
     $jsErrorMsgArray = "['']";
     $jsRequiredMsgArray = "['" . TXT_217 . "']";
     $jsRequiredArray = "[true]";
-    $javascript = "onClick=\"javascript:return subMenuCheck('" . TXT_541 . "','" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+    $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
     define('BODY_CONTENT', RenderViews::buildForm(
         $title,
@@ -138,184 +137,277 @@ function showCustomField($customFieldID = '', $values = '')
 }
 
 /**
- * Modify buildSelectDropdown and sub buildSelectDropdown values
- *
- * @param string $customFieldID Custom Field ID
+ * One screen for every menu's options. Dependent menus are grouped under each value of the menu they depend on.
  */
-function modifyMenuValues($customFieldID)
+function manageMenu(string $customFieldID): void
 {
-    $columnArray = array('*');
-    $condition = "WHERE custom_field_id = '$customFieldID'";
-    $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $field = menuFieldRow($customFieldID);
+    if ($field === null) {
+        RenderViews::buildResponse(TXT_290, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+        return;
+    }
 
-    $rows = '';
-    while ($menuRow = Database::fetchArray($result)) {
-        $input = RenderViews::buildTextInput((string)$menuRow['menu_value_id'], $menuRow['menu_value'])
-            . RenderViews::buildHiddenInput('menu_value_old_id_' . $menuRow['menu_value_id'], $menuRow['menu_value']);
+    $type = FieldTypes::normalise((string)$field['field_type']);
+    if ($type !== FieldTypes::MENU && $type !== 'workerFieldMenu') {
+        RenderViews::buildResponse(TXT_290, RenderViews::buildURL(ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . rawurlencode($customFieldID), TXT_362));
+        return;
+    }
+
+    $parentFieldId = (int)($field['parent_field_id'] ?? 0);
+    $values = Database::buildArray(Database::sqlSelect(
+        'custom_field_menu_values',
+        ['menu_value_id', 'menu_value', 'parent_value_id'],
+        "WHERE custom_field_id = '" . Database::escape($customFieldID) . "' ORDER BY menu_value_id"
+    ));
+
+    $parentOptions = [];
+    if ($parentFieldId > 0) {
+        foreach (Database::buildArray(Database::sqlSelect(
+            'custom_field_menu_values',
+            ['menu_value_id', 'menu_value'],
+            "WHERE custom_field_id = '" . $parentFieldId . "' ORDER BY menu_value_id"
+        )) as $parentValue) {
+            $parentOptions[(int)$parentValue['menu_value_id']] = (string)$parentValue['menu_value'];
+        }
+    }
+
+    $grouped = [];
+    $unassigned = [];
+    foreach ($values as $value) {
+        $parentValueId = (int)$value['parent_value_id'];
+        if ($parentFieldId > 0 && !isset($parentOptions[$parentValueId])) {
+            $unassigned[] = $value;
+            continue;
+        }
+        $grouped[$parentValueId][] = $value;
+    }
+
+    $fields = [];
+    if ($parentFieldId > 0) {
+        $parentName = Menus::fieldName($parentFieldId);
+        $fields[TXT_693] = htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8')
+            . ' — ' . RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_menu&custom_field_id=' . $parentFieldId, TXT_287);
+        if ($parentOptions === []) {
+            $fields[TXT_699] = htmlspecialchars(TXT_699, ENT_QUOTES, 'UTF-8');
+        }
+        foreach ($parentOptions as $parentValueId => $parentLabel) {
+            $fields[menuGroupLabel($parentLabel, $fields)] = menuValueRows($grouped[$parentValueId] ?? [], $customFieldID, $parentOptions, $parentValueId);
+        }
+        if ($unassigned !== []) {
+            $fields[menuGroupLabel(TXT_692, $fields)] = menuValueRows($unassigned, $customFieldID, $parentOptions, 0);
+        }
+    } else {
+        $fields[TXT_288] = menuValueRows($values, $customFieldID, [], 0);
+    }
+
+    $fields[TXT_292] = RenderViews::buildTextInput('new_value', '');
+    if ($parentFieldId > 0 && $parentOptions !== []) {
+        $fields[TXT_696] = RenderViews::buildSelectDropdown(
+            'new_parent_value_id',
+            array_map('strval', array_keys($parentOptions)),
+            array_values($parentOptions),
+            ''
+        );
+    }
+    $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_287 . ': ' . (string)$field['custom_field_name'],
+        'index.php?controller=administration_item_settings&option=save_menu',
+        $fields,
+        [
+            RenderViews::buildFormButton('submit', 'add_new', TXT_545),
+            RenderViews::buildFormButton('submit', 'update_existing', TXT_542),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+        ]
+    ));
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * @param array<string, mixed> $fields
+ */
+function menuGroupLabel(string $label, array $fields): string
+{
+    if (!array_key_exists($label, $fields)) {
+        return $label;
+    }
+    $suffix = 2;
+    while (array_key_exists($label . ' (' . $suffix . ')', $fields)) {
+        $suffix++;
+    }
+    return $label . ' (' . $suffix . ')';
+}
+
+/**
+ * @param list<array<string, mixed>> $rows
+ * @param array<int, string> $parentOptions
+ */
+function menuValueRows(array $rows, string $customFieldID, array $parentOptions, int $groupParentId): string
+{
+    if ($rows === []) {
+        return htmlspecialchars(TXT_366, ENT_QUOTES, 'UTF-8');
+    }
+
+    $html = '';
+    foreach ($rows as $row) {
+        $id = (string)$row['menu_value_id'];
+        $input = RenderViews::buildTextInput('value_' . $id, (string)$row['menu_value'])
+            . RenderViews::buildHiddenInput('old_' . $id, (string)$row['menu_value']);
+        $parentSelect = '';
+        if ($parentOptions !== []) {
+            $selectedParent = (string)($row['parent_value_id'] ?? $groupParentId);
+            $parentSelect = RenderViews::buildSelectDropdown(
+                'parent_for_' . $id,
+                array_merge(['0'], array_map('strval', array_keys($parentOptions))),
+                array_merge([TXT_692], array_values($parentOptions)),
+                $selectedParent
+            );
+        }
         $delete = RenderViews::buildURL(
-            ITEM_BASE_URL . '&option=delete_menu_value&menu_value_id=' . $menuRow['menu_value_id'] . '&custom_field_id=' . $customFieldID,
+            ITEM_BASE_URL . '&option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . rawurlencode($customFieldID),
             TXT_47,
             '',
             'URL',
             'onClick="javascript:return confirm(\'' . TXT_400 . '\')"'
         );
-        $rows .= '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0.75rem;align-items:center;margin-bottom:0.5em;">'
-            . '<span>' . $input . '</span>' . $delete . '</div>';
+        $columns = $parentSelect === '' ? 'minmax(0,1fr) auto' : 'minmax(0,1fr) minmax(0,1fr) auto';
+        $html .= '<div style="display:grid;grid-template-columns:' . $columns . ';gap:0.75rem;align-items:center;margin-bottom:0.5em;">'
+            . '<span>' . $input . '</span>'
+            . ($parentSelect === '' ? '' : '<span>' . $parentSelect . '</span>')
+            . $delete . '</div>';
     }
-    if ($rows === '') {
-        $rows = htmlspecialchars(TXT_366, ENT_QUOTES, 'UTF-8');
-    }
-
-    $fields = [];
-    $fields[TXT_288] = '<div style="flex:1 1 100%">' . $rows . '</div>';
-    $fields[TXT_292] = RenderViews::buildTextInput('menu_value', '');
-    $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
-
-    $buttons = [
-        RenderViews::buildFormButton('submit', 'add_new', TXT_545),
-        RenderViews::buildFormButton('submit', 'update_existing', TXT_542),
-        RenderViews::buildFormButton('reset', 'reset', TXT_75),
-    ];
-
-    define('BODY_CONTENT', RenderViews::buildForm(
-        TXT_287,
-        'index.php?controller=administration_item_settings&option=add_update_menu_value',
-        $fields,
-        $buttons
-    ));
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
+    return $html;
 }
 
-/**
- * Sets sub buildSelectDropdown value filter
- *
- * @param string $customFieldID Custom Field ID
- */
-function modifyMenuValueFilters($customFieldID)
+function saveMenu(string $customFieldID): void
 {
-    $columnArray = array('menu_value_id', 'menu_value', 'sub_menu_values');
-    $condition = "WHERE custom_field_id = '" . $customFieldID . "'";
-    $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $field = menuFieldRow($customFieldID);
+    if ($field === null) {
+        RenderViews::buildResponse(TXT_290, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields_types', TXT_362));
+        return;
+    }
 
-    $fields = [];
-    while ($row = Database::fetchArray($result)) {
-        $label = (string)$row['menu_value'];
-        if (array_key_exists($label, $fields)) {
-            $label .= ' (' . $row['menu_value_id'] . ')';
+    $back = ITEM_BASE_URL . '&option=manage_menu&custom_field_id=' . rawurlencode($customFieldID);
+    $parentFieldId = (int)($field['parent_field_id'] ?? 0);
+
+    if (isset($_POST['add_new']) && $_POST['add_new'] !== '') {
+        $text = trim((string)($_POST['new_value'] ?? ''));
+        $parentValueId = $parentFieldId > 0 ? (int)($_POST['new_parent_value_id'] ?? 0) : 0;
+        if ($text === '') {
+            manageMenu($customFieldID);
+            return;
         }
-        $fields[$label] = RenderViews::buildTextArea(
-            (string)$row['menu_value_id'],
-            (string)$row['sub_menu_values'],
-            (string)SET_FORM_FIELD_HEIGHT
+        if ($parentFieldId > 0 && $parentValueId <= 0) {
+            RenderViews::buildResponse(TXT_698, RenderViews::buildURL($back, TXT_362));
+            return;
+        }
+        $duplicate = Database::buildArray(
+            "SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = '" . Database::escape($customFieldID)
+            . "' AND menu_value = '" . Database::escape($text) . "' AND parent_value_id = '" . $parentValueId . "'"
         );
+        if ($duplicate !== []) {
+            RenderViews::buildResponse(TXT_294, RenderViews::buildURL($back, TXT_362));
+            return;
+        }
+        Database::query(Database::sqlInsert('custom_field_menu_values', [
+            'menu_value_id' => Database::newID('custom_field_menu_values', 'menu_value_id'),
+            'custom_field_id' => $customFieldID,
+            'menu_value' => $text,
+            'parent_value_id' => (string)$parentValueId,
+        ]));
+        manageMenu($customFieldID);
+        return;
     }
-    $fields[''] = '<p>' . htmlspecialchars(TXT_410, ENT_QUOTES, 'UTF-8') . '</p>'
-        . RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
 
-    $buttons = [
-        RenderViews::buildFormButton('submit', 'submit_button', TXT_56),
-        RenderViews::buildFormButton('reset', 'reset', TXT_75),
-    ];
-
-    define('BODY_CONTENT', RenderViews::buildForm(
-        TXT_291,
-        'index.php?controller=administration_item_settings&option=update_menu_value_filter',
-        $fields,
-        $buttons
-    ));
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
-}
-
-function addUpdateMenuValue($customFieldID)
-{
-    if (isset($_POST['add_new']) and $_POST['add_new'] != '') {
-        // Check for duplicate and error handling
-        $columnArray = array('menu_value');
-        $condition = "WHERE custom_field_id = '" . $customFieldID . "' AND menu_value ='" . $_POST['menu_value'] . "'";
-        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        unset($columnArray);
-        if (Database::numRows($result) > 0) {
-            $html = TXT_294;
-            $html .= '<br><br><a href ="' . ITEM_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
-            define('BODY_CONTENT', $html);
-            define('HEADING', TXT_139);
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
-        } else {
-            // Remove unwanted POST variables
-            $columnArray['menu_value_id'] = Database::newID('custom_field_menu_values', 'menu_value_id');
-            $columnArray['custom_field_id'] = $customFieldID;
-            $columnArray['menu_value'] = $_POST['menu_value'];
-            $sql = Database::sqlInsert('custom_field_menu_values', $columnArray);
-            Database::query($sql, DSN, SET_SHOW_SQL);
-            modifyMenuValues($customFieldID);
-        }
-    } elseif (isset($_POST['update_existing']) and $_POST['update_existing'] != '') {
-
-        //Setup an array containing the current field values
-        foreach ($_POST as $key => $value) {
-            if (stristr($key, 'menu_value_old_id_')) {
-                $existingValueArray[$key] = $value;
-            }
-        }
-        foreach ($_POST as $key => $value) {
-            //Check each custom field for updates
-            // Posted field names are strings; menu value ids are numeric
-            if (ctype_digit((string)$key)) {
-                if ($key != $_POST['menu_value_old_id_' . $key]) {
-                    //Update buildSelectDropdown value table
-                    $columnArray['menu_value'] = $value;
-                    $condition = "WHERE menu_value_id = '" . $key . "'";
-                    $sql = Database::sqlUpdate('custom_field_menu_values', $columnArray, $condition);
-                    Database::query($sql, DSN, SET_SHOW_SQL);
-                    unset($columnArray);
-                    if (!array_search($value, $existingValueArray)) {
-                        //Update item table only if we cannot find the changed value in any of the old buildSelectDropdown values
-                        //For example if the order of fields is changed this will not occur.
-                        $columnArray['custom_field_' . $customFieldID] = $value;
-                        $condition = "WHERE custom_field_" . $customFieldID . " = '" . $_POST['menu_value_old_id_' . $key] . "'";
-                        $sql = Database::sqlUpdate('items', $columnArray, $condition);
-                        Database::query($sql, DSN, SET_SHOW_SQL);
-                        unset($columnArray);
-                    }
-                }
-            }
-        }
-        modifyMenuValues($customFieldID);
-    }
-}
-
-function updateMenuValueFilter($customFieldID)
-{
-    // Check for duplicate and error handling
+    $previous = [];
     foreach ($_POST as $key => $value) {
-        // Update each buildSelectDropdown value's sub buildSelectDropdown values (numeric POST keys are the sub buildSelectDropdown ids)
-        if (is_numeric($key)) {
-            $columnArray['sub_menu_values'] = $value;
-            $condition = "WHERE menu_value_id = '" . $key . "'";
-            $sql = Database::sqlUpdate('custom_field_menu_values', $columnArray, $condition);
-            Database::query($sql, DSN, SET_SHOW_SQL);
+        if (str_starts_with((string)$key, 'old_')) {
+            $previous[substr((string)$key, 4)] = (string)$value;
         }
     }
-    modifyMenuValueFilters($customFieldID);
+    foreach ($_POST as $key => $value) {
+        if (!str_starts_with((string)$key, 'value_')) {
+            continue;
+        }
+        $id = substr((string)$key, 6);
+        if (!ctype_digit($id) || !isset($previous[$id])) {
+            continue;
+        }
+        $text = trim((string)$value);
+        $old = $previous[$id];
+        $parentValueId = $parentFieldId > 0 ? (int)($_POST['parent_for_' . $id] ?? 0) : 0;
+        if ($text === '') {
+            continue;
+        }
+        $columnArray = [
+            'menu_value' => $text,
+            'parent_value_id' => (string)$parentValueId,
+        ];
+        Database::query(Database::sqlUpdate('custom_field_menu_values', $columnArray, "WHERE menu_value_id = '" . $id . "'"));
+        if ($text !== $old && !in_array($text, $previous, true)) {
+            Menus::renameStoredValues((int)$customFieldID, $old, $text);
+        }
+    }
+    manageMenu($customFieldID);
 }
 
 /**
- * Delete Menu Value
- *
- * @param string $menuValueID Menu Value ID
- * @param string $customFieldID Custom Field ID
+ * @return array<string, mixed>|null
+ */
+function menuFieldRow(string $customFieldID): ?array
+{
+    if ($customFieldID === '' || !ctype_digit($customFieldID)) {
+        return null;
+    }
+    $result = Database::query(Database::sqlSelect('custom_fields', '*', "WHERE custom_field_id = '" . $customFieldID . "'"));
+    $row = Database::fetchArray($result);
+    return $row ?: null;
+}
+
+/**
+ * Delete one menu option and leave options that belonged to it unassigned.
  */
 function deleteMenuValue($menuValueID, $customFieldID)
 {
-    // Delete buildSelectDropdown value
     $condition = "WHERE menu_value_id = '" . $menuValueID . "'";
-    $sql = Database::sqlDelete('custom_field_menu_values', $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
-    modifyMenuValues($customFieldID);
+    Database::query(Database::sqlDelete('custom_field_menu_values', $condition));
+    if (ctype_digit((string)$menuValueID)) {
+        Database::query(
+            "UPDATE custom_field_menu_values SET parent_value_id = 0 WHERE parent_value_id = '" . (int)$menuValueID . "'"
+        );
+    }
+    manageMenu((string)$customFieldID);
 }
+
+/**
+ * Keep a menu's parent link valid. Non-menus do not depend on another field.
+ *
+ * @param array<string, mixed> $columnArray
+ */
+function applyMenuParent(array &$columnArray, int $fieldId): bool
+{
+    $type = FieldTypes::normalise((string)($columnArray['field_type'] ?? ''));
+    $columnArray['sub_menu'] = '0';
+    if ($type !== FieldTypes::MENU) {
+        $columnArray['parent_field_id'] = '0';
+        if ($fieldId > 0) {
+            Menus::detachDependents($fieldId);
+        }
+        return true;
+    }
+    $parent = (int)($columnArray['parent_field_id'] ?? 0);
+    if (!Menus::parentIsAllowed($fieldId, $parent)) {
+        $back = $fieldId > 0
+            ? ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $fieldId
+            : ITEM_BASE_URL . '&option=new_custom_field';
+        RenderViews::buildResponse(TXT_697, RenderViews::buildURL($back, TXT_362));
+        return false;
+    }
+    $columnArray['parent_field_id'] = (string)$parent;
+    return true;
+}
+
 
 /**
  * showItemType()
@@ -411,15 +503,12 @@ function showItemType($itemTypeID, $values = [])
         'password' => TXT_214,
         FieldTypes::TEXT_AREA => TXT_212,
         FieldTypes::MENU => TXT_213,
-        'subMenu' => TXT_280,
         'hidden' => TXT_216,
-        'subMenuChild' => TXT_413,
         'URL' => TXT_478,
         'dynamicURL' => TXT_479,
         'workerField' => TXT_490,
         'workerFieldMenu' => TXT_501,
         'dataSourceMenu' => TXT_637,
-        'multiLevelMenu' => TXT_659,
     ];
 
     $columnArray = ['*'];
@@ -542,6 +631,9 @@ function addCustomField()
         $columnArray = array_merge($array, $_POST);
         // Handle data column special characters
         $columnArray['data'] = html_entity_decode($columnArray['data'], ENT_COMPAT, 'UTF-8');
+        if (!applyMenuParent($columnArray, (int)$id)) {
+            return;
+        }
         // Insert form field values into row
         $sql = Database::sqlInsert('custom_fields', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
@@ -717,17 +809,10 @@ function customFieldRecord(array $row): array
         'label' => TXT_626,
         'tone' => 'quiet',
     ]];
-    if ($row['field_type'] == FieldTypes::MENU || $row['field_type'] == 'subMenu' || $row['field_type'] == 'workerFieldMenu') {
+    if ($row['field_type'] == FieldTypes::MENU || $row['field_type'] == 'workerFieldMenu') {
         $actions[] = [
-            'href' => ITEM_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $id,
+            'href' => ITEM_BASE_URL . '&option=manage_menu&custom_field_id=' . $id,
             'label' => TXT_287,
-            'tone' => 'quiet',
-        ];
-    }
-    if ($row['field_type'] == 'subMenu') {
-        $actions[] = [
-            'href' => ITEM_BASE_URL . '&option=modify_menu_value_filters&custom_field_id=' . $id,
-            'label' => TXT_291,
             'tone' => 'quiet',
         ];
     }
@@ -741,7 +826,9 @@ function customFieldRecord(array $row): array
     return [
         'name' => $name,
         'href' => ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $id,
-        'meta' => $row['field_type'] . ' · ' . $key . ' · ' . TXT_451 . ' ' . $row['enabled'],
+        'meta' => $row['field_type']
+            . ((int)($row['parent_field_id'] ?? 0) > 0 ? ' · ' . TXT_693 . ' ' . Menus::fieldName((int)$row['parent_field_id']) : '')
+            . ' · ' . $key . ' · ' . TXT_451 . ' ' . $row['enabled'],
         'actions' => $actions,
     ];
 }
@@ -870,6 +957,9 @@ function updateCustomField($customFieldID)
     $columnArray = $_POST;
     // Handle data column special characters
     $columnArray['data'] = html_entity_decode($columnArray['data'], ENT_COMPAT, 'UTF-8');
+    if (!applyMenuParent($columnArray, (int)$customFieldID)) {
+        return;
+    }
     // Set condition
     $condition = "WHERE custom_field_id = '$customFieldID'";
     // Update form field values into row
@@ -947,6 +1037,7 @@ function deleteCustomField(): void
 
     $name = (string)$row['custom_field_name'];
     $type = (string)$row['field_type'];
+    Menus::detachDependents((int)$customFieldID);
     $condition = "WHERE custom_field_id = '" . $customFieldID . "'";
     Database::query(Database::sqlDelete('custom_field_menu_values', $condition), DSN, SET_SHOW_SQL);
     Database::query(Database::sqlDelete('item_type_custom_fields', $condition), DSN, SET_SHOW_SQL);
@@ -997,280 +1088,6 @@ function deleteItemType(): void
 }
 
 
-/**
- * Displays the form for adding or editing a multi-level menu.
- *
- * This function renders a form that allows users to create or update a multi-level menu.
- * It dynamically generates the form fields based on the provided `$multiLevelMenuID` and `$values`.
- * The form uses a modern, semantic HTML structure with div-based layout for accessibility and user-friendliness.
- *
- * Key Features:
- * - Dynamically determines if the form is for adding or editing based on `$multiLevelMenuID`.
- * - Fetches existing menu data from the database when editing.
- * - Parses and displays existing menu relationships.
- * - Builds a dropdown for selecting available multi-level menus.
- * - Generates a list of custom fields with checkboxes and sort dropdowns.
- * - Uses `RenderViews::buildForm` for rendering the form with a modern layout.
- *
- * @param string $multiLevelMenuID The ID of the multi-level menu to edit. If empty, a new menu is being created.
- * @param array|string $values Field values passed in for retaining form field values if an error occurred during entry.
- * @return void
- */
-function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
-{
-    $isNew = ($multiLevelMenuID === '');
-
-    // Prepare form action and field values
-    if ($isNew) {
-        $formAction = 'index.php?controller=administration_item_settings&option=add_multilevel_menu';
-        $fieldValues = is_array($values) ? $values : [];
-    } else {
-        $formAction = 'index.php?controller=administration_item_settings&option=update_multilevel_menu';
-        $columnArray = ['*'];
-        $condition = "WHERE custom_field_id = '" . (string)$multiLevelMenuID . "'";
-        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $fieldValues = Database::fetchArray($result) ?: [];
-    }
-
-    // Parse existing menu_relationship safely
-    $customFieldIDArray = [];
-    $customFieldSortArray = [];
-    $menuRelRaw = $fieldValues['menu_relationship'] ?? '';
-    if (is_string($menuRelRaw) && $menuRelRaw !== '') {
-        $customFieldArray = explode('}-{', $menuRelRaw);
-        foreach ($customFieldArray as $value) {
-            if ($value === '') {
-                continue;
-            }
-            $fieldArray = explode(',', $value);
-            $id = $fieldArray[0] ?? null;
-            $sort = $fieldArray[1] ?? '0';
-            if ($id !== null && $id !== '') {
-                $customFieldIDArray[$id] = $id;
-                $customFieldSortArray[$id] = $sort;
-            }
-        }
-    }
-
-    // Build select of available multi-level menus
-    $menuIDArray = [];
-    $menuNameArray = [];
-    $columnArray = ['custom_field_id', 'custom_field_name'];
-    $condition = "WHERE field_type = 'multiLevelMenu' and enabled = 'Yes'";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    while ($row = Database::fetchArray($result)) {
-        $menuIDArray[] = $row['custom_field_id'];
-        $menuNameArray[] = $row['custom_field_name'];
-    }
-    $selectedMenu = $fieldValues['custom_field_id'] ?? '';
-    if ($menuIDArray === []) {
-        $fieldSelect = '<div class="mlm-note">' . htmlspecialchars(TXT_690, ENT_QUOTES, 'UTF-8') . ' '
-            . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88)
-            . '</div>';
-    } else {
-        $fieldSelect = RenderViews::buildSelectDropdown(
-            'multi_level_menu_id',
-            $menuIDArray,
-            $menuNameArray,
-            $selectedMenu
-        );
-    }
-
-    $columnArray = ['*'];
-    $condition = "WHERE enabled = 'Yes' AND field_type IN (" . FieldTypes::sqlInList(FieldTypes::MENU) . ") ORDER BY custom_field_name";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $menuFields = [];
-    while ($row = Database::fetchArray($result)) {
-        $menuFields[] = $row;
-    }
-
-    $menuValues = [0];
-    $displayValues = [TXT_661];
-    $fieldCount = count($menuFields);
-    for ($i = 1; $i <= $fieldCount; $i++) {
-        $menuValues[$i] = $i;
-        $displayValues[$i] = $i;
-    }
-
-    $rows = '';
-    foreach ($menuFields as $row) {
-        $id = (string)($row['custom_field_id'] ?? '');
-        $name = (string)($row['custom_field_name'] ?? '');
-        $isChecked = isset($customFieldIDArray[$id]);
-        $checkbox = RenderViews::buildCheckBox(
-            'custom_field_id_' . $id,
-            $id,
-            $isChecked ? $id : '',
-            'checkbox',
-            $name
-        );
-        $sortDropdown = RenderViews::buildSelectDropdown(
-            'custom_field_sort_' . $id,
-            $menuValues,
-            $displayValues,
-            $customFieldSortArray[$id] ?? '0'
-        );
-        $rows .= '<tr><td>' . $checkbox . '</td><td>' . $sortDropdown . '</td></tr>';
-    }
-
-    $customFieldsHtml = '<div class="mlm-fields"><table class="table">'
-        . '<thead><tr><th>' . htmlspecialchars(TXT_665, ENT_QUOTES, 'UTF-8') . '</th>'
-        . '<th>' . htmlspecialchars(TXT_668, ENT_QUOTES, 'UTF-8') . '</th></tr></thead>'
-        . '<tbody>' . $rows . '</tbody></table></div>';
-
-    // Determine form title
-    $title = $isNew ? TXT_663 : TXT_664;
-
-    // Build form fields for RenderViews::buildForm
-    $formFields = [];
-
-    $formFields[TXT_659] = RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID) . $fieldSelect;
-    $formFields[''] = $customFieldsHtml;
-
-    // Create form buttons
-    $buttons = [];
-    $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-    $buttons[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
-
-    // Render the form using the modern helper; pass the card title as the form title
-    $bodyContent = RenderViews::buildForm(
-        $title,
-        $formAction,
-        $formFields,
-        $buttons
-    );
-
-    define('BODY_CONTENT', $bodyContent);
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
-}
-
-function addUpdateMultiLevelMenu($multiLevelMenuID)
-{
-    if ((string)$multiLevelMenuID === '') {
-        showMultiLevelMenu();
-        return;
-    }
-
-    $specialData = '}-{';
-    foreach ($_POST as $key => $value) {
-        //Check each custom field for updates
-        if (stristr($key, 'custom_field_id_') and ($value != '0')) {
-            $fieldID = str_replace('custom_field_id_', '', $key);
-            $specialData .= $fieldID . ',' . $_POST['custom_field_sort_' . $fieldID] . "}-{";
-            unset($_POST[$key]);
-
-        }
-    }
-    $columnArray['menu_relationship'] = $specialData;
-    $condition = "WHERE custom_field_id = '" . $multiLevelMenuID . "'";
-    $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
-    showMultiLevelMenu($multiLevelMenuID);
-
-}
-
-function showMultiLevelMenuItems($multiLevelMenuID = '', $fieldValues = '')
-{
-    $columnArray = array('menu_relationship', 'menu_value_links', 'menu_levels');
-    $condition = "WHERE custom_field_id = '$multiLevelMenuID'";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
-
-    if (!$row || ($row['menu_relationship'] ?? '') === '') {
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([[
-            'title' => TXT_666,
-            'html' => htmlspecialchars(TXT_667, ENT_QUOTES, 'UTF-8'),
-        ]]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
-        return;
-    }
-
-    $customFieldIDArray = [];
-    foreach (array_filter(explode('}-{', $row['menu_relationship'])) as $value) {
-        $parts = explode(',', $value);
-        if (($parts[0] ?? '') !== '') {
-            $customFieldIDArray[$parts[0]] = $parts[1] ?? '0';
-        }
-    }
-    asort($customFieldIDArray);
-
-    $links = $row['menu_value_links'];
-    $savedLinks = (is_string($links) && $links !== '') ? @unserialize($links) : [];
-    if (!is_array($savedLinks)) {
-        $savedLinks = [];
-    }
-    $itemCount = (int)$row['menu_levels'];
-
-    $fields = [];
-    $fields[''] = RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID);
-    $level = 1;
-    foreach ($customFieldIDArray as $key => $value) {
-        $idArray = [];
-        $nameArray = [];
-        $columnArray = array('menu_value_id', 'menu_value');
-        $condition = "WHERE custom_field_id = '$key'";
-        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        while ($menuRow = Database::fetchArray($result)) {
-            $idArray[] = $menuRow['menu_value_id'];
-            $nameArray[] = $menuRow['menu_value'];
-        }
-
-        $menuHTML = '';
-        for ($i = 1; $i <= $itemCount; $i++) {
-            $fieldValue = $savedLinks[$i][$key] ?? '';
-            $menuHTML .= RenderViews::buildSelectDropdown('custom_field_id_' . $key . '-' . $i, $idArray, $nameArray, $fieldValue)
-                . ' <span>' . $i . '</span><br>';
-        }
-
-        $columnArray = array('custom_field_name');
-        $condition = "WHERE custom_field_id = '" . $key . "'";
-        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $nameRow = Database::fetchArray($result);
-        $label = TXT_668 . ' ' . $level . ': ' . ($nameRow['custom_field_name'] ?? '');
-        $fields[$label] = '<div style="flex:1 1 100%">' . $menuHTML . '</div>';
-        $level++;
-    }
-
-    $buttons = [
-        RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
-        RenderViews::buildFormButton('reset', 'reset', TXT_75),
-    ];
-
-    define('BODY_CONTENT', RenderViews::buildForm(
-        TXT_666,
-        'index.php?controller=administration_item_settings&option=update_multilevel_menu_items',
-        $fields,
-        $buttons
-    ));
-    RenderViews::renderThemePage('main_page_content', SET_THEME);
-}
-
-
-function updateMultiLevelMenuItems($multiLevelMenuID)
-{
-    unset($_POST['submit_button'], $_POST['menu_levels'], $_POST['multi_level_menu_id']);
-
-
-    foreach ($_POST as $key => $value) {
-        $key = str_replace("custom_field_id_", "", $key);
-        $keyArray = explode("-", $key);
-        $keySeries = $keyArray[1];
-        $customFieldID = $keyArray[0];
-        $fieldArray[$keySeries][$customFieldID] = $value; //i represents custom field buildSelectDropdown series, and keyNumber represents the custom field id
-    }
-    $columnArray['menu_value_links'] = serialize($fieldArray);
-    $condition = "WHERE custom_field_id = '" . $multiLevelMenuID . "'";
-    $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
-    showCustomField($multiLevelMenuID);
-
-}
 
 /**
  * Logic to render the appropriate template or call wrapper functions
@@ -1291,25 +1108,21 @@ switch (@$_GET['option']) {
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
         showCustomField($_GET['custom_field_id']);
         break;
+    case 'manage_menu' :
     case 'modify_menu_values' :
+    case 'modify_menu_value_filters' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        modifyMenuValues($_GET['custom_field_id']);
+        manageMenu((string)($_GET['custom_field_id'] ?? ''));
         break;
+    case 'save_menu' :
     case 'add_update_menu_value' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        addUpdateMenuValue($_POST['custom_field_id']);
-        break;
     case 'update_menu_value_filter' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        updateMenuValueFilter(@$_POST['custom_field_id']);
+        saveMenu((string)($_POST['custom_field_id'] ?? ''));
         break;
     case 'delete_menu_value' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
         deleteMenuValue($_GET['menu_value_id'], $_GET['custom_field_id']);
-        break;
-    case 'modify_menu_value_filters' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        modifyMenuValueFilters($_GET['custom_field_id']);
         break;
     case 'update_custom_field' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
@@ -1351,28 +1164,13 @@ switch (@$_GET['option']) {
         showFieldTypeResults();
         break;
     case 'new_multilevel_menu_relationship' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);
-        showMultiLevelMenu();
-        break;
     case 'add_multilevel_menu' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        addUpdateMultiLevelMenu($_POST['multi_level_menu_id']);
-        break;
     case 'update_multilevel_menu' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        addUpdateMultiLevelMenu($_POST['multi_level_menu_id']);
-        break;
     case 'show_multilevel_menu' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        showMultiLevelMenu($_GET['multi_level_menu_id']);
-        break;
     case 'show_multilevel_menu_items' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        showMultiLevelMenuItems($_GET['multi_level_menu_id']);
-        break;
     case 'update_multilevel_menu_items' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        updateMultiLevelMenuItems($_POST['multi_level_menu_id']);
+        showFieldsAndTypes();
         break;
     default :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);

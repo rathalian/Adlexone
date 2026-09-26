@@ -71,12 +71,13 @@ CREATE TABLE IF NOT EXISTS aims_custom_fields (
   data_source_name TEXT,
   menu_relationship TEXT,
   menu_value_links TEXT,
-  menu_levels INTEGER DEFAULT 0
+  menu_levels INTEGER DEFAULT 0,
+  parent_field_id INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO aims_custom_fields (custom_field_id, custom_field_name, field_type, default_value, sub_menu, enabled, field_reference, data, validation_type, required) VALUES
-(6, 'Ticket Category', 'subMenuChild', '', 0, 'Yes', 6, '', NULL, NULL),
-(7, 'Ticket Group', 'subMenu', '', 6, 'Yes', 7, '', NULL, NULL),
+(6, 'Ticket Category', 'menu', '', 0, 'Yes', 6, '', NULL, NULL),
+(7, 'Ticket Group', 'menu', '', 0, 'Yes', 7, '', NULL, NULL),
 (1, 'Description', 'textArea', '', 0, 'Yes', 1, NULL, NULL, NULL),
 (2, 'Priority', 'menu', 'Please Select', 0, 'Yes', 2, NULL, NULL, NULL),
 (3, 'Status', 'menu', 'Please Select', 0, 'Yes', 3, NULL, NULL, NULL),
@@ -86,8 +87,8 @@ INSERT INTO aims_custom_fields (custom_field_id, custom_field_name, field_type, 
 (9, 'Job Code', 'menu', '', 0, 'Yes', 9, '', '', 'No'),
 (10, 'Fixed Cost', 'menu', '', 0, 'Yes', 10, '', '', 'No'),
 (11, 'Time Spent (Minutes)', 'workerField', '', 0, 'Yes', 11, '', 'numeric', 'No'),
-(12, 'Categories', 'subMenuChild', '', 0, 'Yes', 12, '', '', 'Yes'),
-(13, 'Category Group', 'subMenu', '', 12, 'Yes', 13, '', '', 'Yes'),
+(12, 'Categories', 'menu', '', 0, 'Yes', 12, '', '', 'Yes'),
+(13, 'Category Group', 'menu', '', 0, 'Yes', 13, '', '', 'Yes'),
 (14, 'Subject', 'menu', '', 0, 'Yes', 14, '', '', 'Yes'),
 (15, 'Article Summary', 'textArea', '', 0, 'Yes', 15, '', '', 'Yes'),
 (16, 'Keywords', 'textBox', '', 0, 'Yes', 16, '', '', 'No'),
@@ -98,11 +99,12 @@ CREATE TABLE IF NOT EXISTS aims_custom_field_menu_values (
   menu_value_id INTEGER NOT NULL PRIMARY KEY,
   custom_field_id INTEGER NOT NULL,
   menu_value TEXT NOT NULL,
-  sub_menu_values TEXT
+  sub_menu_values TEXT,
+  parent_value_id INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO aims_custom_field_menu_values (menu_value_id, custom_field_id, menu_value, sub_menu_values) VALUES
-(13, 7, 'Software Issue', 'Corrupted Installation,Require Installation,Update Required,Vendor Issue'),
+(13, 7, 'Software Issue', ''),
 (2, 2, '1', NULL),
 (3, 2, '2', NULL),
 (4, 2, '3', NULL),
@@ -114,11 +116,25 @@ INSERT INTO aims_custom_field_menu_values (menu_value_id, custom_field_id, menu_
 (10, 3, 'Closed', NULL),
 (11, 3, 'Pending Client Update', NULL),
 (12, 3, 'On Hold', NULL),
-(14, 7, 'Hardware Issue', 'Fault,Upgrade Required'),
-(15, 7, 'Other', 'Network Issue,Security Issue,Training Required'),
+(14, 7, 'Hardware Issue', ''),
+(15, 7, 'Other', ''),
 (16, 5, 'Sample Project', NULL),
 (17, 17, 'Yes', NULL),
 (18, 17, 'No', NULL);
+
+INSERT INTO aims_custom_field_menu_values (menu_value_id, custom_field_id, menu_value, sub_menu_values, parent_value_id) VALUES
+(19, 6, 'Corrupted Installation', '', 13),
+(20, 6, 'Require Installation', '', 13),
+(21, 6, 'Update Required', '', 13),
+(22, 6, 'Vendor Issue', '', 13),
+(23, 6, 'Fault', '', 14),
+(24, 6, 'Upgrade Required', '', 14),
+(25, 6, 'Network Issue', '', 15),
+(26, 6, 'Security Issue', '', 15),
+(27, 6, 'Training Required', '', 15);
+
+UPDATE aims_custom_fields SET parent_field_id = 7 WHERE custom_field_id = 6;
+UPDATE aims_custom_fields SET parent_field_id = 13 WHERE custom_field_id = 12;
 
 -- aims_groups
 CREATE TABLE IF NOT EXISTS aims_groups (

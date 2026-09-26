@@ -28,12 +28,32 @@ use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 use Adlexone\support\Actions;
 use Adlexone\support\FieldTypes;
+use Adlexone\support\Menus;
+
+Menus::ensureReady();
 
 /**
  * Controller Constants
  */
 if (!defined('MAN_BASE_URL')) {
     define('MAN_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage');
+}
+
+/**
+ * Dropdown for a menu field. Parent menus reload the form so dependent menus can filter.
+ *
+ * @param array<string, mixed> $field
+ * @param array<string, mixed> $source
+ */
+function menuControl(array $field, string $selected, array $source, string $inputName): string
+{
+    return Menus::selectHtml(
+        $field,
+        $selected,
+        $source,
+        $inputName,
+        Menus::hasDependents((int)$field['custom_field_id'])
+    );
 }
 
 /**
@@ -539,10 +559,8 @@ function showItemAdd($itemTypeID, $values)
         // Override default value if previous values have already been selected.  user_security is a POST variable and is only set when the page is submitted
         if (!isset($values['user_security'])) {
             $defaultValue = $row['default_value'];
-            $subMenuFilter = $row['default_value'];
         } else {
             $defaultValue = @$itemTypeFields['custom_field_' . $row['custom_field_id']];
-            $subMenuFilter = @$itemTypeFields['custom_field_' . $row['custom_field_id']];
         }
 
         // Add the Javascript validation back into the system
@@ -617,180 +635,7 @@ function showItemAdd($itemTypeID, $values)
                 $fields[$row['custom_field_name']] = RenderViews::buildTextArea('custom_field_' . $row['custom_field_id'], $defaultValue, SET_FORM_FIELD_HEIGHT);
                 break;
             case FieldTypes::MENU :
-                // Get any menus values
-                $columnArray = array('menu_value');
-                $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                // Build buildSelectDropdown array
-                while ($menuRow = Database::fetchArray($result)) {
-                    $menuArray[] = $menuRow['menu_value'];
-                }// while
-                $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValue);
-                unset($menuArray);
-                break;
-            case 'subMenu' :
-                // Get any menus values
-                $columnArray = array('menu_value');
-                $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                // Build buildSelectDropdown array
-                // Set default value
-                $menuArray[] = '';
-                $displaymenuArray[] = TXT_284;
-                while ($menuRow = Database::fetchArray($result)) {
-                    $menuArray[] = $menuRow['menu_value'];
-                    $displaymenuArray[] = $menuRow['menu_value'];
-                }// while
-                // Show parent buildSelectDropdown
-                $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $row['custom_field_id'], $menuArray, $displaymenuArray, $defaultValue, 'onChange="document.addItem.submit();"');
-                unset($menuArray, $displaymenuArray);
-                // Get sub buildSelectDropdown
-                $columnArray = array('sub_menu_values');
-                // Parent buildSelectDropdown value sets the criteria for building the sub buildSelectDropdown
-                $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "' AND menu_value = '" . $subMenuFilter . "'";
-                $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $subMenuRow = Database::fetchArray($result);
-                // Set default buildSelectDropdown value if parent buildSelectDropdown has not been refreshed
-                if (!empty($subMenuRow) && !empty($subMenuRow['sub_menu_values'])) {
-                    $subMenuArray = explode(',', $subMenuRow['sub_menu_values']);
-                } else {
-                    // Use the existing fallback used elsewhere in the file
-                    $subMenuArray = array(TXT_296);
-                }
-                // Show sub buildSelectDropdown
-                // Get sub buildSelectDropdown details
-                $columnArray = array('custom_field_id', 'custom_field_name');
-                $condition = "WHERE custom_field_id = '" . $row['sub_menu'] . "'";
-                $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $subMenuRow = Database::fetchArray($result);
-                if (!isset($values['user_security'])) {
-                    $subMenuDefault = $row['default_value'];
-                } else {
-                    $subMenuDefault = @$itemTypeFields['custom_field_' . $subMenuRow['custom_field_id']];
-                }
-                $fields[$subMenuRow['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $subMenuRow['custom_field_id'], $subMenuArray, $subMenuArray, $subMenuDefault);
-                unset($subMenuArray);
-                break;
-
-            case 'multiLevelMenu' :
-                $columnArray = array('*');
-                $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $row = Database::fetchArray($result);
-                $relationshipArray = unserialize($row['menu_value_links']);
-                $itemCount = $row['menu_levels'];
-                if ($row['menu_relationship'] != '') {
-
-                    $customFieldArray = explode('}-{', $row['menu_relationship']);
-                    foreach ($customFieldArray as $key => $value) {
-                        if ($value != '') {
-                            $fieldArray = explode(',', $value);
-                            $customFieldIDArray[$fieldArray[0]] = $fieldArray[1];
-                            //key is custom field id
-                        }
-                    }
-
-                    $arrayCount = count($customFieldIDArray);
-                    $count = 1;
-
-                    foreach ($customFieldIDArray as $key => $value) {
-
-                        $columnArray = array('custom_field_name');
-                        $condition = "WHERE custom_field_id = '" . $key . "'";
-                        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        $row = Database::fetchArray($result);
-                        unset($columnArray);
-
-                        if ($count > 1) {
-                            //prepare dependancy array
-                            $keyDetected = false;
-                            $tempCustomFieldIDArray = $customFieldIDArray;
-                            foreach ($tempCustomFieldIDArray as $idKey => $idValue) {
-                                if ($idKey == $key) {
-                                    $keyDetected = true;
-                                    unset($tempCustomFieldIDArray[$idKey]);
-                                } elseif ($keyDetected == true) {
-                                    unset($tempCustomFieldIDArray[$idKey]);
-                                }
-                            }
-                            foreach ($tempCustomFieldIDArray as $tempKey => $tempValue) {
-                                //get buildSelectDropdown id of parent buildSelectDropdown value
-                                $columnArray = array('menu_value_id');
-                                $condition = "WHERE menu_value = '" . @$_POST['custom_field_' . $tempKey] . "'";
-                                $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                                $valueRow = Database::fetchArray($result);
-                                $parentMenuValueID[$tempKey] = $valueRow['menu_value_id'];
-                                unset($columnArray);
-                            }
-                        }
-                        // Get any menus values
-                        $columnArray = array('menu_value', 'menu_value_id');
-                        $condition = "WHERE custom_field_id = '" . $key . "'";
-                        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        // Build buildSelectDropdown array
-                        // Set default value
-                        $menuArray[] = '';
-                        $displaymenuArray[] = TXT_670;
-                        $idArray = array();
-                        while ($menuRow = Database::fetchArray($result)) {
-                            if ($count == 1) {
-                                foreach ($relationshipArray as $array) {
-                                    if (($array[$key] == $menuRow['menu_value_id']) and !in_array($menuRow['menu_value_id'], $idArray)) {
-                                        $idArray[] = $menuRow['menu_value_id'];
-                                        $menuArray[] = $menuRow['menu_value'];
-                                        $displaymenuArray[] = $menuRow['menu_value'];
-                                    }
-                                }
-                            } else if (!isset($values['custom_field_' . $previousKey])) {
-                                unset($displaymenuArray, $menuArray);
-                                $menuArray[] = '';
-                                $displaymenuArray[] = TXT_670;
-                            } else {
-
-                                foreach ($relationshipArray as $array) {
-                                    //Carry out parent field value match
-                                    $keyDetected = false;
-                                    //this is where the bug is
-                                    foreach ($parentMenuValueID as $aKey) {
-                                        if (!in_array($aKey, $array)) {
-                                            $keyDetected = false;
-                                            break;
-                                        } else {
-                                            $keyDetected = true;
-                                        }
-
-                                    }
-
-                                    if ($keyDetected == true and ($array[$previousKey] == $parentMenuValueID[$previousKey]) and ($array[$key] == $menuRow['menu_value_id']) and !in_array($menuRow['menu_value_id'], $idArray)) {
-
-                                        $idArray[] = $menuRow['menu_value_id'];
-                                        $menuArray[] = $menuRow['menu_value'];
-                                        $displaymenuArray[] = $menuRow['menu_value'];
-                                    }
-                                    //}
-                                }
-                            }
-                        }// while
-                        $previousKey = $key;
-                        if ($count != $arrayCount) {
-                            $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $key, $menuArray, $displaymenuArray, @$values['custom_field_' . $key], 'onChange="document.addItem.submit();"');
-                        } else {
-                            $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $key, $menuArray, $displaymenuArray, @$values['custom_field_' . $key]);
-                        }
-
-                        unset($menuArray, $displaymenuArray, $columnArray);
-                        $count++;
-                    }
-
-                }
+                $fields[$row['custom_field_name']] = menuControl($row, (string)$defaultValue, is_array($itemTypeFields) ? $itemTypeFields : [], 'custom_field_' . $row['custom_field_id']);
                 break;
             case FieldTypes::CHECK_BOX :
                 $fields[$row['custom_field_name']] = RenderViews::buildCheckBox('custom_field_' . $row['custom_field_id'], $row['custom_field_id'], '');
@@ -848,10 +693,9 @@ function showItemAdd($itemTypeID, $values)
     }
 
     if (ADD_ATTACHMENTS == 'yes') {
-        $attachmentField[TXT_393] = RenderViews::buildFileInput('attachment', SET_MAX_ATTACHMENT * 1000000, '', 'btn btn-default');
-        $html .= RenderViews::buildFormFieldsGrid($attachmentField);
+        $fields[TXT_393] = RenderViews::buildFileInput('attachment', (string)(SET_MAX_ATTACHMENT * 1000000));
     }
-    $html .= RenderViews::buildHiddenInput('item_type_id', $itemTypeFields['item_type_id']);
+    $fields[] = RenderViews::buildHiddenInput('item_type_id', (string)($itemTypeFields['item_type_id'] ?? ''));
     //Javascript field validation
     if (@$JSValidation[2] == "") {
         $jsFieldNameArray = ",['item_title']";
@@ -892,7 +736,13 @@ function showItemAdd($itemTypeID, $values)
 
     $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_57, $javascript);
-    $bodyContent = RenderViews::buildForm(RenderViews::getLanguageConstant('LA_67', 'TXT_67') . ' - ' . $itemTypeName,MAN_BASE_URL. '&option=add_item',$fields,$buttons);
+    $bodyContent = RenderViews::buildForm(
+        RenderViews::getLanguageConstant('LA_67', 'TXT_67') . ' - ' . $itemTypeName,
+        MAN_BASE_URL . '&option=add_item',
+        $fields,
+        $buttons,
+        ['name' => 'addItem', 'enctype' => (ADD_ATTACHMENTS == 'yes' ? 'multipart/form-data' : 'application/x-www-form-urlencoded')]
+    );
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -1194,189 +1044,8 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                         $itemField[$row['custom_field_name']] = RenderViews::buildTextArea('custom_field_' . $row['custom_field_id'], $value, SET_FORM_FIELD_HEIGHT);
                         break;
                     case FieldTypes::MENU :
-                        // Get any menus values
-                        $columnArray = array('menu_value');
-                        $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        // Build buildSelectDropdown array
-                        while ($menuRow = Database::fetchArray($result)) {
-                            $menuArray[] = $menuRow['menu_value'];
-                        }// while
-                        $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $row['custom_field_id'], @$menuArray, @$menuArray, $menuValue, 'form-control');
-                        unset($menuArray);
-                        break;
-                    case 'subMenu' :
-                        // Get any menus values
-                        $columnArray = array('menu_value');
-                        $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        // Build buildSelectDropdown array
-                        // Set default value
-                        $menuArray[] = '';
-                        $displaymenuArray[] = TXT_284;
-                        while ($menuRow = Database::fetchArray($result)) {
-                            $menuArray[] = $menuRow['menu_value'];
-                            $displaymenuArray[] = $menuRow['menu_value'];
-                        }// while
-                        // Show parent buildSelectDropdown
-                        $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $row['custom_field_id'], $menuArray, $displaymenuArray, $menuValue, 'onChange="document.updateItem.submit();"');
-                        unset($menuArray, $displaymenuArray);
-
-                        // Get sub buildSelectDropdown
-                        $columnArray = array('sub_menu_values');
-                        // Parent buildSelectDropdown value sets the criteria for building the sub buildSelectDropdown
-                        $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "' AND menu_value = '" . $menuValue . "'";
-                        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        $subMenuRow = Database::fetchArray($result);
-                        // Set default buildSelectDropdown value if parent buildSelectDropdown has not been refreshed
-                        if ($subMenuRow['sub_menu_values'] != '') {
-                            $subMenuArray = explode(',', $subMenuRow['sub_menu_values']);
-                        } else {
-                            $subMenuArray = array(TXT_296);
-                        }
-                        // Show sub buildSelectDropdown
-                        // Get sub buildSelectDropdown details
-                        $columnArray = array('custom_field_id', 'custom_field_name');
-                        $condition = "WHERE custom_field_id = '" . $row['sub_menu'] . "'";
-                        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        $subMenuRow = Database::fetchArray($result);
-                        if (!isset($values['item_id'])) {
-                            $subMenuValue = $itemFields['custom_field_' . $row['sub_menu']];
-                        } else {
-                            $subMenuValue = $values['custom_field_' . $row['sub_menu']];
-                        }
-                        $itemField[$subMenuRow['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $subMenuRow['custom_field_id'], $subMenuArray, $subMenuArray, $subMenuValue);
-                        unset($subMenuArray);
-                        break;
-
-                    case 'multiLevelMenu' :
-                        $columnArray = array('*');
-                        $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        $row = Database::fetchArray($result);
-                        $relationshipArray = unserialize($row['menu_value_links']);
-                        $itemCount = $row['menu_levels'];
-                        if ($row['menu_relationship'] != '') {
-
-                            $customFieldArray = explode('}-{', $row['menu_relationship']);
-                            foreach ($customFieldArray as $key => $value) {
-                                if ($value != '') {
-                                    $fieldArray = explode(',', $value);
-                                    $customFieldIDArray[$fieldArray[0]] = $fieldArray[1];
-                                    //key is custom field id
-                                }
-                            }
-
-                            $arrayCount = count($customFieldIDArray);
-                            $count = 1;
-
-                            foreach ($customFieldIDArray as $key => $value) {
-
-                                $columnArray = array('custom_field_name');
-                                $condition = "WHERE custom_field_id = '" . $key . "'";
-                                $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                                $row = Database::fetchArray($result);
-                                unset($columnArray);
-                                if (!isset($values['item_id'])) {
-
-                                    $menuArray = array('', $itemFields['custom_field_' . $key]);
-                                    $displaymenuArray = array(TXT_670, $itemFields['custom_field_' . $key]);
-                                    $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $key, $menuArray, $displaymenuArray, $itemFields['custom_field_' . $key], 'onChange="document.updateItem.submit();"');
-                                    unset($menuArray, $displaymenuArray);
-
-                                } else {
-
-                                    if ($count > 1) {
-                                        //prepare dependancy array
-                                        $keyDetected = false;
-                                        $tempCustomFieldIDArray = $customFieldIDArray;
-                                        foreach ($tempCustomFieldIDArray as $idKey => $idValue) {
-                                            if ($idKey == $key) {
-                                                $keyDetected = true;
-                                                unset($tempCustomFieldIDArray[$idKey]);
-                                            } elseif ($keyDetected == true) {
-                                                unset($tempCustomFieldIDArray[$idKey]);
-                                            }
-                                        }
-                                        foreach ($tempCustomFieldIDArray as $tempKey => $tempValue) {
-                                            //get buildSelectDropdown id of parent buildSelectDropdown value
-                                            $columnArray = array('menu_value_id');
-                                            $condition = "WHERE menu_value = '" . @$_POST['custom_field_' . $tempKey] . "'";
-                                            $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                                            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                                            $valueRow = Database::fetchArray($result);
-                                            $parentMenuValueID[$tempKey] = $valueRow['menu_value_id'];
-                                            unset($columnArray);
-                                        }
-                                    }
-                                    // Get any menus values
-                                    $columnArray = array('menu_value', 'menu_value_id');
-                                    $condition = "WHERE custom_field_id = '" . $key . "'";
-                                    $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                                    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                                    // Build buildSelectDropdown array
-                                    // Set default value
-                                    $menuArray[] = '';
-                                    $displaymenuArray[] = TXT_670;
-                                    $idArray = array();
-                                    while ($menuRow = Database::fetchArray($result)) {
-                                        if ($count == 1) {
-                                            foreach ($relationshipArray as $array) {
-                                                if (($array[$key] == $menuRow['menu_value_id']) and !in_array($menuRow['menu_value_id'], $idArray)) {
-                                                    $idArray[] = $menuRow['menu_value_id'];
-                                                    $menuArray[] = $menuRow['menu_value'];
-                                                    $displaymenuArray[] = $menuRow['menu_value'];
-                                                }
-                                            }
-                                        } else if (!isset($values['custom_field_' . $previousKey])) {
-                                            unset($displaymenuArray, $menuArray);
-                                            $menuArray[] = '';
-                                            $displaymenuArray[] = TXT_670;
-                                        } else {
-
-                                            foreach ($relationshipArray as $array) {
-                                                //Carry out parent field value match
-                                                $keyDetected = false;
-                                                //this is where the bug is
-                                                foreach ($parentMenuValueID as $aKey) {
-                                                    if (!in_array($aKey, $array)) {
-                                                        $keyDetected = false;
-                                                        break;
-                                                    } else {
-                                                        $keyDetected = true;
-                                                    }
-
-                                                }
-
-                                                if ($keyDetected == true and ($array[$previousKey] == $parentMenuValueID[$previousKey]) and ($array[$key] == $menuRow['menu_value_id']) and !in_array($menuRow['menu_value_id'], $idArray)) {
-
-                                                    $idArray[] = $menuRow['menu_value_id'];
-                                                    $menuArray[] = $menuRow['menu_value'];
-                                                    $displaymenuArray[] = $menuRow['menu_value'];
-                                                }
-                                                //}
-                                            }
-                                        }
-                                    }// while
-                                    $previousKey = $key;
-                                    if ($count != $arrayCount) {
-                                        $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $key, $menuArray, $displaymenuArray, @$values['custom_field_' . $key], 'onChange="document.updateItem.submit();"');
-                                    } else {
-                                        $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $key, $menuArray, $displaymenuArray, @$values['custom_field_' . $key]);
-                                    }
-
-                                    unset($menuArray, $displaymenuArray, $columnArray);
-                                    $count++;
-                                }
-                            }
-
-                        }
+                        $source = (isset($values['item_id']) && is_array($values)) ? $values : (is_array($itemFields) ? $itemFields : []);
+                        $itemField[$row['custom_field_name']] = menuControl($row, (string)$menuValue, $source, 'custom_field_' . $row['custom_field_id']);
                         break;
 
                     case FieldTypes::CHECK_BOX :
@@ -1485,7 +1154,13 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             }
 
             $itemField[] = RenderViews::buildHiddenInput('item_type_id', $itemFields['item_type_id']).RenderViews::buildHiddenInput('item_id', $itemFields['item_id']);
-            $html .= RenderViews::buildForm(RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName,MAN_BASE_URL . '&option=update_item',$itemField,$buttons);
+            $html .= RenderViews::buildForm(
+                RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName,
+                MAN_BASE_URL . '&option=update_item',
+                $itemField,
+                $buttons,
+                ['name' => 'updateItem']
+            );
 
             //Show transform option
             if ($_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
