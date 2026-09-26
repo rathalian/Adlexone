@@ -1,8 +1,4 @@
-# Real config files contain credentials; templates live in config.example/
-config/**/*.json
-
-# Runtime data
-storage/database/*.sqlite
+# Runtime database journals are recreated by SQLite and are not needed to restore.
 storage/database/*.sqlite-wal
 storage/database/*.sqlite-shm
 storage/attachments/*
