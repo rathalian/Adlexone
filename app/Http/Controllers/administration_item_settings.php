@@ -701,6 +701,31 @@ function typeRecordList(array $rows): string
 }
 
 /**
+ * Parent Menu-with-Sub-Menu fields whose sub menu is this child field.
+ *
+ * @return array<int, string>
+ */
+function submenuParentIds(string $childId): array
+{
+    if ($childId === '' || !ctype_digit($childId)) {
+        return [];
+    }
+    $sql = Database::sqlSelect(
+        'custom_fields',
+        ['custom_field_id'],
+        "WHERE field_type = 'subMenu' AND sub_menu = '" . $childId . "'"
+    );
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $ids = [];
+    while ($parent = Database::fetchArray($result)) {
+        if (!empty($parent['custom_field_id'])) {
+            $ids[] = (string)$parent['custom_field_id'];
+        }
+    }
+    return $ids;
+}
+
+/**
  * @param array<string, mixed> $row
  * @return array<string, mixed>
  */
@@ -728,6 +753,27 @@ function customFieldRecord(array $row): array
         $actions[] = [
             'href' => ITEM_BASE_URL . '&option=modify_menu_value_filters&custom_field_id=' . $id,
             'label' => TXT_291,
+            'tone' => 'quiet',
+        ];
+    }
+    if ($row['field_type'] == 'subMenuChild') {
+        foreach (submenuParentIds((string)$row['custom_field_id']) as $parentId) {
+            $actions[] = [
+                'href' => ITEM_BASE_URL . '&option=modify_menu_value_filters&custom_field_id=' . rawurlencode($parentId),
+                'label' => TXT_291,
+                'tone' => 'quiet',
+            ];
+        }
+    }
+    if ($row['field_type'] == 'multiLevelMenu') {
+        $actions[] = [
+            'href' => ITEM_BASE_URL . '&option=show_multilevel_menu&multi_level_menu_id=' . $id,
+            'label' => TXT_660,
+            'tone' => 'quiet',
+        ];
+        $actions[] = [
+            'href' => ITEM_BASE_URL . '&option=show_multilevel_menu_items&multi_level_menu_id=' . $id,
+            'label' => TXT_666,
             'tone' => 'quiet',
         ];
     }
