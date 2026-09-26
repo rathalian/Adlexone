@@ -666,6 +666,7 @@ function showFieldsAndTypes(): void
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
         ['title' => TXT_53, 'html' => fieldRecordList($fieldRows)],
         ['title' => TXT_50, 'html' => typeRecordList($typeRows)],
+        ['id' => 'add-multilevel-menu', 'title' => TXT_658, 'html' => showMultiLevelMenu('', '', true)],
     ]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -679,6 +680,7 @@ function fieldRecordList(array $rows): string
         'column' => TXT_151,
         'searchLabel' => TXT_3,
         'primary' => ['href' => ITEM_BASE_URL . '&option=new_custom_field', 'label' => TXT_88],
+        'buttons' => [['href' => ITEM_BASE_URL . '&option=manage_fields_types#add-multilevel-menu', 'label' => TXT_658]],
         'empty' => TXT_115,
         'noMatch' => TXT_689,
         'groups' => [['rows' => $rows]],
@@ -1062,7 +1064,7 @@ function deleteItemType(): void
  * @param array|string $values Field values passed in for retaining form field values if an error occurred during entry.
  * @return void
  */
-function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
+function showMultiLevelMenu($multiLevelMenuID = '', $values = '', bool $returnToList = false)
 {
     $isNew = ($multiLevelMenuID === '');
 
@@ -1174,6 +1176,9 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
     $formFields = [];
 
     $formFields[TXT_659] = RenderViews::buildHiddenInput('multi_level_menu_id', $multiLevelMenuID) . $fieldSelect;
+    if ($returnToList) {
+        $formFields[TXT_659] .= RenderViews::buildHiddenInput('return_option', 'manage_fields_types');
+    }
     $formFields[''] = $customFieldsHtml;
 
     // Create form buttons
@@ -1186,8 +1191,13 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
         $title,
         $formAction,
         $formFields,
-        $buttons
+        $buttons,
+        ['card' => !$returnToList]
     );
+
+    if ($returnToList) {
+        return $bodyContent;
+    }
 
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
@@ -1195,7 +1205,14 @@ function showMultiLevelMenu($multiLevelMenuID = '', $values = ''): void
 
 function addUpdateMultiLevelMenu($multiLevelMenuID)
 {
+    $returnToList = (($_POST['return_option'] ?? '') === 'manage_fields_types');
+    unset($_POST['return_option']);
+
     if ((string)$multiLevelMenuID === '') {
+        if ($returnToList) {
+            showFieldsAndTypes();
+            return;
+        }
         showMultiLevelMenu();
         return;
     }
@@ -1214,6 +1231,10 @@ function addUpdateMultiLevelMenu($multiLevelMenuID)
     $condition = "WHERE custom_field_id = '" . $multiLevelMenuID . "'";
     $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
+    if ($returnToList) {
+        showFieldsAndTypes();
+        return;
+    }
     showMultiLevelMenu($multiLevelMenuID);
 
 }

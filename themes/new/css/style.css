@@ -421,6 +421,8 @@ body{
     color:var(--title); background:var(--title-strip); border:1px solid var(--title-strip-border);
 }
 .record-list__bar .btn--primary{ margin-left:auto; text-decoration:none; }
+.record-list__primary{ margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.record-list__primary .btn--primary{ margin-left:0; }
 .record-list__tablewrap{ overflow-x:auto; }
 .record-list .table{ margin:0; }
 .record-list td, .record-list th{ vertical-align:middle; }
@@ -444,6 +446,7 @@ body{
     clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 @media (max-width:640px){
-    .record-list__bar .btn--primary{ margin-left:0; }
+    .record-list__bar .btn--primary,
+    .record-list__primary{ margin-left:0; }
     .record-list__search{ max-width:none; flex-basis:100%; }
 }

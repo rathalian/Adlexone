@@ -73,6 +73,10 @@ class RenderViews
         $html .= self::buildFormFieldsGrid($fields);
         $html .= self::buildEndFormWithButtons($buttons);
 
+        if (($options['card'] ?? true) === false) {
+            return $html;
+        }
+
         return self::buildVerticalCards([
             [
                 'title' => $formTitle,
@@ -195,7 +199,10 @@ class RenderViews
         $html = '<div class="grid">';
         foreach ($bodyBlocks as $b) {
             $title = isset($b['title']) ? htmlspecialchars((string)$b['title'], ENT_QUOTES, 'UTF-8') : '';
-            $html .= '<section class="card span-2">';                      // full width always
+            $idAttr = isset($b['id']) && $b['id'] !== ''
+                ? ' id="' . htmlspecialchars((string)$b['id'], ENT_QUOTES, 'UTF-8') . '"'
+                : '';
+            $html .= '<section class="card span-2"' . $idAttr . '>';                      // full width always
             if ($title !== '') {
                 $html .= '<div class="card-title">' . $title . '</div>';
             }
@@ -412,6 +419,7 @@ class RenderViews
      *   column?: string,
      *   searchLabel?: string,
      *   primary?: array{href: string, label: string},
+     *   buttons?: array<int, array{href: string, label: string}>,
      *   empty?: string,
      *   noMatch?: string,
      *   groups: array<int, array{label?: string, rows: array<int, array{
@@ -435,7 +443,7 @@ class RenderViews
         $emptyText = (string)($list['empty'] ?? TXT_115);
         $noMatch = (string)($list['noMatch'] ?? TXT_689);
         $groups = $list['groups'] ?? [];
-        $primary = self::recordListPrimary($list['primary'] ?? null);
+        $primary = self::recordListButtons($list);
 
         $rows = [];
         $hasActions = false;
@@ -493,6 +501,36 @@ class RenderViews
             . '<p class="record-list__nomatch" hidden>' . htmlspecialchars($noMatch, ENT_QUOTES, 'UTF-8') . '</p>'
             . self::recordListScript($id)
             . '</div>';
+    }
+
+    /**
+     * One primary button stays as-is. Extra buttons sit with it on the right of the list bar.
+     *
+     * @param array{primary?: array{href?: string, label?: string}, buttons?: array<int, array{href?: string, label?: string}>} $list
+     */
+    private static function recordListButtons(array $list): string
+    {
+        $buttons = [];
+        $primary = $list['primary'] ?? null;
+        if (is_array($primary) && ($primary['href'] ?? '') !== '' && ($primary['label'] ?? '') !== '') {
+            $buttons[] = $primary;
+        }
+        foreach ($list['buttons'] ?? [] as $button) {
+            if (is_array($button) && ($button['href'] ?? '') !== '' && ($button['label'] ?? '') !== '') {
+                $buttons[] = $button;
+            }
+        }
+        if ($buttons === []) {
+            return '';
+        }
+        if (count($buttons) === 1) {
+            return self::recordListPrimary($buttons[0]);
+        }
+        $html = '<div class="record-list__primary">';
+        foreach ($buttons as $button) {
+            $html .= self::recordListPrimary($button);
+        }
+        return $html . '</div>';
     }
 
     /**
