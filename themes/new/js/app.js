@@ -108,31 +108,66 @@ const isMobile = () => !mqDesktop.matches;
     window.addEventListener('load', update);
 })();
 
-/* 4) Prevent top dropdown overflow — flip inward near viewport right edge */
+/* 4) Top menus — click to open, one at a time, flip near the right edge */
 (() => {
-    const menus = document.querySelectorAll('.topnav .menu');
+    const menus = Array.from(document.querySelectorAll('.topnav .menu'));
     if (!menus.length) return;
 
     const vw = () => Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+    const buttonOf = (menu) => menu.querySelector('.menu__button');
+    const panelOf = (menu) => menu.querySelector('.menu__panel');
 
-    const check = (panel) => {
+    const place = (menu) => {
+        const panel = panelOf(menu);
         if (!panel) return;
         panel.classList.remove('is-flip');
-        const r = panel.getBoundingClientRect();
-        if (r.right > vw() - 8) panel.classList.add('is-flip');
+        const rect = panel.getBoundingClientRect();
+        if (rect.right > vw() - 8) panel.classList.add('is-flip');
     };
 
-    menus.forEach(m => {
-        const btn   = m.querySelector('.menu__button');
-        const panel = m.querySelector('.menu__panel');
-        if (!btn || !panel) return;
+    const closeMenu = (menu) => {
+        const button = buttonOf(menu);
+        const panel = panelOf(menu);
+        if (button) button.setAttribute('aria-expanded', 'false');
+        if (panel) panel.hidden = true;
+    };
 
-        // Reposition safely whenever it opens or viewport changes
-        m.addEventListener('mouseenter', () => check(panel));
-        btn.addEventListener('focus', () => check(panel));
-        window.addEventListener('resize', () => {
-            const s = window.getComputedStyle(panel);
-            if (s.display !== 'none' && s.visibility !== 'hidden') check(panel);
+    const openMenu = (menu) => {
+        menus.forEach((other) => { if (other !== menu) closeMenu(other); });
+        const button = buttonOf(menu);
+        const panel = panelOf(menu);
+        if (button) button.setAttribute('aria-expanded', 'true');
+        if (panel) {
+            panel.hidden = false;
+            place(menu);
+        }
+    };
+
+    menus.forEach((menu) => {
+        const button = buttonOf(menu);
+        if (!button) return;
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const panel = panelOf(menu);
+            if (panel && !panel.hidden) closeMenu(menu);
+            else openMenu(menu);
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('.topnav .menu')) return;
+        menus.forEach(closeMenu);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') menus.forEach(closeMenu);
+    });
+
+    window.addEventListener('resize', () => {
+        menus.forEach((menu) => {
+            const panel = panelOf(menu);
+            if (panel && !panel.hidden) place(menu);
         });
     });
 })();

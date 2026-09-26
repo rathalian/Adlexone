@@ -93,7 +93,7 @@ final class LaunchpadHelper
             // use slug-based id with fallback to uniqid() to ensure it's never empty / duplicated
             $id = 'lp-more-' . (self::slug($title) ?: uniqid());
             $html .= '<div class="controller-more">'
-                .  '<button class="btn -sm" type="button" aria-expanded="false" aria-controls="' . $id . '">More</button>'
+                .  '<button class="btn btn--sm" type="button" aria-expanded="false" aria-controls="' . $id . '">More</button>'
                 .  '<div id="' . $id . '" class="controller-more__menu" hidden>';
             foreach ($rest as $lnk) {
                 $html .= self::a($lnk, 'controller-more__item URL') . '<br>';

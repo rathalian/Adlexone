@@ -266,7 +266,7 @@ function determineUserRole(array $user): int
             ];
             $buttons = [RenderViews::buildFormButton('submit', 'Login', TXT_543)];
             if (ALLOW_USER_REG == "yes") {
-                $buttons[] = RenderViews::buildFormButton('submit', 'Register', TXT_630);
+                $buttons[] = RenderViews::buildFormButton('submit', 'Register', TXT_630, '', 'secondary');
             }
             return RenderViews::buildForm(TXT_543, 'index.php', $fields, $buttons);
         }

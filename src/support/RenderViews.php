@@ -118,13 +118,22 @@ class RenderViews
         $controller = $controller ?? $defaultPage;
         $controller = basename($controller);
 
-        // Determine the controller path
-        $controllerPath = str_starts_with($controller, 'app_')
-            ? "app/http/controllers/applications/" . explode('_', $controller)[1] . "/controllers/"
-            : 'app/http/controllers/';
+        include self::controllerFile($controller);
+    }
 
-        // Include the controller file
-        include $controllerPath . $controller . '.php';
+    /**
+     * Resolve a controller name to its file. Directory names follow the
+     * repository casing so the include works on case-sensitive filesystems.
+     */
+    private static function controllerFile(string $controller): string
+    {
+        $root = SET_INSTALL_PATH . 'app/Http/Controllers/';
+        if (str_starts_with($controller, 'app_')) {
+            $app = explode('_', $controller)[1] ?? '';
+            return $root . 'Applications/' . $app . '/controllers/' . $controller . '.php';
+        }
+
+        return $root . $controller . '.php';
     }
 
 
@@ -337,14 +346,11 @@ class RenderViews
             return '</form>';
         }
 
-        $html = str_repeat('<br />', $lineBreaksBefore);
-
+        $html = '<div class="form-actions">';
         foreach ($buttons as $button) {
-            $html .= '&nbsp&nbsp' . $button;
+            $html .= $button;
         }
-
-        $html .= str_repeat('<br />', $lineBreaksAfter);
-        $html .= '</form>';
+        $html .= '</div></form>';
 
         return $html;
     }
@@ -503,7 +509,7 @@ class RenderViews
         if ($primary === null || ($primary['href'] ?? '') === '' || ($primary['label'] ?? '') === '') {
             return '';
         }
-        return '<a class="btn btn--primary -sm" href="' . htmlspecialchars((string)$primary['href'], ENT_QUOTES, 'UTF-8') . '">'
+        return '<a class="btn btn--primary btn--sm" href="' . htmlspecialchars((string)$primary['href'], ENT_QUOTES, 'UTF-8') . '>'
             . htmlspecialchars((string)$primary['label'], ENT_QUOTES, 'UTF-8') . '</a>';
     }
 
@@ -533,7 +539,7 @@ class RenderViews
                     ? ' onclick="' . self::confirmAttribute((string)$action['confirm']) . '"'
                     : '';
                 $label = (string)$action['label'];
-                $buttons .= '<a class="btn -sm ' . $tone . '" href="' . htmlspecialchars((string)$action['href'], ENT_QUOTES, 'UTF-8') . '"'
+                $buttons .= '<a class="btn btn--sm ' . $tone . '" href="' . htmlspecialchars((string)$action['href'], ENT_QUOTES, 'UTF-8') . '"'
                     . $confirm
                     . ' aria-label="' . htmlspecialchars($label . ': ' . $name, ENT_QUOTES, 'UTF-8') . '">'
                     . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
@@ -632,16 +638,15 @@ class RenderViews
      * @param string $name The name attribute for the file input field.
      * @param string $maximumSize The maximum file size allowed, specified in bytes.
      * @param string $size (Optional) The size attribute for the file input field. Defaults to '50'.
-     * @param string $class (Optional) The CSS class for the file input field. Defaults to 'btn btn-default'.
+     * @param string $class Unused. File fields use the standard input style.
      * @return string The generated HTML for the file upload input box.
      */
-    public static function buildFileInput(string $name, string $maximumSize, string $size = '50', string $class = 'btn btn-default'): string
+    public static function buildFileInput(string $name, string $maximumSize, string $size = '50', string $class = ''): string
     {
         return sprintf(
-            '<input name="MAX_FILE_SIZE" value="%s" type="hidden"><input name="%s" size="%s" type="file" class="input-file btn btn-primary">',
+            '<input name="MAX_FILE_SIZE" value="%s" type="hidden"><input name="%s" type="file" class="input input-file">',
             htmlspecialchars($maximumSize, ENT_QUOTES, 'UTF-8'),
-            htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
-            htmlspecialchars($size, ENT_QUOTES, 'UTF-8')
+            htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
         );
     }
 
@@ -736,17 +741,28 @@ class RenderViews
      * @param string $type Button type
      * @param string $name Button name
      * @param string $value Button value
-     * @param string $class Button class
-     * @param string $javascript Button javascript
+     * @param string $javascript Optional raw attributes, such as an onclick handler.
+     * @param string $variant primary, secondary, quiet, or danger. Submit defaults to primary; reset defaults to secondary.
      * @return string Returns form button HTML
      */
-    public static function buildFormButton(string $type, string $name = '', string $value = '', string $javascript = ''): string
+    public static function buildFormButton(string $type, string $name = '', string $value = '', string $javascript = '', string $variant = ''): string
     {
+        if ($variant === '') {
+            $variant = $type === 'reset' ? 'secondary' : 'primary';
+        }
+        $class = match ($variant) {
+            'primary' => 'btn btn--primary',
+            'quiet' => 'btn btn--quiet',
+            'danger' => 'btn btn--danger',
+            default => 'btn',
+        };
+
         return sprintf(
-            '<input type="%s" name="%s" value="%s" class="btn btn-primary" %s>',
+            '<input type="%s" name="%s" value="%s" class="%s" %s>',
             htmlspecialchars($type, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($value, ENT_QUOTES, 'UTF-8'),
+            $class,
             $javascript
         );
     }
