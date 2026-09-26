@@ -685,6 +685,10 @@ TXT_684 = "Available"
 TXT_685 = "On this item type"
 TXT_686 = "Move up"
 TXT_687 = "Move down"
+TXT_688 = "No matching actions"
+TXT_689 = "No matches"
+TXT_690 = "No multi-level menus yet. Add a custom field with type Multi-Level Menu first."
+TXT_691 = "is used by existing items and was not deleted."
 ; ******************************************************************************;
 ;
 ; Adlexone Action Package language constants

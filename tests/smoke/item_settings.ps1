@@ -115,8 +115,10 @@ $search     = Invoke-Page "$Ctl&option=manage_fields_types";           Record 'G
 $newMlm     = Invoke-Page "$Ctl&option=new_multilevel_menu_relationship"; Record 'GET  new_multilevel_menu_relationship' $newMlm
 
 # --- Submits ------------------------------------------------------------------------------------------
-Submit-Form 'POST field_type_search (custom fields)' $search @{ type = 'custom_field_name'; operator = 'LIKE'; criteria = '' } | Out-Null
-Submit-Form 'POST field_type_search (item types)'    $search @{ type = 'item_type_name'; operator = 'LIKE'; criteria = '' } | Out-Null
+Invoke-Page "$BaseUrl/index.php?controller=administration_item_settings&option=field_type_search" @{ type = 'custom_field_name'; operator = 'LIKE'; criteria = ''; submit_button = 'Submit' } |
+    ForEach-Object { Record 'POST field_type_search (custom fields)' $_ }
+Invoke-Page "$BaseUrl/index.php?controller=administration_item_settings&option=field_type_search" @{ type = 'item_type_name'; operator = 'LIKE'; criteria = ''; submit_button = 'Submit' } |
+    ForEach-Object { Record 'POST field_type_search (item types)' $_ }
 
 Submit-Form 'POST add_custom_field (new textBox)' $newField @{ custom_field_name = 'ZZ Smoke Text'; field_type = 'textBox' } | Out-Null
 $created = Invoke-Sql "SELECT custom_field_id, field_type FROM custom_fields WHERE custom_field_name = 'ZZ Smoke Text'"

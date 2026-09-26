@@ -195,7 +195,10 @@ document.addEventListener('click', (e) => {
         cap.className = 'urlcap';
         cap.textContent = first;
 
-        a.append(cap, document.createTextNode(rest));
+        const label = document.createElement('span');
+        label.className = 'urllabel';
+        label.append(cap, document.createTextNode(rest));
+        a.append(label);
     });
 })();
 

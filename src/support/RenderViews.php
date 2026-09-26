@@ -390,6 +390,174 @@ class RenderViews
     }
 
     /**
+     * Confirm handler for a destructive link. Literal "\n" from language files become line breaks.
+     */
+    public static function confirmAttribute(string $message): string
+    {
+        $message = str_replace('\\n', "\n", $message);
+        return htmlspecialchars(
+            'return confirm(' . json_encode($message, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ')',
+            ENT_QUOTES,
+            'UTF-8'
+        );
+    }
+
+    /**
+     * Searchable collection of records.
+     *
+     * The name opens the record. Other verbs are buttons at the end of the row.
+     * Groups are optional: omit "label" for a flat list.
+     *
+     * @param array{
+     *   column?: string,
+     *   searchLabel?: string,
+     *   primary?: array{href: string, label: string},
+     *   empty?: string,
+     *   noMatch?: string,
+     *   groups: array<int, array{label?: string, rows: array<int, array{
+     *     name: string,
+     *     href: string,
+     *     meta?: string,
+     *     metaTitle?: string,
+     *     search?: string,
+     *     actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string}>
+     *   }>}>
+     * } $list
+     */
+    public static function buildRecordList(array $list): string
+    {
+        static $sequence = 0;
+        $sequence++;
+        $id = 'record-list-' . $sequence;
+
+        $column = (string)($list['column'] ?? TXT_151);
+        $searchLabel = (string)($list['searchLabel'] ?? TXT_3);
+        $emptyText = (string)($list['empty'] ?? TXT_115);
+        $noMatch = (string)($list['noMatch'] ?? TXT_689);
+        $groups = $list['groups'] ?? [];
+        $primary = self::recordListPrimary($list['primary'] ?? null);
+
+        $rows = [];
+        $hasActions = false;
+        foreach ($groups as $group) {
+            foreach ($group['rows'] ?? [] as $row) {
+                $rows[] = $row;
+                if (!empty($row['actions'])) {
+                    $hasActions = true;
+                }
+            }
+        }
+
+        if ($rows === []) {
+            return '<div class="record-list">'
+                . ($primary !== '' ? '<div class="record-list__bar">' . $primary . '</div>' : '')
+                . '<p class="record-list__empty">' . htmlspecialchars($emptyText, ENT_QUOTES, 'UTF-8') . '</p>'
+                . '</div>';
+        }
+
+        $colCount = $hasActions ? 2 : 1;
+        $body = '';
+        foreach ($groups as $group) {
+            $groupRows = $group['rows'] ?? [];
+            if ($groupRows === []) {
+                continue;
+            }
+            $label = trim((string)($group['label'] ?? ''));
+            $body .= '<tbody data-group>';
+            if ($label !== '') {
+                $body .= '<tr class="record-list__grouphead"><th colspan="' . $colCount . '" scope="rowgroup">'
+                    . htmlspecialchars($label, ENT_QUOTES, 'UTF-8')
+                    . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
+            }
+            foreach ($groupRows as $row) {
+                $body .= self::recordListRow($row, $label, $hasActions);
+            }
+            $body .= '</tbody>';
+        }
+
+        $manageHead = $hasActions
+            ? '<th class="record-list__manage"><span class="record-list__sr">' . htmlspecialchars(TXT_388, ENT_QUOTES, 'UTF-8') . '</span></th>'
+            : '';
+        $searchId = $id . '-search';
+
+        return '<div class="record-list" id="' . $id . '">'
+            . '<div class="record-list__bar">'
+            . '<input id="' . $searchId . '" class="input record-list__search" type="search" placeholder="' . htmlspecialchars($searchLabel, ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($searchLabel, ENT_QUOTES, 'UTF-8') . '" autocomplete="off">'
+            . '<span class="record-list__count" aria-live="polite">' . count($rows) . '</span>'
+            . $primary
+            . '</div>'
+            . '<div class="record-list__tablewrap"><table class="table table-hover">'
+            . '<thead><tr><th>' . htmlspecialchars($column, ENT_QUOTES, 'UTF-8') . '</th>' . $manageHead . '</tr></thead>'
+            . $body
+            . '</table></div>'
+            . '<p class="record-list__nomatch" hidden>' . htmlspecialchars($noMatch, ENT_QUOTES, 'UTF-8') . '</p>'
+            . self::recordListScript($id)
+            . '</div>';
+    }
+
+    /**
+     * @param array{href: string, label: string}|null $primary
+     */
+    private static function recordListPrimary(?array $primary): string
+    {
+        if ($primary === null || ($primary['href'] ?? '') === '' || ($primary['label'] ?? '') === '') {
+            return '';
+        }
+        return '<a class="btn btn--primary -sm" href="' . htmlspecialchars((string)$primary['href'], ENT_QUOTES, 'UTF-8') . '">'
+            . htmlspecialchars((string)$primary['label'], ENT_QUOTES, 'UTF-8') . '</a>';
+    }
+
+    /**
+     * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string}>} $row
+     */
+    private static function recordListRow(array $row, string $groupLabel, bool $hasActions): string
+    {
+        $name = (string)($row['name'] ?? '');
+        $meta = (string)($row['meta'] ?? '');
+        $search = strtolower($name . ' ' . $groupLabel . ' ' . $meta . ' ' . (string)($row['search'] ?? ''));
+        $nameHtml = '<a class="record-link" href="' . htmlspecialchars((string)$row['href'], ENT_QUOTES, 'UTF-8') . '">'
+            . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '</a>';
+        if ($meta !== '') {
+            $title = (string)($row['metaTitle'] ?? '');
+            $titleAttr = $title !== '' ? ' title="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '"' : '';
+            $nameHtml .= '<div class="record-list__meta"' . $titleAttr . '>' . htmlspecialchars($meta, ENT_QUOTES, 'UTF-8') . '</div>';
+            $search .= ' ' . strtolower($title);
+        }
+
+        $actionsHtml = '';
+        if ($hasActions) {
+            $buttons = '';
+            foreach ($row['actions'] ?? [] as $action) {
+                $tone = ($action['tone'] ?? '') === 'danger' ? 'btn--danger' : 'btn--quiet';
+                $confirm = isset($action['confirm']) && $action['confirm'] !== ''
+                    ? ' onclick="' . self::confirmAttribute((string)$action['confirm']) . '"'
+                    : '';
+                $label = (string)$action['label'];
+                $buttons .= '<a class="btn -sm ' . $tone . '" href="' . htmlspecialchars((string)$action['href'], ENT_QUOTES, 'UTF-8') . '"'
+                    . $confirm
+                    . ' aria-label="' . htmlspecialchars($label . ': ' . $name, ENT_QUOTES, 'UTF-8') . '">'
+                    . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+                $search .= ' ' . strtolower($label);
+            }
+            $actionsHtml = '<td class="record-list__manage"><span class="record-list__actions">' . $buttons . '</span></td>';
+        }
+
+        return '<tr data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '"><td>' . $nameHtml . '</td>' . $actionsHtml . '</tr>';
+    }
+
+    private static function recordListScript(string $id): string
+    {
+        $idJson = json_encode($id);
+        return '<script>(function(root){if(!root)return;var input=root.querySelector(".record-list__search");if(!input)return;'
+            . 'var count=root.querySelector(".record-list__count");var empty=root.querySelector(".record-list__nomatch");'
+            . 'var total=root.querySelectorAll("tr[data-search]").length;function apply(){var q=(input.value||"").trim().toLowerCase();var shown=0;'
+            . 'root.querySelectorAll("tr[data-search]").forEach(function(row){var hit=q===""||(row.getAttribute("data-search")||"").indexOf(q)!==-1;row.hidden=!hit;if(hit)shown++;});'
+            . 'root.querySelectorAll("tbody[data-group]").forEach(function(group){var visible=group.querySelectorAll("tr[data-search]:not([hidden])").length;group.hidden=visible===0;var badge=group.querySelector(".record-list__badge");if(badge)badge.textContent=String(visible);});'
+            . 'if(count)count.textContent=q===""?String(total):(shown+" / "+total);if(empty)empty.hidden=shown!==0;}'
+            . 'input.addEventListener("input",apply);})(document.getElementById(' . $idJson . '));</script>';
+    }
+
+    /**
      * Renders content elements in a horizontal layout.
      *
      * This method generates HTML for displaying content elements in a horizontal layout.

@@ -313,6 +313,20 @@ body{
 .field-picker-move{ padding:6px 8px; font-size:12px; font-weight:600; }
 #availableFields .field-picker-moves{ display:none; }
 .field-picker-actions{ margin-top:16px; }
+.mlm-fields{ flex:1 1 100%; min-width:0; }
+.mlm-fields .table{ width:auto; min-width:28rem; }
+.mlm-fields .checkbox{ display:flex; align-items:center; gap:10px; font-weight:600; }
+.mlm-fields td:last-child,
+.mlm-fields th:last-child{ width:12rem; }
+.mlm-fields .select{ width:12rem; min-width:0; }
+.mlm-note{ flex:1 1 20rem; min-width:0; line-height:1.45; color:var(--placeholder); }
+.field.is-inline:has(.mlm-note){ align-items:flex-start; }
+.sidebar .side-actions > .URL{
+    display:flex; align-items:flex-start; gap:8px; line-height:1.35;
+}
+.sidebar .side-actions > .URL .icon{ flex:0 0 auto; margin-top:2px; }
+.sidebar .side-actions > .URL .urllabel{ min-width:0; }
+.sidebar .URL .urlcap{ margin-left:0; }
 @media (max-width:960px){ .field-picker{ grid-template-columns:1fr; } }
 
 @media (max-width:960px){
@@ -377,3 +391,59 @@ body{
 .controller-more { position: relative; }
 .controller-more__menu[hidden] { display: none; }
 .controller-more__menu { margin-top: .25rem; }
+
+/* ---------- Record lists ---------- */
+.record-link{
+    color:#1d4ed8; font-weight:600; text-decoration:underline;
+    text-decoration-color:color-mix(in srgb, #1d4ed8 45%, transparent); text-underline-offset:2px;
+}
+.record-link:hover, .record-link:focus-visible{ color:#1e40af; }
+.btn.btn--quiet{
+    color:#1d4ed8; background:#fff; box-shadow:none; text-decoration:none;
+    border-color:color-mix(in srgb, var(--brand2) 28%, transparent);
+}
+.btn.btn--quiet:hover, .btn.btn--quiet:focus-visible{
+    color:#1d4ed8; background:color-mix(in srgb, var(--brand) 12%, #fff);
+    border-color:color-mix(in srgb, var(--brand2) 45%, transparent); box-shadow:none;
+}
+.btn.btn--danger{
+    color:#b91c1c; background:#fff; box-shadow:none; text-decoration:none; border-color:transparent;
+}
+.btn.btn--danger:hover, .btn.btn--danger:focus-visible{
+    color:#b91c1c; background:rgba(185,28,28,.08); border-color:rgba(185,28,28,.2); box-shadow:none;
+}
+.record-list{ display:flex; flex-direction:column; gap:14px; }
+.record-list__bar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.record-list__search{ flex:1 1 220px; width:auto; max-width:420px; min-width:0; }
+.record-list__count{
+    display:inline-flex; align-items:center; justify-content:center; min-width:2rem;
+    padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;
+    color:var(--title); background:var(--title-strip); border:1px solid var(--title-strip-border);
+}
+.record-list__bar .btn--primary{ margin-left:auto; text-decoration:none; }
+.record-list__tablewrap{ overflow-x:auto; }
+.record-list .table{ margin:0; }
+.record-list td, .record-list th{ vertical-align:middle; }
+.record-list__actions{ display:inline-flex; align-items:center; gap:6px; }
+.record-list__meta{ margin-top:2px; color:var(--placeholder); font-size:12.5px; line-height:1.35; }
+.record-list__grouphead th{
+    padding-top:18px; padding-bottom:6px; background:transparent; border-bottom:none;
+    text-align:left; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--title);
+}
+.record-list tbody:first-of-type .record-list__grouphead th{ padding-top:4px; }
+.record-list .table-hover tbody tr.record-list__grouphead:hover{ background:transparent; }
+.record-list__badge{
+    display:inline-flex; align-items:center; justify-content:center; min-width:1.5rem;
+    margin-left:6px; padding:1px 7px; border-radius:999px; font-size:11px; letter-spacing:0;
+    text-transform:none; background:var(--title-strip); border:1px solid var(--title-strip-border);
+}
+.record-list__manage{ width:1%; white-space:nowrap; text-align:right; }
+.record-list__empty, .record-list__nomatch{ margin:0; color:var(--placeholder); }
+.record-list__sr{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+@media (max-width:640px){
+    .record-list__bar .btn--primary{ margin-left:0; }
+    .record-list__search{ max-width:none; flex-basis:100%; }
+}
