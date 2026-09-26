@@ -319,6 +319,10 @@ body{
 .mlm-fields td:last-child,
 .mlm-fields th:last-child{ width:12rem; }
 .mlm-fields .select{ width:12rem; min-width:0; }
+.mlm-summary{ margin:0 0 16px; }
+.mlm-summary p{ margin:0 0 6px; }
+.mlm-summary ol{ margin:0 0 12px 1.25rem; }
+.mlm-summary li{ margin:2px 0; }
 .mlm-note{ flex:1 1 20rem; min-width:0; line-height:1.45; color:var(--placeholder); }
 .field.is-inline:has(.mlm-note){ align-items:flex-start; }
 .sidebar .side-actions > .URL{

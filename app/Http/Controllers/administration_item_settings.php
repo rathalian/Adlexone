@@ -663,12 +663,89 @@ function showFieldsAndTypes(): void
         $typeRows[] = itemTypeRecord($row);
     }
 
+    $menus = Database::buildArray(Database::sqlSelect(
+        'custom_fields',
+        '*',
+        "WHERE field_type = 'multiLevelMenu' ORDER BY custom_field_name ASC"
+    ));
+    $editId = (string)($menus[0]['custom_field_id'] ?? '');
+
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        [
+            'id' => 'add-multilevel-menu',
+            'title' => TXT_658,
+            'html' => multiLevelRelationshipSummary($menus) . showMultiLevelMenu($editId, '', true),
+        ],
         ['title' => TXT_53, 'html' => fieldRecordList($fieldRows)],
         ['title' => TXT_50, 'html' => typeRecordList($typeRows)],
-        ['id' => 'add-multilevel-menu', 'title' => TXT_658, 'html' => showMultiLevelMenu('', '', true)],
     ]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Saved level order for a multi-level menu, as custom field names.
+ *
+ * @return array<int, string>
+ */
+function linkedMenuNames(string $relationship): array
+{
+    $items = [];
+    $index = 0;
+    foreach (array_filter(explode('}-{', $relationship)) as $value) {
+        $parts = explode(',', $value);
+        $id = (string)($parts[0] ?? '');
+        if ($id === '' || !ctype_digit($id)) {
+            continue;
+        }
+        $sort = (int)($parts[1] ?? 0);
+        $items[] = ['id' => $id, 'sort' => $sort > 0 ? $sort : PHP_INT_MAX, 'index' => $index++];
+    }
+    usort($items, static function (array $a, array $b): int {
+        return $a['sort'] <=> $b['sort'] ?: $a['index'] <=> $b['index'];
+    });
+
+    $names = [];
+    foreach ($items as $item) {
+        $names[] = menuFieldName($item['id']);
+    }
+    return $names;
+}
+
+function menuFieldName(string $id): string
+{
+    static $names = null;
+    if ($names === null) {
+        $names = [];
+        foreach (Database::buildArray(Database::sqlSelect('custom_fields', ['custom_field_id', 'custom_field_name'])) as $row) {
+            $names[(string)$row['custom_field_id']] = (string)$row['custom_field_name'];
+        }
+    }
+    return $names[$id] ?? $id;
+}
+
+/**
+ * @param array<int, array<string, mixed>> $menus
+ */
+function multiLevelRelationshipSummary(array $menus): string
+{
+    if ($menus === []) {
+        return '';
+    }
+    $html = '<div class="mlm-summary">';
+    foreach ($menus as $menu) {
+        $html .= '<p><strong>' . htmlspecialchars((string)$menu['custom_field_name'], ENT_QUOTES, 'UTF-8') . '</strong></p>';
+        $names = linkedMenuNames((string)($menu['menu_relationship'] ?? ''));
+        if ($names === []) {
+            $html .= '<p>' . htmlspecialchars(TXT_667, ENT_QUOTES, 'UTF-8') . '</p>';
+            continue;
+        }
+        $html .= '<ol>';
+        foreach ($names as $name) {
+            $html .= '<li>' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '</li>';
+        }
+        $html .= '</ol>';
+    }
+    return $html . '</div>';
 }
 
 /**
@@ -786,10 +863,18 @@ function customFieldRecord(array $row): array
         'confirm' => $name . "\n" . TXT_400,
     ];
 
+    $meta = $row['field_type'] . ' · ' . $key . ' · ' . TXT_451 . ' ' . $row['enabled'];
+    if ($row['field_type'] == 'multiLevelMenu') {
+        $linked = linkedMenuNames((string)($row['menu_relationship'] ?? ''));
+        if ($linked !== []) {
+            $meta = implode(' → ', $linked) . ' · ' . $meta;
+        }
+    }
+
     return [
         'name' => $name,
         'href' => ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $id,
-        'meta' => $row['field_type'] . ' · ' . $key . ' · ' . TXT_451 . ' ' . $row['enabled'],
+        'meta' => $meta,
         'actions' => $actions,
     ];
 }
