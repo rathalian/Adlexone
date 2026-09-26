@@ -100,53 +100,124 @@ function showactionPackages(): void
 function showPackageactionList($actionPackage): void
 {
 	require_once 'actions/' . $actionPackage . '.actions.php';
-	$html = '';
 	$names = (isset($actionName) && is_array($actionName)) ? $actionName : [];
 	$descriptions = (isset($actionDescription) && is_array($actionDescription)) ? $actionDescription : [];
+	$rows = [];
 	foreach ($names as $descriptorName => $value) {
-		$url = RenderViews::buildURL(ACT_BASE_URL . '&option=new_action&action_package=' . $actionPackage . '&descriptor_name=' . $descriptorName, (string)$value, '', 'URL');
-		$html .= RenderViews::buildFormFieldsGrid([
-			TXT_299 => $url,
-			'' => htmlspecialchars((string)($descriptions[$descriptorName] ?? ''), ENT_QUOTES, 'UTF-8'),
-		]);
-		$html .= RenderViews::buildHorizontalSeparator();
+		$rows[] = [
+			'name' => (string)$value,
+			'href' => ACT_BASE_URL . '&option=new_action&action_package=' . rawurlencode((string)$actionPackage) . '&descriptor_name=' . rawurlencode((string)$descriptorName),
+			'meta' => (string)($descriptions[$descriptorName] ?? ''),
+		];
 	}
-	if ($html === '') {
-		$html = htmlspecialchars(TXT_412, ENT_QUOTES, 'UTF-8');
-	}
+	$html = RenderViews::buildRecordList([
+		'column' => TXT_299,
+		'searchLabel' => TXT_3,
+		'empty' => TXT_412,
+		'noMatch' => TXT_688,
+		'groups' => [['rows' => $rows]],
+	]);
 	$title = TXT_253 . ' - ' . str_replace('_', ' ', (string)$actionPackage);
 	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => $title, 'html' => $html]]));
 	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
+/**
+ * Friendly name and description for one descriptor inside an action package file.
+ *
+ * @return array{name: string, description: string}
+ */
+function definedActionDescriptor(string $packageFile, string $function): array
+{
+	static $cache = [];
+	if (!isset($cache[$packageFile])) {
+		$actionName = [];
+		$actionDescription = [];
+		$path = 'actions/' . basename($packageFile);
+		if (is_file($path)) {
+			require_once $path;
+		}
+		$cache[$packageFile] = [
+			'names' => is_array($actionName) ? $actionName : [],
+			'descriptions' => is_array($actionDescription) ? $actionDescription : [],
+		];
+	}
+
+	$name = (string)($cache[$packageFile]['names'][$function] ?? '');
+	$description = (string)($cache[$packageFile]['descriptions'][$function] ?? '');
+	if ($name === '') {
+		$name = trim((string)preg_replace('/(?<!^)([A-Z])/', ' $1', $function));
+	}
+
+	return ['name' => $name, 'description' => $description];
+}
+
 function showDefinedactions ()
 {
-	// Get defined actions from database and create a list
 	$columnArray = array('action_id', 'action_name', 'package_file', 'package_function');
-	$condition = 'ORDER BY package_file ASC';
-	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
+	$condition = 'ORDER BY package_file ASC, action_name ASC';
+	$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
 	$canDelete = $_SESSION['access_role_id'] <= 1;
 
-	if (Database::numRows($result) == 0) {
-		$html = htmlspecialchars(TXT_412, ENT_QUOTES, 'UTF-8');
-	} else {
-		$html = '';
+	$groups = [];
+	if ($result && Database::numRows($result) > 0) {
 		while ($row = Database::fetchArray($result)) {
-			$package = str_replace('_', ' ', str_replace('.actions.php', '', (string)$row['package_file'])) . ' - ' . $row['package_function'];
-			$fields = [
-				TXT_299 => RenderViews::buildURL(ACT_BASE_URL . '&option=defined_action&action_id=' . $row['action_id'], (string)$row['action_name'], '', 'URL'),
-				TXT_250 => htmlspecialchars($package, ENT_QUOTES, 'UTF-8'),
-			];
-			if ($canDelete) {
-				$fields[TXT_388] = RenderViews::buildURL(ACT_BASE_URL . '&option=delete_action&action_id=' . $row['action_id'], TXT_315, '', 'URL', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
-			}
-			$html .= RenderViews::buildFormFieldsGrid($fields);
-			$html .= RenderViews::buildHorizontalSeparator();
+			$groups[(string)$row['package_file']][] = $row;
 		}
 	}
 
+	$html = renderDefinedActionsList($groups, $canDelete);
 	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_83, 'html' => $html]]));
 	RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Searchable list of defined actions, grouped by package.
+ *
+ * @param array<string, array<int, array<string, mixed>>> $groups
+ */
+function renderDefinedActionsList(array $groups, bool $canDelete): string
+{
+	$listGroups = [];
+	foreach ($groups as $packageFile => $rows) {
+		usort($rows, static fn(array $a, array $b): int => strcasecmp((string)$a['action_name'], (string)$b['action_name']));
+		$packageLabel = str_replace('_', ' ', str_replace('.actions.php', '', $packageFile));
+		$listRows = [];
+		foreach ($rows as $row) {
+			$descriptor = definedActionDescriptor($packageFile, (string)$row['package_function']);
+			$actionName = (string)$row['action_name'];
+			$id = rawurlencode((string)$row['action_id']);
+			$record = [
+				'name' => $actionName,
+				'href' => ACT_BASE_URL . '&option=defined_action&action_id=' . $id,
+				'meta' => $descriptor['name'],
+				'metaTitle' => $descriptor['description'],
+				'search' => $descriptor['description'],
+			];
+			if ($canDelete) {
+				$record['actions'] = [[
+					'href' => ACT_BASE_URL . '&option=delete_action&action_id=' . $id,
+					'label' => TXT_315,
+					'tone' => 'danger',
+					'confirm' => $actionName . "\n" . TXT_400,
+				]];
+			}
+			$listRows[] = $record;
+		}
+		$listGroups[] = ['label' => $packageLabel, 'rows' => $listRows];
+	}
+
+	return RenderViews::buildRecordList([
+		'column' => TXT_299,
+		'searchLabel' => TXT_3,
+		'primary' => [
+			'href' => ACT_BASE_URL . '&option=show_action_packages',
+			'label' => TXT_255,
+		],
+		'empty' => TXT_412,
+		'noMatch' => TXT_688,
+		'groups' => $listGroups,
+	]);
 }
 function showDefinedaction ($actionID)
 {

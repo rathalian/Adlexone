@@ -562,38 +562,66 @@ function showUserGroupResults()
     $sql = Database::sqlSelect($table, $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
 
-    // Check if there are any results
-    if (Database::numRows($result) == 0) {
-        // No results found, no additional processing needed
-    } else {
-        // Process each row in the result set
+    $rows = [];
+    $isUsers = $table === 'users';
+    if ($result && Database::numRows($result) > 0) {
         while ($row = Database::fetchArray($result)) {
-            // Render different URLs for users and groups
-            if ($table == 'users') {
-                // Generate action links for user-related results
-                $fields[$row['first_name'] . ' ' . $row['last_name']] =
-                    RenderViews::buildURL(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $row['user_id'], TXT_154, 'URL') . ' - ' .
-                    RenderViews::buildURL(SEC_BASE_URL . '&option=modify_group_membership&user_id=' . $row['user_id'], TXT_238, 'URL') . ' - ' .
-                    RenderViews::buildURL(SEC_BASE_URL . '&option=delete_user&user_id=' . $row['user_id'], TXT_47, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
+            if ($isUsers) {
+                $name = trim((string)$row['first_name'] . ' ' . (string)$row['last_name']);
+                $userName = (string)$row['user_name'];
+                if ($name === '') {
+                    $name = $userName;
+                    $userName = '';
+                }
+                $id = rawurlencode((string)$row['user_id']);
+                $rows[] = [
+                    'name' => $name,
+                    'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
+                    'meta' => $userName,
+                    'actions' => [
+                        [
+                            'href' => SEC_BASE_URL . '&option=modify_group_membership&user_id=' . $id,
+                            'label' => TXT_238,
+                            'tone' => 'quiet',
+                        ],
+                        [
+                            'href' => SEC_BASE_URL . '&option=delete_user&user_id=' . $id,
+                            'label' => TXT_47,
+                            'tone' => 'danger',
+                            'confirm' => $name . "\n" . TXT_400,
+                        ],
+                    ],
+                ];
             } else {
-                // Generate action links for group-related results
-                $fields[$row['group_name']] =
-                    RenderViews::buildURL(SEC_BASE_URL . '&option=modify_group&group_id=' . $row['group_id'], TXT_36, 'URL') . ' - ' .
-                    RenderViews::buildURL(SEC_BASE_URL . '&option=delete_group&group_id=' . $row['group_id'], TXT_47, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"');
+                $name = (string)$row['group_name'];
+                $id = rawurlencode((string)$row['group_id']);
+                $rows[] = [
+                    'name' => $name,
+                    'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
+                    'actions' => [[
+                        'href' => SEC_BASE_URL . '&option=delete_group&group_id=' . $id,
+                        'label' => TXT_47,
+                        'tone' => 'danger',
+                        'confirm' => $name . "\n" . TXT_400,
+                    ]],
+                ];
             }
         }
-
-        // Prepare the content block for rendering the results
-        $bodyBlock = [
-            [
-                'title' => TXT_113, // Title for the results section
-                'html' => RenderViews::buildFormFieldsGrid($fields), // Render the results in a grid layout
-            ]
-        ];
-
-        // Render the results in a vertical content block
-        $html = RenderViews::buildVerticalCards($bodyBlock);
     }
+
+    $html = RenderViews::buildVerticalCards([[
+        'title' => TXT_113,
+        'html' => RenderViews::buildRecordList([
+            'column' => TXT_151,
+            'searchLabel' => TXT_3,
+            'primary' => $isUsers
+                ? ['href' => SEC_BASE_URL . '&option=new_user', 'label' => TXT_33]
+                : ['href' => SEC_BASE_URL . '&option=new_group', 'label' => TXT_34],
+            'empty' => TXT_115,
+            'noMatch' => TXT_689,
+            'groups' => [['rows' => $rows]],
+        ]),
+    ]]);
 
     // Define the BODY_CONTENT constant with the generated HTML
     define('BODY_CONTENT', $html);
