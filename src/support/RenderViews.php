@@ -120,8 +120,8 @@ class RenderViews
 
         // Determine the controller path
         $controllerPath = str_starts_with($controller, 'app_')
-            ? "app/http/controllers/applications/" . explode('_', $controller)[1] . "/controllers/"
-            : 'app/http/controllers/';
+            ? "app/Http/Controllers/Applications/" . explode('_', $controller)[1] . "/controllers/"
+            : 'app/Http/Controllers/';
 
         // Include the controller file
         include $controllerPath . $controller . '.php';

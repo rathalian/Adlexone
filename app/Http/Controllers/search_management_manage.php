@@ -1443,7 +1443,7 @@ function showAdvancedItemSearch($filter = '')
     }
 
     // Application Menu
-    $directory = opendir('app/http/controllers/applications/');
+    $directory = opendir('app/Http/Controllers/Applications/');
     $applicationFileArray = [];
     while ($a = readdir($directory)) {
         $appXMLFile = $a . '.xml';

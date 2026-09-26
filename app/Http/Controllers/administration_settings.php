@@ -66,13 +66,13 @@ function showAdlexoneSettings(): void
         closedir($directory);
     }
     $fields[TXT_182] = RenderViews::buildSelectDropdown('SET_DEFAULT_THEME', $themeArray, $themeArray, SET_DEFAULT_THEME);
-    $directories = opendir('app/http/controllers/applications/');
+    $directories = opendir('app/Http/Controllers/Applications/');
     $applicationFileArray = [];
     $i = 0;
     while ($a = readdir($directories)) {
         $appXMLFile = $a . '.xml';
-        if (is_file('app/http/controllers/applications/' . $a . '/' . $appXMLFile)) {
-            $applicationFileArray[$i++] = 'app/http/controllers/applications/' . $a . '/' . $appXMLFile;
+        if (is_file('app/Http/Controllers/Applications/' . $a . '/' . $appXMLFile)) {
+            $applicationFileArray[$i++] = 'app/Http/Controllers/Applications/' . $a . '/' . $appXMLFile;
         }
     }
     // If any applications are found read them and create the applications array to set a home page
