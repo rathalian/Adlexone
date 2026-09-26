@@ -668,18 +668,66 @@ function showFieldsAndTypes(): void
         '*',
         "WHERE field_type = 'multiLevelMenu' ORDER BY custom_field_name ASC"
     ));
-    $editId = (string)($menus[0]['custom_field_id'] ?? '');
+    $editId = requestedMultiLevelMenuId($menus);
 
-    define('BODY_CONTENT', RenderViews::buildVerticalCards([
-        [
+    $cards = [];
+    if ($editId !== '') {
+        $selected = array_values(array_filter(
+            $menus,
+            static fn(array $menu): bool => (string)$menu['custom_field_id'] === $editId
+        ));
+        $cards[] = [
             'id' => 'add-multilevel-menu',
-            'title' => TXT_658,
-            'html' => multiLevelRelationshipSummary($menus) . showMultiLevelMenu($editId, '', true),
-        ],
-        ['title' => TXT_53, 'html' => fieldRecordList($fieldRows)],
-        ['title' => TXT_50, 'html' => typeRecordList($typeRows)],
-    ]));
+            'title' => TXT_692,
+            'html' => multiLevelRelationshipSummary($selected) . showMultiLevelMenu($editId, '', true),
+        ];
+    }
+    $cards[] = ['title' => TXT_53, 'html' => fieldRecordList($fieldRows, multiLevelMenuManageButtons($menus))];
+    $cards[] = ['title' => TXT_50, 'html' => typeRecordList($typeRows)];
+
+    define('BODY_CONTENT', RenderViews::buildVerticalCards($cards));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * Multi-level menu id from the request, when it matches one of the menus.
+ *
+ * @param array<int, array<string, mixed>> $menus
+ */
+function requestedMultiLevelMenuId(array $menus): string
+{
+    $requested = (string)($_GET['multi_level_menu_id'] ?? '');
+    if ($requested === '' || !ctype_digit($requested)) {
+        return '';
+    }
+    foreach ($menus as $menu) {
+        if ((string)$menu['custom_field_id'] === $requested) {
+            return $requested;
+        }
+    }
+    return '';
+}
+
+/**
+ * Buttons that open this page with a specific multi-level menu selected.
+ *
+ * @param array<int, array<string, mixed>> $menus
+ * @return array<int, array{href: string, label: string}>
+ */
+function multiLevelMenuManageButtons(array $menus): array
+{
+    $buttons = [];
+    foreach ($menus as $menu) {
+        $id = (string)$menu['custom_field_id'];
+        $label = count($menus) === 1
+            ? TXT_692
+            : TXT_692 . ': ' . $menu['custom_field_name'];
+        $buttons[] = [
+            'href' => ITEM_BASE_URL . '&option=manage_fields_types&multi_level_menu_id=' . rawurlencode($id),
+            'label' => $label,
+        ];
+    }
+    return $buttons;
 }
 
 /**
@@ -751,13 +799,13 @@ function multiLevelRelationshipSummary(array $menus): string
 /**
  * @param array<int, array<string, mixed>> $rows
  */
-function fieldRecordList(array $rows): string
+function fieldRecordList(array $rows, array $buttons = []): string
 {
     return RenderViews::buildRecordList([
         'column' => TXT_151,
         'searchLabel' => TXT_3,
         'primary' => ['href' => ITEM_BASE_URL . '&option=new_custom_field', 'label' => TXT_88],
-        'buttons' => [['href' => ITEM_BASE_URL . '&option=manage_fields_types#add-multilevel-menu', 'label' => TXT_658]],
+        'buttons' => $buttons,
         'empty' => TXT_115,
         'noMatch' => TXT_689,
         'groups' => [['rows' => $rows]],
@@ -845,6 +893,11 @@ function customFieldRecord(array $row): array
         }
     }
     if ($row['field_type'] == 'multiLevelMenu') {
+        $actions[] = [
+            'href' => ITEM_BASE_URL . '&option=manage_fields_types&multi_level_menu_id=' . $id,
+            'label' => TXT_692,
+            'tone' => 'quiet',
+        ];
         $actions[] = [
             'href' => ITEM_BASE_URL . '&option=show_multilevel_menu&multi_level_menu_id=' . $id,
             'label' => TXT_660,
@@ -1317,6 +1370,7 @@ function addUpdateMultiLevelMenu($multiLevelMenuID)
     $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
     if ($returnToList) {
+        $_GET['multi_level_menu_id'] = (string)$multiLevelMenuID;
         showFieldsAndTypes();
         return;
     }
