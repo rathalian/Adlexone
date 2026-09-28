@@ -83,18 +83,9 @@ function showCustomField($customFieldID = '', $values = '')
 
     $fields[TXT_86] = RenderViews::buildTextInput('custom_field_name', @$fieldValues['custom_field_name']);
     $fields[TXT_210] = RenderViews::buildTextInput('default_value', @$fieldValues['default_value']);
-    $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'hidden', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu', 'dataSourceMenu');
-    $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_216, TXT_478, TXT_479, TXT_490, TXT_501, TXT_637);
+    $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'hidden', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu');
+    $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_216, TXT_478, TXT_479, TXT_490, TXT_501);
     $fields[TXT_65] = RenderViews::buildSelectDropdown('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
-    //lookup data source names
-    $i = 1;
-    if (defined('SET_DS_DATA_SOURCE_COUNT')) {
-        while ($i <= SET_DS_DATA_SOURCE_COUNT) {
-            $dataSourceName[] = constant('SET_DS_NAME_' . $i);
-            $i++;
-        }
-        $fields[TXT_636] = RenderViews::buildSelectDropdown('data_source_name', $dataSourceName, $dataSourceName, @$fieldValues['data_source_name']);
-    }
     $fields[TXT_477] = RenderViews::buildTextInput('data', @$fieldValues['data']);
     // Javascript field validation setup
     $fields[TXT_505] = RenderViews::buildSelectDropdown('required', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['required']);
@@ -289,7 +280,6 @@ function showItemType($itemTypeID, $values = [])
         'dynamicURL' => TXT_479,
         'workerField' => TXT_490,
         'workerFieldMenu' => TXT_501,
-        'dataSourceMenu' => TXT_637,
     ];
 
     $columnArray = ['*'];
@@ -559,7 +549,6 @@ function fieldRecordList(array $rows): string
     return RenderViews::buildRecordList([
         'column' => TXT_151,
         'searchLabel' => TXT_3,
-        'primary' => ['href' => 'index.php?controller=administration_item_settings&option=new_custom_field', 'label' => TXT_692],
         'empty' => TXT_115,
         'noMatch' => TXT_689,
         'groups' => [['rows' => $rows]],

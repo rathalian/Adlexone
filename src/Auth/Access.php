@@ -87,6 +87,13 @@ final class Access
         $permissions = self::permissionsForUser($userId);
         $_SESSION['access_permissions'] = $permissions;
         $_SESSION['access_role_id'] = self::legacyRoleFromPermissions($permissions);
+        $identity = Database::firstResultParams(
+            'SELECT user_name FROM users WHERE user_id = ?',
+            [$userId]
+        );
+        if ($identity !== null) {
+            $_SESSION['access_user_name'] = (string) ($identity['user_name'] ?? '');
+        }
     }
 
     /**

@@ -1023,7 +1023,6 @@ if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['
 
 function showSavedSearches($userID, $application = '')
 {
-    $bodyBlocks = [];
     if ($_SESSION['access_role_id'] <= '1') {
         $applicationClause = ($application != '') ? " WHERE application = '" . $application . "'" : "";
         $sql = "SELECT * FROM saved_searches $applicationClause ORDER BY search_name ASC";
@@ -1032,42 +1031,58 @@ function showSavedSearches($userID, $application = '')
         $sql = "SELECT * FROM saved_searches WHERE (user = '$userID' OR user = 'all') $applicationClause ORDER BY search_name ASC";
     }
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $i = 0;
+    $controller = basename((string)($_GET['controller'] ?? ''));
+    $base = 'index.php?controller=' . rawurlencode($controller) . '&subcontroller=search_management_manage';
+    $rows = [];
     if (Database::numRows($result) > 0) {
         while ($row = Database::fetchArray($result)) {
+            $href = $base . '&option=saved_search&id=' . rawurlencode((string)$row['search_id']);
+            $name = (string)$row['search_name'];
             if ($row['user'] == 'all') {
-                $searchUrl = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&global=1&id=' . $row['search_id'], $row['search_name'] . ' (' . TXT_408 . ')', 'URL');
-            } else {
-                $searchUrl = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['search_id'], $row['search_name'], 'URL');
+                $href .= '&global=1';
+                $name .= ' (' . TXT_408 . ')';
             }
-            if (($row['user'] == 'all' or $row['user'] == 'system') and $_SESSION['access_role_id'] <= 1) {
-                $url = $searchUrl . ' - (' . RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=delete_saved_search&id=' . $row['search_id'] . '&scope=global', TXT_315, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"') . ')';
-            } elseif ($row['user'] == $_SESSION['access_user_id']) {
-                $url = $searchUrl . ' - (' . RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=delete_saved_search&id=' . $row['search_id'], TXT_315, 'URL', '', 'onClick="javascript:return confirm(\'' . TXT_400 . '\')"') . ')';
-            } else {
-                $url = $searchUrl;
+            $actions = [];
+            $canDeleteGlobal = ($row['user'] == 'all' || $row['user'] == 'system') && (int)$_SESSION['access_role_id'] <= 1;
+            $canDeleteOwn = (string)$row['user'] === (string)$_SESSION['access_user_id'];
+            if ($canDeleteGlobal || $canDeleteOwn) {
+                $deleteHref = $base . '&option=delete_saved_search&id=' . rawurlencode((string)$row['search_id']);
+                if ($canDeleteGlobal) {
+                    $deleteHref .= '&scope=global';
+                }
+                $actions[] = [
+                    'href' => $deleteHref,
+                    'label' => TXT_315,
+                    'tone' => 'danger',
+                    'confirm' => TXT_400,
+                ];
             }
-            if ($_SESSION['access_role_id'] == 0) {
-                $editURL = ' - (' . RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=edit_saved_search&id=' . $row['search_id'], TXT_626, 'URL') . ')';
-                $url .= $editURL;
+            if ((int)$_SESSION['access_role_id'] === 0) {
+                $actions[] = [
+                    'href' => $base . '&option=edit_saved_search&id=' . rawurlencode((string)$row['search_id']),
+                    'label' => TXT_626,
+                ];
             }
-            $savedSearch = $url . '<br><br>' . $row['search_description'];
-            $i++;
-            $bodyBlocks[] = [
-                'title' => $row['search_name'],
-                'html' => $savedSearch,
-                'full' => false,
+            $rows[] = [
+                'name' => $name,
+                'href' => $href,
+                'meta' => (string)($row['search_description'] ?? ''),
+                'actions' => $actions,
             ];
         }
-    } else {
-        $bodyBlocks[] = [
-            'title' => TXT_313,
-            'html' => TXT_115,
-            'full' => true,
-        ];
     }
-    define('BODY_CONTENT', RenderViews::buildVerticalCards($bodyBlocks));
-    // define('HEADING', TXT_313);
+    $list = RenderViews::buildRecordList([
+        'column' => TXT_151,
+        'searchLabel' => TXT_3,
+        'empty' => TXT_115,
+        'groups' => [['rows' => $rows]],
+    ]);
+    define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        [
+            'title' => TXT_313,
+            'html' => $list,
+        ],
+    ]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 

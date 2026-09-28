@@ -93,6 +93,8 @@ APP_HDSK_TXT_80 = "Update Service Centre Settings"
 APP_HDSK_TXT_81 = "Show Quick Launch"
 APP_HDSK_TXT_82 = "Show Portal"
 APP_HDSK_TXT_83 = "New Announcement"
+APP_HDSK_TXT_84 = "Choose a saved search, or open Quick Ticket Search."
+APP_HDSK_TXT_85 = "No announcements yet."
 ;******************************************************************************
 ;
 ; Special language constants that have associated Adlexone language constants (i.e. APP_HDSK_LA_1 = TXT_1)

@@ -227,32 +227,6 @@ document.addEventListener('click', (e) => {
         if (!isMatch) return;
 
         a.classList.add('is-current');
-
-        // Ensure first-letter gradient is visible even with icons/markup
-        if (a.querySelector('.urlcap')) return;
-
-        const full = (a.textContent || '').replace(/\s+/g, ' ').trim();
-        if (!full) return;
-
-        const first = full.charAt(0);
-        const rest  = full.slice(1);
-
-        // Remove text-bearing nodes; keep pure icon nodes
-        const toRemove = [];
-        a.childNodes.forEach(n => {
-            if (n.nodeType === 3 && n.nodeValue.trim()) toRemove.push(n);
-            else if (n.nodeType === 1 && n.textContent.trim()) toRemove.push(n);
-        });
-        toRemove.forEach(n => n.remove());
-
-        const cap = document.createElement('span');
-        cap.className = 'urlcap';
-        cap.textContent = first;
-
-        const label = document.createElement('span');
-        label.className = 'urllabel';
-        label.append(cap, document.createTextNode(rest));
-        a.append(label);
     });
 })();
 

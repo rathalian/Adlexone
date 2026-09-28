@@ -194,8 +194,6 @@ final class RenderNavigation
     {
         $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
         $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_item_types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88, 'ic-custom-field-add'), Permission::ADMIN_ITEMS);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_item_type', TXT_85, 'ic-itemtype-add'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
@@ -220,17 +218,11 @@ final class RenderNavigation
     {
         $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=inbound_email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=ldap_settings', TXT_43,'ic-ldap'), Permission::ADMIN_SYSTEM);
-
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=autologon_settings', TXT_536,'ic-autologon'), Permission::ADMIN_SETTINGS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
 
         $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
-
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_sharing_settings', TXT_415, 'ic-data-sharing'), Permission::ADMIN_SYSTEM);
-
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_source_settings', TXT_631, 'ic-data-source'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }
@@ -516,6 +508,9 @@ final class RenderNavigation
         if (defined('APP_SECTION_NAV')) {
             return;
         }
+        if (!defined('PAGE_EYEBROW')) {
+            define('PAGE_EYEBROW', $label);
+        }
         $built = self::build([$label => $linksHtml]);
         define('APP_SECTION_NAV', self::sectionNav($built[$label] ?? [], $label));
     }
@@ -540,13 +535,22 @@ final class RenderNavigation
             if (preg_match('/<svg\b.*?<\/svg>/s', $inner, $match) === 1) {
                 $icon = $match[0];
             }
-            $html .= '<a class="sectionnav__link" href="' . self::e($href) . '"' . $current . '>'
+            $group = self::sectionNavGroup($href) ? ' sectionnav__link--group' : '';
+            $html .= '<a class="sectionnav__link' . $group . '" href="' . self::e($href) . '"' . $current . '>'
                 . $icon
                 . '<span class="sectionnav__label">' . self::e(trim((string)($lnk['label'] ?? ''))) . '</span></a>';
         }
         $html .= '</nav>';
 
         return $html;
+    }
+
+    private static function sectionNavGroup(string $href): bool
+    {
+        return str_contains($href, 'option=show_item_types')
+            || str_contains($href, 'option=show_search')
+            || str_contains($href, 'option=helpdesk_settings')
+            || str_contains($href, 'option=knowledgebase_settings');
     }
 
     private static function linkIsCurrent(string $href): bool

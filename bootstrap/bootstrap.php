@@ -78,8 +78,10 @@ define('FULL_SCRIPT_PATH', $protocol . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SEL
 
 // Set default values
 if (!defined('SET_DEFAULT_THEME')) {
-    // define('SET_DEFAULT_THEME', 'aims');
     define('SET_DEFAULT_THEME', 'new');
+}
+if (!defined('SET_DEFAULT_LANGUAGE')) {
+    define('SET_DEFAULT_LANGUAGE', 'English');
 }
 
 // Apply addslashesRecursive() to all data and strip scripts

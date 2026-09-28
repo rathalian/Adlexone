@@ -9,8 +9,8 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Adlexone</title>
-    <meta name="color-scheme" content="light dark">
+    <title><?php echo htmlspecialchars((defined('PAGE_TITLE') && PAGE_TITLE !== '' ? PAGE_TITLE . ' — Adlexone' : 'Adlexone'), ENT_QUOTES, 'UTF-8'); ?></title>
+    <meta name="color-scheme" content="light">
     <link rel="icon" href="themes/new/assets/brand/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="themes/new/css/style.css">
 </head>
@@ -25,7 +25,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                           fill="white"/>
                 </svg>
             </div>
-            <div class="brandtext"><span class="title-static">dlexone</span></div>
+            <div class="brandtext"><span class="title-static">Adlexone</span></div>
         </div>
         </a>
 
@@ -59,17 +59,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                     . '<span>' . htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') . '</span></a>';
             };
             $appLabel = 'Applications';
-            foreach (array_merge($applications, [$quickLaunch]) as $item) {
-                if ($matchesController($item['controller'])) {
-                    $appLabel = $item['label'];
-                }
-            }
             $manageLabel = 'Manage';
-            foreach ($manageItems as $item) {
-                if ($matchesController($item['controller'])) {
-                    $manageLabel = $item['label'];
-                }
-            }
             $chevron = '<svg class="chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6"/></svg>';
             ?>
             <div class="menu" data-menu>
@@ -90,6 +80,12 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                     } ?>
                 </div>
             </div>
+            <?php
+            $signedInName = trim((string)($_SESSION['access_user_name'] ?? ''));
+            if ($signedInName !== ''):
+            ?>
+            <span class="topnav__user"><?php echo htmlspecialchars((defined('TXT_6') ? TXT_6 . ' ' : '') . $signedInName, ENT_QUOTES, 'UTF-8'); ?></span>
+            <?php endif; ?>
             <a class="topnav__logout" href="?action=logoff" aria-label="Logout">
                 <svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
                 <span class="topnav__logout-label">Logout</span>
@@ -102,17 +98,22 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
 <!--    <div class="underline" aria-hidden="true"></div>-->
 </div>
 
+<?php if (defined('PAGE_TITLE') && PAGE_TITLE !== ''): ?>
+<header class="pagehead">
+    <?php if (defined('PAGE_EYEBROW') && PAGE_EYEBROW !== ''): ?>
+        <p class="pagehead__eyebrow"><?php echo htmlspecialchars(PAGE_EYEBROW, ENT_QUOTES, 'UTF-8'); ?></p>
+    <?php endif; ?>
+    <h1 class="pagehead__title"><?php echo htmlspecialchars(PAGE_TITLE, ENT_QUOTES, 'UTF-8'); ?></h1>
+</header>
+<?php endif; ?>
+
 <!-- Main content area rendered by the controller -->
 <?php echo $pageBody; ?>
 
-    <p class="modal-footer">
-        &nbsp;
-    </p>
-    <p align="center" class="modal-footer">
-        Adlexone Version <?php echo VERSION; ?>
-        <br>
-        <a href="http://www.adlexone.com" target="_blank">&copy;2025 Adlexone</a></span>
-    </p>
+<footer class="app-footer">
+    <span>Adlexone <?php echo htmlspecialchars((string)VERSION, ENT_QUOTES, 'UTF-8'); ?></span>
+    <a href="https://www.adlexone.com" target="_blank" rel="noopener">&copy;<?php echo date('Y'); ?> Adlexone</a>
+</footer>
 <script src="themes/new/js/app.js" defer></script>
 </body>
 </html>

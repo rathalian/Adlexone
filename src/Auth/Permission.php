@@ -38,7 +38,7 @@ final class Permission
     {
         return [
             self::ADMIN_SYSTEM => [
-                'label' => 'System configuration (advanced, LDAP, inbound email, data links)',
+                'label' => 'System configuration (sign-in, advanced settings, and outbound email)',
                 'legacy_max_role' => 0,
             ],
             self::ADMIN_SETTINGS => [

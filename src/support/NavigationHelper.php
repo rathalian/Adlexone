@@ -225,17 +225,11 @@ final class NavigationHelper
 
         $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), $_SESSION['access_role_id'], 1);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=inbound_email_settings', TXT_565,'ic-inbound-email'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), $_SESSION['access_role_id'], 0);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&&option=ldap_settings', TXT_43,'ic-ldap'), $_SESSION['access_role_id'], 0);
-
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=autologon_settings', TXT_536,'ic-autologon'), $_SESSION['access_role_id'], 1);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=email_settings', TXT_565,'ic-inbound-email'), $_SESSION['access_role_id'], 0);
 
         $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=advanced_settings', TXT_130, 'ic-advanced'), $_SESSION['access_role_id'], 0);
-
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_sharing_settings', TXT_415, 'ic-data-sharing'), $_SESSION['access_role_id'], 0);
-
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_source_settings', TXT_631, 'ic-data-source'), $_SESSION['access_role_id'], 0);
 
         return $html;
 

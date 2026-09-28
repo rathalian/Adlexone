@@ -201,11 +201,25 @@ class RenderViews
      */
     public static function buildVerticalCards(array $bodyBlocks): string
     {
+        $titles = [];
+        foreach ($bodyBlocks as $b) {
+            $rawTitle = trim((string)($b['title'] ?? ''));
+            if ($rawTitle !== '') {
+                $titles[] = $rawTitle;
+            }
+        }
+        $liftTitle = count($bodyBlocks) === 1
+            && count($titles) === 1
+            && !defined('PAGE_TITLE');
+        if ($liftTitle) {
+            define('PAGE_TITLE', trim(html_entity_decode(strip_tags($titles[0]), ENT_QUOTES, 'UTF-8')));
+        }
+
         $html = '<div class="grid">';
         foreach ($bodyBlocks as $b) {
             $title = isset($b['title']) ? htmlspecialchars((string)$b['title'], ENT_QUOTES, 'UTF-8') : '';
             $html .= '<section class="card span-2">';                      // full width always
-            if ($title !== '') {
+            if ($title !== '' && !$liftTitle) {
                 $html .= '<div class="card-title">' . $title . '</div>';
             }
             $html .= '<div class="form-block">';                         // consistent inner padding/visual
@@ -385,14 +399,47 @@ class RenderViews
     public static function buildFormFieldsGrid(array $labelFormElementArray): string
     {
         $html = '<div class="form-grid">';
+        $fieldIndex = 0;
         foreach ($labelFormElementArray as $label => $element) {
-            $html .= '<div class="field is-inline">';
-            $html .= !empty($label) ? '<label class="label">' . htmlspecialchars((string)$label) . '</label>' : '';
+            $fieldIndex++;
+            $labelText = trim((string)$label);
+            if ($labelText === '') {
+                $html .= $element;
+                continue;
+            }
+            [$element, $controlId] = self::associateControlId((string)$element, 'field-' . $fieldIndex);
+            $for = $controlId !== '' ? ' for="' . htmlspecialchars($controlId, ENT_QUOTES, 'UTF-8') . '"' : '';
+            $html .= '<div class="field">';
+            $html .= '<label class="label"' . $for . '>' . htmlspecialchars($labelText, ENT_QUOTES, 'UTF-8') . '</label>';
             $html .= $element;
             $html .= '</div>';
         }
         $html .= '</div>';
         return $html;
+    }
+
+    /**
+     * Point the field label at the first control when that control has no id yet.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function associateControlId(string $element, string $fallbackId): array
+    {
+        if (preg_match('/\bid="([^"]+)"/', $element, $match) === 1) {
+            return [$element, $match[1]];
+        }
+        $updated = preg_replace(
+            '/<(input|select|textarea)\b/',
+            '<$1 id="' . htmlspecialchars($fallbackId, ENT_QUOTES, 'UTF-8') . '"',
+            $element,
+            1
+        );
+
+        if (!is_string($updated) || $updated === $element) {
+            return [$element, ''];
+        }
+
+        return [$updated, $fallbackId];
     }
 
     /**
@@ -839,24 +886,54 @@ class RenderViews
      */
     public static function buildResponse(string $text, $url = ''): void
     {
-
-        // Build the content block, omitting 'html' when no URL/content is provided
-        $block = ['title' => $text];
-
-        if ($url !== null && trim((string)$url) !== '') {
-            $block['html'] = (string)$url;
+        $message = trim($text);
+        if (!defined('PAGE_TITLE')) {
+            define('PAGE_TITLE', $message);
         }
 
-        $bodyBlocks = [$block];
+        $detail = trim((string)$url);
+        $follow = $detail !== '' ? self::formatResponseDetail($detail) : self::responseBackLink();
+        $body = $follow !== '' ? '<div class="response" role="status">' . $follow . '</div>' : '';
 
-        // Render the content blocks in a vertical layout
-        $bodyContent = self::buildVerticalCards($bodyBlocks);
-
-        // Define the BODY_CONTENT constant with the generated HTML
-        define('BODY_CONTENT', $bodyContent);
-
-        // Include the main page layout
+        define('BODY_CONTENT', $body);
         self::renderThemePage('main_page_content', SET_THEME);
+    }
+
+    /**
+     * Supporting copy stays as text. A link built by this class stays HTML so it can be styled as an action.
+     */
+    private static function formatResponseDetail(string $detail): string
+    {
+        if (str_contains($detail, '<a ')) {
+            return $detail;
+        }
+
+        return '<p class="response__detail">' . htmlspecialchars($detail, ENT_QUOTES, 'UTF-8') . '</p>';
+    }
+
+    /**
+     * When a response has no follow-up of its own, offer a way back to the form that posted it.
+     */
+    private static function responseBackLink(): string
+    {
+        $referer = (string)($_SERVER['HTTP_REFERER'] ?? '');
+        $parts = parse_url($referer);
+        if (!is_array($parts)) {
+            return '';
+        }
+        $host = (string)($parts['host'] ?? '');
+        $serverHost = (string)($_SERVER['HTTP_HOST'] ?? '');
+        if ($host !== '' && strcasecmp($host, preg_replace('/:\d+$/', '', $serverHost) ?? $serverHost) !== 0) {
+            return '';
+        }
+        $path = (string)($parts['path'] ?? '');
+        if (!str_ends_with($path, 'index.php')) {
+            return '';
+        }
+        $href = 'index.php' . (isset($parts['query']) ? '?' . $parts['query'] : '');
+        $label = defined('TXT_31') ? TXT_31 : 'Back';
+
+        return self::buildURL($href, $label, '', 'btn btn--primary btn--sm');
     }
 
     /**

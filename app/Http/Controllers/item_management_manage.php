@@ -395,6 +395,9 @@ function showItemAdd($itemTypeID, $values)
         $sql = Database::sqlSelect('item_types', $columnArray, $condition);
         $result = Database::query($sql, DSN, SET_SHOW_SQL);
         $itemTypeFields = Database::fetchArray($result);
+        if (!is_array($itemTypeFields)) {
+            $itemTypeFields = [];
+        }
     } else {
         // Use passed in values.  Only occurs when user comes back to incomplete form
         // as original item type is pass in from item type selection page is no more
@@ -409,6 +412,21 @@ function showItemAdd($itemTypeID, $values)
     $sql = Database::sqlSelect('item_types', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     $row = Database::fetchArray($result);
+    if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
+        $picker = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? 'item_management_manage'))
+            . '&subcontroller=item_management_manage&option=show_item_types';
+        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+            [
+                'title' => TXT_68,
+                'html' => '<p class="record-list__empty">' . htmlspecialchars(TXT_68, ENT_QUOTES, 'UTF-8') . '</p>'
+                    . '<div class="form-actions">'
+                    . RenderViews::buildURL($picker, TXT_69, '', 'btn btn--primary btn--sm')
+                    . '</div>',
+            ],
+        ]));
+        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        return;
+    }
     $itemTypeName = $row['item_type_name'];
     if ($_SESSION['access_role_id'] <= 2) {//Admin, FlowIQ Admin, Global FlowIQ Admin have write access
         $itemRole = 2;
@@ -484,29 +502,38 @@ function showItemAdd($itemTypeID, $values)
         }
     }
     // Create group membership list
-    $groupArray = explode('}-{', $itemTypeFields['group_security']);
-    $i = 0;
-    foreach ($groupArray as $a) {
-        if ($i == 0) {
-            $condition = "WHERE group_id='" . $a . "'";
-        } else {
-            $condition .= " OR group_id='" . $a . "'";
-        }
-        $i++;
-    }
-    $columnArray = array('group_id', 'group_name');
-    $sql = Database::sqlSelect('groups', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $i = 0;
     $groupMembership = '';
-    while ($row = Database::fetchArray($result)) {
-        if ($i == 0) {
-            $groupMembership = $row['group_name'];
-        } else {
-            $groupMembership .= ', ' . $row['group_name'];
+    $groupSecurity = (string)($itemTypeFields['group_security'] ?? '');
+    if ($groupSecurity !== '') {
+        $groupArray = explode('}-{', $groupSecurity);
+        $i = 0;
+        $condition = '';
+        foreach ($groupArray as $a) {
+            if ($a === '') {
+                continue;
+            }
+            if ($i == 0) {
+                $condition = "WHERE group_id='" . $a . "'";
+            } else {
+                $condition .= " OR group_id='" . $a . "'";
+            }
+            $i++;
         }
-        $i++;
-    }// while
+        if ($condition !== '') {
+            $columnArray = array('group_id', 'group_name');
+            $sql = Database::sqlSelect('groups', $columnArray, $condition);
+            $result = Database::query($sql, DSN, SET_SHOW_SQL);
+            $i = 0;
+            while ($row = Database::fetchArray($result)) {
+                if ($i == 0) {
+                    $groupMembership = $row['group_name'];
+                } else {
+                    $groupMembership .= ', ' . $row['group_name'];
+                }
+                $i++;
+            }
+        }
+    }
     $fields[TXT_270] = RenderViews::buildTextInput('group_security', $groupMembership, '', true);
     $fields[TXT_84] = RenderViews::buildTextInput('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
     $columnArray = array('custom_field_id');
@@ -660,36 +687,17 @@ function showItemAdd($itemTypeID, $values)
                 $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('worker_field_menu_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValueArray['default_value']);
                 unset($menuArray);
                 break;
-            case 'dataSourceMenu' :
-                //lookup data source name
-                $i = 1;
-                while ($i <= SET_DS_DATA_SOURCE_COUNT) {
-                    if (constant('SET_DS_NAME_' . $i) == $row['data_source_name']) {
-                        $dataSourceDSN = 'Driver={' . constant('SET_DS_DRIVER_' . $i) . '};Server=[' . constant('SET_DS_DATABASE_HOST_' . $i) . '];Database=[' . constant('SET_DS_DATABASE_NAME_' . $i) . '];UID=[' . constant('SET_DS_DATABASE_USER_' . $i) . '];PWD=[' . constant('SET_DS_DATABASE_PWD_' . $i) . '];Port=[' . constant('SET_DS_DATABASE_PORT_' . $i) . ']';
-                        break;
-                    }
-                    $i++;
-                }
-                $sql = constant('SET_DS_SQL_' . $i);
-                $result = Database::query($sql, $dataSourceDSN, SET_SHOW_SQL);
-                // Build buildSelectDropdown array
-                while ($menuRow = Database::fetchArray($result)) {
-                    $valueArray[] = $menuRow[0];
-                    $displayArray[] = $menuRow[1];
-                }// while
-                $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $row['custom_field_id'], @$valueArray, @$displayArray, $defaultValue);
-                unset($valueArray, $displayArray);
-                break;
             default :
                 break;
         }
     }
 
+    $fields[''] = RenderViews::buildHiddenInput('item_type_id', (string)$itemTypeFields['item_type_id']);
+    $formOptions = [];
     if (ADD_ATTACHMENTS == 'yes') {
-        $attachmentField[TXT_393] = RenderViews::buildFileInput('attachment', SET_MAX_ATTACHMENT * 1000000, '', 'btn btn-default');
-        $html .= RenderViews::buildFormFieldsGrid($attachmentField);
+        $fields[TXT_393] = RenderViews::buildFileInput('attachment', SET_MAX_ATTACHMENT * 1000000);
+        $formOptions['enctype'] = 'multipart/form-data';
     }
-    $html .= RenderViews::buildHiddenInput('item_type_id', $itemTypeFields['item_type_id']);
     //Javascript field validation
     if (@$JSValidation[2] == "") {
         $jsFieldNameArray = ",['item_title']";
@@ -730,7 +738,7 @@ function showItemAdd($itemTypeID, $values)
 
     $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_57, $javascript);
-    $bodyContent = RenderViews::buildForm(RenderViews::getLanguageConstant('LA_67', 'TXT_67') . ' - ' . $itemTypeName,MAN_BASE_URL. '&option=add_item',$fields,$buttons);
+    $bodyContent = RenderViews::buildForm(RenderViews::getLanguageConstant('LA_67', 'TXT_67') . ' - ' . $itemTypeName,MAN_BASE_URL. '&option=add_item',$fields,$buttons,$formOptions);
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -1085,26 +1093,6 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                         }// while
                         $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('worker_field_menu_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValueArray['default_value']);
                         unset($menuArray);
-                        break;
-                    case 'dataSourceMenu' :
-                        //lookup data source name
-                        $i = 1;
-                        while ($i <= SET_DS_DATA_SOURCE_COUNT) {
-                            if (constant('SET_DS_NAME_' . $i) == $row['data_source_name']) {
-                                $dataSourceDSN = 'Driver={' . constant('SET_DS_DRIVER_' . $i) . '};Server=[' . constant('SET_DS_DATABASE_HOST_' . $i) . '];Database=[' . constant('SET_DS_DATABASE_NAME_' . $i) . '];UID=[' . constant('SET_DS_DATABASE_USER_' . $i) . '];PWD=[' . constant('SET_DS_DATABASE_PWD_' . $i) . '];Port=[' . constant('SET_DS_DATABASE_PORT_' . $i) . ']';
-                                break;
-                            }
-                            $i++;
-                        }
-                        $sql = constant('SET_DS_SQL_' . $i);
-                        $result = Database::query($sql, $dataSourceDSN, SET_SHOW_SQL);
-                        // Build buildSelectDropdown array
-                        while ($menuRow = Database::fetchArray($result)) {
-                            $valueArray[] = $menuRow[0];
-                            $displayArray[] = $menuRow[1];
-                        }// while
-                        $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('custom_field_' . $row['custom_field_id'], @$valueArray, @$displayArray, $menuValue, 'form-control');
-                        unset($valueArray, $displayArray);
                         break;
                     default :
                         break;
@@ -1922,7 +1910,17 @@ switch (@$_GET['option']) {
         break;
     case 'new_item' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-        showItemAdd($_POST['item_type_id'], $_POST);
+        $itemTypeId = $_POST['item_type_id'] ?? $_GET['item_type_id'] ?? '';
+        if ($itemTypeId === '' || $itemTypeId === null) {
+            $target = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? 'item_management_manage'))
+                . '&subcontroller=item_management_manage&option=show_item_types';
+            if (defined('HELPDESK_SET_ITEM_TYPE') && (string)HELPDESK_SET_ITEM_TYPE !== '') {
+                $target .= '&default_item_type=' . rawurlencode((string)HELPDESK_SET_ITEM_TYPE);
+            }
+            header('Location: ' . $target);
+            exit;
+        }
+        showItemAdd($itemTypeId, $_POST);
         break;
     case 'add_item' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);

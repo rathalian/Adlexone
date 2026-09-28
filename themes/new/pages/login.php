@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Adlexone — Sign in</title>
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="light">
     <link rel="icon" href="themes/new/assets/brand/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="themes/new/css/style.css">
 </head>
@@ -18,7 +18,7 @@
                           fill="white"/>
                 </svg>
             </div>
-            <div class="brandtext"><span class="title-static">dlexone</span></div>
+            <div class="brandtext"><span class="title-static">Adlexone</span></div>
         </div>
     </div>
     <div class="underline" aria-hidden="true"></div>
@@ -81,7 +81,7 @@
                     <?php endif; ?>
 
                     <?php if (!AUTH_PAGE_SHOW_OAUTH && !AUTH_PAGE_SHOW_LOCAL): ?>
-                        <p class="login-lead">No sign-in methods are turned on. An administrator can enable username sign-in or OAuth in <code>config/auth_settings.json</code>.</p>
+                        <p class="login-lead">No sign-in methods are turned on. An administrator can enable username sign-in or an identity provider under Settings, Sign-in.</p>
                     <?php endif; ?>
                 </section>
             <?php endif; ?>
@@ -89,11 +89,10 @@
     </div>
 </main>
 
-<p align="center" class="modal-footer">
-    Adlexone Version <?php echo VERSION; ?>
-    <br>
-    <a href="http://www.adlexone.com" target="_blank">&copy;2025 Adlexone</a>
-</p>
+<footer class="app-footer">
+    <span>Adlexone <?php echo htmlspecialchars((string)VERSION, ENT_QUOTES, 'UTF-8'); ?></span>
+    <a href="https://www.adlexone.com" target="_blank" rel="noopener">&copy;<?php echo date('Y'); ?> Adlexone</a>
+</footer>
 <script src="themes/new/js/app.js" defer></script>
 </body>
 </html>

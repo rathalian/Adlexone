@@ -351,23 +351,32 @@ function showAnnouncements($userID = '')
         $editURL = $deleteURL = '';
 
         if ($_SESSION['access_role_id'] < 2) {
-            $editURL = RenderViews::buildURL('index.php?controller=app_oneorzerohelpdesk_main&option=edit_announcement&id=' . $row['id'], APP_HDSK_TXT_22, '', 'link URL');
+            $editURL = RenderViews::buildURL(
+                'index.php?controller=app_oneorzerohelpdesk_main&option=edit_announcement&id=' . $row['id'],
+                APP_HDSK_TXT_22,
+                '',
+                'btn btn--sm btn--quiet'
+            );
             $deleteURL = RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&option=delete_announcement&id=' . $row['id'],
                 TXT_47,
                 '',
-                'link URL',
+                'btn btn--sm btn--danger',
                 'onClick="return confirm(\'' . TXT_400 . '\')"'
             );
         }
-        $bodyBlock = [
-            [
-                'title' => '',
-                'html' => '<strong>'.$row['subject'].'</strong>.<br/>'.$row['message']. RenderViews::buildHorizontalSeparator(). '('.date(SET_DATE_FORMAT, $row['time']) . ')'.'&nbsp-&nbsp'.$editURL .'&nbsp-&nbsp'. $deleteURL,
-            ]
-        ];
-        $html .= RenderViews::buildHorizontalCards($bodyBlock).'<br />';
+        $actions = ($editURL !== '' || $deleteURL !== '')
+            ? '<div class="announcement__actions">' . $editURL . $deleteURL . '</div>'
+            : '';
+        $html .= '<article class="announcement">'
+            . '<h2 class="announcement__subject">' . htmlspecialchars((string)$row['subject'], ENT_QUOTES, 'UTF-8') . '</h2>'
+            . '<div class="announcement__body">' . $row['message'] . '</div>'
+            . '<div class="announcement__meta"><time>' . htmlspecialchars(date(SET_DATE_FORMAT, (int)$row['time']), ENT_QUOTES, 'UTF-8') . '</time>' . $actions . '</div>'
+            . '</article>';
+    }
 
+    if ($html === '') {
+        $html = '<p class="record-list__empty">' . htmlspecialchars(APP_HDSK_TXT_85, ENT_QUOTES, 'UTF-8') . '</p>';
     }
 
     $bodyBlock = [
@@ -674,10 +683,16 @@ function showSearchItems($id, $userID, $rss = false)
         define('BODY_CONTENT', $bodyContent);
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     } else {
+        $quickSearch = 'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_quick_search';
+        $savedSearches = 'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_saved_searches';
         $bodyBlock = [
             [
                 'title' => APP_HDSK_TXT_78,
-                'html' => '',
+                'html' => '<p class="record-list__empty">' . htmlspecialchars(APP_HDSK_TXT_84, ENT_QUOTES, 'UTF-8') . '</p>'
+                    . '<div class="form-actions">'
+                    . RenderViews::buildURL($quickSearch, APP_HDSK_TXT_62, '', 'btn btn--primary btn--sm')
+                    . RenderViews::buildURL($savedSearches, APP_HDSK_TXT_60, '', 'btn btn--sm')
+                    . '</div>',
             ]
         ];
         $bodyContent = RenderViews::buildVerticalCards($bodyBlock);
