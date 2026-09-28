@@ -172,6 +172,25 @@ const isMobile = () => !mqDesktop.matches;
     });
 })();
 
+/* Section links — fade the edge when the row scrolls */
+(() => {
+    const navs = Array.from(document.querySelectorAll('.sectionnav'));
+    if (!navs.length) return;
+
+    const update = () => {
+        navs.forEach((nav) => {
+            const overflows = nav.scrollWidth > nav.clientWidth + 1;
+            const atEnd = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 2;
+            nav.classList.toggle('is-overflowing', overflows);
+            nav.classList.toggle('is-scrolled-end', atEnd);
+        });
+    };
+
+    navs.forEach((nav) => nav.addEventListener('scroll', update, { passive: true }));
+    window.addEventListener('resize', update);
+    update();
+})();
+
 /* 5) NEW — Delegated toggle for any [aria-controls] button (More/Dropdowns) */
 document.addEventListener('click', (e) => {
     const btn = e.target.closest('button[aria-controls]');
