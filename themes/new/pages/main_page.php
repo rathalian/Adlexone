@@ -40,7 +40,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                 return is_string($prefix) && $prefix !== $controller && str_starts_with($currentController, $prefix);
             };
             $applications = [
-                ['label' => 'Service Centre', 'href' => '?controller=app_oneorzerohelpdesk_main', 'icon' => 'ic-helpdesk', 'controller' => 'app_oneorzerohelpdesk_main'],
+                ['label' => 'Service Centre', 'href' => '?controller=app_servicecentre_main', 'icon' => 'ic-servicecentre', 'controller' => 'app_servicecentre_main'],
                 ['label' => 'Knowledge Hub', 'href' => '?controller=app_oneorzeroknowledgebase_main', 'icon' => 'ic-knowledgebase', 'controller' => 'app_oneorzeroknowledgebase_main'],
                 ['label' => 'Report Manager', 'href' => '?controller=app_oneorzeroreportmanager_main', 'icon' => 'ic-search', 'controller' => 'app_oneorzeroreportmanager_main'],
                 ['label' => 'Time Manager', 'href' => '?controller=app_oneorzerotimemanager_main', 'icon' => 'ic-time', 'controller' => 'app_oneorzerotimemanager_main'],

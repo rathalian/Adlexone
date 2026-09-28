@@ -17,10 +17,10 @@ final class Permission
     public const ADMIN_ACTIONS = 'admin.actions';
     public const ADMIN_ITEMS = 'admin.items';
 
-    public const HELPDESK_USE = 'helpdesk.use';
-    public const HELPDESK_SEARCH = 'helpdesk.search';
-    public const HELPDESK_ANNOUNCE = 'helpdesk.announce';
-    public const HELPDESK_SETTINGS = 'helpdesk.settings';
+    public const SERVICECENTRE_USE = 'servicecentre.use';
+    public const SERVICECENTRE_SEARCH = 'servicecentre.search';
+    public const SERVICECENTRE_ANNOUNCE = 'servicecentre.announce';
+    public const SERVICECENTRE_SETTINGS = 'servicecentre.settings';
 
     public const KNOWLEDGEBASE_USE = 'knowledgebase.use';
     public const KNOWLEDGEBASE_MANAGE = 'knowledgebase.manage';
@@ -57,28 +57,28 @@ final class Permission
                 'label' => 'Item types and fields',
                 'legacy_max_role' => 1,
             ],
-            self::HELPDESK_SETTINGS => [
-                'label' => 'Helpdesk settings',
+            self::SERVICECENTRE_SETTINGS => [
+                'label' => 'Service Centre settings',
                 'legacy_max_role' => 1,
             ],
             self::KNOWLEDGEBASE_MANAGE => [
                 'label' => 'Knowledgebase administration',
                 'legacy_max_role' => 1,
             ],
-            self::HELPDESK_ANNOUNCE => [
-                'label' => 'Manage helpdesk announcements',
+            self::SERVICECENTRE_ANNOUNCE => [
+                'label' => 'Manage Service Centre announcements',
                 'legacy_max_role' => 2,
             ],
             self::REPORTS_MANAGE => [
                 'label' => 'Create and manage reports',
                 'legacy_max_role' => 3,
             ],
-            self::HELPDESK_USE => [
-                'label' => 'Use the helpdesk',
+            self::SERVICECENTRE_USE => [
+                'label' => 'Use Service Centre',
                 'legacy_max_role' => 4,
             ],
-            self::HELPDESK_SEARCH => [
-                'label' => 'Search helpdesk tickets',
+            self::SERVICECENTRE_SEARCH => [
+                'label' => 'Search Service Centre tickets',
                 'legacy_max_role' => 5,
             ],
             self::KNOWLEDGEBASE_USE => [

@@ -13,79 +13,43 @@ final class NavigationHelper
 {
 
     /**
-     * Builds the Helpdesk left navigation constant.
-     *
-     * This method generates a series of navigation buttons for the Helpdesk interface
-     * based on the user's role and access permissions. Each button corresponds to a specific
-     * Helpdesk feature or section. The generated buttons are combined into a single navigation
-     * card, which is then defined as a constant (`LEFT_NAVIGATION`) for use in the application.
-     *
-     * @return string
+     * Unused left-nav builder kept in step with the Service Centre section nav.
      */
-    public static function helpDeskNavigationURLS(): string
+    public static function serviceCentreNavigationURLS(): string
     {
-        // Generate navigation buttons based on user role and access permissions
+        $controller = 'index.php?controller=app_servicecentre_main';
+        $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE')
+            ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE)
+            : '';
 
         $html = RenderViews::outputIfRoleAllowed(
+            RenderViews::buildURL($controller . '&option=show_tickets', APP_SC_TXT_1, 'ic-search'),
+            $_SESSION['access_role_id'],
+            5
+        );
+        $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=show_announcements',
-                APP_HDSK_TXT_38, 'ic-announcements'
+                $controller . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . $itemType,
+                APP_SC_TXT_2, 'ic-create-ticket'
             ),
             $_SESSION['access_role_id'],
             4
         );
-
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE,
-                APP_HDSK_TXT_59, 'ic-create-ticket'
+                $controller . '&subcontroller=search_management_manage&option=show_saved_searches',
+                APP_SC_TXT_60, 'ic-my-ticket-searches'
             ),
+            $_SESSION['access_role_id'],
+            5
+        );
+        $html .= RenderViews::outputIfRoleAllowed(
+            RenderViews::buildURL($controller . '&option=show_announcements', APP_SC_TXT_38, 'ic-announcements'),
             $_SESSION['access_role_id'],
             4
         );
-
         $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=show_search',
-                APP_HDSK_TXT_78, 'ic-search'
-            ),
-            $_SESSION['access_role_id'],
-            5
-        );
-
-
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_quick_search',
-                APP_HDSK_TXT_62, 'ic-quick-search'
-            ),
-            $_SESSION['access_role_id'],
-            5
-        );
-
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_saved_searches',
-                APP_HDSK_TXT_60, 'ic-my-ticket-searches'
-            ),
-            $_SESSION['access_role_id'],
-            5
-        );
-
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE,
-                APP_HDSK_TXT_61, 'ic-create-ticket-search'
-            ),
-            $_SESSION['access_role_id'],
-            5
-        );
-
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=helpdesk_settings',
-                APP_HDSK_TXT_79, 'ic-hd-settings'
-            ),
+            RenderViews::buildURL($controller . '&option=settings', APP_SC_TXT_79, 'ic-settings'),
             $_SESSION['access_role_id'],
             1
         );
@@ -128,7 +92,7 @@ final class NavigationHelper
         $html = RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage',
-                APP_RM_TXT_10, 'ic-hd-settings'
+                APP_RM_TXT_10, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             5
@@ -137,7 +101,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&view_multi_reports',
-                APP_RM_TXT_39, 'ic-hd-settings'
+                APP_RM_TXT_39, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             5
@@ -146,7 +110,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&subcontroller=search_management_manage&option=show_item_search',
-                APP_RM_TXT_15, 'ic-hd-settings'
+                APP_RM_TXT_15, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             3
@@ -155,7 +119,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=show_report_criteria',
-                APP_RM_TXT_30, 'ic-hd-settings'
+                APP_RM_TXT_30, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             3
@@ -164,7 +128,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=create_report',
-                APP_RM_TXT_2, 'ic-hd-settings'
+                APP_RM_TXT_2, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             3
@@ -173,7 +137,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=manage_reports',
-                APP_RM_TXT_29, 'ic-hd-settings'
+                APP_RM_TXT_29, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             3
@@ -183,7 +147,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=create_multi_report',
-                APP_RM_TXT_37, 'ic-hd-settings'
+                APP_RM_TXT_37, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             3
@@ -192,7 +156,7 @@ final class NavigationHelper
         $html .= RenderViews::outputIfRoleAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=manage_multi_reports',
-                APP_RM_TXT_38, 'ic-hd-settings'
+                APP_RM_TXT_38, 'ic-settings'
             ),
             $_SESSION['access_role_id'],
             3
@@ -238,7 +202,7 @@ final class NavigationHelper
     /**
      * Convert controller left-nav HTML into a simple map of controller => [ [label, href, target?, rel?], ... ]
      *
-     * @param array<string,string> $controllersNavHtml e.g. ['Helpdesk' => $helpdeskNavHtml]
+     * @param array<string,string> $controllersNavHtml e.g. ['Service Centre' => $serviceCentreNavHtml]
      * @return array<string,array<int,array{label:string, href:string, target:?string, rel:?string}>>
      */
     public static function build(array $controllersNavHtml): array

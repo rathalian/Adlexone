@@ -14,79 +14,56 @@ final class RenderNavigation
 {
 
     /**
-     * Helpdesk links for the top section navigation.
-     *
-     * @return string
+     * Service Centre links for the top section navigation.
      */
-    public static function helpDeskNavigationURLS(): string
+    public static function serviceCentreNavigationURLS(): string
     {
+        $controller = 'index.php?controller=app_servicecentre_main';
+        $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE')
+            ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE)
+            : '';
+
         $html = RenderViews::outputIfAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=show_announcements',
-                APP_HDSK_TXT_38, 'ic-announcements'
+                $controller . '&option=show_tickets',
+                APP_SC_TXT_1, 'ic-search'
             ),
-            Permission::HELPDESK_USE,
-            Permission::HELPDESK_ANNOUNCE
+            Permission::SERVICECENTRE_SEARCH,
+            Permission::SERVICECENTRE_USE
         );
 
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=new_announcement',
-                APP_HDSK_TXT_83, 'ic-announcements'
+                $controller . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . $itemType,
+                APP_SC_TXT_2, 'ic-create-ticket'
             ),
-            Permission::HELPDESK_ANNOUNCE
+            Permission::SERVICECENTRE_USE
         );
 
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE,
-                APP_HDSK_TXT_59, 'ic-create-ticket'
+                $controller . '&subcontroller=search_management_manage&option=show_saved_searches',
+                APP_SC_TXT_60, 'ic-my-ticket-searches'
             ),
-            Permission::HELPDESK_USE
+            Permission::SERVICECENTRE_SEARCH,
+            Permission::SERVICECENTRE_USE
         );
 
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=show_search',
-                APP_HDSK_TXT_78, 'ic-search'
+                $controller . '&option=show_announcements',
+                APP_SC_TXT_38, 'ic-announcements'
             ),
-            Permission::HELPDESK_SEARCH,
-            Permission::HELPDESK_USE
+            Permission::SERVICECENTRE_USE,
+            Permission::SERVICECENTRE_ANNOUNCE
         );
 
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_quick_search',
-                APP_HDSK_TXT_62, 'ic-quick-search'
+                $controller . '&option=settings',
+                APP_SC_TXT_79, 'ic-settings'
             ),
-            Permission::HELPDESK_SEARCH,
-            Permission::HELPDESK_USE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_saved_searches',
-                APP_HDSK_TXT_60, 'ic-my-ticket-searches'
-            ),
-            Permission::HELPDESK_SEARCH,
-            Permission::HELPDESK_USE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE,
-                APP_HDSK_TXT_61, 'ic-create-ticket-search'
-            ),
-            Permission::HELPDESK_SEARCH,
-            Permission::HELPDESK_USE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                'index.php?controller=app_oneorzerohelpdesk_main&option=helpdesk_settings',
-                APP_HDSK_TXT_79, 'ic-hd-settings'
-            ),
-            Permission::HELPDESK_SETTINGS
+            Permission::SERVICECENTRE_SETTINGS
         );
 
         return $html;
@@ -124,7 +101,7 @@ final class RenderNavigation
         $html = RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage',
-                APP_RM_TXT_10, 'ic-hd-settings'
+                APP_RM_TXT_10, 'ic-settings'
             ),
             Permission::REPORTS_USE,
             Permission::REPORTS_MANAGE
@@ -133,7 +110,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&view_multi_reports',
-                APP_RM_TXT_39, 'ic-hd-settings'
+                APP_RM_TXT_39, 'ic-settings'
             ),
             Permission::REPORTS_USE,
             Permission::REPORTS_MANAGE
@@ -142,7 +119,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&subcontroller=search_management_manage&option=show_item_search',
-                APP_RM_TXT_15, 'ic-hd-settings'
+                APP_RM_TXT_15, 'ic-settings'
             ),
             Permission::REPORTS_MANAGE
         );
@@ -150,7 +127,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=show_report_criteria',
-                APP_RM_TXT_30, 'ic-hd-settings'
+                APP_RM_TXT_30, 'ic-settings'
             ),
             Permission::REPORTS_MANAGE
         );
@@ -158,7 +135,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=create_report',
-                APP_RM_TXT_2, 'ic-hd-settings'
+                APP_RM_TXT_2, 'ic-settings'
             ),
             Permission::REPORTS_MANAGE
         );
@@ -166,7 +143,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=manage_reports',
-                APP_RM_TXT_29, 'ic-hd-settings'
+                APP_RM_TXT_29, 'ic-settings'
             ),
             Permission::REPORTS_MANAGE
         );
@@ -174,7 +151,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=create_multi_report',
-                APP_RM_TXT_37, 'ic-hd-settings'
+                APP_RM_TXT_37, 'ic-settings'
             ),
             Permission::REPORTS_MANAGE
         );
@@ -182,7 +159,7 @@ final class RenderNavigation
         $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=manage_multi_reports',
-                APP_RM_TXT_38, 'ic-hd-settings'
+                APP_RM_TXT_38, 'ic-settings'
             ),
             Permission::REPORTS_MANAGE
         );
@@ -230,7 +207,7 @@ final class RenderNavigation
 /**
      * Convert controller left-nav HTML into a simple map of controller => [ [label, href, target?, rel?], ... ]
      *
-     * @param array<string,string> $controllersNavHtml e.g. ['Helpdesk' => $helpdeskNavHtml]
+     * @param array<string,string> $controllersNavHtml e.g. ['Service Centre' => $serviceCentreNavHtml]
      * @return array<string,array<int,array{label:string, href:string, target:?string, rel:?string}>>
      */
     public static function build(array $controllersNavHtml): array
@@ -548,8 +525,9 @@ final class RenderNavigation
     private static function sectionNavGroup(string $href): bool
     {
         return str_contains($href, 'option=show_item_types')
-            || str_contains($href, 'option=show_search')
-            || str_contains($href, 'option=helpdesk_settings')
+            || str_contains($href, 'option=show_saved_searches')
+            || str_contains($href, 'option=show_announcements')
+            || str_contains($href, '&option=settings')
             || str_contains($href, 'option=knowledgebase_settings');
     }
 

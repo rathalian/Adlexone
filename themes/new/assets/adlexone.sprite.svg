@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-    <!-- Core / Helpdesk -->
-    <symbol id="ic-helpdesk" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7v3H3v4h6v-7H8V9a4 4 0 1 1 8 0v1h-1v7h6v-4h-2V9a7 7 0 0 0-7-7z"/></symbol>
+    <!-- Core / Service Centre -->
+    <symbol id="ic-servicecentre" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7v3H3v4h6v-7H8V9a4 4 0 1 1 8 0v1h-1v7h6v-4h-2V9a7 7 0 0 0-7-7z"/></symbol>
     <symbol id="ic-announcements" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v4a2 2 0 0 0 2 2h2l2 4h2l-2-4h3V8H7a2 2 0 0 0-2 2H3zm14-6-6 3v10l6 3V4z"/></symbol>
     <symbol id="ic-search" viewBox="0 0 24 24"><path fill="currentColor" d="M10 18a8 8 0 1 1 5.3-14.1l6.4 6.4-1.4 1.4-6.4-6.4A8 8 0 0 1 10 18z"/></symbol>
-    <symbol id="ic-hd-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.9 7.9 0 0 0 .1-2l2.1-1.6-2-3.5-2.5.7a7.6 7.6 0 0 0-1.7-1l-.3-2.5H9l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.5-.7-2 3.5 2.1 1.6a7.9 7.9 0 0 0 .1 2L2.5 14.6l2 3.5 2.5-.7a7.6 7.6 0 0 0 1.7 1l.3 2.5h4.2l.3-2.5a7.6 7.6 0 0 0 1.7-1l2.5.7 2-3.5L19.4 13zm-7.4 2.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.9 7.9 0 0 0 .1-2l2.1-1.6-2-3.5-2.5.7a7.6 7.6 0 0 0-1.7-1l-.3-2.5H9l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.5-.7-2 3.5 2.1 1.6a7.9 7.9 0 0 0 .1 2L2.5 14.6l2 3.5 2.5-.7a7.6 7.6 0 0 0 1.7 1l.3 2.5h4.2l.3-2.5a7.6 7.6 0 0 0 1.7-1l2.5.7 2-3.5L19.4 13zm-7.4 2.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></symbol>
     <symbol id="ic-more" viewBox="0 0 24 24"><path fill="currentColor" d="M5 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></symbol>
     <symbol id="ic-create-ticket" viewBox="0 0 24 24"><path fill="currentColor" d="M3 7h18v4h-2a2 2 0 1 0 0 4h2v4H3v-4h2a2 2 0 1 0 0-4H3z"/></symbol>
     <symbol id="ic-quick-search" viewBox="0 0 24 24"><path fill="currentColor" d="M11 2 4 13h6l-1 9 7-11h-6zM17 15l5 5-1.5 1.5-5-5z"/></symbol>

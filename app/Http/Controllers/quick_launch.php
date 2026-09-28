@@ -64,12 +64,12 @@ function launchGroup(string $label, array $tiles): string
 }
 
 $applications = [];
-if (Access::can(Permission::HELPDESK_USE)) {
+if (Access::can(Permission::SERVICECENTRE_USE)) {
     $applications[] = launchTile(
-        'index.php?controller=app_oneorzerohelpdesk_main',
+        'index.php?controller=app_servicecentre_main',
         'Service Centre',
         'Tickets and announcements',
-        'ic-helpdesk'
+        'ic-servicecentre'
     );
 }
 if (Access::can(Permission::KNOWLEDGEBASE_USE)) {

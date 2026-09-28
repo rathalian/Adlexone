@@ -117,6 +117,9 @@ class RenderViews
         // Use defaultPage if controller is null or empty
         $controller = $controller ?? $defaultPage;
         $controller = basename($controller);
+        if ($controller === 'app_oneorzerohelpdesk_main') {
+            $controller = 'app_servicecentre_main';
+        }
 
         include self::controllerFile($controller);
     }
@@ -425,21 +428,28 @@ class RenderViews
      */
     private static function associateControlId(string $element, string $fallbackId): array
     {
-        if (preg_match('/\bid="([^"]+)"/', $element, $match) === 1) {
-            return [$element, $match[1]];
-        }
-        $updated = preg_replace(
-            '/<(input|select|textarea)\b/',
-            '<$1 id="' . htmlspecialchars($fallbackId, ENT_QUOTES, 'UTF-8') . '"',
-            $element,
-            1
-        );
+        static $sequence = 0;
+        $sequence++;
+        $fallbackId .= '-' . $sequence;
+        if (preg_match_all('/<(input|select|textarea)\b([^>]*)>/', $element, $matches, PREG_OFFSET_CAPTURE) !== false) {
+            foreach ($matches[0] as $index => $full) {
+                $tag = $matches[1][$index][0];
+                $attrs = $matches[2][$index][0];
+                if ($tag === 'input' && preg_match('/\btype\s*=\s*"hidden"/i', $attrs) === 1) {
+                    continue;
+                }
+                if (preg_match('/\bid="([^"]+)"/', $attrs, $idMatch) === 1) {
+                    return [$element, $idMatch[1]];
+                }
+                $id = htmlspecialchars($fallbackId, ENT_QUOTES, 'UTF-8');
+                $replacement = '<' . $tag . ' id="' . $id . '"' . $attrs . '>';
+                $element = substr_replace($element, $replacement, $full[1], strlen($full[0]));
 
-        if (!is_string($updated) || $updated === $element) {
-            return [$element, ''];
+                return [$element, $fallbackId];
+            }
         }
 
-        return [$updated, $fallbackId];
+        return [$element, ''];
     }
 
     /**
@@ -585,8 +595,11 @@ class RenderViews
                 $confirm = isset($action['confirm']) && $action['confirm'] !== ''
                     ? ' onclick="' . self::confirmAttribute((string)$action['confirm']) . '"'
                     : '';
+                $target = (string)($action['target'] ?? '');
+                $targetAttr = $target !== '' ? ' target="' . htmlspecialchars($target, ENT_QUOTES, 'UTF-8') . '"' : '';
                 $label = (string)$action['label'];
                 $buttons .= '<a class="btn btn--sm ' . $tone . '" href="' . htmlspecialchars((string)$action['href'], ENT_QUOTES, 'UTF-8') . '"'
+                    . $targetAttr
                     . $confirm
                     . ' aria-label="' . htmlspecialchars($label . ': ' . $name, ENT_QUOTES, 'UTF-8') . '">'
                     . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
@@ -994,10 +1007,10 @@ class RenderViews
      * @param string $text The text to display for the link.
      * @param string $class (Optional) CSS class for the link. Defaults to an empty string.
      * @param string $spriteName (Optional) Image source for the link. If provided, the image is shown instead of text. Sprite names:
-     * ic-helpdesk                  (Helpdesk)
-     * ic-announcements             (Show Announcements)
-     * ic-search                   (Show Search)
-     * ic-hd-settings                 (Helpdesk Settings)
+     * ic-servicecentre               (Service Centre)
+     * ic-announcements             (Announcements)
+     * ic-search                   (Tickets)
+     * ic-settings                 (Settings)
      *
      * ic-create-ticket                   (Create A New Ticket)
      * ic-quick-search              (Quick Ticket Search)
@@ -1161,7 +1174,50 @@ class RenderViews
      */
     public static function getLanguageConstant(string $aliasValue, string $originalValue): mixed
     {
-        return defined($aliasValue) ? constant($aliasValue) : constant($originalValue);
+        if (defined($aliasValue)) {
+            return constant($aliasValue);
+        }
+        $prefix = self::applicationPrefix();
+        if ($prefix !== null && defined($prefix . $aliasValue)) {
+            return constant($prefix . $aliasValue);
+        }
+        return defined($originalValue) ? constant($originalValue) : $originalValue;
+    }
+
+    /**
+     * Application wording for a shared screen. Falls back when this app has no override.
+     */
+    public static function applicationText(string $suffix, string $fallback): string
+    {
+        $prefix = self::applicationPrefix();
+        if ($prefix !== null && defined($prefix . $suffix)) {
+            return (string)constant($prefix . $suffix);
+        }
+
+        return $fallback;
+    }
+
+    public static function languageAlias(string $aliasValue, string $originalValue): mixed
+    {
+        return self::getLanguageConstant($aliasValue, $originalValue);
+    }
+
+    private static function applicationPrefix(): ?string
+    {
+        $controller = (string)($_GET['controller'] ?? '');
+        $prefixes = [
+            'app_servicecentre' => 'APP_SC_',
+            'app_oneorzeroknowledgebase' => 'APP_KB_',
+            'app_oneorzeroreportmanager' => 'APP_RM_',
+            'app_oneorzerotimemanager' => 'APP_TM_',
+        ];
+        foreach ($prefixes as $needle => $prefix) {
+            if (str_starts_with($controller, $needle)) {
+                return $prefix;
+            }
+        }
+
+        return null;
     }
 }
 

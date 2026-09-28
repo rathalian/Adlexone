@@ -58,7 +58,7 @@ RenderNavigation::applySectionNav('Knowledge Hub', RenderNavigation::knowledgeba
 //
 //// Application Administrative Options
 //$tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'center', '', 'tdLeftNavShaded', array(APP_KB_TXT_30), 'row'), $_SESSION['access_role_id'], 1);
-//$buildImage = RenderViews::buildImage(SET_IMAGE_PATH . 'helpdeskSettings.png', SET_SHOW_IMAGES);
+//$buildImage = RenderViews::buildImage(SET_IMAGE_PATH . 'settings.png', SET_SHOW_IMAGES);
 //$URL = RenderViews::buildURL(KB_SUB_URL . '&subcontroller=app_oneorzeroknowledgebase_manage&option=knowledgebase_settings', APP_KB_TXT_31, 'URLNav');
 //$tableRows .= RenderViews::outputIfRoleAllowed(RenderViews::tableData('3', '', 'left', '', 'tdLeftNavLast', array($buildImage . $URL), 'row'), $_SESSION['access_role_id'], 1);
 //// Bottom Cell
@@ -300,7 +300,7 @@ function getSubjectArticles($subjectID, $subjectFieldNbr, $passedID)
 
 function showKnowledgebaseSettings()
 {
-    // Get Helpdesk Settings from file
+    // Get Knowledge Hub settings from file
     $settings = @parse_ini_file(SET_WRITEABLE_DIRECTORY . 'applications/knowledgemanager/configuration/knowledgebase_settings.php');
     $sql = Database::sqlSelect('item_types',  ['item_type_id', 'item_type_name']);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);

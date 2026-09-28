@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<application>
+	<name>Service Centre</name>
+	<image>servicecentre.png</image>
+	<help_text>
+		Service Centre is the place to manage tickets, searches, and announcements.
+	</help_text>
+	<subcontroller>
+		<base_url>app_servicecentre_main</base_url>
+	</subcontroller>
+	<install_information>
+		<controllers>
+			app_servicecentre_main
+		</controllers>
+		<pages></pages>
+	</install_information>
+</application>

@@ -86,7 +86,7 @@ function showQuickSearch()
         '' => RenderViews::buildHiddenInput('search', 'Search'),
     ];
     define('BODY_CONTENT', RenderViews::buildForm(
-        TXT_376,
+        RenderViews::applicationText('TXT_62', TXT_376),
         'index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=quick_search',
         $fields,
         [RenderViews::buildFormButton('submit', 'search', TXT_3, $javascript)]
@@ -150,152 +150,96 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
         }
     }
 
-    // No items -> show a single card indicating no results
+    $heading = defined('SEARCH_NAME')
+        ? (string)SEARCH_NAME
+        : (string)RenderViews::applicationText('TXT_1', (string)RenderViews::getLanguageConstant('LA_44', 'TXT_44'));
+
     if (empty($ids)) {
-        $bodyBlocks = [
+        define('BODY_CONTENT', RenderViews::buildVerticalCards([
             [
-                'title' => RenderViews::languageAlias('LA_44', 'TXT_44'),
-                'html' => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8'),
-                'full' => true,
+                'title' => $heading,
+                'html' => RenderViews::buildRecordList([
+                    'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
+                    'empty' => TXT_115,
+                    'groups' => [['rows' => []]],
+                ]),
             ],
-        ];
-        define('BODY_CONTENT', RenderViews::buildVerticalCards($bodyBlocks));
+        ]));
         RenderViews::renderThemePage('main_page_content', SET_THEME);
         return;
     }
 
-    // Sanitize and prepare condition
     $ids = array_values(array_unique(array_map('intval', $ids)));
-    $condition = "WHERE item_id IN (" . implode(',', $ids) . ")";
-    $orderClause = ($orderSQL !== '') ? " ORDER BY " . $orderSQL : " ORDER BY item_id DESC";
-
-    // Fetch minimal columns used for the card display
-    $columns = ['item_id', 'item_title', 'create_date', 'item_type_id', 'creator_security', 'user_security','item_type'];
+    $condition = 'WHERE item_id IN (' . implode(',', $ids) . ')';
+    $orderClause = ($orderSQL !== '') ? ' ORDER BY ' . $orderSQL : ' ORDER BY item_id DESC';
+    $columns = ['item_id', 'item_title', 'create_date', 'item_type_id'];
     $sql = Database::sqlSelect('items', $columns, $condition . $orderClause);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
 
-    $cards = [];
+    $base = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? '')) . '&subcontroller=item_management_manage';
+    $role = (int)($_SESSION['access_role_id'] ?? 5);
+    $typeNames = [];
+    $rows = [];
     while ($row = Database::fetchArray($result)) {
         $itemId = (int)$row['item_id'];
-        $title = htmlspecialchars($row['item_title'] ?? '', ENT_QUOTES, 'UTF-8');
-
-        // Build a concise details block
-        $details = '<div><strong>' . RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ':</strong> ' . $itemId . '</div>';
-        $details .= '<div><strong>' . RenderViews::getLanguageConstant('LA_226', 'TXT_103') . ':</strong> ' . date('Y-m-d H:i:s', (int)($row['create_date'] ?? 0)) . '</div>';
-        $details .= '<div><strong>' . RenderViews::getLanguageConstant('LA_84', 'TXT_84') . ':</strong> ' . htmlspecialchars((string)($row['item_title'] ?? ''), ENT_QUOTES, 'UTF-8') . '</div>';
-
- // Build base controller and normalized action list
- $baseController = $_GET['controller'] ?? '';
-
- $viewLink = RenderViews::buildURL(
-     'index.php?controller=' . $baseController . '&subcontroller=items_manage&option=show_item&item_id=' . $itemId,
-     TXT_385,
-     'URL'
- );
-
- $editLink = RenderViews::outputIfRoleAllowed(
-     RenderViews::buildURL(
-         'index.php?controller=' . $baseController . '&subcontroller=items_manage&option=update_item&item_id=' . $itemId,
-         TXT_48,
-         'URL'
-     ),
-     $_SESSION['access_role_id'],
-     4
- );
-
- $logEntryLink = RenderViews::outputIfRoleAllowed(
-     RenderViews::buildURL(
-         'index.php?controller=' . $baseController . '&subcontroller=item_management_manage&option=log_entry&item_id=' . $itemId,
-         TXT_246
-     ),
-     $_SESSION['access_role_id'],
-     4
- );
-
- $attachmentsLink = RenderViews::outputIfRoleAllowed(
-     RenderViews::buildURL(
-         'index.php?controller=' . $baseController . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . $itemId,
-         TXT_389
-     ),
-     $_SESSION['access_role_id'],
-     4
- );
-
- $changeSecurityLink = RenderViews::outputIfRoleAllowed(
-     RenderViews::buildURL(
-         'index.php?controller=' . $baseController . '&subcontroller=item_management_manage&option=change_security&item_id=' . $itemId,
-         TXT_28
-     ),
-     $_SESSION['access_role_id'],
-     3
- );
-
- $printLink = RenderViews::outputIfRoleAllowed(
-     RenderViews::buildURL(
-         'index.php?controller=full_page_view&option=print_item&item_id=' . $itemId,
-         TXT_625,
-         '',      // spriteName
-         'URL',   // class
-         '',      // javascript
-         '_blank' // target
-     ),
-     $_SESSION['access_role_id'],
-     5
- );
-
- $deleteAltLink = RenderViews::outputIfRoleAllowed(
-     RenderViews::buildURL(
-         'index.php?controller=' . $baseController . '&subcontroller=item_management_manage&option=delete_item&item_id=' . $itemId,
-         TXT_315,
-         '', // spriteName
-         'URL',
-         'onClick="return confirm(\'' . TXT_400 . '\')"' // javascript
-     ),
-     $_SESSION['access_role_id'],
-     2
- );
-
- // Collect all action fragments and join with separators (ignore empty values)
- $actionParts = [];
- $actionParts[] = (string) $viewLink;
- if ($editLink) {
-     $actionParts[] = (string) $editLink;
- }
- if ($logEntryLink) {
-     $actionParts[] = (string) $logEntryLink;
- }
- if ($attachmentsLink) {
-     $actionParts[] = (string) $attachmentsLink;
- }
- if ($changeSecurityLink) {
-     $actionParts[] = (string) $changeSecurityLink;
- }
- if ($printLink) {
-     $actionParts[] = (string) $printLink;
- }
- if ($deleteAltLink) {
-     $actionParts[] = (string) $deleteAltLink;
- }
-
- $actions = implode(' - ', array_filter($actionParts, 'strlen'));
-
-
-        $cards[] = [
-            'title' => $title,
-            'html' => $details . '<div style="margin-top:.5rem;">' . $actions . '</div>',
-            'full' => false,
+        $title = trim((string)($row['item_title'] ?? ''));
+        if ($title === '') {
+            $title = (string)TXT_357;
+        }
+        $typeId = (string)($row['item_type_id'] ?? '');
+        if (!isset($typeNames[$typeId])) {
+            $typeSql = Database::sqlSelect('item_types', ['item_type_name'], "WHERE item_type_id = '" . $typeId . "'");
+            $typeResult = Database::query($typeSql, DSN, SET_SHOW_SQL);
+            $typeRow = Database::fetchArray($typeResult);
+            $typeNames[$typeId] = is_array($typeRow) ? (string)($typeRow['item_type_name'] ?? '') : '';
+        }
+        $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId
+            . ' · ' . date(SET_DATE_FORMAT, (int)($row['create_date'] ?? 0));
+        if ($typeNames[$typeId] !== '') {
+            $meta .= ' · ' . $typeNames[$typeId];
+        }
+        $actions = [];
+        if ($role <= 4) {
+            $actions[] = ['href' => $base . '&option=log_entry&item_id=' . $itemId, 'label' => TXT_246];
+            $actions[] = ['href' => $base . '&option=show_attachments&item_id=' . $itemId, 'label' => TXT_389];
+        }
+        if ($role <= 3) {
+            $actions[] = ['href' => $base . '&option=change_security&item_id=' . $itemId, 'label' => TXT_28];
+        }
+        if ($role <= 5) {
+            $actions[] = [
+                'href' => 'index.php?controller=full_page_view&option=print_item&item_id=' . $itemId,
+                'label' => TXT_625,
+                'target' => '_blank',
+            ];
+        }
+        if ($role <= 2) {
+            $actions[] = [
+                'href' => $base . '&option=delete_item&item_id=' . $itemId,
+                'label' => TXT_315,
+                'tone' => 'danger',
+                'confirm' => TXT_400,
+            ];
+        }
+        $rows[] = [
+            'name' => $title,
+            'href' => $base . '&option=show_item&item_id=' . $itemId,
+            'meta' => $meta,
+            'actions' => $actions,
         ];
     }
 
-    if (empty($cards)) {
-        $cards[] = [
-            'title' => RenderViews::languageAlias('LA_44', 'TXT_44'),
-            'html' => TXT_115,
-            'full' => true,
-        ];
-    }
-
-    define('BODY_CONTENT', RenderViews::buildVerticalCards($cards));
+    define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        [
+            'title' => $heading,
+            'html' => RenderViews::buildRecordList([
+                'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
+                'searchLabel' => TXT_3,
+                'empty' => TXT_115,
+                'groups' => [['rows' => $rows]],
+            ]),
+        ],
+    ]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
@@ -1071,7 +1015,15 @@ function showSavedSearches($userID, $application = '')
             ];
         }
     }
-    $list = RenderViews::buildRecordList([
+    $toolbar = '';
+    if (str_starts_with($controller, 'app_servicecentre')) {
+        $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE') ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE) : '';
+        $toolbar = '<div class="form-actions" style="margin-top:0">'
+            . RenderViews::buildURL($base . '&option=show_quick_search', APP_SC_TXT_62, '', 'btn btn--primary btn--sm')
+            . RenderViews::buildURL($base . '&option=show_item_search&item_types=' . $itemType, APP_SC_TXT_61, '', 'btn btn--sm')
+            . '</div>';
+    }
+    $list = $toolbar . RenderViews::buildRecordList([
         'column' => TXT_151,
         'searchLabel' => TXT_3,
         'empty' => TXT_115,
@@ -1079,7 +1031,7 @@ function showSavedSearches($userID, $application = '')
     ]);
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
         [
-            'title' => TXT_313,
+            'title' => RenderViews::applicationText('TXT_60', TXT_313),
             'html' => $list,
         ],
     ]));
@@ -1308,76 +1260,101 @@ function showCustomFieldsAsList($itemTypeID = '', $fieldData = '', $dispRows = '
  */
 function showCustomFields($itemTypeID = '')
 {
-    $condition = '';
-    if ($itemTypeID != '' && $itemTypeID != '0') {
-        $columnArray = array('custom_field_id');
-        if (is_array($itemTypeID)) {
-            $condition = "WHERE ";
-            foreach ($itemTypeID as $value) {
-                $condition .= "item_type_id = " . $value . " OR ";
-            }
-            $condition = substr($condition, 0, -4);
-        } else {
-            $condition = "WHERE item_type_id = $itemTypeID";
-        }
-        $sql = Database::sqlSelect('item_type_custom_fields', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $i = 0;
-        $condition = '';
-        while ($row = Database::fetchArray($result)) {
-            if ($i == 0) {
-                $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-            } else {
-                $condition .= " OR custom_field_id = '" . $row['custom_field_id'] . "'";
-            }
-            $i++;
-        }
+    $advanced = Database::query(
+        "SELECT user_id FROM users WHERE user_id = '" . (int)$_SESSION['access_user_id'] . "' AND settings LIKE '%{SHOW-HIDE=TRUE}%'",
+        DSN,
+        SET_SHOW_SQL
+    );
+    if (Database::numRows($advanced) === 0) {
+        return '';
     }
-    // Get custom fields from database
-    $columnArray = array('custom_field_id', 'custom_field_name');
-    if ($condition != '') {
-        $condition .= " AND field_type NOT LIKE 'worker%' ORDER BY custom_field_name ASC";
-    } else {
-        $condition = " WHERE field_type NOT LIKE 'worker%' ORDER BY custom_field_name ASC";
-    }
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
 
-    $fieldsGrid = [];
-    for ($a = 0; $a < SET_CUSTOM_FIELDS_IN_SEARCH; $a++) {
-        // Set the selected option to 'All item definitions'
+    $ids = [];
+    $idList = is_array($itemTypeID) ? $itemTypeID : [$itemTypeID];
+    $idList = array_values(array_filter(array_map('intval', $idList)));
+    if ($idList !== [] && !in_array(0, $idList, true)) {
+        $sql = Database::sqlSelect('item_type_custom_fields', ['custom_field_id'], 'WHERE item_type_id IN (' . implode(',', $idList) . ')');
+        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        while ($row = Database::fetchArray($result)) {
+            $ids[] = (int)$row['custom_field_id'];
+        }
+    }
+
+    $condition = "WHERE field_type NOT LIKE 'worker%' AND field_type <> 'fieldSeparator'";
+    if ($ids !== []) {
+        $condition .= ' AND custom_field_id IN (' . implode(',', array_unique($ids)) . ')';
+    }
+    $condition .= ' ORDER BY custom_field_name ASC';
+    $sql = Database::sqlSelect('custom_fields', ['custom_field_id', 'custom_field_name'], $condition);
+    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $fieldRows = [];
+    while ($row = Database::fetchArray($result)) {
+        $fieldRows[] = $row;
+    }
+    if ($fieldRows === []) {
+        return '';
+    }
+
+    $html = '';
+    $count = (int)SET_CUSTOM_FIELDS_IN_SEARCH;
+    for ($a = 0; $a < $count; $a++) {
         $listValues = [''];
         $listDisplayValues = [TXT_108];
-        $i = 1;
-        // Reset result pointer for each field
-        //Database::dataSeek($result, 0);
-        while ($row = Database::fetchArray($result)) {
-            $listValues[$i] = $row['custom_field_id'];
-            $listDisplayValues[$i] = $row['custom_field_name'];
-            $i++;
+        foreach ($fieldRows as $row) {
+            $listValues[] = $row['custom_field_id'];
+            $listDisplayValues[] = $row['custom_field_name'];
         }
-        $customFieldList = RenderViews::buildSelectDropdown('custom_field_' . $a, $listValues, $listDisplayValues, TXT_108);
-        $customFieldTextBox = RenderViews::buildTextInput('custom_field_value_' . $a, '');
-        $andOrDisplayValues = array(TXT_109, TXT_110);
-        $andOr = array('AND', 'OR');
-        $operatorValues = array('=', 'LIKE', '<>', '>', '<');
-        $operatorDisplayValues = array(TXT_418, TXT_112, TXT_318, TXT_364, TXT_365);
-        $customFieldAndOr = RenderViews::buildSelectDropdown('custom_field_andor_' . $a, $andOr, $andOrDisplayValues, 'AND');
-        $customFieldOperator = RenderViews::buildSelectDropdown('custom_field_operator_' . $a, $operatorValues, $operatorDisplayValues, '=');
-        $styleAdvanceUser = (Database::sqlLookup('users', 'WHERE user_id = ' . $_SESSION['access_user_id'] . ' AND settings LIKE "%{SHOW-HIDE=TRUE}%"', DSN, SET_SHOW_SQL)) ? "" : 'style="display:none;"';
-
-        $fieldsGrid[''] = '<div ' . $styleAdvanceUser . '>' .
-            RenderViews::renderHorizontalList([
-                $customFieldList,
-                $customFieldOperator,
-                $customFieldTextBox,
-                $customFieldAndOr
-            ]) .
-            '</div>';
+        $html .= searchControlRow(
+            RenderViews::buildSelectDropdown('custom_field_' . $a, $listValues, $listDisplayValues, ''),
+            RenderViews::buildSelectDropdown('custom_field_operator_' . $a, ['=', 'LIKE', '<>', '>', '<'], [TXT_418, TXT_112, TXT_318, TXT_364, TXT_365], '='),
+            RenderViews::buildTextInput('custom_field_value_' . $a, ''),
+            RenderViews::buildSelectDropdown('custom_field_andor_' . $a, ['AND', 'OR'], [TXT_109, TXT_110], 'AND')
+        );
     }
-    $html = RenderViews::buildFormFieldsGrid($fieldsGrid);
-    $html .= RenderViews::buildHiddenInput('custom_field_count', $a);
+    $html .= RenderViews::buildHiddenInput('custom_field_count', (string)$count);
+
     return $html;
+}
+
+function searchControlRow(string ...$controls): string
+{
+    return '<div class="criteria-row">' . implode('', $controls) . '</div>';
+}
+
+function searchApplicationMenu(string $selected): string
+{
+    $root = SET_INSTALL_PATH . 'app/Http/Controllers/Applications/';
+    $names = [];
+    $urls = [];
+    if (is_dir($root)) {
+        foreach (scandir($root) ?: [] as $dir) {
+            if ($dir === '.' || $dir === '..') {
+                continue;
+            }
+            $xmlFile = $root . $dir . '/' . $dir . '.xml';
+            if (!is_file($xmlFile)) {
+                continue;
+            }
+            $xml = simplexml_load_file($xmlFile);
+            if ($xml === false) {
+                continue;
+            }
+            $name = trim((string)($xml->name ?? ''));
+            $base = trim((string)($xml->subcontroller->base_url ?? ''));
+            if ($name === '' || $base === '') {
+                continue;
+            }
+            if (defined($name)) {
+                $name = (string)constant($name);
+            } elseif (str_starts_with($name, 'OOZ_') && defined(substr($name, 4))) {
+                $name = (string)constant(substr($name, 4));
+            }
+            $names[] = $name;
+            $urls[] = $base;
+        }
+    }
+
+    return RenderViews::buildSelectDropdown('application', $urls, $names, $selected);
 }
 
 /**
@@ -1405,12 +1382,18 @@ function showAdvancedItemSearch($filter = '')
     $andOrDisplayValues = array(TXT_109, TXT_110);
     $eventId = (isset($_GET['event_id'])) ? '&event_id=' . $_GET['event_id'] : '';
 
-    $styleAdvanceUser = (Database::sqlLookup('users', 'WHERE user_id = ' . $_SESSION['access_user_id'] . ' AND settings LIKE "%{SHOW-HIDE=TRUE}%"', DSN, SET_SHOW_SQL)) ? "" : 'style="display:none;"';
-
     $fields = [];
     $fields[TXT_99] = showItemTypeMenu($filter);
-    $fields[TXT_102] = RenderViews::buildSelectDropdown('id_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildTextInput('item_id', '') . RenderViews::buildSelectDropdown('id_andor', $andOrValues, $andOrDisplayValues, '');
-    $fields[TXT_84] = RenderViews::buildSelectDropdown('item_title_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildTextInput('item_title', '') . RenderViews::buildSelectDropdown('title_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[RenderViews::getLanguageConstant('LA_102', 'TXT_102')] = searchControlRow(
+        RenderViews::buildSelectDropdown('id_operator', $operatorValues, $operatorDisplayValues, ''),
+        RenderViews::buildTextInput('item_id', ''),
+        RenderViews::buildSelectDropdown('id_andor', $andOrValues, $andOrDisplayValues, '')
+    );
+    $fields[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = searchControlRow(
+        RenderViews::buildSelectDropdown('item_title_operator', $operatorValues, $operatorDisplayValues, ''),
+        RenderViews::buildTextInput('item_title', ''),
+        RenderViews::buildSelectDropdown('title_andor', $andOrValues, $andOrDisplayValues, '')
+    );
 
     // Populate users dropdown
     $sql = "select user_id, user_name FROM users ORDER BY user_name ASC";
@@ -1421,33 +1404,69 @@ function showAdvancedItemSearch($filter = '')
     }
 
     // Add user-related fields to system criteria
-    $fields[TXT_551] = RenderViews::buildSelectDropdown('security_creators_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildSelectDropdown('creator_security', array_keys($listValues), array_values($listValues), '') . RenderViews::buildSelectDropdown('security_creators_andor', $andOrValues, $andOrDisplayValues, '');
-    $fields[TXT_269] = RenderViews::buildSelectDropdown('security_users_operator', $operatorValues, $operatorDisplayValues, '') . RenderViews::buildSelectDropdown('user_security', array_keys($listValues), array_values($listValues), '') . RenderViews::buildSelectDropdown('security_users_andor', $andOrValues, $andOrDisplayValues, '');
-    $fields[TXT_79] = RenderViews::buildSelectDropdown('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), '') . showSecurityGroups() . RenderViews::buildSelectDropdown('security_groups_andor', $andOrValues, $andOrDisplayValues, '');
+    $fields[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = searchControlRow(
+        RenderViews::buildSelectDropdown('security_creators_operator', $operatorValues, $operatorDisplayValues, ''),
+        RenderViews::buildSelectDropdown('creator_security', array_keys($listValues), array_values($listValues), ''),
+        RenderViews::buildSelectDropdown('security_creators_andor', $andOrValues, $andOrDisplayValues, '')
+    );
+    $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = searchControlRow(
+        RenderViews::buildSelectDropdown('security_users_operator', $operatorValues, $operatorDisplayValues, ''),
+        RenderViews::buildSelectDropdown('user_security', array_keys($listValues), array_values($listValues), ''),
+        RenderViews::buildSelectDropdown('security_users_andor', $andOrValues, $andOrDisplayValues, '')
+    );
+    $fields[TXT_79] = searchControlRow(
+        RenderViews::buildSelectDropdown('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), ''),
+        showSecurityGroups(),
+        RenderViews::buildSelectDropdown('security_groups_andor', $andOrValues, $andOrDisplayValues, '')
+    );
 
-    $fields[TXT_406] = RenderViews::buildSelectDropdown('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('hour_range_operator', array('<=', '=', '>='), array(TXT_111, TXT_81, TXT_405), '>=') . ' ' . RenderViews::buildTextInput('hour_range', '', '30', true) . ' ' . RenderViews::buildSelectDropdown('hour_range_andor', $andOrValues, $andOrDisplayValues, '');
-    $fields[TXT_103 . ' 1'] = RenderViews::buildSelectDropdown('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>=') . ' ' . RenderViews::buildTextInput('date_1', '') . ' ' . RenderViews::buildSelectDropdown('date_andor_1', $andOrValues, $andOrDisplayValues, '');
-    $fields[TXT_103 . ' 2'] = RenderViews::buildSelectDropdown('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), '') . ' ' . RenderViews::buildSelectDropdown('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<=') . ' ' . RenderViews::buildTextInput('date_2', '') . ' ' . RenderViews::buildSelectDropdown('date_andor_2', $andOrValues, $andOrDisplayValues, '');
-    $fields[TXT_407] = 'dd-mm-yyyy hh:mm:ss';
+    $fields[TXT_406] = searchControlRow(
+        RenderViews::buildSelectDropdown('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
+        RenderViews::buildSelectDropdown('hour_range_operator', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
+        RenderViews::buildTextInput('hour_range', '', '30'),
+        RenderViews::buildSelectDropdown('hour_range_andor', $andOrValues, $andOrDisplayValues, '')
+    );
+    $fields[TXT_103 . ' 1'] = searchControlRow(
+        RenderViews::buildSelectDropdown('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
+        RenderViews::buildSelectDropdown('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
+        RenderViews::buildTextInput('date_1', ''),
+        RenderViews::buildSelectDropdown('date_andor_1', $andOrValues, $andOrDisplayValues, '')
+    );
+    $fields[TXT_103 . ' 2'] = searchControlRow(
+        RenderViews::buildSelectDropdown('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
+        RenderViews::buildSelectDropdown('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<='),
+        RenderViews::buildTextInput('date_2', ''),
+        RenderViews::buildSelectDropdown('date_andor_2', $andOrValues, $andOrDisplayValues, '')
+    );
+    $fields[TXT_407] = '<p class="field-note">dd-mm-yyyy hh:mm:ss</p>';
 
     $postedItemTypeID = (isset($_POST['item_type_id'])) ? $_POST['item_type_id'] : $filter;
-    $fields[TXT_106] = showCustomFields($postedItemTypeID);
+    $customFields = showCustomFields($postedItemTypeID);
+    if ($customFields !== '') {
+        $fields[TXT_106] = $customFields;
+    }
 
-    $fields[TXT_258] = RenderViews::buildRadioButton('sortOrder', 'ascending', 'ascending', '') . ' ' . RenderViews::buildRadioButton('sortOrder', 'descending', '', '');
+    $fields[TXT_258] = '<div class="choice-list__sort">'
+        . '<label class="checkbox">' . RenderViews::buildRadioButton('sortOrder', 'ascending', 'ascending', '') . ' ' . htmlspecialchars(TXT_533, ENT_QUOTES, 'UTF-8') . '</label>'
+        . '<label class="checkbox">' . RenderViews::buildRadioButton('sortOrder', 'descending', '', '') . ' ' . htmlspecialchars(TXT_534, ENT_QUOTES, 'UTF-8') . '</label>'
+        . '</div>';
 
-    // Display fields grid
-    $fieldData = [
-        RenderViews::getLanguageConstant('LA_102', 'TXT_102'),
-        RenderViews::buildCheckBox('spec_item_id', 'true', 'true') . RenderViews::buildHiddenInput('disp_item_id', 'disp_item_id'),
-        RenderViews::buildRadioButton('sort_field', 'sort_item_id', 'sort_item_id', ''),
-        RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
-        RenderViews::buildCheckBox('spec_item_title', 'true', 'true') . RenderViews::buildHiddenInput('disp_item_title', 'disp_item_title'),
-        RenderViews::buildRadioButton('sort_field', 'sort_item_title', '', ''),
-        TXT_225,
-        RenderViews::buildCheckBox('disp_create_date', 'true', 'true'),
-        RenderViews::buildRadioButton('sort_field', 'sort_create_date', '', '')
+    $displayChoices = [
+        [RenderViews::getLanguageConstant('LA_102', 'TXT_102'), 'spec_item_id', 'disp_item_id', 'sort_item_id', true],
+        [RenderViews::getLanguageConstant('LA_84', 'TXT_84'), 'spec_item_title', 'disp_item_title', 'sort_item_title', false],
+        [TXT_225, 'disp_create_date', '', 'sort_create_date', false],
     ];
-    $fields[TXT_527] = RenderViews::renderHorizontalList($fieldData);
+    $choiceHtml = '<div class="choice-list">';
+    foreach ($displayChoices as [$label, $checkName, $hiddenName, $sortValue, $sortChecked]) {
+        $choiceHtml .= '<div class="choice-list__row">'
+            . RenderViews::buildCheckBox($checkName, 'true', 'true', 'checkbox', (string)$label)
+            . ($hiddenName !== '' ? RenderViews::buildHiddenInput($hiddenName, $hiddenName) : '')
+            . '<span class="choice-list__sort">' . RenderViews::buildRadioButton('sort_field', $sortValue, $sortChecked ? $sortValue : '', '', 'aria-label="' . htmlspecialchars(TXT_258, ENT_QUOTES, 'UTF-8') . '"')
+            . htmlspecialchars(TXT_258, ENT_QUOTES, 'UTF-8') . '</span>'
+            . '</div>';
+    }
+    $choiceHtml .= '</div>';
+    $fields[TXT_527] = $choiceHtml;
 
     $fields[RenderViews::getLanguageConstant('LA_310', 'TXT_310')] = RenderViews::buildTextInput('search_name', '');
     $fields[RenderViews::getLanguageConstant('LA_312', 'TXT_312')] = RenderViews::buildTextArea('search_description', '', SET_FORM_FIELD_HEIGHT);
@@ -1457,39 +1476,7 @@ function showAdvancedItemSearch($filter = '')
         $fields[''] = RenderViews::buildHiddenInput('security', 'mine');
     }
 
-    // Application Menu
-    $directory = opendir('app/Http/Controllers/Applications/');
-    $applicationFileArray = [];
-    while ($a = readdir($directory)) {
-        $appXMLFile = $a . '.xml';
-        if (is_file($directory . $a . '/' . $appXMLFile)) {
-            $applicationFileArray[] = $directory . $a . '/' . $appXMLFile;
-        }
-    }
-    $nameArray = [];
-    $baseURLArray = [];
-    if (is_array($applicationFileArray)) {
-        foreach ($applicationFileArray as $filename) {
-            $fp = fopen($filename, "r") or die("Cannot open " . $filename);
-            $xmlparser = xml_parser_create('UTF-8') or die ("Cannot create parser");
-            $xml = fread($fp, 4096);
-            xml_parser_set_option($xmlparser, XML_OPTION_SKIP_WHITE, 1);
-            xml_parse_into_struct($xmlparser, $xml, $values);
-            xml_parser_free($xmlparser);
-            foreach ($values as $key => $value) {
-                switch ($value['tag']) {
-                    case 'NAME':
-                        $nameArray[] = constant($value['value']);
-                        break;
-                    case 'BASE_URL':
-                        $baseURLArray[] = $value['value'];
-                        break;
-                    default:
-                }
-            }
-        }
-    }
-    $fields[TXT_350] = RenderViews::buildSelectDropdown('application', $baseURLArray, $nameArray, $_GET['controller']);
+    $fields[TXT_350] = searchApplicationMenu((string)($_GET['controller'] ?? ''));
 
     if ($_SESSION['access_role_id'] == 0) {
         $fields[TXT_421] = RenderViews::buildTextArea('sql_query', '', SET_FORM_FIELD_HEIGHT);
@@ -1503,14 +1490,15 @@ function showAdvancedItemSearch($filter = '')
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
     define('BODY_CONTENT', RenderViews::buildForm(
-        TXT_96,
+        RenderViews::applicationText('TXT_61', (string)RenderViews::getLanguageConstant('LA_96', 'TXT_96')),
         'index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=show_search_results' . $eventId,
         $fields,
         [
             RenderViews::buildFormButton('submit', 'search', TXT_3),
             RenderViews::buildFormButton('reset', 'reset', TXT_75),
             RenderViews::buildFormButton('submit', 'new_favourite', TXT_309, $javascript),
-        ]
+        ],
+        ['name' => 'itemSearch', 'id' => 'itemSearch']
     ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -1576,7 +1564,11 @@ switch (@$_GET['option']) {
         break;
     case 'show_saved_searches' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-        showSavedSearches($_SESSION['access_user_id'], @$_GET['application']);
+        $application = (string)($_GET['application'] ?? '');
+        if ($application === '' && str_starts_with((string)($_GET['controller'] ?? ''), 'app_')) {
+            $application = (string)$_GET['controller'];
+        }
+        showSavedSearches($_SESSION['access_user_id'], $application);
         break;
     case 'saved_search' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);

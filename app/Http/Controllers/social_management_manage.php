@@ -26,6 +26,19 @@
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 
+if (!defined('SERVICECENTRE_SET_RESULT_COUNT')) {
+    define('SERVICECENTRE_SET_RESULT_COUNT', '10');
+}
+if (!defined('SERVICECENTRE_SET_SAVED_SEARCHES')) {
+    define('SERVICECENTRE_SET_SAVED_SEARCHES', 'Yes');
+}
+if (!defined('SERVICECENTRE_SET_ANNOUNCEMENTS')) {
+    define('SERVICECENTRE_SET_ANNOUNCEMENTS', 'Yes');
+}
+if (!defined('SERVICECENTRE_SET_DEFAULT_SCREEN')) {
+    define('SERVICECENTRE_SET_DEFAULT_SCREEN', 'quick_launch');
+}
+
 /**
  * /**
  * Controller Template Wrapper Functions
@@ -85,7 +98,7 @@ function showPublicItems() {
 	RenderViews::renderThemePage('main_page_content',  SET_THEME);
 }
 
-function showHelpdeskModules() {
+function showServiceCentreModules() {
 	$html = showTopX();
 	$html .= RenderViews::buildHorizontalCards([
 		['title' => APP_TXT_5, 'html' => showSavedSearches()],
@@ -94,13 +107,13 @@ function showHelpdeskModules() {
 	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
-function showHelpdeskQuickLaunch() {
+function showServiceCentreQuickLaunch() {
 	$blocks = [];
 	if ($_SESSION['access_role_id'] < 5) {
 		$blocks[] = [
 			'title' => APP_TXT_59,
-			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'newTicketBig.png')
-				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE, APP_TXT_59, 'URLHeading')
+			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . SERVICECENTRE_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'newTicketBig.png')
+				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . SERVICECENTRE_SET_ITEM_TYPE, APP_TXT_59, 'URLHeading')
 				. '<br>' . APP_TXT_58,
 		];
 	}
@@ -119,26 +132,26 @@ function showHelpdeskQuickLaunch() {
 	if ($_SESSION['access_role_id'] < 5) {
 		$blocks[] = [
 			'title' => APP_TXT_61,
-			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'advancedSearchBig.png')
-				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE, APP_TXT_61, 'URLHeading')
+			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . SERVICECENTRE_SET_ITEM_TYPE, '', 'launchURL', SET_IMAGE_PATH . 'advancedSearchBig.png')
+				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=search_management_manage&option=show_item_search&item_types=' . SERVICECENTRE_SET_ITEM_TYPE, APP_TXT_61, 'URLHeading')
 				. '<br>' . APP_TXT_64,
 		];
 		$blocks[] = [
 			'title' => APP_TXT_68,
-			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_announcements', '', 'launchURL', SET_IMAGE_PATH . 'announcementsBig.png')
-				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_announcements', APP_TXT_68, 'URLHeading')
+			'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_servicecentre_main&option=show_announcements', '', 'launchURL', SET_IMAGE_PATH . 'announcementsBig.png')
+				. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_servicecentre_main&option=show_announcements', APP_TXT_68, 'URLHeading')
 				. '<br>' . APP_TXT_69,
 		];
 	}
 	$blocks[] = [
 		'title' => APP_TXT_55,
-		'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_portal', '', 'launchURL', SET_IMAGE_PATH . 'portalBig.png')
-			. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_oneorzerohelpdesk_manage&option=show_portal', APP_TXT_55, 'URLHeading')
+		'html' => RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_servicecentre_main&option=show_portal', '', 'launchURL', SET_IMAGE_PATH . 'portalBig.png')
+			. '<br>' . RenderViews::buildURL(HEL_SUB_URL . '&subcontroller=app_servicecentre_main&option=show_portal', APP_TXT_55, 'URLHeading')
 			. '<br>' . APP_TXT_71,
 	];
 
 	$html = RenderViews::buildHorizontalCards($blocks, 3);
-	if (is_numeric(HELPDESK_SET_SAVED_SEARCH)) {
+	if (is_numeric(SERVICECENTRE_SET_SAVED_SEARCH)) {
 		$html .= showTopX();
 	}
 	define('BODY_CONTENT', $html);
@@ -259,7 +272,7 @@ function updateAnnouncement() {
  * @return Saved searches table
  */
 function showSavedSearches() {
-	$sql = "SELECT * FROM saved_searches WHERE (user ='" . $_SESSION['access_user_id'] . "' OR user = 'all' OR user = 'system') AND application = 'app_oneorzerohelpdesk_main' ORDER BY search_name ASC";
+	$sql = "SELECT * FROM saved_searches WHERE (user ='" . $_SESSION['access_user_id'] . "' OR user = 'all' OR user = 'system') AND application = 'app_servicecentre_main' ORDER BY search_name ASC";
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
 	if (Database::numRows($result) == 0) {
 		return RenderViews::buildFormFieldsGrid(['' => APP_TXT_40]);
@@ -283,7 +296,7 @@ function showSavedSearches() {
  */
 function showTopX() {
 	//Get saved search SQL
-	$sql = "SELECT saved_search_sql, search_name FROM saved_searches WHERE search_id = '" . HELPDESK_SET_SAVED_SEARCH . "'";
+	$sql = "SELECT saved_search_sql, search_name FROM saved_searches WHERE search_id = '" . SERVICECENTRE_SET_SAVED_SEARCH . "'";
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
 	$row = Database::fetchArray($result);
 	//Set heading
@@ -418,7 +431,7 @@ function showTopX() {
 					}
 				}
 			}
-			if ($allowedAccess == true && $i < (int)HELPDESK_SET_RESULT_COUNT) {
+			if ($allowedAccess == true && $i < (int)SERVICECENTRE_SET_RESULT_COUNT) {
 				$fields = [];
 				foreach ($cellData as $index => $cell) {
 					$label = (string)($headTitle[$index] ?? $index);
@@ -434,7 +447,7 @@ function showTopX() {
 			unset($cellData);
 		}
 	}
-	$title = APP_TXT_53 . ' ' . HELPDESK_SET_RESULT_COUNT . ' - ' . $searchName;
+	$title = APP_TXT_53 . ' ' . SERVICECENTRE_SET_RESULT_COUNT . ' - ' . $searchName;
 	$controls = '<div>' . $show . ' \\ ' . $hide . ' ' . APP_TXT_67 . '</div>';
 	if ($html === '') {
 		$html = RenderViews::buildFormFieldsGrid(['' => APP_TXT_54]);
@@ -459,13 +472,12 @@ function showSearchItems($id, $userID, $rss = false) {
 }
 
 /**
- * showHelpdeskSettings()
+ * showServiceCentreSettings()
  *
- * RenderViews helpdesk settings page
+ * Service Centre settings page
  */
-function showHelpdeskSettings() {
-	// Get Helpdesk Settings from file
-	$settings = @parse_ini_file(SET_WRITEABLE_DIRECTORY . 'applications/helpdesk/configuration/helpdesk_settings.php');
+function showServiceCentreSettings() {
+	$settings = @parse_ini_file(SET_WRITEABLE_DIRECTORY . 'applications/servicecentre/configuration/servicecentre_settings.php');
 	// Get all item types
 	$columnArray = array('item_type_id', 'item_type_name');
 	$sql = Database::sqlSelect('item_types', $columnArray);
@@ -474,7 +486,7 @@ function showHelpdeskSettings() {
 		$valueArray[] = $row['item_type_id'];
 		$displayArray[] = $row['item_type_name'];
 	}
-	$fields[APP_TXT_32] = RenderViews::buildSelectDropdown('HELPDESK_SET_ITEM_TYPE', $valueArray, $displayArray, $settings['HELPDESK_SET_ITEM_TYPE']);
+	$fields[APP_TXT_32] = RenderViews::buildSelectDropdown('SERVICECENTRE_SET_ITEM_TYPE', $valueArray, $displayArray, $settings['SERVICECENTRE_SET_ITEM_TYPE']);
 	$columnArray = array('item_type_id', 'item_type_name');
 	$sql = Database::sqlSelect('item_types', $columnArray);
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
@@ -484,8 +496,8 @@ function showHelpdeskSettings() {
 		$listDisplayValues[$i] = $row[1];
 		$i++;
 	}
-	$fields[APP_TXT_36] = RenderViews::buildSelectDropdown('HELPDESK_SET_SAVED_SEARCHES', array('Yes', 'No'), array(APP_TXT_42, APP_TXT_43), $settings['HELPDESK_SET_SAVED_SEARCHES']);
-	$fields[APP_TXT_38] = RenderViews::buildSelectDropdown('HELPDESK_SET_ANNOUNCEMENTS', array('Yes', 'No'), array(APP_TXT_42, APP_TXT_43), $settings['HELPDESK_SET_ANNOUNCEMENTS']);
+	$fields[APP_TXT_36] = RenderViews::buildSelectDropdown('SERVICECENTRE_SET_SAVED_SEARCHES', array('Yes', 'No'), array(APP_TXT_42, APP_TXT_43), $settings['SERVICECENTRE_SET_SAVED_SEARCHES']);
+	$fields[APP_TXT_38] = RenderViews::buildSelectDropdown('SERVICECENTRE_SET_ANNOUNCEMENTS', array('Yes', 'No'), array(APP_TXT_42, APP_TXT_43), $settings['SERVICECENTRE_SET_ANNOUNCEMENTS']);
 	$listValues[0] = '';
 	$listDisplayValues[0] = APP_TXT_52;
 	$sql = "SELECT search_id, search_name FROM saved_searches WHERE user = 'all' OR user = 'system' ORDER BY search_name ASC";
@@ -496,12 +508,12 @@ function showHelpdeskSettings() {
 		$listDisplayValues[$i] = $row['search_name'];
 		$i++;
 	}
-	$fields[APP_TXT_51] = RenderViews::buildSelectDropdown('HELPDESK_SET_SAVED_SEARCH', $listValues, $listDisplayValues, $settings['HELPDESK_SET_SAVED_SEARCH']);
-	$fields[APP_TXT_72] = RenderViews::buildTextInput('HELPDESK_SET_RESULT_COUNT', $settings['HELPDESK_SET_RESULT_COUNT']);
-	$fields[APP_TXT_57] = RenderViews::buildSelectDropdown('HELPDESK_SET_DEFAULT_SCREEN', array('portal', 'quick_launch'), array(APP_TXT_55, APP_TXT_56), $settings['HELPDESK_SET_DEFAULT_SCREEN']);
+	$fields[APP_TXT_51] = RenderViews::buildSelectDropdown('SERVICECENTRE_SET_SAVED_SEARCH', $listValues, $listDisplayValues, $settings['SERVICECENTRE_SET_SAVED_SEARCH']);
+	$fields[APP_TXT_72] = RenderViews::buildTextInput('SERVICECENTRE_SET_RESULT_COUNT', $settings['SERVICECENTRE_SET_RESULT_COUNT']);
+	$fields[APP_TXT_57] = RenderViews::buildSelectDropdown('SERVICECENTRE_SET_DEFAULT_SCREEN', array('portal', 'quick_launch'), array(APP_TXT_55, APP_TXT_56), $settings['SERVICECENTRE_SET_DEFAULT_SCREEN']);
 	define('BODY_CONTENT', RenderViews::buildForm(
 		APP_TXT_31,
-		CONTROLLER_BASEURL . '&option=update_helpdesk_settings',
+		CONTROLLER_BASEURL . '&option=update_settings',
 		$fields,
 		[
 			RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
@@ -515,8 +527,8 @@ function updateSettings() {
 	// remove so is not added to config file
 	unset($_POST['submit_button'], $_POST['reset']);
 	// Write config file based on form created in showFlowIQSettings
-	$header = 'Adlexone Helpdesk Settings File - this file is generated by the Adlexone Helpdesk.  You can update manually if desired.';
-	$configurationDirectory = SET_WRITEABLE_DIRECTORY . 'applications/helpdesk/configuration/';
+	$header = 'Service Centre settings file.';
+	$configurationDirectory = SET_WRITEABLE_DIRECTORY . 'applications/servicecentre/configuration/';
 	if (!is_dir($configurationDirectory)) {
 		if (!mkdir($configurationDirectory, 0755, 1)) {
 			echo 'ERROR: Could not create directory: ' . $configurationDirectory;
@@ -525,17 +537,17 @@ function updateSettings() {
 	$i = 0;
 	foreach ($_POST as $key => $value) {
 		if (stristr($key, 'item_type_id_')) {
-			@$_POST['HELPDESK_SET_ITEM_TYPE'] .= ($i == 0) ? $value : ',' . $value;
+			@$_POST['SERVICECENTRE_SET_ITEM_TYPE'] .= ($i == 0) ? $value : ',' . $value;
 			unset($_POST[$key]);
 		}
 		$i++;
 	}
-	if (File::writeFileFromArray($configurationDirectory . 'helpdesk_settings.php', $header, $_POST)) {
+	if (File::writeFileFromArray($configurationDirectory . 'servicecentre_settings.php', $header, $_POST)) {
 		$message = TXT_201;
 	} else {
 		$message = TXT_203;
 	}
-	$html = RenderViews::showResponse($message, RenderViews::buildURL(CONTROLLER_BASEURL . '&option=helpdesk_settings', TXT_202, 'URL'));
+	$html = RenderViews::showResponse($message, RenderViews::buildURL(CONTROLLER_BASEURL . '&option=settings', TXT_202, 'URL'));
 	define('BODY_CONTENT', $html);
 	define('HEADING', TXT_139);
 	RenderViews::renderThemePage('main_page_content',  SET_THEME);
@@ -574,21 +586,21 @@ switch (@$_GET['option']) {
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
 		showSearchItems($_GET['id'], $_SESSION['access_user_id'], $_GET['rss']);
 		break;
-	case 'helpdesk_settings' :
+	case 'settings' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-		showHelpdeskSettings();
+		showServiceCentreSettings();
 		break;
-	case 'update_helpdesk_settings' :
+	case 'update_settings' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
 		updateSettings();
 		break;
 	case 'show_quick_launch' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-		showHelpdeskQuickLaunch();
+		showServiceCentreQuickLaunch();
 		break;
 	case 'show_portal' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-		showHelpdeskModules();
+		showServiceCentreModules();
 		break;
 	default :
 		echo showPublicItems();

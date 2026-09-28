@@ -12,7 +12,7 @@ final class LaunchpadHelper
     /**
      * Convert controller left-nav HTML into a simple map of controller => [ [label, href, target?, rel?], ... ]
      *
-     * @param array<string,string> $controllersNavHtml  e.g. ['Helpdesk' => $helpdeskNavHtml]
+     * @param array<string,string> $controllersNavHtml  e.g. ['Service Centre' => $serviceCentreNavHtml]
      * @return array<string,array<int,array{label:string, href:string, target:?string, rel:?string}>>
      */
     public static function build(array $controllersNavHtml): array
