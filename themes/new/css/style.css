@@ -31,18 +31,16 @@ body{
 
 /* ---------- Brand bar & brand underline ---------- */
 .brandbar{
-    display:flex; align-items:center; gap:10px;
     position:sticky; top:0; z-index:600;
-    margin:0; padding:12px 20px 0;
-    background:#fff; border:0; border-radius:0;
-    box-shadow:0 10px 28px rgba(15,23,42,.07);
+    margin:0; padding:10px 20px;
+    background:#fff;
+    border-bottom:1px solid #e6e8eb;
+    box-shadow:none;
 }
-.brandbar::before{
-    content:""; position:absolute; left:0; right:0; bottom:0; height:3px; z-index:2; pointer-events:none;
-    background:linear-gradient(90deg, var(--brand), var(--brand2));
+.brandrow{
+    display:flex; align-items:center; gap:12px 16px;
+    min-width:0; position:relative;
 }
-.brandbar.has-sectionnav{ flex-direction:column; align-items:stretch; gap:0; }
-.brandrow{ display:flex; align-items:center; gap:12px; flex:1 1 auto; min-width:0; position:relative; padding-bottom:12px; }
 .brandrow::after{ display:none; }
 
 .brandwrap{ display:flex; align-items:center; gap:12px; min-width:0; }
@@ -86,13 +84,14 @@ body{
 
 /* ---------- Top navigation: visible, right aligned (hover dropdowns) ---------- */
 .topnav{
-    display:flex !important; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;
+    display:flex !important; align-items:center; gap:4px; flex:0 0 auto; flex-wrap:nowrap; justify-content:flex-end;
     margin-left:auto; position:static; padding:0; background:transparent; border:0; box-shadow:none;
+    min-width:0;
 }
 .topnav .menu{ position:relative; display:inline-block; background:transparent; box-shadow:none; padding:0; border-radius:0; }
 .topnav .menu__button{
     position:relative; display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:10px; background:transparent; border:0; cursor:pointer;
+    min-height:40px; padding:0 12px; border-radius:12px; background:transparent; border:0; cursor:pointer;
     color:rgba(15,23,42,.85);
     font: inherit; font-weight:600;
     appearance:none; -webkit-appearance:none;
@@ -101,14 +100,6 @@ body{
 .topnav .menu__label{ min-width:0; }
 .topnav .menu__button:hover,
 .topnav .menu__button[aria-expanded="true"]{ background:var(--hover); }
-.topnav .menu__button.is-current{
-    color:var(--brand2);
-    background:color-mix(in srgb, var(--brand) 14%, white);
-}
-.topnav .menu__button.is-current:hover,
-.topnav .menu__button.is-current[aria-expanded="true"]{
-    background:color-mix(in srgb, var(--brand) 22%, white);
-}
 .topnav .menu__button:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
 .chev{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; transition:transform .15s ease; }
 .topnav .menu__button[aria-expanded="true"] .chev{ transform:rotate(180deg); }
@@ -145,7 +136,7 @@ body{
 .topnav .menu__divider{ height:1px; margin:6px 8px; background:var(--border); }
 .topnav__logout{
     display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:10px; text-decoration:none;
+    min-height:40px; padding:0 12px; border-radius:12px; text-decoration:none;
     color:rgba(15,23,42,.85); font-weight:600;
 }
 .topnav__logout:hover{ background:var(--hover); }
@@ -156,20 +147,16 @@ body{
     left:auto; right:0; transform-origin:top right;
 }
 
-/* Section links that used to live in the left navigation card */
-.brandbar.has-sectionnav{
-    flex-direction:column;
-    align-items:stretch;
-    gap:0;
-}
+/* Section links sit between the wordmark and the right-hand menu */
 .sectionnav{
     display:flex;
+    flex:1 1 auto;
     flex-wrap:wrap;
     align-items:center;
     gap:4px;
-    margin-top:2px;
-    overflow:visible;
-    padding-bottom:12px;
+    min-width:0;
+    margin:0;
+    padding:0;
 }
 .sectionnav.is-overflowing:not(.is-scrolled-end){
     -webkit-mask-image:none;
@@ -180,7 +167,8 @@ body{
     align-items:center;
     flex:0 0 auto;
     gap:8px;
-    padding:6px 12px 6px 6px;
+    min-height:40px;
+    padding:0 12px 0 6px;
     border-radius:12px;
     text-decoration:none;
     color:rgba(15,23,42,.82);
@@ -190,11 +178,11 @@ body{
 }
 .sectionnav__link .icon{
     width:16px; height:16px; opacity:1; box-sizing:content-box;
-    padding:6px; border-radius:9px;
+    padding:6px; border-radius:8px;
     background:color-mix(in srgb, var(--brand) 14%, white);
     color:var(--brand2);
 }
-.sectionnav__link--group{ margin-left:10px; }
+.sectionnav__link--group{ margin-left:0; }
 .sectionnav__link:hover,
 .sectionnav__link:focus-visible{
     background:color-mix(in srgb, var(--brand) 8%, white);
@@ -207,18 +195,29 @@ body{
 }
 .sectionnav__label{ display:inline-block; }
 .sectionnav__link[aria-current="page"] .icon{
-    background:linear-gradient(135deg, var(--brand), var(--brand2));
+    background:var(--brand2);
     color:#fff;
     opacity:1;
 }
 
+@media (max-width:1500px){
+    .brandrow{ flex-wrap:wrap; row-gap:8px; }
+    .brandhome{ order:1; flex:0 0 auto; }
+    .topnav{ order:2; flex:1 1 auto; min-width:0; justify-content:flex-end; }
+    .sectionnav{
+        order:3;
+        flex:1 0 100%;
+        padding-left:52px;
+    }
+}
 @media (max-width:640px){
-    .brandbar{ padding:10px 12px 0; }
-    .brandrow{ flex-wrap:nowrap; gap:6px; padding-bottom:10px; }
+    .brandbar{ padding:10px 12px; }
+    .brandrow{ gap:6px; }
     .brandwrap{ flex:0 0 auto; gap:8px; }
     .logoA{ width:34px; height:34px; border-radius:10px; }
     .logoA svg{ width:18px; height:18px; }
     .brandtext{ font-size:17px; }
+    .sectionnav{ padding-left:42px; }
     .topnav{ flex-wrap:nowrap; min-width:0; gap:2px; }
     .topnav .menu{ min-width:0; flex:1 1 auto; }
     .topnav .menu__button{ min-height:44px; padding:8px 6px; gap:4px; }
@@ -227,11 +226,12 @@ body{
     .topnav__logout{ min-width:44px; min-height:44px; padding:8px; justify-content:center; }
     .topnav__logout-label{ display:none; }
     .topnav .menu__item{ min-height:44px; }
-    .sectionnav{ flex-wrap:wrap; overflow:visible; gap:4px; padding-bottom:2px; }
-    .sectionnav__link{ min-height:44px; padding:8px 12px; }
+    .sectionnav{ gap:4px; }
+    .sectionnav__link{ min-height:44px; padding:0 12px 0 6px; }
 }
 @media (max-width:380px){
     .brandtext{ display:none; }
+    .sectionnav{ padding-left:0; }
 }
 
 /* ---------- Layout spacing & grid ---------- */
@@ -745,15 +745,21 @@ body{
 }
 
 .topnav__user{
+    display:inline-flex;
+    align-items:center;
+    max-width:11rem;
+    min-height:40px;
     font-size:13px;
     font-weight:600;
-    color:var(--brand2);
-    padding:6px 10px;
-    border-radius:999px;
-    background:color-mix(in srgb, var(--brand) 12%, white);
+    color:rgba(15,23,42,.78);
+    padding:0 12px;
+    border-radius:12px;
+    background:rgba(15,23,42,.05);
     white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
 }
-@media (max-width:640px){
+@media (max-width:960px){
     .topnav__user{ display:none; }
 }
 
