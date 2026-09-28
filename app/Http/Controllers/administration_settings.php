@@ -102,6 +102,10 @@ function showAdlexoneSettings(): void
             }
         }
     }
+    $nameArray = $nameArray ?? [];
+    $baseURLArray = $baseURLArray ?? [];
+    array_unshift($nameArray, 'Home');
+    array_unshift($baseURLArray, 'quick_launch}-{Home');
     $fields[TXT_297] = RenderViews::buildSelectDropdown('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION, 'form-control');
     $fields[TXT_561] = RenderViews::buildSelectDropdown('SET_DEFAULT_START_PAGE', array('quick_launch', 'application'), array(TXT_562, TXT_297), @SET_DEFAULT_START_PAGE);
     // Get all item types

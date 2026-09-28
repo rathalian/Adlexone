@@ -17,8 +17,9 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
 <body>
     <div class="brandbar<?php echo $hasSectionNav ? ' has-sectionnav' : ''; ?>">
     <div class="brandrow">
+        <a class="brandhome" href="index.php?controller=quick_launch" aria-label="Home">
         <div class="brandwrap">
-            <div class="logoA" aria-label="Adlexone logo">
+            <div class="logoA" aria-hidden="true">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 3 L20 21 H16 L14.6 18 H9.4 L8 21 H4 L12 3 Z M10.7 14h2.6L12 9.8 10.7 14Z"
                           fill="white"/>
@@ -26,6 +27,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
             </div>
             <div class="brandtext"><span class="title-static">dlexone</span></div>
         </div>
+        </a>
 
         <nav class="topnav" aria-label="Top">
             <?php
@@ -43,7 +45,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                 ['label' => 'Report Manager', 'href' => '?controller=app_oneorzeroreportmanager_main', 'icon' => 'ic-search', 'controller' => 'app_oneorzeroreportmanager_main'],
                 ['label' => 'Time Manager', 'href' => '?controller=app_oneorzerotimemanager_main', 'icon' => 'ic-time', 'controller' => 'app_oneorzerotimemanager_main'],
             ];
-            $quickLaunch = ['label' => 'Quick Launch', 'href' => '?controller=quick_launch', 'icon' => 'ic-launch', 'controller' => 'quick_launch'];
+            $quickLaunch = ['label' => 'Home', 'href' => '?controller=quick_launch', 'icon' => 'ic-launch', 'controller' => 'quick_launch'];
             $manageItems = [
                 ['label' => 'Items and Fields', 'href' => '?controller=administration_item_settings&option=manage_fields', 'icon' => 'ic-manage-fields', 'controller' => 'administration_item_settings'],
                 ['label' => 'Workflow', 'href' => '?controller=administration_actions&option=show_defined_actions', 'icon' => 'ic-manage-actions', 'controller' => 'administration_actions'],

@@ -115,7 +115,7 @@ final class UserIdentityRepository
         $baseUsername = $email !== '' ? strtok($email, '@') : ('user' . substr(md5($claims['sub'] ?? uniqid('', true)), 0, 8));
         $username = self::uniqueUsername((string) $baseUsername);
 
-        $defaultApplication = defined('SET_DEFAULT_APPLICATION') ? (string) SET_DEFAULT_APPLICATION : 'launch}-{Home';
+        $defaultApplication = defined('SET_DEFAULT_APPLICATION') ? (string) SET_DEFAULT_APPLICATION : 'quick_launch}-{Home';
         $defaultApplicationArray = explode('}-{', $defaultApplication);
 
         $userId = Database::newID('users', 'user_id');
@@ -131,7 +131,7 @@ final class UserIdentityRepository
             'show_header' => 'Yes',
             'show_graphics' => 'Yes',
             'role' => 4,
-            'home_controller' => $defaultApplicationArray[0] ?? 'launch',
+            'home_controller' => $defaultApplicationArray[0] ?? 'quick_launch',
             'home_controller_name' => $defaultApplicationArray[1] ?? 'Home',
             'lastactive' => 'active',
         ];

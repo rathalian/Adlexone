@@ -28,7 +28,7 @@ final class AuthSession
         $_SESSION['access_home_controller_name'] = $user['home_controller_name'] ?? '';
         $_SESSION['access_show_header'] = $user['show_header'] ?? 'Yes';
         $_SESSION['access_show_graphics'] = $user['show_graphics'] ?? 'Yes';
-        $_SESSION['access_home_controller'] = !empty($user['home_controller']) ? $user['home_controller'] : 'launch';
+        $_SESSION['access_home_controller'] = !empty($user['home_controller']) ? $user['home_controller'] : 'quick_launch';
 
         Access::hydrateSession((int) $user['user_id']);
     }

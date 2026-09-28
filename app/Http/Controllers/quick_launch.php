@@ -25,164 +25,130 @@ declare(strict_types=1);
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
+use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
 use Adlexone\support\RenderViews;
-use Adlexone\support\RenderNavigation;
 
-function showQuickLaunch()
+/**
+ * Homepage. One tile per destination. Section menus stay inside each app.
+ */
+function launchTile(string $href, string $title, string $hint, string $icon): string
 {
-//    //Load application list
-//    // Get all application xml files and create a application array
-//    $directoryPath = 'app/http/controllers/applications/';
-//    $applicationFileArray = [];
-//
-//    // Collect application XML files
-//    foreach (scandir($directoryPath) as $entry) {
-//        $appXMLFile = $directoryPath . $entry . '/' . $entry . '.xml';
-//        if (is_file($appXMLFile)) {
-//            $applicationFileArray[] = $appXMLFile;
-//        }
-//    }
-//
-//    // Parse XML files and extract data
-//    $applicationName = $applicationArray = $applicationImageArray = [];
-//    foreach ($applicationFileArray as $filename) {
-//        $xml = file_get_contents($filename);
-//        $xmlparser = xml_parser_create('UTF-8');
-//        xml_parser_set_option($xmlparser, XML_OPTION_SKIP_WHITE, 1);
-//        xml_parse_into_struct($xmlparser, $xml, $values);
-//        xml_parser_free($xmlparser);
-//
-//        foreach ($values as $value) {
-//            switch ($value['tag']) {
-//                case 'NAME':
-//                    $applicationName[] = $value['value'];
-//                    break;
-//                case 'BASE_URL':
-//                    $applicationArray[] = $value['value'];
-//                    break;
-//                case 'IMAGE':
-//                    $applicationImageArray[] = $value['value'];
-//                    break;
-//            }
-//        }
-//    }
-//
-//    // Generate page output
-//    $quickLaunchArray = [];
-//    foreach ($applicationArray as $i => $application) {
-//        $imageURL = RenderViews::buildURL('index.php?controller=' . $application, '', 'launchURL', SET_IMAGE_PATH . $applicationImageArray[$i]);
-//        $URL = RenderViews::buildURL('index.php?controller=' . $application, constant($applicationName[$i]));
-//        $html =  RenderViews::outputIfRoleAllowed($URL . $imageURL, $_SESSION['access_role_id'], 5);
-//        $bodyBlock[] = [
-//            'title' => constant($applicationName[$i]),
-//            'html' => $html,
-//        ];
-//    }
-//    $horizontalList = RenderViews::buildHorizontalCards($bodyBlock);
+    $hrefEsc = htmlspecialchars($href, ENT_QUOTES, 'UTF-8');
+    $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+    $hintEsc = htmlspecialchars($hint, ENT_QUOTES, 'UTF-8');
+    $iconEsc = htmlspecialchars($icon, ENT_QUOTES, 'UTF-8');
 
-
-
-    $imageURL = RenderViews::buildURL('index.php?controller=item_management_main', '', 'launchURL', SET_IMAGE_PATH . 'manageItems.png');
-    $URL = RenderViews::buildURL('index.php?controller=item_management_main', TXT_559, 'launchURL');
-    $html =  RenderViews::outputIfRoleAllowed($URL . $imageURL, $_SESSION['access_role_id'], 1);
-    $bodyBlock[] = ['title' => TXT_559,'html' => $html];
-
-
-
-
-
-    $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=new_user', TXT_33), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL( 'index.php?controller=administration_main&subcontroller=administration_security&option=new_group', TXT_34), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=manage_users_groups', TXT_73), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
-    $bodyBlock[] = RenderViews::outputIfRoleAllowed(['title' => TXT_560,'html' => $html], $_SESSION['access_role_id'], 2);
-
-
-
-
-   $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=manage_fields', TXT_53, 'URL'), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=manage_item_types', TXT_50, 'URL'), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=new_custom_field', TXT_88, 'URL'), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_item_settings&option=new_item_type', TXT_85, 'URL'),  $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
-//
-////    $imageURL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', '', 'launchURL', SET_IMAGE_PATH . 'manageItemTypes.png');
-////    $URL = RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', TXT_50, 'launchURL');
-////    $html =  RenderViews::outputIfRoleAllowed($URL . $imageURL, $_SESION['access_role_id'], 1);
-        $bodyBlock[] = RenderViews::outputIfRoleAllowed(['title' => TXT_50,'html' => $html], $_SESSION['access_role_id'], 2);
-
-
-    $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_actions&option=show_action_packages', TXT_255, 'URL'), $_SESSION['access_role_id'], 1);
-    $html .= RenderViews::outputIfRoleAllowed('<br>'.RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_actions&option=show_defined_actions', TXT_411, 'URL'), $_SESSION['access_role_id'], 1);
-//    // Show page
-//    $imageURL = RenderViews::buildURL('index . php ? controller = administration_main & subcontroller = administration_actions', '', 'launchURL', SET_IMAGE_PATH . 'manageActions . png');
-//    $URL = RenderViews::buildURL('index . php ? controller = administration_main & subcontroller = administration_actions', TXT_411, 'launchURL');
-//    $html =  RenderViews::outputIfRoleAllowed($URL . $imageURL, $_SESSION['access_role_id'], 1);
-    $bodyBlock[] =  RenderViews::outputIfRoleAllowed(['title' => TXT_411,'html' => $html], $_SESSION['access_role_id'], 1);
-
-
-//    /* Generate line content from array */
-//    $html = RenderViews::renderHorizontalList($quickLaunchArray);
-//    /* Generate full page output */
-//    $bodyBlock[] = [
-//        'title' => TXT_552,
-//        'html' => $html,
-//        'full' => true,
-//    ];
-    $content = RenderViews::buildHorizontalCards($bodyBlock,3);
-
-    // Set page heading and full page content, note no left navigation so LEFT_NAVIGATION is not defined
-   // define('BODY_HEADING', TXT_552);
-	define('BODY_CONTENT', $content);
+    return '<a class="launch-tile" href="' . $hrefEsc . '">'
+        . '<span class="launch-tile__icon" aria-hidden="true"><svg class="icon"><use href="themes/new/assets/adlexone.sprite.svg#' . $iconEsc . '"></use></svg></span>'
+        . '<span class="launch-tile__copy">'
+        . '<span class="launch-tile__title">' . $titleEsc . '</span>'
+        . '<span class="launch-tile__hint">' . $hintEsc . '</span>'
+        . '</span></a>';
 }
 
 /**
- * Builds and renders the navigation for the Helpdesk and Knowledgebase sections.
- *
- * This code first constructs a map of controllers and their respective navigation URLs
- * using the `RenderNavigation::build` method. Each controller is associated with a set
- * of navigation links generated by `helpDeskNavigationURLS`.
- *
- * The `RenderNavigation::render` method is then used to render the navigation in a specific
- * style, with optional parameters for columns and the number of links to display inline.
- *
- * Finally, the rendered navigation content is included in the main page layout using
- * `RenderViews::renderThemePage`.
+ * @param list<string> $tiles
  */
-// Build controllers only when the current role is allowed to see the navigation, sets minimum role to view as 5 by default
-$controllers = [];
-$roleId = $_SESSION['access_role_id'] ?? 5;
+function launchGroup(string $label, array $tiles): string
+{
+    if ($tiles === []) {
+        return '';
+    }
+    $labelEsc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
 
-$helpdeskUrls = RenderNavigation::helpDeskNavigationURLS();
-if (!empty(RenderViews::outputIfRoleAllowed($helpdeskUrls, $roleId, 5))) {
-    $controllers['Helpdesk'] = $helpdeskUrls;
+    return '<section class="launchpad__group" aria-label="' . $labelEsc . '">'
+        . '<h2 class="launchpad__heading">' . $labelEsc . '</h2>'
+        . '<div class="launchpad__grid">' . implode('', $tiles) . '</div>'
+        . '</section>';
 }
 
-$knowledgebaseUrls = RenderNavigation::knowledgebaseNavigationURLS();
-if (!empty(RenderViews::outputIfRoleAllowed($knowledgebaseUrls, $roleId, 5))) {
-    $controllers['Knowledgebase'] = $knowledgebaseUrls;
+$applications = [];
+if (Access::can(Permission::HELPDESK_USE)) {
+    $applications[] = launchTile(
+        'index.php?controller=app_oneorzerohelpdesk_main',
+        'Service Centre',
+        'Tickets and announcements',
+        'ic-helpdesk'
+    );
+}
+if (Access::can(Permission::KNOWLEDGEBASE_USE)) {
+    $applications[] = launchTile(
+        'index.php?controller=app_oneorzeroknowledgebase_main',
+        'Knowledge Hub',
+        'Articles and search',
+        'ic-knowledgebase'
+    );
+}
+if (Access::can(Permission::REPORTS_USE)) {
+    $applications[] = launchTile(
+        'index.php?controller=app_oneorzeroreportmanager_main',
+        'Report Manager',
+        'Reports and saved views',
+        'ic-search'
+    );
+}
+if (Access::can(Permission::APP_ACCESS)) {
+    $applications[] = launchTile(
+        'index.php?controller=app_oneorzerotimemanager_main',
+        'Time Manager',
+        'Time entries',
+        'ic-time'
+    );
 }
 
-$reportManagerURLS = RenderNavigation::reportManagerNavigationURLS();
-if (!empty(RenderViews::outputIfRoleAllowed($reportManagerURLS, $roleId, 5))) {
-    $controllers['Reports'] = $reportManagerURLS;
+$manage = [];
+if (Access::can(Permission::ADMIN_ITEMS)) {
+    $manage[] = launchTile(
+        'index.php?controller=administration_item_settings&option=manage_fields',
+        'Items and Fields',
+        'Fields and item types',
+        'ic-manage-fields'
+    );
+}
+if (Access::can(Permission::ADMIN_ACTIONS)) {
+    $manage[] = launchTile(
+        'index.php?controller=administration_actions&option=show_defined_actions',
+        'Workflow',
+        'Actions and packages',
+        'ic-manage-actions'
+    );
+}
+if (Access::can(Permission::ADMIN_SECURITY)) {
+    $manage[] = launchTile(
+        'index.php?controller=administration_security&option=manage_users',
+        'Security',
+        'Users and groups',
+        'ic-manage-users'
+    );
+}
+if (Access::can(Permission::ADMIN_SETTINGS)) {
+    $manage[] = launchTile(
+        'index.php?controller=administration_settings&option=adlexone_settings',
+        'Settings',
+        'Application setup',
+        'ic-system-settings'
+    );
+} elseif (Access::can(Permission::ADMIN_SYSTEM)) {
+    $manage[] = launchTile(
+        'index.php?controller=administration_settings&option=sign_in_settings',
+        'Settings',
+        'Sign-in and system setup',
+        'ic-system-settings'
+    );
 }
 
-$searchURLS = RenderNavigation::itemSettingsURLs();
-if (!empty(RenderViews::outputIfRoleAllowed($searchURLS, $roleId, 5))) {
-    $controllers['Item Management'] = $searchURLS;
+$html = '<div class="launchpad">'
+    . launchGroup('Applications', $applications)
+    . launchGroup('Manage', $manage)
+    . '</div>';
+
+if ($applications === [] && $manage === []) {
+    $html = '<p class="launchpad__empty">Nothing is available for this account.</p>';
 }
 
-$securityURLS = RenderNavigation::securityManagementURLs();
-if (!empty(RenderViews::outputIfRoleAllowed($securityURLS, $roleId, 5))) {
-    $controllers['Security Management'] = $securityURLS;
+if (!defined('PAGE_TITLE')) {
+    define('PAGE_TITLE', 'Home');
 }
-
-$settingsURLS = RenderNavigation::systemSettingsURLs();
-if (!empty(RenderViews::outputIfRoleAllowed($settingsURLS, $roleId, 0))) {
-    $controllers['System Settings'] = $settingsURLS;
-}
-
-// Build navigation from the allowed controllers
-$controllers = RenderNavigation::build($controllers);
-// 2) Render whichever style you want:
-define('BODY_CONTENT', RenderNavigation::render($controllers,null,3,false));
-RenderViews::renderThemePage('main_page_content',  SET_THEME);
+define('BODY_CONTENT', $html);
+RenderViews::renderThemePage('main_page_content', SET_THEME);

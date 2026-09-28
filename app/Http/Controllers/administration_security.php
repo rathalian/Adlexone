@@ -182,6 +182,8 @@ function showUser($userID = '', $values = [], $adminEdit = true)
             }
         }
     }
+    array_unshift($nameArray, 'Home');
+    array_unshift($baseURLArray, 'quick_launch}-{Home');
     $application = empty($fieldValues['home_controller']) ? SET_DEFAULT_APPLICATION : $fieldValues['home_controller'] . '}-{' . @$fieldValues['home_controller_name'];
     $userPreferences[TXT_297] = RenderViews::buildSelectDropdown('home_controller', $baseURLArray, $nameArray, $application);
     $userPreferences[TXT_63] = RenderViews::buildSelectDropdown('show_header', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_header']);
