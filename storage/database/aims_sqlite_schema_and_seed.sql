@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS aims_custom_field_menu_values (
   menu_value_id INTEGER NOT NULL PRIMARY KEY,
   custom_field_id INTEGER NOT NULL,
   menu_value TEXT NOT NULL,
-  sub_menu_values TEXT
+  sub_menu_values TEXT,
+  parent_menu_value_id INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO aims_custom_field_menu_values (menu_value_id, custom_field_id, menu_value, sub_menu_values) VALUES

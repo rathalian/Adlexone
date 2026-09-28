@@ -22,6 +22,9 @@ final class FieldTypes
         'buildTextArea'       => self::TEXT_AREA,
         'buildSelectDropdown' => self::MENU,
         'buildCheckBox'       => self::CHECK_BOX,
+        'subMenu'             => self::MENU,
+        'subMenuChild'        => self::MENU,
+        'multiLevelMenu'      => self::MENU,
     ];
 
     public static function normalise(?string $fieldType): string

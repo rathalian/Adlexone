@@ -138,6 +138,8 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     }
 
 
+    \Adlexone\support\MenuOptions::prepare();
+
     if (@$_GET['controller'] === 'full_page_view') {
         include 'app/Http/Controllers/full_page_view.php';
     } else {
