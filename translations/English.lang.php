@@ -693,6 +693,8 @@ TXT_692 = "Add New"
 TXT_693 = "Parent"
 TXT_694 = "Top level"
 TXT_695 = "One menu holds every level. Add a value, then add the next value under it."
+TXT_696 = "Permissions"
+TXT_697 = "Legacy label only. Access is controlled by the permissions below."
 ; ******************************************************************************;
 ;
 ; Adlexone Action Package language constants

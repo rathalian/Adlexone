@@ -67,7 +67,9 @@ private static function pdo(?string $dsn = null): \PDO
        $pdo = self::pdo($dsn);
        $sql2 = self::translateMysqlToSqlite($sql);
         $stmt = $pdo->prepare($sql2);
-        echo '<!-- SQL: ' . htmlspecialchars($sql2, ENT_QUOTES|ENT_SUBSTITUTE) . ' -->' . "\n";
+        if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
+            echo '<!-- SQL: ' . htmlspecialchars($sql2, ENT_QUOTES|ENT_SUBSTITUTE) . ' -->' . "\n";
+        }
         $stmt->execute();
         // For SELECT, buffer rows so numRows() works reliably
         if (preg_match('/^\\s*SELECT\\b/i', $sql2)) {
@@ -77,6 +79,38 @@ private static function pdo(?string $dsn = null): \PDO
         // Non-SELECT: return DB_Result with affected rows count
         $count = $stmt->rowCount();
         return new DB_Result([], $count);
+    }
+
+    /**
+     * Parameterized query. Prefer this for auth and other user-supplied values.
+     *
+     * @param array<int|string, mixed> $params
+     */
+    public static function queryParams(string $sql, array $params = [], ?string $dsn = null)
+    {
+        $pdo = self::pdo($dsn);
+        $sql2 = self::translateMysqlToSqlite($sql);
+        if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
+            echo '<!-- SQL: ' . htmlspecialchars($sql2, ENT_QUOTES|ENT_SUBSTITUTE) . ' -->' . "\n";
+        }
+        $stmt = $pdo->prepare($sql2);
+        $stmt->execute($params);
+        if (preg_match('/^\\s*SELECT\\b/i', $sql2)) {
+            return new DB_Result($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []);
+        }
+        return new DB_Result([], $stmt->rowCount());
+    }
+
+    /** @param array<int|string, mixed> $params */
+    public static function firstResultParams(string $sql, array $params = [], ?string $dsn = null): ?array
+    {
+        return self::fetchArray(self::queryParams($sql, $params, $dsn));
+    }
+
+    /** Run DDL/exec without result buffering. */
+    public static function exec(string $sql, ?string $dsn = null): void
+    {
+        self::pdo($dsn)->exec(self::translateMysqlToSqlite($sql));
     }
 
     /** Fetch next assoc row from a DB_Result */

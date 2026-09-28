@@ -376,71 +376,71 @@ function showEmailSettings(): void
  */
 switch (@$_GET['option']) {
     case 'adlexone_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
         showAdlexoneSettings();
         break;
     case 'update_adlexone_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'adlexone_settings.json', $_POST);
         break;
     case 'server_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         showServerSettings();
         break;
     case 'update_server_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'server_settings.json', $_POST);
         break;
     case 'data_source_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         showDataSourceSettings();
         break;
     case 'update_data_source_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'data_source_settings.json', $_POST);
         break;
     case 'data_sharing_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         showDataSharingSettings();
         break;
     case 'update_data_sharing_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'data_sharing_settings.json', $_POST);
         break;
     case 'ldap_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         showLDAPSettings();
         break;
     case 'update_ldap_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'ldap_settings.json', $_POST);
         break;
     case 'autologon_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
         showAutologonSettings();
         break;
     case 'update_autologon_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'autologon_settings.json', $_POST);
         break;
     case 'advanced_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         showAdvancedSettings();
         break;
     case 'update_advanced_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'advanced_settings.json', $_POST);
         break;
     case 'email_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         showEmailSettings();
         break;
     case 'update_email_settings' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'email_settings.json', $_POST);
         break;
     default :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
         RenderViews::buildResponse('Invalid Option', 'index . php ? controller = administration_main & subcontroller = administration_settings & option = adlexone_settings');
         break;
 }

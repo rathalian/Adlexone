@@ -1,0 +1,8 @@
+{
+    "AUTH_HELP": "OAuth uses OpenID Connect (built on OAuth 2.0). Fill in one connection below. The same settings work with common directories that support this standard (for example Microsoft Entra, Okta, Google, Auth0, or Keycloak). Register this redirect URI with them: https://YOUR_HOST/index.php?action=oauth_callback",
+    "AUTH_LOCAL_ENABLED": "Yes",
+    "AUTH_LOCAL_ALLOW_REGISTRATION": "No",
+    "AUTH_OAUTH_ENABLED": "No",
+    "AUTH_OAUTH_AUTO_REDIRECT": "No",
+    "AUTH_OAUTH_CONNECTIONS_JSON": "[{\"id\":\"organisation\",\"label\":\"Sign in with OAuth\",\"issuer\":\"https://YOUR_ISSUER_URL\",\"client_id\":\"YOUR_APP_CLIENT_ID\",\"client_secret\":\"YOUR_APP_CLIENT_SECRET\",\"scopes\":\"openid profile email\",\"auto_provision\":\"No\"}]"
+}

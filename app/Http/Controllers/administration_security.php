@@ -25,20 +25,15 @@ declare(strict_types=1);
  */
 
 use Adlexone\support\Database;
-use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
+use Adlexone\support\RenderViews;
 
 /**
  * Controller specific constants
  */
 define('SEC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_security');
 
-
-/**
- * Security links sit in the top navigation card. There is no left sidebar.
- * Editing a user or group keeps the matching section link current.
- */
-if ((int)($_SESSION['access_role_id'] ?? 5) <= 1) {
+if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
     $securityOption = (string)($_GET['option'] ?? '');
     $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
     $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
@@ -49,14 +44,15 @@ if ((int)($_SESSION['access_role_id'] ?? 5) <= 1) {
     }
 }
 RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
+
 /**
  * Shows secured security options
  */
 function showSecurityOptions(): void
 {
-    $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), $_SESSION['access_role_id'], 2);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), $_SESSION['access_role_id'], 2);
+    $html = RenderViews::outputIfAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+    $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+    $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
     define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_28, 'html' => $html]]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -94,7 +90,7 @@ function showUser($userID = '', $values = [], $adminEdit = true)
     $fields[TXT_168] = RenderViews::buildTextInput('last_name', @$fieldValues['last_name']);
     $fields[TXT_169] = RenderViews::buildTextInput('email', @$fieldValues['email']);
 
-    if ($_SESSION['access_role_id'] > 0) {
+    if (!\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SYSTEM)) {
         $roleIDs = [1, 2, 3, 4, 5];
         $roleNames = [TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
     } else {
@@ -102,15 +98,13 @@ function showUser($userID = '', $values = [], $adminEdit = true)
         $roleNames = [TXT_190, TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
     }
 
-    $fields[TXT_187] = RenderViews::outputIfRoleAllowed(
+    $fields[TXT_187] = RenderViews::outputIfAllowed(
         RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, @$fieldValues['role']),
-        $_SESSION['access_role_id'],
-        1
+        \Adlexone\Auth\Permission::ADMIN_SECURITY
     );
-    $fields[TXT_653] = RenderViews::outputIfRoleAllowed(
+    $fields[TXT_653] = RenderViews::outputIfAllowed(
         RenderViews::buildSelectDropdown('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
-        $_SESSION['access_role_id'],
-        1
+        \Adlexone\Auth\Permission::ADMIN_SECURITY
     );
     if (empty($fields[TXT_187])) {
         unset($fields[TXT_187]);
@@ -238,6 +232,7 @@ function showGroup($groupID = '', $values = '')
     if ($isNew) {
         $fieldValues = is_array($values) ? $values : [];
         $action = SEC_BASE_URL . '&option=add_group';
+        $selectedPermissions = [];
     } else {
         $columnArray = array('group_id', 'group_name', 'description', 'role');
         $condition = "WHERE group_id = '$groupID'";
@@ -245,13 +240,18 @@ function showGroup($groupID = '', $values = '')
         $result = Database::query($sql, DSN, SET_SHOW_SQL);
         $fieldValues = Database::fetchArray($result);
         $action = SEC_BASE_URL . '&option=update_group';
+        $selectedPermissions = \Adlexone\Auth\Access::permissionsForGroup((int) $groupID);
     }
     $roleIDs = array(1, 2, 3, 4, 5);
     $roleNames = array(TXT_191, TXT_192, TXT_193, TXT_194, TXT_303);
     $fields = [
         TXT_150 => RenderViews::buildTextInput('group_name', $fieldValues['group_name'] ?? ''),
         TXT_186 => RenderViews::buildTextArea('description', $fieldValues['description'] ?? '', SET_FORM_FIELD_HEIGHT),
-        TXT_187 => RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, $fieldValues['role'] ?? ''),
+        TXT_187 => '<div class="field-stack">'
+            . RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, $fieldValues['role'] ?? '')
+            . '<p class="form-help">' . htmlspecialchars(TXT_697, ENT_QUOTES, 'UTF-8') . '</p>'
+            . '</div>',
+        TXT_696 => buildGroupPermissionsField($selectedPermissions),
     ];
     $fields[] = RenderViews::buildHiddenInput('group_id', $fieldValues['group_id'] ?? '');
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
@@ -262,9 +262,33 @@ function showGroup($groupID = '', $values = '')
         [
             RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
             RenderViews::buildFormButton('reset', 'reset', TXT_75),
+            '<a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=manage_groups', ENT_QUOTES, 'UTF-8') . '">'
+                . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
         ]
     ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * @param list<string> $selected
+ */
+function buildGroupPermissionsField(array $selected): string
+{
+    $html = '<div class="group-security-list">';
+    foreach (\Adlexone\Auth\Permission::catalog() as $key => $meta) {
+        $checked = in_array($key, $selected, true) ? $key : '';
+        $html .= '<div class="group-security-item">'
+            . RenderViews::buildCheckBox(
+                'permissions[]',
+                $key,
+                $checked,
+                'checkbox',
+                (string) $meta['label']
+            )
+            . '</div>';
+    }
+    $html .= '</div>';
+    return $html;
 }
 
 /**
@@ -522,7 +546,7 @@ function recordMeta(array $parts): string
             $condition = "WHERE user_id = '$userID'";
 
             // Prevent role modification for users with insufficient access rights
-            if ($_SESSION['access_role_id'] > 2) {
+            if (!\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
                 unset($_POST['role']);
             }
 
@@ -578,8 +602,9 @@ function addGroup()
     $sql = Database::sqlSelect('groups', $columnArray, $condition);
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     if (Database::numRows($result) == 0) {
+        $permissions = $_POST['permissions'] ?? [];
         // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id']);
+        unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id'], $_POST['permissions']);
         // Set unique id
         $array['group_id'] = Database::newID('groups', 'group_id');
         // Build insert array
@@ -587,6 +612,7 @@ function addGroup()
         // Insert form field values into row
         $sql = Database::sqlInsert('groups', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
+        \Adlexone\Auth\Access::setGroupPermissions((int) $array['group_id'], is_array($permissions) ? $permissions : []);
         RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
         return;
     }
@@ -600,8 +626,9 @@ function addGroup()
  */
 function updateGroup($groupID)
 {
+    $permissions = $_POST['permissions'] ?? [];
     // Remove unwanted POST variables
-    unset ($_POST['submit_button'], $_POST['reset']);
+    unset ($_POST['submit_button'], $_POST['reset'], $_POST['permissions']);
     // Build insert array
     $columnArray = $_POST;
     // Set condition
@@ -609,6 +636,7 @@ function updateGroup($groupID)
     // Updates form field values into row
     $sql = Database::sqlUpdate('groups', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
+    \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, is_array($permissions) ? $permissions : []);
     RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
 }
 
@@ -631,31 +659,32 @@ function updateGroup($groupID)
  */
 function updateGroupMembership($userID)
 {
-    // Remove unwanted POST variables
-    unset($_POST['submit_button'], $_POST['reset']);
+    $userID = (int) $userID;
 
-    // Create a delimited string from selected groups
-    $groups = '}-{';
-    foreach ($_POST as $fieldValue) {
-        $groups .= $fieldValue . '}-{';
+    $groups = '';
+    $i = 0;
+    foreach ($_POST as $key => $value) {
+        if (!str_starts_with((string) $key, 'group_') || $value === '' || !is_scalar($value)) {
+            continue;
+        }
+        $value = trim((string) $value);
+        if (!ctype_digit($value)) {
+            continue;
+        }
+        $groups .= ($i === 0 ? '}-{' : '') . $value . '}-{';
+        $i++;
+    }
+    if ($groups === '') {
+        $groups = '}-{';
     }
 
-    // Prepare the data for the database
-    $columnArray['groups'] = $groups;
-    $columnArray['user_id'] = $userID;
+    $condition = "WHERE user_id = '" . $userID . "'";
+    Database::query(Database::sqlDelete('group_members', $condition), DSN, SET_SHOW_SQL);
+    Database::query(Database::sqlInsert('group_members', [
+        'user_id' => $userID,
+        'groups' => $groups,
+    ]), DSN, SET_SHOW_SQL);
 
-    // Set the condition for the database query
-    $condition = "WHERE user_id = '$userID'";
-
-    // Delete existing group memberships for the user
-    $sql = Database::sqlDelete('group_members', $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
-
-    // Insert the updated group memberships into the database
-    $sql = Database::sqlInsert('group_members', $columnArray);
-    Database::query($sql, DSN, SET_SHOW_SQL);
-
-    // Render a confirmation message
     RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
 }
 
@@ -725,6 +754,7 @@ function deleteGroup($groupID = '')
 {
     $sql = "DELETE FROM groups WHERE group_id='" . $groupID . "'";
     Database::query($sql, DSN, SET_SHOW_SQL);
+    \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, []);
     showGroups();
 }
 
@@ -753,55 +783,82 @@ function deleteUser($userID = '')
  */
 function showGroupMembership($userID = '')
 {
-    // Fetch user name
-    $columnArray = array('user_name');
-    $condition = "WHERE user_id = '" . $userID . "'";
-    $sql = Database::sqlSelect('users', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
-    $userName = $row['user_name'];
+    $userID = (int) $userID;
+    $user = Database::firstResultParams(
+        'SELECT user_name FROM users WHERE user_id = ?',
+        [$userID]
+    );
+    if ($user === null) {
+        RenderViews::buildResponse('User not found.', RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+        return;
+    }
+    $userName = (string) $user['user_name'];
 
-    // Fetch group memberships
-    $columnArray = array('groups');
-    $condition = "WHERE user_id = '" . $userID . "'";
-    $sql = Database::sqlSelect('group_members', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
-    $groupArray = explode('}-{', $row['groups']);
-
-    // Fetch all groups
-    $columnArray = array('group_id', 'group_name', 'description');
-    $sql = Database::sqlSelect('groups', $columnArray);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-
-    $bodyBlocks = [];
-    if (Database::numRows($result) > 0) {
-        while ($row = Database::fetchArray($result)) {
-            $checked = in_array($row['group_id'], $groupArray) ? $row['group_id'] : '';
-            $checkbox = RenderViews::buildCheckBox($row['group_id'], $row['group_id'], $checked, 'form-control');
-            $bodyBlocks[] = [
-                'title' => $row['group_name'],
-                'html' => '<div>' . htmlspecialchars($row['description']) . '</div>' . $checkbox
-            ];
+    $member = Database::firstResultParams(
+        'SELECT groups FROM group_members WHERE user_id = ?',
+        [$userID]
+    );
+    $groupArray = [];
+    if ($member !== null && !empty($member['groups'])) {
+        foreach (preg_split('/\}-\{/', (string) $member['groups']) ?: [] as $part) {
+            $id = trim($part, " \t\n\r\0\x0B{}-");
+            if ($id !== '' && ctype_digit($id)) {
+                $groupArray[] = $id;
+            }
         }
-        $fields = [];
-        foreach ($bodyBlocks as $block) {
-            $fields[$block['title']] = $block['html'];
-        }
-        $formHtml = RenderViews::buildForm(
-            TXT_239 . ': ' . $userName,
-            SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID,
-            $fields,
-            [
-                RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
-            ]
-        );
-    } else {
-        $formHtml = RenderViews::buildVerticalCards([['title' => TXT_239 . ': ' . $userName, 'html' => TXT_342]]);
     }
 
-    define('BODY_CONTENT', $formHtml);
+    $result = Database::query(
+        Database::sqlSelect('groups', ['group_id', 'group_name', 'description'], 'ORDER BY group_name ASC'),
+        DSN,
+        SET_SHOW_SQL
+    );
+
+    if (Database::numRows($result) === 0) {
+        define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+            'title' => TXT_239 . ': ' . $userName,
+            'html' => '<p class="form-help">' . htmlspecialchars(TXT_342, ENT_QUOTES, 'UTF-8') . '</p>'
+                . '<p><a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a></p>',
+        ]]));
+        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        return;
+    }
+
+    $groupMembershipHtml = '<div class="group-security-list">';
+    while ($row = Database::fetchArray($result)) {
+        $groupId = (string) $row['group_id'];
+        $checked = in_array($groupId, $groupArray, true) ? $groupId : '';
+        $description = trim((string) ($row['description'] ?? ''));
+        $groupMembershipHtml .= '<div class="group-security-item">'
+            . RenderViews::buildCheckBox(
+                'group_' . $groupId,
+                $groupId,
+                $checked,
+                'checkbox',
+                (string) $row['group_name']
+            );
+        if ($description !== '') {
+            $groupMembershipHtml .= '<div class="record-list__meta">'
+                . htmlspecialchars($description, ENT_QUOTES, 'UTF-8')
+                . '</div>';
+        }
+        $groupMembershipHtml .= '</div>';
+    }
+    $groupMembershipHtml .= '</div>';
+
+    define('BODY_CONTENT', RenderViews::buildForm(
+        TXT_239 . ': ' . $userName,
+        SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID,
+        [
+            TXT_71 => $groupMembershipHtml,
+        ],
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
+            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+            '<a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">'
+                . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
+        ]
+    ));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 /**
@@ -811,80 +868,80 @@ function showGroupMembership($userID = '')
 switch (@$_GET['option']) {
     case 'manage_users' :
     case 'manage_users_groups' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         showUsers();
         break;
     case 'manage_groups' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         showGroups();
         break;
     case 'user_group_search' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         showUserGroupResults();
         break;
     case 'new_user' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         // Removes leading VBL_ from any session variables (used for form value persistence)
         showUser('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
         // Unset session variables starting with VBL_
         $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
         break;
     case 'admin_modify_user' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         showUser($_GET['user_id'], '', true);
         break;
     case 'modify_user' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::APP_ACCESS);
         showUser($_SESSION['access_user_id'], '', false);
         break;
     case 'new_group' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         // Removes leading VBL_ from any session variables (used for form value persistence)
         showGroup('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
         // Unset session variables starting with VBL_
         $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
         break;
     case 'add_user' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         addUser();
         break;
     case 'update_user' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::APP_ACCESS);
         updateUser($_POST['user_id']);
         break;
     case 'delete_user' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         deleteUser($_GET['user_id']);
         break;
     case 'add_group' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         addGroup();
         break;
     case 'modify_group' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         // Removes leading VBL_ from any session variables (used for form value persistence)
         showGroup($_GET['group_id'], RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
         // Unset session variables starting with VBL_
         $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
         break;
     case 'modify_group_membership' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         showGroupMembership($_GET['user_id']);
         break;
     case 'update_group_membership' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         updateGroupMembership($_GET['user_id']);
         break;
     case 'update_group' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         updateGroup($_POST['group_id']);
         break;
     case 'delete_group' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
         deleteGroup($_GET['group_id']);
         break;
     default :
-        if ($_SESSION['access_role_id'] <= 1) {
+        if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
             showUsers();
         } else {
             showUser($_SESSION['access_user_id'], '', false);

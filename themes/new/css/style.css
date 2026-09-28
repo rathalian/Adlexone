@@ -383,8 +383,24 @@ body{
 .form-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
 .input-file{ width:100%; }
 
-.group-security-list{ display:flex; flex-direction:column; gap:8px; flex:1 1 100%; }
-.group-security-list .checkbox{ display:flex; align-items:center; gap:8px; }
+.group-security-list{ display:flex; flex-direction:column; gap:8px; flex:1 1 100%; min-width:0; }
+.group-security-list .checkbox{ display:flex; align-items:flex-start; gap:8px; }
+.field-stack{ flex:1 1 100%; min-width:0; }
+.field.is-inline:has(.field-stack),
+.field.is-inline:has(.group-security-list){ align-items:flex-start; }
+.field-stack .select,
+.field-stack .input,
+.field-stack .textarea{ width:100%; }
+.group-security-item{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    padding:8px 10px;
+    border:1px solid color-mix(in srgb, var(--form-border, #c5d0da) 85%, transparent);
+    border-radius:12px;
+    background:var(--form-surface, #fff);
+}
+.group-security-item .record-list__meta{ margin:0 0 0 1.6rem; }
 .field-picker{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .field-picker-list{
     list-style:none; margin:8px 0 0; padding:8px; min-height:160px;
@@ -446,6 +462,87 @@ body{
 .login-card {
     width: 100%;
     max-width: 420px;
+}
+.login-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 1.25rem 1.35rem 1.5rem;
+    border: 1px solid var(--title-strip-border, rgba(41,72,100,.12));
+    border-radius: 16px;
+    background: color-mix(in srgb, #fff 92%, var(--brand, #7ac8ff) 8%);
+}
+.login-title {
+    margin: 0;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    color: var(--title, #17324a);
+}
+.login-lead {
+    margin: 0;
+    color: var(--placeholder, #556b7a);
+    font-size: 0.95rem;
+}
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+.login-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--title, #17324a);
+}
+.login-submit,
+.login-sso-btn,
+.login-local-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    text-decoration: none;
+    margin-top: 6px;
+}
+.login-sso {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0;
+    color: var(--placeholder, #556b7a);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.login-divider::before,
+.login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, var(--title-strip-border, #c5d0da) 80%, transparent);
+}
+.login-alt {
+    margin: 8px 0 0;
+    font-size: 0.9rem;
+}
+.login-alt a { color: #1d4ed8; }
+.login-error {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(185, 28, 28, 0.25);
+    background: rgba(185, 28, 28, 0.08);
+    color: #991b1b;
+    font-size: 0.92rem;
+}
+.form-help {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: var(--placeholder, #556b7a);
 }
 
 /* === Adlexone SVG Enhancements (bundle) === */

@@ -41,8 +41,8 @@ define('ACT_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcont
  */
 function showSettingsOptions (): void
 {
-	$html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL(ACT_BASE_URL . '&option=show_action_packages', TXT_255), $_SESSION['access_role_id'], 1);
-	$html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL(ACT_BASE_URL . '&option=show_defined_actions', TXT_411), $_SESSION['access_role_id'], 1);
+	$html = RenderViews::outputIfAllowed(RenderViews::buildURL(ACT_BASE_URL . '&option=show_action_packages', TXT_255), \Adlexone\Auth\Permission::ADMIN_ACTIONS);
+	$html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(ACT_BASE_URL . '&option=show_defined_actions', TXT_411), \Adlexone\Auth\Permission::ADMIN_ACTIONS);
 
 	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_128, 'html' => $html]]));
 	RenderViews::renderThemePage('main_page_content', SET_THEME);
@@ -154,7 +154,7 @@ function showDefinedactions ()
 	$condition = 'ORDER BY package_file ASC, action_name ASC';
 	$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
 	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$canDelete = $_SESSION['access_role_id'] <= 1;
+	$canDelete = \Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 
 	$groups = [];
 	if ($result && Database::numRows($result) > 0) {
@@ -241,45 +241,45 @@ function deleteAction($actionID)
  */
 switch (@$_GET['option']) {
 	case 'show_package_action_list' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		showPackageactionList($_POST['action_package']);
 		break;
 	case 'show_action_packages' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		showactionPackages();
 		break;
 	case 'new_action' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		require_once  'actions/' . $_GET['action_package'] . '.actions.php';
 		$functionName = 'showSetup' . $_GET['descriptor_name'];
 		$functionName(@$_GET['action_id']);
 		break;
 	case 'add_action' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		require_once  'actions/' . $_GET['action_package'] . '.actions.php';
 		$functionName = 'addUpdate' . $_GET['descriptor_name'];
 		$functionName('', true);
 		break;
 	case 'show_defined_actions' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		showDefinedactions();
 		break;
 	case 'defined_action' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		showDefinedaction($_GET['action_id']);
 		break;
 	case 'update_action' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		require_once  'actions/' . $_GET['action_package'] . '.actions.php';
 		$functionName = 'addUpdate' . $_GET['descriptor_name'];
 		$functionName($_GET['action_id'], false);
 		break;
 	case 'delete_action' :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		deleteAction($_GET['action_id']);
 		break;
 	default :
-		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 		showSettingsOptions();
 		break;
 }

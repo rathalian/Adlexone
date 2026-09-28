@@ -877,79 +877,79 @@ function deleteItemType(): void
  */
 switch (@$_GET['option']) {
     case 'new_custom_field' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         // Removes leading  from any session variables (used for form value persistence)
         showCustomField('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
         // Unset session variables starting with
         $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
         break;
     case 'add_custom_field' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         addCustomField();
         break;
     case 'modify_custom_field' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showCustomField($_GET['custom_field_id']);
         break;
     case 'modify_menu_values' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         modifyMenuValues($_GET['custom_field_id']);
         break;
     case 'add_update_menu_value' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         addUpdateMenuValue($_POST['custom_field_id']);
         break;
     case 'update_menu_value_filter' :
     case 'modify_menu_value_filters' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         modifyMenuValues((string)($_GET['custom_field_id'] ?? $_POST['custom_field_id'] ?? ''));
         break;
     case 'delete_menu_value' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         deleteMenuValue($_GET['menu_value_id'], $_GET['custom_field_id']);
         break;
     case 'update_custom_field' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         updateCustomField($_POST['custom_field_id']);
         break;
     case 'delete_custom_field' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         deleteCustomField();
         break;
     case 'new_item_type' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         // Removes leading  from any session variables (used for form value persistence)
         showItemType('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
         // Unset session variables starting with
         $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
         break;
     case 'add_item_type' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         addItemType();
         break;
     case 'modify_item_type' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showItemType($_GET['item_type_id']);
         break;
     case 'update_item_type' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         updateItemType($_POST['item_type_id']);
         break;
     case 'manage_fields' :
     case 'manage_fields_types' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showFields();
         break;
     case 'manage_item_types' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showItemTypes();
         break;
     case 'delete_item_type' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         deleteItemType();
         break;
     case 'field_type_search' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showFieldTypeResults();
         break;
     case 'new_multilevel_menu_relationship' :
@@ -958,11 +958,11 @@ switch (@$_GET['option']) {
     case 'show_multilevel_menu' :
     case 'show_multilevel_menu_items' :
     case 'update_multilevel_menu_items' :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showFields();
         break;
     default :
-        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
         showSearchOptions();
         break;
 }

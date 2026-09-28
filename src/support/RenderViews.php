@@ -1024,7 +1024,20 @@ class RenderViews
      */
     public static function outputIfRoleAllowed(mixed $value, int $userRole, int $allowedRole): mixed
     {
+        // Prefer permission-derived legacy role when the session is hydrated.
+        $effective = \Adlexone\Auth\Access::legacyRole();
+        if ($effective !== $userRole && isset($_SESSION['access_permissions'])) {
+            $userRole = $effective;
+        }
         return $allowedRole >= $userRole ? $value : null;
+    }
+
+    /**
+     * Include content when the signed-in user has at least one of the permissions.
+     */
+    public static function outputIfAllowed(mixed $value, string ...$permissions): mixed
+    {
+        return \Adlexone\Auth\Access::can(...$permissions) ? $value : null;
     }
 
     /**
@@ -1041,11 +1054,22 @@ class RenderViews
      */
     public static function terminateIfRoleNotAllowed(int $userRole, int $allowedRole): void
     {
+        $effective = \Adlexone\Auth\Access::legacyRole();
+        if (isset($_SESSION['access_permissions'])) {
+            $userRole = $effective;
+        }
         // The greater the permissions, the lower the allowed role value
         if ($allowedRole < $userRole) {
-            self::buildResponse(TXT_356);
-            die;
+            \Adlexone\Auth\Access::deny();
         }
+    }
+
+    /**
+     * Stop the request unless the user has at least one of the named permissions.
+     */
+    public static function terminateUnlessAllowed(string ...$permissions): void
+    {
+        \Adlexone\Auth\Access::require(...$permissions);
     }
 
     /**

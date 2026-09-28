@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\support;
 
+use Adlexone\Auth\Permission;
 use DOMDocument;
 use DOMElement;
 use RuntimeException;
@@ -15,86 +16,77 @@ final class RenderNavigation
     /**
      * Helpdesk links for the top section navigation.
      *
-     * Each link is included only when the current role is allowed to see it.
-     * Controllers place the result in the top card with applySectionNav().
-     *
      * @return string
      */
     public static function helpDeskNavigationURLS(): string
     {
-        // Generate navigation buttons based on user role and access permissions
-
-        $html = RenderViews::outputIfRoleAllowed(
+        $html = RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&option=show_announcements',
                 APP_HDSK_TXT_38, 'ic-announcements'
             ),
-            $_SESSION['access_role_id'],
-            4
+            Permission::HELPDESK_USE,
+            Permission::HELPDESK_ANNOUNCE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&option=new_announcement',
                 APP_HDSK_TXT_83, 'ic-announcements'
             ),
-            $_SESSION['access_role_id'],
-            2
+            Permission::HELPDESK_ANNOUNCE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . HELPDESK_SET_ITEM_TYPE,
                 APP_HDSK_TXT_59, 'ic-create-ticket'
             ),
-            $_SESSION['access_role_id'],
-            4
+            Permission::HELPDESK_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&option=show_search',
                 APP_HDSK_TXT_78, 'ic-search'
             ),
-            $_SESSION['access_role_id'],
-            5
+            Permission::HELPDESK_SEARCH,
+            Permission::HELPDESK_USE
         );
 
-
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_quick_search',
                 APP_HDSK_TXT_62, 'ic-quick-search'
             ),
-            $_SESSION['access_role_id'],
-            5
+            Permission::HELPDESK_SEARCH,
+            Permission::HELPDESK_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_saved_searches',
                 APP_HDSK_TXT_60, 'ic-my-ticket-searches'
             ),
-            $_SESSION['access_role_id'],
-            5
+            Permission::HELPDESK_SEARCH,
+            Permission::HELPDESK_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&subcontroller=search_management_manage&option=show_item_search&item_types=' . HELPDESK_SET_ITEM_TYPE,
                 APP_HDSK_TXT_61, 'ic-create-ticket-search'
             ),
-            $_SESSION['access_role_id'],
-            5
+            Permission::HELPDESK_SEARCH,
+            Permission::HELPDESK_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzerohelpdesk_main&option=helpdesk_settings',
                 APP_HDSK_TXT_79, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            1
+            Permission::HELPDESK_SETTINGS
         );
 
         return $html;
@@ -102,28 +94,26 @@ final class RenderNavigation
 
     public static function knowledgebaseNavigationURLS()
     {
-        $html = RenderViews::outputIfRoleAllowed(
+        $html = RenderViews::outputIfAllowed(
             RenderViews::buildURL('index.php?controller=app_oneorzeroknowledgebase_main&option=show_knowledge', APP_KB_TXT_68, 'ic-knowledgebase'),
-            $_SESSION['access_role_id'],
-            5
+            Permission::KNOWLEDGEBASE_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL('index.php?controller=app_oneorzeroknowledgebase_main&option=show_item_types&default_item_type=' . KNOWLEDGEBASE_SET_KB_ITEM_TYPE, APP_KB_TXT_49, 'ic-new-article'),
-            $_SESSION['access_role_id'],
-            5
+            Permission::KNOWLEDGEBASE_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL('index.php?controller=app_oneorzeroknowledgebase_main&option=show_item_search&event_id=returned_items&item_types=' . KNOWLEDGEBASE_SET_KB_ITEM_TYPE, APP_KB_TXT_47,'ic-article-search'),
-            $_SESSION['access_role_id'],
-            1
+            Permission::KNOWLEDGEBASE_MANAGE,
+            Permission::KNOWLEDGEBASE_USE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL('index.php?controller=app_oneorzeroknowledgebase_main&option=knowledgebase_settings', APP_KB_TXT_31,'ic-kb-settings'),
-            $_SESSION['access_role_id'],
-            5
+            Permission::KNOWLEDGEBASE_SETTINGS,
+            Permission::KNOWLEDGEBASE_MANAGE
         );
 
         return $html;
@@ -131,78 +121,70 @@ final class RenderNavigation
 
     public static function reportManagerNavigationURLS()
     {
-
-        $html = RenderViews::outputIfRoleAllowed(
+        $html = RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage',
                 APP_RM_TXT_10, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            5
+            Permission::REPORTS_USE,
+            Permission::REPORTS_MANAGE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&view_multi_reports',
                 APP_RM_TXT_39, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            5
+            Permission::REPORTS_USE,
+            Permission::REPORTS_MANAGE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&subcontroller=search_management_manage&option=show_item_search',
                 APP_RM_TXT_15, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            3
+            Permission::REPORTS_MANAGE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=show_report_criteria',
                 APP_RM_TXT_30, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            3
+            Permission::REPORTS_MANAGE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=create_report',
                 APP_RM_TXT_2, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            3
+            Permission::REPORTS_MANAGE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=manage_reports',
                 APP_RM_TXT_29, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            3
+            Permission::REPORTS_MANAGE
         );
 
-
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=create_multi_report',
                 APP_RM_TXT_37, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            3
+            Permission::REPORTS_MANAGE
         );
 
-        $html .= RenderViews::outputIfRoleAllowed(
+        $html .= RenderViews::outputIfAllowed(
             RenderViews::buildURL(
                 'index.php?controller=app_oneorzeroreportmanager_manage&option=manage_multi_reports',
                 APP_RM_TXT_38, 'ic-hd-settings'
             ),
-            $_SESSION['access_role_id'],
-            3
+            Permission::REPORTS_MANAGE
         );
 
         return $html;
@@ -210,52 +192,50 @@ final class RenderNavigation
 
     public static function itemSettingsURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_fields', TXT_53, 'ic-manage-fields'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_item_types', TXT_50, 'ic-manage-item-types'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88, 'ic-custom-field-add'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_item_type', TXT_85, 'ic-itemtype-add'), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_item_types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88, 'ic-custom-field-add'), Permission::ADMIN_ITEMS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_item_type', TXT_85, 'ic-itemtype-add'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_security&option=manage_users', TXT_40, 'ic-manage-users'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_security&option=manage_groups', TXT_35, 'ic-manage-groups'), $_SESSION['access_role_id'], 2);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
 
         return $html;
     }
 
     public static function workflowURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_actions&option=show_defined_actions', TXT_411, 'ic-manage-actions'), $_SESSION['access_role_id'], 1);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_actions&option=show_action_packages', TXT_255, 'ic-new-action'), $_SESSION['access_role_id'], 1);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_actions&option=show_defined_actions', TXT_411, 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_actions&option=show_action_packages', TXT_255, 'ic-new-action'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }
 
     public static function systemSettingsURLs()
     {
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
 
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), $_SESSION['access_role_id'], 1);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=inbound_email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=inbound_email_settings', TXT_565,'ic-inbound-email'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=ldap_settings', TXT_43,'ic-ldap'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&&option=ldap_settings', TXT_43,'ic-ldap'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=autologon_settings', TXT_536,'ic-autologon'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=autologon_settings', TXT_536,'ic-autologon'), $_SESSION['access_role_id'], 1);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=advanced_settings', TXT_130, 'ic-advanced'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_sharing_settings', TXT_415, 'ic-data-sharing'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_sharing_settings', TXT_415, 'ic-data-sharing'), $_SESSION['access_role_id'], 0);
-
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_source_settings', TXT_631, 'ic-data-source'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=data_source_settings', TXT_631, 'ic-data-source'), Permission::ADMIN_SYSTEM);
 
         return $html;
-
     }
 
-    /**
+/**
      * Convert controller left-nav HTML into a simple map of controller => [ [label, href, target?, rel?], ... ]
      *
      * @param array<string,string> $controllersNavHtml e.g. ['Helpdesk' => $helpdeskNavHtml]

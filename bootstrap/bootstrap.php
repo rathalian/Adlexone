@@ -104,6 +104,9 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     include 'app/Http/Controllers/login.php';
 
 } else {
+    // Refresh permissions on every authenticated request so group changes apply immediately.
+    \Adlexone\Auth\Access::hydrateSession((int) $_SESSION['access_user_id']);
+
     // Handle accessing the root / with session variables still set
     if (!isset($_GET['controller'])) {
         $_GET['controller'] = $_SESSION['access_home_controller'];
