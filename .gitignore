@@ -10,9 +10,6 @@ error_log
 **/error_log
 *.log
 
-# Tooling
-composer.phar
-
 # OS / editor
 .DS_Store
 Thumbs.db
