@@ -220,9 +220,8 @@ final class RenderNavigation
 
     public static function securityManagementURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_security&option=manage_users_groups', TXT_73, 'ic-manage-users'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_security&option=new_user', TXT_33, 'ic-new-user'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_security&option=new_group', TXT_34, 'ic-new-group'), $_SESSION['access_role_id'], 2);
+        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_security&option=manage_users', TXT_40, 'ic-manage-users'), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_security&option=manage_groups', TXT_35, 'ic-manage-groups'), $_SESSION['access_role_id'], 2);
 
         return $html;
     }
@@ -578,7 +577,9 @@ final class RenderNavigation
             parse_str($query, $params);
         }
         $linkOption = (string)($params['option'] ?? '');
-        $currentOption = (string)($_GET['option'] ?? '');
+        $currentOption = defined('SECTION_NAV_OPTION')
+            ? (string)SECTION_NAV_OPTION
+            : (string)($_GET['option'] ?? '');
         if ($linkOption !== '' || $currentOption !== '') {
             return $linkOption !== '' && $linkOption === $currentOption;
         }

@@ -36,7 +36,18 @@ define('SEC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcont
 
 /**
  * Security links sit in the top navigation card. There is no left sidebar.
+ * Editing a user or group keeps the matching section link current.
  */
+if ((int)($_SESSION['access_role_id'] ?? 5) <= 1) {
+    $securityOption = (string)($_GET['option'] ?? '');
+    $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
+    $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
+    if (in_array($securityOption, $userSectionOptions, true)) {
+        define('SECTION_NAV_OPTION', 'manage_users');
+    } elseif (in_array($securityOption, $groupSectionOptions, true)) {
+        define('SECTION_NAV_OPTION', 'manage_groups');
+    }
+}
 RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
 /**
  * Shows secured security options
@@ -256,53 +267,177 @@ function showGroup($groupID = '', $values = '')
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
- /**
-        * Displays the user/group search form.
-        *
-        * This function renders a form allowing users to search for users or groups
-        * by specifying the type (user name, first name, last name, or group name),
-        * the operator (LIKE or =), and the search criteria. The form includes
-        * submit and reset buttons, and is displayed within a vertical card layout.
-        *
-        * The generated HTML is assigned to the BODY_CONTENT constant and the main
-        * page content is included using the current theme.
-        *
-        * @return void
-        */
-       function showUserGroupSearch()
-       {
-           // Setup form fields (labels and elements only)
-           $fields = [
-               TXT_596 => RenderViews::buildSelectDropdown(
-                   'type',
-                   ['user_name', 'first_name', 'last_name', 'group_name'],
-                   [TXT_76, TXT_77, TXT_78, TXT_79],
-                   SET_DEFAULT_ITEM_TYPE
-               ),
-               TXT_678 => RenderViews::buildSelectDropdown(
-                   'operator',
-                   ['LIKE', '='],
-                   [TXT_80, TXT_81],
-                   ''
-               ),
-               TXT_679 => RenderViews::buildTextInput('criteria', ''),
-           ];
+/**
+ * Users, listed the same way as Manage Fields.
+ */
+function showUsers(): void
+{
+    $rows = [];
+    foreach (Database::buildArray(Database::sqlSelect('users', '*', 'ORDER BY last_name ASC, first_name ASC, user_name ASC')) as $row) {
+        $rows[] = userRecord($row);
+    }
 
-           // Buttons for submitting or resetting the form
-           $buttons = [
-               RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
-               RenderViews::buildFormButton('reset', 'reset', TXT_75),
-           ];
+    define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        ['title' => TXT_40, 'html' => userRecordList($rows)],
+    ]));
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
 
-           // Define the content block for the form
-           define('BODY_CONTENT', RenderViews::buildForm(
-               TXT_147,
-               SEC_BASE_URL . '&option=user_group_search',
-               $fields,
-               $buttons
-           ));
-           RenderViews::renderThemePage('main_page_content', SET_THEME);
-       }
+/**
+ * Security groups, listed the same way as Manage Fields.
+ */
+function showGroups(): void
+{
+    $rows = [];
+    foreach (Database::buildArray(Database::sqlSelect('groups', '*', 'ORDER BY group_name ASC')) as $row) {
+        $rows[] = groupRecord($row);
+    }
+
+    define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        ['title' => TXT_35, 'html' => groupRecordList($rows)],
+    ]));
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * @param array<int, array<string, mixed>> $rows
+ */
+function userRecordList(array $rows): string
+{
+    return RenderViews::buildRecordList([
+        'column' => TXT_151,
+        'searchLabel' => TXT_3,
+        'primary' => ['href' => SEC_BASE_URL . '&option=new_user', 'label' => TXT_692],
+        'empty' => TXT_115,
+        'noMatch' => TXT_689,
+        'groups' => [['rows' => $rows]],
+    ]);
+}
+
+/**
+ * @param array<int, array<string, mixed>> $rows
+ */
+function groupRecordList(array $rows): string
+{
+    return RenderViews::buildRecordList([
+        'column' => TXT_151,
+        'searchLabel' => TXT_3,
+        'primary' => ['href' => SEC_BASE_URL . '&option=new_group', 'label' => TXT_692],
+        'empty' => TXT_115,
+        'noMatch' => TXT_689,
+        'groups' => [['rows' => $rows]],
+    ]);
+}
+
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>
+ */
+function userRecord(array $row): array
+{
+    $userName = (string)($row['user_name'] ?? '');
+    $name = trim((string)($row['first_name'] ?? '') . ' ' . (string)($row['last_name'] ?? ''));
+    if ($name === '') {
+        $name = $userName;
+        $userName = '';
+    }
+    $id = rawurlencode((string)$row['user_id']);
+    $active = ((string)($row['lastactive'] ?? '') === 'inactive') ? TXT_94 : TXT_93;
+    $meta = recordMeta([
+        $userName,
+        (string)($row['email'] ?? ''),
+        securityRoleLabel($row['role'] ?? ''),
+        TXT_653 . ' ' . $active,
+    ]);
+
+    return [
+        'name' => $name,
+        'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
+        'meta' => $meta,
+        'actions' => [
+            [
+                'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
+                'label' => TXT_626,
+                'tone' => 'quiet',
+            ],
+            [
+                'href' => SEC_BASE_URL . '&option=modify_group_membership&user_id=' . $id,
+                'label' => TXT_239,
+                'tone' => 'quiet',
+            ],
+            [
+                'href' => SEC_BASE_URL . '&option=delete_user&user_id=' . $id,
+                'label' => TXT_47,
+                'tone' => 'danger',
+                'confirm' => $name . "\n" . TXT_400,
+            ],
+        ],
+    ];
+}
+
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>
+ */
+function groupRecord(array $row): array
+{
+    $name = (string)($row['group_name'] ?? '');
+    $id = rawurlencode((string)$row['group_id']);
+    $description = trim((string)preg_replace('/\s+/', ' ', (string)($row['description'] ?? '')));
+    $meta = recordMeta([
+        $description,
+        securityRoleLabel($row['role'] ?? ''),
+    ]);
+
+    return [
+        'name' => $name,
+        'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
+        'meta' => $meta,
+        'actions' => [
+            [
+                'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
+                'label' => TXT_626,
+                'tone' => 'quiet',
+            ],
+            [
+                'href' => SEC_BASE_URL . '&option=delete_group&group_id=' . $id,
+                'label' => TXT_47,
+                'tone' => 'danger',
+                'confirm' => $name . "\n" . TXT_400,
+            ],
+        ],
+    ];
+}
+
+function securityRoleLabel(mixed $role): string
+{
+    $labels = [
+        '0' => TXT_190,
+        '1' => TXT_191,
+        '2' => TXT_192,
+        '3' => TXT_193,
+        '4' => TXT_194,
+        '5' => TXT_303,
+    ];
+
+    return $labels[trim((string)$role)] ?? '';
+}
+
+/**
+ * @param array<int, string> $parts
+ */
+function recordMeta(array $parts): string
+{
+    $kept = [];
+    foreach ($parts as $part) {
+        $part = trim($part);
+        if ($part !== '') {
+            $kept[] = $part;
+        }
+    }
+
+    return implode(' · ', $kept);
+}
 
 /**
  * Adds user to database
@@ -427,7 +562,7 @@ function showGroup($groupID = '', $values = '')
             // Render a success message after the update
             RenderViews::buildResponse(
                 ($_POST['user_name'] ?? '') . ' ' . TXT_164,
-                RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL')
+                RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL')
             );
             return;
         }
@@ -452,7 +587,7 @@ function addGroup()
         // Insert form field values into row
         $sql = Database::sqlInsert('groups', $columnArray);
         Database::query($sql, DSN, SET_SHOW_SQL);
-        RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+        RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
         return;
     }
     RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_198, RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
@@ -474,7 +609,7 @@ function updateGroup($groupID)
     // Updates form field values into row
     $sql = Database::sqlUpdate('groups', $columnArray, $condition);
     Database::query($sql, DSN, SET_SHOW_SQL);
-    RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+    RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
 }
 
 /**
@@ -521,7 +656,7 @@ function updateGroupMembership($userID)
     Database::query($sql, DSN, SET_SHOW_SQL);
 
     // Render a confirmation message
-    RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL, TXT_160, 'URL'));
+    RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
 }
 
 /**
@@ -563,61 +698,13 @@ function showUserGroupResults()
     $isUsers = $table === 'users';
     if ($result && Database::numRows($result) > 0) {
         while ($row = Database::fetchArray($result)) {
-            if ($isUsers) {
-                $name = trim((string)$row['first_name'] . ' ' . (string)$row['last_name']);
-                $userName = (string)$row['user_name'];
-                if ($name === '') {
-                    $name = $userName;
-                    $userName = '';
-                }
-                $id = rawurlencode((string)$row['user_id']);
-                $rows[] = [
-                    'name' => $name,
-                    'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
-                    'meta' => $userName,
-                    'actions' => [
-                        [
-                            'href' => SEC_BASE_URL . '&option=modify_group_membership&user_id=' . $id,
-                            'label' => TXT_238,
-                            'tone' => 'quiet',
-                        ],
-                        [
-                            'href' => SEC_BASE_URL . '&option=delete_user&user_id=' . $id,
-                            'label' => TXT_47,
-                            'tone' => 'danger',
-                            'confirm' => $name . "\n" . TXT_400,
-                        ],
-                    ],
-                ];
-            } else {
-                $name = (string)$row['group_name'];
-                $id = rawurlencode((string)$row['group_id']);
-                $rows[] = [
-                    'name' => $name,
-                    'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
-                    'actions' => [[
-                        'href' => SEC_BASE_URL . '&option=delete_group&group_id=' . $id,
-                        'label' => TXT_47,
-                        'tone' => 'danger',
-                        'confirm' => $name . "\n" . TXT_400,
-                    ]],
-                ];
-            }
+            $rows[] = $isUsers ? userRecord($row) : groupRecord($row);
         }
     }
 
     $html = RenderViews::buildVerticalCards([[
         'title' => TXT_113,
-        'html' => RenderViews::buildRecordList([
-            'column' => TXT_151,
-            'searchLabel' => TXT_3,
-            'primary' => $isUsers
-                ? ['href' => SEC_BASE_URL . '&option=new_user', 'label' => TXT_33]
-                : ['href' => SEC_BASE_URL . '&option=new_group', 'label' => TXT_34],
-            'empty' => TXT_115,
-            'noMatch' => TXT_689,
-            'groups' => [['rows' => $rows]],
-        ]),
+        'html' => $isUsers ? userRecordList($rows) : groupRecordList($rows),
     ]]);
 
     // Define the BODY_CONTENT constant with the generated HTML
@@ -638,7 +725,7 @@ function deleteGroup($groupID = '')
 {
     $sql = "DELETE FROM groups WHERE group_id='" . $groupID . "'";
     Database::query($sql, DSN, SET_SHOW_SQL);
-    showUserGroupSearch();
+    showGroups();
 }
 
 /**
@@ -656,7 +743,7 @@ function deleteUser($userID = '')
     Database::query($sql, DSN, SET_SHOW_SQL);
     $sql = "DELETE FROM group_members WHERE user_id='" . $userID . "'";
     Database::query($sql, DSN, SET_SHOW_SQL);
-    showUserGroupSearch();
+    showUsers();
 }
 
 /**
@@ -722,9 +809,14 @@ function showGroupMembership($userID = '')
  * Option is captured from the value selected via a hyperlink
  */
 switch (@$_GET['option']) {
+    case 'manage_users' :
     case 'manage_users_groups' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
-        showUserGroupSearch();
+        showUsers();
+        break;
+    case 'manage_groups' :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
+        showGroups();
         break;
     case 'user_group_search' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);
@@ -793,7 +885,7 @@ switch (@$_GET['option']) {
         break;
     default :
         if ($_SESSION['access_role_id'] <= 1) {
-            showUserGroupSearch();
+            showUsers();
         } else {
             showUser($_SESSION['access_user_id'], '', false);
         }
