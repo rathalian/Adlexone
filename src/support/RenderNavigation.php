@@ -13,12 +13,10 @@ final class RenderNavigation
 {
 
     /**
-     * Builds the Helpdesk left navigation constant.
+     * Helpdesk links for the top section navigation.
      *
-     * This method generates a series of navigation buttons for the Helpdesk interface
-     * based on the user's role and access permissions. Each button corresponds to a specific
-     * Helpdesk feature or section. The generated buttons are combined into a single navigation
-     * card, which is then defined as a constant (`LEFT_NAVIGATION`) for use in the application.
+     * Each link is included only when the current role is allowed to see it.
+     * Controllers place the result in the top card with applySectionNav().
      *
      * @return string
      */
@@ -105,7 +103,7 @@ final class RenderNavigation
     public static function knowledgebaseNavigationURLS()
     {
         $html = RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL('index.php?controller=app_oneorzeroknowledgebase_main&option=option=show_knowledge', APP_KB_TXT_68, 'ic-knowledgebase'),
+            RenderViews::buildURL('index.php?controller=app_oneorzeroknowledgebase_main&option=show_knowledge', APP_KB_TXT_68, 'ic-knowledgebase'),
             $_SESSION['access_role_id'],
             5
         );
@@ -529,6 +527,66 @@ final class RenderNavigation
         $s = strtolower(trim($s)); // Convert to lowercase and trim whitespace
         $s = preg_replace('~[^a-z0-9]+~', '-', $s); // Replace non-alphanumeric characters with hyphens
         return trim($s ?? '', '-'); // Trim leading and trailing hyphens
+    }
+
+    /**
+     * Put a controller's links in the top navigation card and drop the left sidebar.
+     * Call this once at the top of a controller, before the page is rendered.
+     */
+    public static function applySectionNav(string $label, string $linksHtml): void
+    {
+        if (defined('APP_SECTION_NAV')) {
+            return;
+        }
+        $built = self::build([$label => $linksHtml]);
+        define('APP_SECTION_NAV', self::sectionNav($built[$label] ?? [], $label));
+    }
+
+    /**
+     * Horizontal section links for the top navigation card.
+     *
+     * @param array<int, array{label: ?string, html: ?string, href: string, target: ?string, rel: ?string}> $links
+     */
+    public static function sectionNav(array $links, string $label): string
+    {
+        if ($links === []) {
+            return '';
+        }
+
+        $html = '<nav class="sectionnav" aria-label="' . self::e($label) . '">';
+        foreach ($links as $lnk) {
+            $href = (string)($lnk['href'] ?? '#');
+            $current = self::linkIsCurrent($href) ? ' aria-current="page"' : '';
+            $inner = str_replace(['&nbsp;&nbsp;', '&nbsp;'], '', (string)($lnk['html'] ?? ''));
+            $icon = '';
+            if (preg_match('/<svg\b.*?<\/svg>/s', $inner, $match) === 1) {
+                $icon = $match[0];
+            }
+            $html .= '<a class="sectionnav__link" href="' . self::e($href) . '"' . $current . '>'
+                . $icon
+                . '<span class="sectionnav__label">' . self::e(trim((string)($lnk['label'] ?? ''))) . '</span></a>';
+        }
+        $html .= '</nav>';
+
+        return $html;
+    }
+
+    private static function linkIsCurrent(string $href): bool
+    {
+        $params = [];
+        $query = parse_url($href, PHP_URL_QUERY);
+        if (is_string($query)) {
+            parse_str($query, $params);
+        }
+        $linkOption = (string)($params['option'] ?? '');
+        $currentOption = (string)($_GET['option'] ?? '');
+        if ($linkOption !== '' || $currentOption !== '') {
+            return $linkOption !== '' && $linkOption === $currentOption;
+        }
+        $linkController = (string)($params['controller'] ?? '');
+        return $linkController !== ''
+            && $linkController === (string)($_GET['controller'] ?? '')
+            && (string)($params['subcontroller'] ?? '') === (string)($_GET['subcontroller'] ?? '');
     }
 
     /**

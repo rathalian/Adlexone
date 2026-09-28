@@ -28,12 +28,9 @@ use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
 
 /**
- * Left navigation card: icon plus blue capital on the current item, matching System Settings.
+ * Workflow links sit in the top navigation card. There is no left sidebar.
  */
-$controllers = RenderNavigation::build([
-    'Workflow' => RenderNavigation::workflowURLs(),
-]);
-define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
+RenderNavigation::applySectionNav('Workflow', RenderNavigation::workflowURLs());
 
 /**
  * Controller specific constants

@@ -35,12 +35,9 @@ define('SEC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcont
 
 
 /**
- * Left navigation card: icon plus blue capital on the current item, matching System Settings.
+ * Security links sit in the top navigation card. There is no left sidebar.
  */
-$controllers = RenderNavigation::build([
-    'Security' => RenderNavigation::securityManagementURLs(),
-]);
-define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
+RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
 /**
  * Shows secured security options
  */

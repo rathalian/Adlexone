@@ -1,3 +1,9 @@
+<?php
+ob_start();
+controller();
+$pageBody = ob_get_clean();
+$hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
+?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,7 +15,7 @@
     <link rel="stylesheet" href="themes/new/css/style.css">
 </head>
 <body>
-    <div class="brandbar">
+    <div class="brandbar<?php echo $hasSectionNav ? ' has-sectionnav' : ''; ?>">
     <div class="brandrow">
         <div class="brandwrap">
             <div class="logoA" aria-label="Adlexone logo">
@@ -88,11 +94,14 @@
             </a>
         </nav>
     </div>
+    <?php if ($hasSectionNav) {
+        echo APP_SECTION_NAV;
+    } ?>
 <!--    <div class="underline" aria-hidden="true"></div>-->
 </div>
 
-<!-- Main content area rendered by the controller including the left navigation card and the body card    -->
-<?php echo controller(); ?>
+<!-- Main content area rendered by the controller -->
+<?php echo $pageBody; ?>
 
     <p class="modal-footer">
         &nbsp;

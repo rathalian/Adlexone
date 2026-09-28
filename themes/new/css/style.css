@@ -123,6 +123,50 @@ body{
     left:auto; right:0; transform-origin:top right;
 }
 
+/* Section links that used to live in the left navigation card */
+.brandbar.has-sectionnav{
+    flex-direction:column;
+    align-items:stretch;
+    gap:0;
+}
+.sectionnav{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:2px;
+    margin-top:14px;
+    overflow-x:auto;
+    padding-bottom:6px;
+    scrollbar-width:thin;
+}
+.sectionnav__link{
+    display:inline-flex;
+    align-items:center;
+    flex:0 0 auto;
+    gap:8px;
+    padding:6px 8px;
+    border-radius:10px;
+    text-decoration:none;
+    color:rgba(15,23,42,.85);
+    font-weight:600;
+    font-size:13px;
+    line-height:1.2;
+}
+.sectionnav__link:hover,
+.sectionnav__link:focus-visible,
+.sectionnav__link[aria-current="page"]{ background:var(--hover); }
+.sectionnav__link:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
+.sectionnav__link[aria-current="page"]{ font-weight:700; }
+.sectionnav__label{ display:inline-block; }
+.sectionnav__link[aria-current="page"] .sectionnav__label::first-letter{
+    font-weight:900;
+    letter-spacing:0;
+    color:transparent;
+    background:linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+}
+
 /* ---------- Layout spacing & grid ---------- */
 .wrap{
     display:grid; grid-template-columns:1fr; gap:12px; padding:0 12px 12px;

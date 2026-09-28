@@ -17,12 +17,9 @@ use Adlexone\support\SharedMethods;
 use Adlexone\support\RenderNavigation;
 
 /**
- * Build the left navigation for the Helpdesk application using RenderNavigation.
+ * Service Centre links sit in the top navigation card. There is no left sidebar.
  */
-$controllers = RenderNavigation::build([
-    'Service Centre' => RenderNavigation::helpDeskNavigationURLS(),
-]);
-define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
+RenderNavigation::applySectionNav('Service Centre', RenderNavigation::helpDeskNavigationURLS());
 
 /**
  * Handles the routing logic for the Helpdesk application based on the `subcontroller` or `option` parameters.

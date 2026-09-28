@@ -27,6 +27,7 @@
 
 use Adlexone\support\RenderViews;
 use Adlexone\support\Database;
+use Adlexone\support\RenderNavigation;
 use Adlexone\support\SharedMethods;
 
 /**
@@ -36,14 +37,14 @@ SharedMethods::loadConstantFromIni(SET_INSTALL_PATH. 'translations/applications/
 
 
 define('SUB_CONTROLLER_BASEURL', FULL_SCRIPT_PATH . '?controller=app_oneorzeroknowledgebase_main');
+if (!defined('CONTROLLER_BASEURL')) {
+    define('CONTROLLER_BASEURL', 'index.php?controller=app_oneorzeroknowledgebase_main');
+}
 
-//$buildLeftNavigationButton = RenderViews::outputIfRoleAllowed(RenderViews::leftNavButton( SUB_CONTROLLER_BASEURL. '&option=show_announcement_item',APP_KB_TXT_72,APP_KB_TXT_73,false), $_SESSION['access_role_id'], 5);
-$leftNav = RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(CONTROLLER_BASEURL . '&option=option=show_knowledge', APP_KB_TXT_68, false, false), $_SESSION['access_role_id'], 5);
-$leftNav .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(CONTROLLER_BASEURL . '&option=show_item_types&default_item_type=' . KNOWLEDGEBASE_SET_KB_ITEM_TYPE, APP_KB_TXT_49, false, false), $_SESSION['access_role_id'], 5);
-$leftNav .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(CONTROLLER_BASEURL . '&option=show_item_search&event_id=returned_items&item_types=' . KNOWLEDGEBASE_SET_KB_ITEM_TYPE, APP_KB_TXT_47, false, false), $_SESSION['access_role_id'], 1);
-//$buildLeftNavigationButton .= RenderViews::outputIfRoleAllowed(RenderViews::leftNavButton(SUB_CONTROLLER_BASEURL . '&option=update_helpdesk_settings',APP_KB_TXT_80,false, false), $_SESSION['access_role_id'], 1);
-$leftNav .= RenderViews::outputIfRoleAllowed(RenderViews::buildLeftNavigationButton(CONTROLLER_BASEURL . '&option=knowledgebase_settings', APP_KB_TXT_31, false, false), $_SESSION['access_role_id'], 5);
-define('LEFT_NAVIGATION', $leftNav);
+/**
+ * Knowledge Hub links sit in the top navigation card. There is no left sidebar.
+ */
+RenderNavigation::applySectionNav('Knowledge Hub', RenderNavigation::knowledgebaseNavigationURLS());
 
 //$tableRows = RenderViews::tableData('', '', 'center', '', array('tdTopLeft', 'tdLeftNavTopMiddle', 'tdTopRight'), array('', APP_KB_TXT_56, ''), 'row');	$buildImage = RenderViews::buildImage(SET_IMAGE_PATH . 'knowledgebase.png', SET_SHOW_IMAGES);
 //$URL = RenderViews::buildURL(KB_SUB_URL . '&subcontroller=app_oneorzeroknowledgebase_manage&option=show_knowledge', APP_KB_TXT_68, 'URLNav');
@@ -384,7 +385,7 @@ switch (@$_GET['option']) {
         showSubjects();
         break;
     default;
-        if (KB_CONFIGURED == true) {
+        if (defined('KNOWLEDGEBASE_SET_KB_ITEM_TYPE')) {
             showKnowledgebaseModules();
         } else {
             RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 1);

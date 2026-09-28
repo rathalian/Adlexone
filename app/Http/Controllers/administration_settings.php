@@ -30,12 +30,9 @@ use Adlexone\support\SharedMethods;
 use Adlexone\support\Communications;
 
 /**
- * Build the left navigation for the Helpdesk application using RenderNavigation.
+ * Settings links sit in the top navigation card. There is no left sidebar.
  */
-$controllers = RenderNavigation::build([
-    'System Settings' => RenderNavigation::systemSettingsURLs(),
-]);
-define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
+RenderNavigation::applySectionNav('System Settings', RenderNavigation::systemSettingsURLs());
 
 function showAdlexoneSettings(): void
 {

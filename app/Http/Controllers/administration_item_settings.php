@@ -29,12 +29,9 @@ use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
 
 /**
- * Build the left navigation for Items and Fields using RenderNavigation.
+ * Items and Fields links sit in the top navigation card. There is no left sidebar.
  */
-$controllers = RenderNavigation::build([
-    'Items and Fields' => RenderNavigation::itemSettingsURLs(),
-]);
-define('LEFT_NAVIGATION', RenderNavigation::render($controllers, 1, 3, true));
+RenderNavigation::applySectionNav('Items and Fields', RenderNavigation::itemSettingsURLs());
 /**
  * Controller specific constants
  */

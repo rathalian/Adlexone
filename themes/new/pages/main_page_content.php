@@ -1,6 +1,5 @@
 <!-- CONTENT TEMPLATE LAYOUT -->
 <div class="wrap">
-    <!-- Left navigation only if LEFT_NAVIGATION constant is set.  If it isn't only the main content area is shown -->
     <?php if (defined('LEFT_NAVIGATION')) echo LEFT_NAVIGATION; ?>
 
     <!-- MAIN CONTENT -->
