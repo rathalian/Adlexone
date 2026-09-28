@@ -2,7 +2,7 @@
     "AUTH_HELP": "OAuth uses OpenID Connect (built on OAuth 2.0). Point issuer, client_id, and client_secret at any directory that supports this standard. Redirect URI: /index.php?action=oauth_callback",
     "AUTH_LOCAL_ENABLED": "Yes",
     "AUTH_LOCAL_ALLOW_REGISTRATION": "No",
-    "AUTH_OAUTH_ENABLED": "No",
+    "AUTH_OAUTH_ENABLED": "Yes",
     "AUTH_OAUTH_AUTO_REDIRECT": "No",
-    "AUTH_OAUTH_CONNECTIONS_JSON": "[]"
+    "AUTH_OAUTH_CONNECTIONS_JSON": "[{\"id\":\"organisation\",\"label\":\"Sign in with OAuth\",\"issuer\":\"\",\"client_id\":\"Administrator\",\"client_secret\":\"password\",\"scopes\":\"openid profile email\",\"auto_provision\":\"No\"}]"
 }
