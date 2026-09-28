@@ -61,9 +61,21 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
             $appLabel = 'Applications';
             $manageLabel = 'Manage';
             $chevron = '<svg class="chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6"/></svg>';
+            $applicationsCurrent = $matchesController($quickLaunch['controller']);
+            foreach ($applications as $item) {
+                if ($matchesController($item['controller'])) {
+                    $applicationsCurrent = true;
+                }
+            }
+            $manageCurrent = false;
+            foreach ($manageItems as $item) {
+                if ($matchesController($item['controller'])) {
+                    $manageCurrent = true;
+                }
+            }
             ?>
             <div class="menu" data-menu>
-                <button class="menu__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-applications"><span class="menu__label"><?php echo htmlspecialchars($appLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php echo $chevron; ?></button>
+                <button class="menu__button<?php echo $applicationsCurrent ? ' is-current' : ''; ?>" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-applications"><span class="menu__label"><?php echo htmlspecialchars($appLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php echo $chevron; ?></button>
                 <div class="menu__panel" id="menu-applications" role="menu" hidden>
                     <?php foreach ($applications as $item) {
                         echo $renderMenuItem($item);
@@ -73,7 +85,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                 </div>
             </div>
             <div class="menu" data-menu>
-                <button class="menu__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-manage"><span class="menu__label"><?php echo htmlspecialchars($manageLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php echo $chevron; ?></button>
+                <button class="menu__button<?php echo $manageCurrent ? ' is-current' : ''; ?>" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-manage"><span class="menu__label"><?php echo htmlspecialchars($manageLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php echo $chevron; ?></button>
                 <div class="menu__panel" id="menu-manage" role="menu" hidden>
                     <?php foreach ($manageItems as $item) {
                         echo $renderMenuItem($item);
