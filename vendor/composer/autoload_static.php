@@ -7,7 +7,7 @@ namespace Composer\Autoload;
 class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
 {
     public static $prefixLengthsPsr4 = array (
-        'A' => 
+        'A' =>
         array (
             'Adlexone\\App\\' => 13,
             'Adlexone\\' => 9,
@@ -15,27 +15,43 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
     );
 
     public static $prefixDirsPsr4 = array (
-        'Adlexone\\App\\' => 
+        'Adlexone\\App\\' =>
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
-        'Adlexone\\' => 
+        'Adlexone\\' =>
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
     );
 
     public static $classMap = array (
+        'Adlexone\\Auth\\Access' => __DIR__ . '/../..' . '/src/Auth/Access.php',
+        'Adlexone\\Auth\\AuthConfig' => __DIR__ . '/../..' . '/src/Auth/AuthConfig.php',
+        'Adlexone\\Auth\\AuthException' => __DIR__ . '/../..' . '/src/Auth/AuthException.php',
+        'Adlexone\\Auth\\AuthRouter' => __DIR__ . '/../..' . '/src/Auth/AuthRouter.php',
+        'Adlexone\\Auth\\AuthSession' => __DIR__ . '/../..' . '/src/Auth/AuthSession.php',
+        'Adlexone\\Auth\\LocalAuthenticator' => __DIR__ . '/../..' . '/src/Auth/LocalAuthenticator.php',
+        'Adlexone\\Auth\\OauthClient' => __DIR__ . '/../..' . '/src/Auth/OauthClient.php',
+        'Adlexone\\Auth\\OauthConnection' => __DIR__ . '/../..' . '/src/Auth/OauthConnection.php',
+        'Adlexone\\Auth\\Permission' => __DIR__ . '/../..' . '/src/Auth/Permission.php',
+        'Adlexone\\Auth\\UserIdentityRepository' => __DIR__ . '/../..' . '/src/Auth/UserIdentityRepository.php',
         'Adlexone\\support\\Actions' => __DIR__ . '/../..' . '/src/support/Actions.php',
         'Adlexone\\support\\Communications' => __DIR__ . '/../..' . '/src/support/Communications.php',
         'Adlexone\\support\\DB_Result' => __DIR__ . '/../..' . '/src/support/Database.php',
         'Adlexone\\support\\Database' => __DIR__ . '/../..' . '/src/support/Database.php',
+        'Adlexone\\support\\FieldTypes' => __DIR__ . '/../..' . '/src/support/FieldTypes.php',
         'Adlexone\\support\\LaunchpadHelper' => __DIR__ . '/../..' . '/src/support/LaunchpadHelper.php',
+        'Adlexone\\support\\MenuOptions' => __DIR__ . '/../..' . '/src/support/MenuOptions.php',
+        'Adlexone\\support\\NavHelper' => __DIR__ . '/../..' . '/src/support/NavHelper.php',
         'Adlexone\\support\\NavigationHelper' => __DIR__ . '/../..' . '/src/support/NavigationHelper.php',
+        'Adlexone\\support\\RenderHTML' => __DIR__ . '/../..' . '/src/support/RenderHTML.php',
+        'Adlexone\\support\\RenderNavigation' => __DIR__ . '/../..' . '/src/support/RenderNavigation.php',
         'Adlexone\\support\\RenderViews' => __DIR__ . '/../..' . '/src/support/RenderViews.php',
         'Adlexone\\support\\SharedMethods' => __DIR__ . '/../..' . '/src/support/SharedMethods.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'File' => __DIR__ . '/../..' . '/src/support/file.class.php',
+        'FlowIQ\\support\\Launchpad' => __DIR__ . '/../..' . '/src/support/Launchpad.php',
         'XML' => __DIR__ . '/../..' . '/src/support/xml.class.php',
     );
 
