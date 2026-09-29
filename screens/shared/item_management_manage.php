@@ -416,8 +416,7 @@ function showItemAdd($itemTypeID, $values)
     $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
     $row = Database::first('item_types', $columnArray, $condition);
     if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
-        $picker = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? 'item_management_manage'))
-            . '&subcontroller=item_management_manage&option=show_item_types';
+        $picker = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
         define('BODY_CONTENT', RenderViews::buildVerticalCards([
             [
                 'title' => TXT_68,
@@ -1675,8 +1674,7 @@ function updateSecurityAssignment(string $itemID): void
     // Build return URL and render success response via the modern helper
     $logEntry   = (SET_LOG_ENTRY === 'yes') ? '&log_entry=yes' : '';
     $attachments = (SET_ATTACHMENTS === 'yes') ? '&attachments=yes' : '';
-    $controller = $_GET['controller'] ?? '';
-    $url = 'index.php?controller=' . $controller . '&subcontroller=item_management_manage&option=show_item&item_id=' . $itemID . $logEntry . $attachments;
+    $url = MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments;
 
     RenderViews::buildResponse(TXT_320, RenderViews::buildURL($url, TXT_353, 'URL'));
 }
@@ -1860,8 +1858,7 @@ switch (@$_GET['option']) {
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
         $itemTypeId = $_POST['item_type_id'] ?? $_GET['item_type_id'] ?? '';
         if ($itemTypeId === '' || $itemTypeId === null) {
-            $target = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? 'item_management_manage'))
-                . '&subcontroller=item_management_manage&option=show_item_types';
+            $target = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
             if (defined('SERVICECENTRE_SET_ITEM_TYPE') && (string)SERVICECENTRE_SET_ITEM_TYPE !== '') {
                 $target .= '&default_item_type=' . rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE);
             }

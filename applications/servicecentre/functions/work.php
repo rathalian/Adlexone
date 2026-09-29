@@ -13,7 +13,7 @@ function showServiceCentreWork(): void
     $ids = serviceCentreAccessibleItemIds();
     $base = defined('MAN_BASE_URL')
         ? (string) MAN_BASE_URL
-        : serviceCentreUrl('subcontroller=item_management_manage');
+        : serviceCentreUrl();
     $rows = [];
     if ($ids !== []) {
                 $result = Database::select(
@@ -41,22 +41,22 @@ function showServiceCentreWork(): void
             }
             $actions = [];
             if ($role <= 4) {
-                $actions[] = ['href' => $base . '&option=log_entry&item_id=' . $itemId, 'label' => TXT_246];
-                $actions[] = ['href' => $base . '&option=show_attachments&item_id=' . $itemId, 'label' => TXT_389];
+                $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
+                $actions[] = ['href' => $base . '&item=' . $itemId . '&option=show_attachments', 'label' => TXT_389];
             }
             if ($role <= 3) {
-                $actions[] = ['href' => $base . '&option=change_security&item_id=' . $itemId, 'label' => TXT_28];
+                $actions[] = ['href' => $base . '&item=' . $itemId . '&option=change_security', 'label' => TXT_28];
             }
             if ($role <= 5) {
                 $actions[] = [
-                    'href' => 'index.php?controller=full_page_view&option=print_item&item_id=' . $itemId,
+                    'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
                     'label' => TXT_625,
                     'target' => '_blank',
                 ];
             }
             if ($role <= 2) {
                 $actions[] = [
-                    'href' => $base . '&option=delete_item&item_id=' . $itemId,
+                    'href' => $base . '&item=' . $itemId . '&option=delete_item',
                     'label' => TXT_315,
                     'tone' => 'danger',
                     'confirm' => TXT_400,
@@ -64,7 +64,7 @@ function showServiceCentreWork(): void
             }
             $rows[] = [
                 'name' => $title,
-                'href' => $base . '&option=show_item&item_id=' . $itemId,
+                'href' => $base . '&item=' . $itemId,
                 'meta' => $meta,
                 'actions' => $actions,
             ];

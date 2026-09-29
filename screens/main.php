@@ -213,7 +213,7 @@ function showHeader() {
 
 function Controller(): void
 {
-	RenderViews::includeControllerFile(@$_GET['controller'], SET_DEFAULT_PAGE);
+	\Adlexone\Http\Router::open(\Adlexone\Http\Router::requested());
 }
 
 /**

@@ -17,7 +17,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
 <body>
     <div class="brandbar">
     <div class="brandrow">
-        <a class="brandhome" href="index.php?controller=quick_launch" aria-label="Home">
+        <a class="brandhome" href="index.php" aria-label="Home">
         <div class="brandwrap">
             <div class="logoA" aria-hidden="true">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -44,16 +44,16 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                 return is_string($prefix) && $prefix !== $controller && str_starts_with($currentController, $prefix);
             };
             $applications = \Adlexone\Application\ApplicationStore::menuItems();
-            $quickLaunch = ['label' => 'Home', 'href' => '?controller=quick_launch', 'icon' => 'ic-launch', 'controller' => 'quick_launch'];
+            $quickLaunch = ['label' => 'Home', 'href' => 'index.php', 'icon' => 'ic-launch', 'controller' => 'quick_launch'];
             $manageItems = [];
             if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SETTINGS)) {
-                $manageItems[] = ['label' => 'Applications', 'href' => '?controller=administration_applications', 'icon' => 'ic-launch', 'controller' => 'administration_applications'];
+                $manageItems[] = ['label' => 'Applications', 'href' => 'index.php?manage=applications', 'icon' => 'ic-launch', 'controller' => 'administration_applications'];
             }
             $manageItems = array_merge($manageItems, [
-                ['label' => 'Items and Fields', 'href' => '?controller=administration_item_settings&option=manage_fields', 'icon' => 'ic-manage-fields', 'controller' => 'administration_item_settings'],
-                ['label' => 'Workflow', 'href' => '?controller=administration_actions&option=show_defined_actions', 'icon' => 'ic-manage-actions', 'controller' => 'administration_actions'],
-                ['label' => 'Security', 'href' => '?controller=administration_security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'administration_security'],
-                ['label' => 'Settings', 'href' => '?controller=administration_settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'administration_settings'],
+                ['label' => 'Items and Fields', 'href' => 'index.php?manage=items&option=manage_fields', 'icon' => 'ic-manage-fields', 'controller' => 'administration_item_settings'],
+                ['label' => 'Workflow', 'href' => 'index.php?manage=workflow&option=show_defined_actions', 'icon' => 'ic-manage-actions', 'controller' => 'administration_actions'],
+                ['label' => 'Security', 'href' => 'index.php?manage=security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'administration_security'],
+                ['label' => 'Settings', 'href' => 'index.php?manage=settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'administration_settings'],
             ]);
             $renderMenuItem = static function (array $item) use ($matchesController, $currentController): string {
                 $onApplication = $currentController === 'application' && (string) ($item['app'] ?? '') !== '';

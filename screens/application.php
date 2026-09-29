@@ -62,9 +62,9 @@ $_SESSION['application_nav_id'] = (int) $current['nav_id'];
 $_GET['nav'] = (string) $current['nav_id'];
 Capabilities::sectionNavigation($app, $visible);
 
-$subcontroller = basename((string) ($_GET['subcontroller'] ?? ''));
-if ($subcontroller === 'item_management_manage' || $subcontroller === 'search_management_manage') {
-    Capabilities::forwardShared($app, (int) $current['nav_id'], $subcontroller);
+$engine = \Adlexone\Http\Router::engine();
+if ($engine !== null) {
+    Capabilities::forwardShared($app, (int) $current['nav_id'], $engine);
     return;
 }
 

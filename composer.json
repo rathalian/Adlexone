@@ -15,7 +15,7 @@
       "Adlexone\\App\\": "app/",
       "Adlexone\\": "src/"
     },
-    "classmap": ["app/http/controllers/", "src/"]
+    "classmap": ["screens/", "src/"]
   },
   "config": {
     "optimize-autoloader": true

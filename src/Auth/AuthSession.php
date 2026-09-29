@@ -60,8 +60,8 @@ final class AuthSession
 
     public static function redirectHome(): never
     {
-        $controller = $_SESSION['access_home_controller'] ?? 'quick_launch';
-        $url = rtrim((string) BASE_URL, '/') . '/index.php?controller=' . rawurlencode((string) $controller);
+        $home = (string) ($_SESSION['access_home_controller'] ?? 'quick_launch');
+        $url = rtrim((string) BASE_URL, '/') . '/' . \Adlexone\Http\Router::homeTarget($home);
         header('Location: ' . $url);
         exit;
     }

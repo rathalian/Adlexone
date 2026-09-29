@@ -1,4 +1,4 @@
-# Smoke test for app/Http/Controllers/administration_item_settings.php.
+# Smoke test for screens/administration_item_settings.php.
 # Loads every page option, then submits each form the way a browser would (parsing inputs, selected
 # options and checked boxes from the rendered HTML). Submits WRITE to the database: back it up first.
 #

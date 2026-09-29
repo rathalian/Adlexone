@@ -114,7 +114,6 @@ class RenderViews
      */
     public static function includeControllerFile(?string $controller, string $defaultPage): void
     {
-        // Use defaultPage if controller is null or empty
         $controller = basename($controller ?? $defaultPage);
         if (str_contains($controller, ':')) {
             [$controller, $appSlug] = explode(':', $controller, 2);
@@ -122,26 +121,11 @@ class RenderViews
                 $_GET['app'] = $appSlug;
             }
         }
-
-        include self::controllerFile($controller);
-    }
-
-    /**
-     * Resolve a controller name to its file. Directory names follow the
-     * repository casing so the include works on case-sensitive filesystems.
-     */
-    private static function controllerFile(string $controller): string
-    {
-        $root = SET_INSTALL_PATH . 'app/Http/Controllers/';
-        if (in_array($controller, ['item_management_manage', 'search_management_manage'], true)) {
-            return $root . 'shared/' . $controller . '.php';
-        }
-        if (str_starts_with($controller, 'app_')) {
-            $app = explode('_', $controller)[1] ?? '';
-            return $root . 'Applications/' . $app . '/controllers/' . $controller . '.php';
+        if ($controller === '') {
+            $controller = $defaultPage;
         }
 
-        return $root . $controller . '.php';
+        \Adlexone\Http\Router::open($controller);
     }
 
 

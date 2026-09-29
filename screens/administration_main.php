@@ -43,6 +43,6 @@ if (in_array($subcontroller, $forward, true)) {
     return;
 }
 
-header('Location: index.php?controller=quick_launch');
+header('Location: index.php');
 exit;
 ?>

@@ -159,7 +159,7 @@ final class ApplicationStore
                 'icon' => $app['icon'],
                 'href' => $legacy
                     ? 'index.php?controller=' . rawurlencode((string) $app['legacy_controller'])
-                    : 'index.php?controller=application&app=' . rawurlencode((string) $app['slug']),
+                    : \Adlexone\Http\Router::applicationUrl((string) $app['slug']),
                 'controller' => $legacy ? $app['legacy_controller'] : 'application',
                 'app' => $legacy ? '' : $app['slug'],
             ];

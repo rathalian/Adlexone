@@ -87,7 +87,7 @@ function showQuickSearch()
     ];
     define('BODY_CONTENT', RenderViews::buildForm(
         RenderViews::applicationText('TXT_62', TXT_376),
-        'index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=quick_search',
+        \Adlexone\Http\Router::continueUrl('search') . '&option=quick_search',
         $fields,
         [RenderViews::buildFormButton('submit', 'search', TXT_3, $javascript)]
     ));
@@ -175,7 +175,7 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
     $columns = ['item_id', 'item_title', 'create_date', 'item_type_id'];
     $result = Database::select('items', $columns, $condition . $orderClause);
 
-    $base = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? '')) . '&subcontroller=item_management_manage';
+    $base = \Adlexone\Http\Router::continueUrl('items');
     $role = (int)($_SESSION['access_role_id'] ?? 5);
     $typeNames = [];
     $rows = [];
@@ -198,22 +198,22 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
         }
         $actions = [];
         if ($role <= 4) {
-            $actions[] = ['href' => $base . '&option=log_entry&item_id=' . $itemId, 'label' => TXT_246];
-            $actions[] = ['href' => $base . '&option=show_attachments&item_id=' . $itemId, 'label' => TXT_389];
+            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
+            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=show_attachments', 'label' => TXT_389];
         }
         if ($role <= 3) {
-            $actions[] = ['href' => $base . '&option=change_security&item_id=' . $itemId, 'label' => TXT_28];
+            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=change_security', 'label' => TXT_28];
         }
         if ($role <= 5) {
             $actions[] = [
-                'href' => 'index.php?controller=full_page_view&option=print_item&item_id=' . $itemId,
+                'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
                 'label' => TXT_625,
                 'target' => '_blank',
             ];
         }
         if ($role <= 2) {
             $actions[] = [
-                'href' => $base . '&option=delete_item&item_id=' . $itemId,
+                'href' => $base . '&item=' . $itemId . '&option=delete_item',
                 'label' => TXT_315,
                 'tone' => 'danger',
                 'confirm' => TXT_400,
@@ -221,7 +221,7 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
         }
         $rows[] = [
             'name' => $title,
-            'href' => $base . '&option=show_item&item_id=' . $itemId,
+            'href' => $base . '&item=' . $itemId,
             'meta' => $meta,
             'actions' => $actions,
         ];
@@ -672,7 +672,7 @@ function showItems1($itemIDArray, $itemID = '', $orderSQL = '',  $userID = '', $
 		} else {
 			$html .= RenderViews::buildFormFieldsGrid(array(TXT_115));
 		}
-		$html = RenderViews::buildStartForm('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=show_search_results','POST','form-horizontal');
+		$html = RenderViews::buildStartForm(\Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results','POST','form-horizontal');
 
 		//RenderViews search results
 		//$html .= RenderViews::tbStartTable('table table-striped table-hover');
@@ -962,18 +962,11 @@ function showSavedSearches($userID, $application = '')
         $sql = "SELECT * FROM saved_searches WHERE (user = '$userID' OR user = 'all') $applicationClause ORDER BY search_name ASC";
     }
         $result = Database::rows($sql);
-    $controller = basename((string)($_GET['controller'] ?? ''));
-    $base = 'index.php?controller=' . rawurlencode($controller) . '&subcontroller=search_management_manage';
-    if (defined('APPLICATION_SLUG')) {
-        $base .= '&app=' . rawurlencode((string) APPLICATION_SLUG);
-        if (defined('APPLICATION_NAV_ID') && (int) APPLICATION_NAV_ID > 0) {
-            $base .= '&nav=' . (int) APPLICATION_NAV_ID;
-        }
-    }
+    $base = \Adlexone\Http\Router::continueUrl('search');
     $rows = [];
     if (count($result) > 0) {
         foreach ($result as $row) {
-            $href = $base . '&option=saved_search&id=' . rawurlencode((string)$row['search_id']);
+            $href = $base . '&search=' . rawurlencode((string)$row['search_id']);
             $name = (string)$row['search_name'];
             if ($row['user'] == 'all') {
                 $href .= '&global=1';
@@ -983,7 +976,7 @@ function showSavedSearches($userID, $application = '')
             $canDeleteGlobal = ($row['user'] == 'all' || $row['user'] == 'system') && (int)$_SESSION['access_role_id'] <= 1;
             $canDeleteOwn = (string)$row['user'] === (string)$_SESSION['access_user_id'];
             if ($canDeleteGlobal || $canDeleteOwn) {
-                $deleteHref = $base . '&option=delete_saved_search&id=' . rawurlencode((string)$row['search_id']);
+                $deleteHref = $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=delete_saved_search';
                 if ($canDeleteGlobal) {
                     $deleteHref .= '&scope=global';
                 }
@@ -996,7 +989,7 @@ function showSavedSearches($userID, $application = '')
             }
             if ((int)$_SESSION['access_role_id'] === 0) {
                 $actions[] = [
-                    'href' => $base . '&option=edit_saved_search&id=' . rawurlencode((string)$row['search_id']),
+                    'href' => $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=edit_saved_search',
                     'label' => TXT_626,
                 ];
             }
@@ -1479,7 +1472,7 @@ function showAdvancedItemSearch($filter = '')
 
     define('BODY_CONTENT', RenderViews::buildForm(
         RenderViews::applicationText('TXT_61', (string)RenderViews::getLanguageConstant('LA_96', 'TXT_96')),
-        'index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=show_search_results' . $eventId,
+        \Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results' . $eventId,
         $fields,
         [
             RenderViews::buildFormButton('submit', 'search', TXT_3),
@@ -1504,7 +1497,7 @@ function editSavedSearch($id)
         return;
     }
 
-    $action = 'index.php?controller=' . ($_GET['controller'] ?? '') . '&subcontroller=search_management_manage&option=update_saved_search&id=' . $id;
+    $action = \Adlexone\Http\Router::continueUrl('search') . '&option=update_saved_search&id=' . $id;
     $fields = [
         TXT_627 => RenderViews::buildTextInput('search_name', $row['search_name']),
         TXT_628 => RenderViews::buildTextArea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT),

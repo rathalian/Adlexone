@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Service Centre.
  *
  * Announcements, settings, and the work list live here.
- * The application shell opens search and items on the shared controllers.
+ * The application shell opens search and items through the router.
  */
 
 use Adlexone\Auth\Access;
@@ -21,12 +21,9 @@ const SERVICE_CENTRE_SLUG = 'service-centre';
 
 function serviceCentreUrl(string $query = ''): string
 {
-    $url = 'index.php?controller=application&app=' . rawurlencode((string) APPLICATION_SLUG);
-    if (defined('APPLICATION_NAV_ID') && (int) APPLICATION_NAV_ID > 0) {
-        $url .= '&nav=' . (int) APPLICATION_NAV_ID;
-    }
+    $nav = defined('APPLICATION_NAV_ID') ? (int) APPLICATION_NAV_ID : 0;
 
-    return $query === '' ? $url : $url . '&' . ltrim($query, '&');
+    return \Adlexone\Http\Router::applicationUrl((string) APPLICATION_SLUG, $nav, $query);
 }
 
 require_once __DIR__ . '/functions/announcements.php';

@@ -12,6 +12,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 /** * Import necessary classes
  */
+use Adlexone\Http\Router;
 use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
 /**
@@ -103,17 +104,14 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     $_SESSION['secure_id'] = md5(substr(md5(uniqid(rand(), true)), 0, 20));
     SharedMethods::loadConstantFromIni(SET_INSTALL_PATH . 'translations/' . SET_DEFAULT_LANGUAGE . '.lang.php');
     define('SET_THEME', SET_DEFAULT_THEME);
-    include 'app/Http/Controllers/login.php';
+    Router::open('login');
 
 } else {
     // Refresh permissions on every authenticated request so group changes apply immediately.
     \Adlexone\Auth\Access::hydrateSession((int) $_SESSION['access_user_id']);
 
-    // Handle accessing the root / with session variables still set
-    if (!isset($_GET['controller']) || (string) $_GET['controller'] === '') {
-        $_GET['controller'] = (string) $_SESSION['access_home_controller'];
-    }
-    $requestedController = (string) $_GET['controller'];
+    // A stored home such as application:service-centre still arrives as controller.
+    $requestedController = (string) ($_GET['controller'] ?? '');
     if (str_contains($requestedController, ':')) {
         [$requestedController, $requestedApp] = explode(':', $requestedController, 2);
         $_GET['controller'] = $requestedController;
@@ -153,9 +151,9 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
     \Adlexone\support\MenuOptions::prepare();
 
-    if (@$_GET['controller'] === 'full_page_view') {
-        include 'app/Http/Controllers/full_page_view.php';
+    if (Router::bare(Router::requested())) {
+        Router::open(Router::requested());
     } else {
-        include 'app/Http/Controllers/main.php';
+        include 'screens/main.php';
     }
 }

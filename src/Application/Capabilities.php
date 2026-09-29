@@ -89,8 +89,8 @@ final class Capabilities
             return;
         }
 
-        $shared = (string) ($_GET['subcontroller'] ?? '');
-        if ($shared === 'item_management_manage' || $shared === 'search_management_manage') {
+        $shared = \Adlexone\Http\Router::engine();
+        if ($shared !== null) {
             self::includeShared($shared);
             return;
         }
@@ -176,12 +176,9 @@ final class Capabilities
             define('PAGE_TITLE', (string) $app['name']);
         }
 
-        $base = 'index.php?controller=application&app=' . rawurlencode($slug);
-        if ($navId > 0) {
-            $base .= '&nav=' . $navId;
-        }
+        $base = \Adlexone\Http\Router::applicationUrl($slug, $navId);
         if (!defined('MAN_BASE_URL')) {
-            define('MAN_BASE_URL', $base . '&subcontroller=item_management_manage');
+            define('MAN_BASE_URL', $base);
         }
         if (!defined('CONTROLLER_BASEURL')) {
             define('CONTROLLER_BASEURL', $base);
@@ -191,7 +188,7 @@ final class Capabilities
 
     private static function includeShared(string $controller): void
     {
-        $file = SET_INSTALL_PATH . 'app/Http/Controllers/shared/' . $controller . '.php';
+        $file = \Adlexone\Http\Router::path($controller) ?? '';
         if (!is_file($file)) {
             RenderViews::buildResponse('The shared screen is missing.');
             return;
@@ -229,8 +226,7 @@ final class Capabilities
             if (!self::linkVisible($link)) {
                 continue;
             }
-            $href = 'index.php?controller=application&app=' . rawurlencode((string) $app['slug'])
-                . '&nav=' . (int) $link['nav_id'];
+            $href = \Adlexone\Http\Router::applicationUrl((string) $app['slug'], (int) $link['nav_id']);
             $icon = self::icon((string) $link['capability'], (string) $link['icon']);
             $html .= RenderViews::buildURL($href, (string) $link['label'], $icon);
         }
