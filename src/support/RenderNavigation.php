@@ -139,6 +139,8 @@ final class RenderNavigation
     {
         $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
 
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
+
         $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
 
         $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign in — Inlay</title>
     <meta name="color-scheme" content="light">
-    <link rel="icon" href="themes/new/assets/brand/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="themes/new/css/style.css?v=<?php echo (int) @filemtime(__DIR__ . '/../css/style.css'); ?>">
+    <link rel="icon" href="themes/inlay-blue/assets/brand/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="themes/inlay-blue/css/style.css?v=<?php echo (int) @filemtime(__DIR__ . '/../css/style.css'); ?>">
 </head>
 <body class="page-login">
 <main class="main" id="content">
@@ -83,6 +83,6 @@
     <span>Inlay <?php echo htmlspecialchars((string)VERSION, ENT_QUOTES, 'UTF-8'); ?></span>
     <a href="https://www.adlexone.com" target="_blank" rel="noopener">&copy;<?php echo date('Y'); ?> Adlexone</a>
 </footer>
-<script src="themes/new/js/app.js" defer></script>
+<script src="themes/inlay-blue/js/app.js" defer></script>
 </body>
 </html>

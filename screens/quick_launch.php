@@ -40,7 +40,7 @@ function launchTile(string $href, string $title, string $hint, string $icon): st
     $iconEsc = htmlspecialchars($icon, ENT_QUOTES, 'UTF-8');
 
     return '<a class="launch-tile" href="' . $hrefEsc . '">'
-        . '<span class="launch-tile__icon" aria-hidden="true"><svg class="icon"><use href="themes/new/assets/adlexone.sprite.svg#' . $iconEsc . '"></use></svg></span>'
+        . '<span class="launch-tile__icon" aria-hidden="true"><svg class="icon"><use href="themes/' . (defined('SET_THEME') ? rawurlencode((string) SET_THEME) : 'new') . '/assets/adlexone.sprite.svg#' . $iconEsc . '"></use></svg></span>'
         . '<span class="launch-tile__copy">'
         . '<span class="launch-tile__title">' . $titleEsc . '</span>'
         . '<span class="launch-tile__hint">' . $hintEsc . '</span>'

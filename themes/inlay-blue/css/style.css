@@ -6,10 +6,10 @@
    ========================================================= */
 
 :root{
-    --ink:#172033; --inlay:#8c6239; --stone:#efe6d4;
-    --brand:var(--inlay); --brand2:var(--ink);
-    --text:#172033; --panel:rgba(255,255,255,.94); --border:rgba(23,32,51,.08); --hover:rgba(23,32,51,.06);
-    --ring:rgba(23,32,51,.22);
+    --ink:#1e3a8a; --inlay:#2563eb; --stone:#dbeafe;
+    --brand:var(--inlay); --brand2:#1d4ed8;
+    --text:#0f2744; --panel:rgba(255,255,255,.94); --border:rgba(30,58,138,.12); --hover:rgba(37,99,235,.08);
+    --ring:rgba(37,99,235,.35);
     --title:rgba(15,23,42,.78); --label:rgba(15,23,42,.74); --body:rgba(15,23,42,.86); --input:rgba(15,23,42,.84); --placeholder:rgba(15,23,42,.48);
     --title-strip: color-mix(in srgb, var(--brand) 6%, white);
     --title-strip-border: color-mix(in srgb, var(--brand2) 8%, rgba(0,0,0,.07));
@@ -17,7 +17,7 @@
 
     --form-surface: color-mix(in srgb, var(--stone) 42%, white);
     --form-border: color-mix(in srgb, var(--ink) 12%, rgba(0,0,0,.08));
-    --form-hover-shadow: 0 0 0 3px rgba(140,98,57,.14);
+    --form-hover-shadow: 0 0 0 3px rgba(37,99,235,.22);
 }
 
 /* ---------- Base ---------- */
@@ -27,7 +27,7 @@ body{
     margin:0;
     font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
     color:var(--body);
-    background:#f3f1ec;
+    background:#e7f0fc;
 }
 
 /* ---------- Brand bar & brand underline ---------- */
@@ -35,7 +35,7 @@ body{
     position:sticky; top:0; z-index:600;
     margin:0; padding:10px 20px;
     background:#fff;
-    border-bottom:1px solid #e4dfd6;
+    border-bottom:1px solid #c5d8f5;
     box-shadow:none;
 }
 .brandrow{
@@ -56,7 +56,7 @@ body{
 }
 .brandtext .title-static{ color:var(--ink); }
 .brandmaker{
-    font-size:11px; font-weight:600; letter-spacing:.11em; text-transform:uppercase; line-height:1; color:#6d6458;
+    font-size:11px; font-weight:600; letter-spacing:.11em; text-transform:uppercase; line-height:1; color:#3b5f99;
 }
 
 /* If a legacy .underline divider exists in HTML, hide it to prevent double lines */
@@ -440,7 +440,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     border-color:transparent;
     box-shadow:none;
 }
-.btn--primary:hover{ color:#fff; background:#2c4158; border-color:transparent; }
+.btn--primary:hover{ color:#fff; background:#1e3a8a; border-color:transparent; }
 .btn.-sm, .btn.btn--sm{ padding:8px 11px; border-radius:8px; font-weight:600; letter-spacing:0; }
 .form-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
 .input-file{ width:100%; }
@@ -926,5 +926,5 @@ a.btn{ text-decoration:none; }
 }
 .response a.URL::after{ display:none; }
 .response a.URL:hover,
-.response a.link:hover{ color:#fff; background:#2c4158; }
+.response a.link:hover{ color:#fff; background:#1e3a8a; }
 

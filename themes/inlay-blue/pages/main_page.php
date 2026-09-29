@@ -11,8 +11,8 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo htmlspecialchars((defined('PAGE_TITLE') && PAGE_TITLE !== '' ? PAGE_TITLE . ' — Inlay' : 'Inlay'), ENT_QUOTES, 'UTF-8'); ?></title>
     <meta name="color-scheme" content="light">
-    <link rel="icon" href="themes/new/assets/brand/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="themes/new/css/style.css?v=<?php echo (int) @filemtime(__DIR__ . '/../css/style.css'); ?>">
+    <link rel="icon" href="themes/inlay-blue/assets/brand/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="themes/inlay-blue/css/style.css?v=<?php echo (int) @filemtime(__DIR__ . '/../css/style.css'); ?>">
 </head>
 <body>
     <div class="brandbar appbar">
@@ -51,7 +51,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                     ? ((string) ($item['app'] ?? '') === (string) ($_GET['app'] ?? '') ? ' aria-current="page"' : '')
                     : ($matchesController((string) ($item['controller'] ?? '')) ? ' aria-current="page"' : '');
                 return '<a role="menuitem" class="menu__item" href="' . htmlspecialchars($item['href'], ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
-                    . '<svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#' . htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') . '"></use></svg>'
+                    . '<svg class="icon" aria-hidden="true"><use href="themes/inlay-blue/assets/adlexone.sprite.svg#' . htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') . '"></use></svg>'
                     . '<span>' . htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') . '</span></a>';
             };
             $appLabel = 'Applications';
@@ -99,14 +99,14 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                     </div>
                     <div class="menu__divider" role="separator"></div>
                     <a role="menuitem" class="menu__item" href="?action=logoff">
-                        <svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
+                        <svg class="icon" aria-hidden="true"><use href="themes/inlay-blue/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
                         <span>Logout</span>
                     </a>
                 </div>
             </div>
             <?php else: ?>
             <a class="topnav__logout" href="?action=logoff" aria-label="Logout">
-                <svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
+                <svg class="icon" aria-hidden="true"><use href="themes/inlay-blue/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
                 <span class="topnav__logout-label">Logout</span>
             </a>
             <?php endif; ?>
@@ -143,6 +143,6 @@ if (defined('PAGE_TITLE') && PAGE_TITLE !== '') {
     <span>Inlay <?php echo htmlspecialchars((string)VERSION, ENT_QUOTES, 'UTF-8'); ?></span>
     <a href="https://www.adlexone.com" target="_blank" rel="noopener">&copy;<?php echo date('Y'); ?> Adlexone</a>
 </footer>
-<script src="themes/new/js/app.js" defer></script>
+<script src="themes/inlay-blue/js/app.js" defer></script>
 </body>
 </html>

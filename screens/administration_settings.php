@@ -173,6 +173,51 @@ function showSignInSettings(): void
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
+/**
+ * Installed themes, keyed by directory name.
+ *
+ * @return array<string, string>
+ */
+function installedThemes(): array
+{
+    $known = ['new' => 'Inlay', 'inlay-blue' => 'Inlay Blue'];
+    $themes = [];
+    $root = rtrim(THEME_PATH, '/\\') . DIRECTORY_SEPARATOR;
+    foreach (scandir($root) ?: [] as $name) {
+        if ($name === '.' || $name === '..' || !preg_match('/^[A-Za-z0-9_-]+$/', $name)) {
+            continue;
+        }
+        $directory = $root . $name;
+        if (!is_dir($directory) || !is_file($directory . '/pages/main_page.php')) {
+            continue;
+        }
+        $themes[$name] = $known[$name] ?? $name;
+    }
+    asort($themes, SORT_NATURAL | SORT_FLAG_CASE);
+
+    return $themes;
+}
+
+function showThemeSettings(): void
+{
+    $themes = installedThemes();
+    $current = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'new';
+    if (!isset($themes[$current]) && $current !== '') {
+        $themes[$current] = $current;
+    }
+    $fields = [
+        'Default theme' => RenderViews::buildSelectDropdown('SET_DEFAULT_THEME', array_keys($themes), array_values($themes), $current)
+            . '<p class="form-help">Used when a person has not chosen a theme on their own account.</p>',
+    ];
+    define('BODY_CONTENT', RenderViews::buildForm(
+        'Theme',
+        'index.php?controller=administration_settings&option=update_theme_settings',
+        $fields,
+        [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
+    ));
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
 function showEmailSettings(): void
 {
     $smtp = static function (string $name): string {
@@ -197,6 +242,41 @@ switch (@$_GET['option']) {
     case 'adlexone_settings' :
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
         showAdlexoneSettings();
+        break;
+    case 'theme_settings' :
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
+        showThemeSettings();
+        break;
+    case 'update_theme_settings' :
+        RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
+        $themes = installedThemes();
+        $theme = trim((string) ($_POST['SET_DEFAULT_THEME'] ?? ''));
+        if (!isset($themes[$theme])) {
+            RenderViews::buildResponse(
+                'Choose an installed theme.',
+                RenderViews::buildURL('index.php?controller=administration_settings&option=theme_settings', 'Theme', 'URL')
+            );
+            break;
+        }
+        $path = SET_CONFIGURATION_PATH . 'adlexone_settings.json';
+        $decoded = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+        if (!is_array($decoded)) {
+            RenderViews::buildResponse(
+                'Theme settings could not be read.',
+                RenderViews::buildURL('index.php?controller=administration_settings&option=theme_settings', 'Theme', 'URL')
+            );
+            break;
+        }
+        $previous = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : (string) ($decoded['SET_DEFAULT_THEME'] ?? 'new');
+        $decoded['SET_DEFAULT_THEME'] = $theme;
+        if ($previous !== $theme) {
+            Database::update('users', ['theme' => $theme], 'theme = ? OR theme = ? OR theme IS NULL', [$previous, '']);
+        }
+        if (!empty($_SESSION['access_user_id'])) {
+            Database::update('users', ['theme' => $theme], 'user_id = ?', [(int) $_SESSION['access_user_id']]);
+            $_SESSION['access_theme'] = $theme;
+        }
+        SharedMethods::saveSettingsToJson($path, $decoded);
         break;
     case 'update_adlexone_settings' :
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);

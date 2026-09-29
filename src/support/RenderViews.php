@@ -1113,7 +1113,8 @@ class RenderViews
         $svg = '';
         if ($spriteName !== '') {
             $spriteEsc = htmlspecialchars($spriteName, ENT_QUOTES, 'UTF-8');
-            $svg = '<svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#' . $spriteEsc . '"></use></svg>&nbsp;&nbsp;';
+            $theme = defined('SET_THEME') ? rawurlencode((string) SET_THEME) : 'new';
+            $svg = '<svg class="icon" aria-hidden="true"><use href="themes/' . $theme . '/assets/adlexone.sprite.svg#' . $spriteEsc . '"></use></svg>&nbsp;&nbsp;';
         }
 
         $textEsc = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
