@@ -43,21 +43,23 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
                 $prefix = preg_replace('/_(main|manage)$/', '', $controller);
                 return is_string($prefix) && $prefix !== $controller && str_starts_with($currentController, $prefix);
             };
-            $applications = [
-                ['label' => 'Service Centre', 'href' => '?controller=app_servicecentre_main', 'icon' => 'ic-servicecentre', 'controller' => 'app_servicecentre_main'],
-                ['label' => 'Knowledge Hub', 'href' => '?controller=app_oneorzeroknowledgebase_main', 'icon' => 'ic-knowledgebase', 'controller' => 'app_oneorzeroknowledgebase_main'],
-                ['label' => 'Report Manager', 'href' => '?controller=app_oneorzeroreportmanager_main', 'icon' => 'ic-search', 'controller' => 'app_oneorzeroreportmanager_main'],
-                ['label' => 'Time Manager', 'href' => '?controller=app_oneorzerotimemanager_main', 'icon' => 'ic-time', 'controller' => 'app_oneorzerotimemanager_main'],
-            ];
+            $applications = \Adlexone\Application\ApplicationStore::menuItems();
             $quickLaunch = ['label' => 'Home', 'href' => '?controller=quick_launch', 'icon' => 'ic-launch', 'controller' => 'quick_launch'];
-            $manageItems = [
+            $manageItems = [];
+            if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SETTINGS)) {
+                $manageItems[] = ['label' => 'Applications', 'href' => '?controller=administration_applications', 'icon' => 'ic-launch', 'controller' => 'administration_applications'];
+            }
+            $manageItems = array_merge($manageItems, [
                 ['label' => 'Items and Fields', 'href' => '?controller=administration_item_settings&option=manage_fields', 'icon' => 'ic-manage-fields', 'controller' => 'administration_item_settings'],
                 ['label' => 'Workflow', 'href' => '?controller=administration_actions&option=show_defined_actions', 'icon' => 'ic-manage-actions', 'controller' => 'administration_actions'],
                 ['label' => 'Security', 'href' => '?controller=administration_security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'administration_security'],
                 ['label' => 'Settings', 'href' => '?controller=administration_settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'administration_settings'],
-            ];
-            $renderMenuItem = static function (array $item) use ($matchesController): string {
-                $current = $matchesController($item['controller']) ? ' aria-current="page"' : '';
+            ]);
+            $renderMenuItem = static function (array $item) use ($matchesController, $currentController): string {
+                $onApplication = $currentController === 'application' && (string) ($item['app'] ?? '') !== '';
+                $current = $onApplication
+                    ? ((string) ($item['app'] ?? '') === (string) ($_GET['app'] ?? '') ? ' aria-current="page"' : '')
+                    : ($matchesController((string) ($item['controller'] ?? '')) ? ' aria-current="page"' : '');
                 return '<a role="menuitem" class="menu__item" href="' . htmlspecialchars($item['href'], ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
                     . '<svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#' . htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') . '"></use></svg>'
                     . '<span>' . htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') . '</span></a>';

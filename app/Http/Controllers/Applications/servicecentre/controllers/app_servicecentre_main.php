@@ -19,7 +19,14 @@ const SERVICE_CENTRE_CONTROLLER = 'app_servicecentre_main';
 
 function serviceCentreUrl(string $query = ''): string
 {
-    $url = 'index.php?controller=' . SERVICE_CENTRE_CONTROLLER;
+    if (defined('APPLICATION_SLUG')) {
+        $url = 'index.php?controller=application&app=' . rawurlencode((string) APPLICATION_SLUG);
+        if (defined('APPLICATION_NAV_ID') && (int) APPLICATION_NAV_ID > 0) {
+            $url .= '&nav=' . (int) APPLICATION_NAV_ID;
+        }
+    } else {
+        $url = 'index.php?controller=' . SERVICE_CENTRE_CONTROLLER;
+    }
     return $query === '' ? $url : $url . '&' . ltrim($query, '&');
 }
 

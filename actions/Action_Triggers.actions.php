@@ -8,7 +8,7 @@ use Adlexone\support\Actions;
  * action package specific constants
  */
 if (!defined('NOT_BASE_URL')) {
-	define('NOT_BASE_URL', 'index.php?controller=administration_main&subcontroller=administration_actions');
+	define('NOT_BASE_URL', 'index.php?controller=administration_actions');
 }
 /**
  * * Shows the setup page for the trigger action for custom fields

@@ -2003,5 +2003,6 @@ switch (@$_GET['option']) {
         transformItem($_POST['item_id'], $_POST['transform_type'], $_POST['item_type_id']);
         break;
     default :
+        RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
         showMyItems($_SESSION['access_user_id']);
 }

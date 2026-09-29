@@ -32,43 +32,56 @@ use Adlexone\support\RenderViews;
 define('CRM_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=crm_management_manage');
 
 
-function showUser($userID = '',$itemID = '')
+function showUser($userID = '', $itemID = ''): void
 {
 	$logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
 	$attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-	$itemURL = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&item_id='.$itemID.$logEntry . $attachments,TXT_621.' - '.TXT_398.' '.$itemID,'URL');
-	if ($userID == '') {
+	$itemHref = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? ''))
+		. '&subcontroller=item_management_manage&option=show_item&item_id=' . rawurlencode((string)$itemID)
+		. $logEntry . $attachments;
+	$itemURL = RenderViews::buildURL($itemHref, TXT_621 . ' - ' . TXT_398 . ' ' . $itemID, 'URL');
+	if ($userID === '') {
 		RenderViews::buildResponse(TXT_620, $itemURL);
 		return;
-	} else {
-		// Get custom fields from database
-		$columnArray = array ('*');
-		$condition = "WHERE user_id = '$userID'";
-		$sql = Database::sqlSelect('users', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$fieldValues = Database::fetchArray($result);
-		$userInformation[TXT_167] = $fieldValues['first_name'];
-		$userInformation[TXT_168] = $fieldValues['last_name'];
-		$userInformation[TXT_169] = RenderViews::buildURL('mailto:'.$fieldValues['email'], $fieldValues['email'],'URL');
-		$userInformation[TXT_171] = $fieldValues['phone'];
-		$userInformation[TXT_172] = $fieldValues['address'];
-		$userInformation[TXT_173] = $fieldValues['city'];
-		$userInformation[TXT_174] = $fieldValues['state_province'];
-		$userInformation[TXT_175] = $fieldValues['zip_postal'];
-		$userInformation[TXT_176] = $fieldValues['country'];
-		$userInformation[TXT_177] = $fieldValues['website'];
-		$userInformation[TXT_178] = $fieldValues['other'];
-		//$tableRows = '';
-		foreach ($userInformation as $name => $field) {
-			$html .= '<div><strong>' . $name . '</strong>  '. $field. '</div>';
-			//$tableRows .= RenderViews::tableData('', array('20%', '70%'), '', '' , 'tdc1BottomBorder', $cellData, 'row');
-		}
-		//$html = RenderViews::table('95%', '0', '0', '0', 'tableIndent', $tableRows);
-		$itemURL = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&item_id='.$itemID.$logEntry . $attachments,TXT_621.' ('.$fieldValues['user_name'].') - '.RenderViews::getLanguageConstant('LA_398','TXT_398').' '.$itemID,'URL');
-		define('HEADING', $itemURL);
-		define('BODY_CONTENT', $html);
-		RenderViews::renderThemePage('main_page_content',  SET_THEME);
 	}
+
+	$fieldValues = Database::firstResultParams('SELECT * FROM users WHERE user_id = ?', [$userID]);
+	if ($fieldValues === null) {
+		RenderViews::buildResponse(TXT_620, $itemURL);
+		return;
+	}
+
+	$text = static function (mixed $value): string {
+		return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+	};
+	$email = (string)($fieldValues['email'] ?? '');
+	$userInformation = [
+		TXT_167 => $text($fieldValues['first_name'] ?? ''),
+		TXT_168 => $text($fieldValues['last_name'] ?? ''),
+		TXT_169 => RenderViews::buildURL('mailto:' . $email, $email, 'URL'),
+		TXT_171 => $text($fieldValues['phone'] ?? ''),
+		TXT_172 => $text($fieldValues['address'] ?? ''),
+		TXT_173 => $text($fieldValues['city'] ?? ''),
+		TXT_174 => $text($fieldValues['state_province'] ?? ''),
+		TXT_175 => $text($fieldValues['zip_postal'] ?? ''),
+		TXT_176 => $text($fieldValues['country'] ?? ''),
+		TXT_177 => $text($fieldValues['website'] ?? ''),
+		TXT_178 => $text($fieldValues['other'] ?? ''),
+	];
+	$html = '';
+	foreach ($userInformation as $name => $field) {
+		$html .= '<div><strong>' . $text($name) . '</strong> ' . $field . '</div>';
+	}
+	$back = RenderViews::buildURL(
+		$itemHref,
+		TXT_621 . ' (' . (string)($fieldValues['user_name'] ?? '') . ') - ' . RenderViews::getLanguageConstant('LA_398', 'TXT_398') . ' ' . $itemID,
+		'URL'
+	);
+	if (!defined('PAGE_TITLE')) {
+		define('PAGE_TITLE', TXT_621);
+	}
+	define('BODY_CONTENT', '<p>' . $back . '</p>' . $html);
+	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
 /**
@@ -78,7 +91,7 @@ function showUser($userID = '',$itemID = '')
 switch (@$_GET['option']) {
 	case 'view_user' :
 		RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-		showUser($_GET['user_id'], $_GET['item_id']);
+		showUser((string)($_GET['user_id'] ?? ''), (string)($_GET['item_id'] ?? ''));
 		break;
 	default :
 		break;

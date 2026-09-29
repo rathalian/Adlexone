@@ -538,6 +538,10 @@ final class RenderNavigation
         if (is_string($query)) {
             parse_str($query, $params);
         }
+        $linkNav = (string)($params['nav'] ?? '');
+        if ($linkNav !== '') {
+            return $linkNav === (string)($_GET['nav'] ?? '');
+        }
         $linkOption = (string)($params['option'] ?? '');
         $currentOption = defined('SECTION_NAV_OPTION')
             ? (string)SECTION_NAV_OPTION

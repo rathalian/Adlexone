@@ -977,6 +977,12 @@ function showSavedSearches($userID, $application = '')
     $result = Database::query($sql, DSN, SET_SHOW_SQL);
     $controller = basename((string)($_GET['controller'] ?? ''));
     $base = 'index.php?controller=' . rawurlencode($controller) . '&subcontroller=search_management_manage';
+    if (defined('APPLICATION_SLUG')) {
+        $base .= '&app=' . rawurlencode((string) APPLICATION_SLUG);
+        if (defined('APPLICATION_NAV_ID') && (int) APPLICATION_NAV_ID > 0) {
+            $base .= '&nav=' . (int) APPLICATION_NAV_ID;
+        }
+    }
     $rows = [];
     if (Database::numRows($result) > 0) {
         while ($row = Database::fetchArray($result)) {
@@ -1351,6 +1357,12 @@ function searchApplicationMenu(string $selected): string
             }
             $names[] = $name;
             $urls[] = $base;
+        }
+    }
+    foreach (\Adlexone\Application\ApplicationStore::searchScopes() as [$scope, $label]) {
+        if (!in_array($scope, $urls, true)) {
+            $names[] = $label;
+            $urls[] = $scope;
         }
     }
 

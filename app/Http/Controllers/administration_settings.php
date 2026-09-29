@@ -284,6 +284,6 @@ switch (@$_GET['option']) {
         break;
     default :
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-        RenderViews::buildResponse('Invalid Option', 'index . php ? controller = administration_main & subcontroller = administration_settings & option = adlexone_settings');
+        RenderViews::buildResponse('Invalid Option', RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_55, 'URL'));
         break;
 }

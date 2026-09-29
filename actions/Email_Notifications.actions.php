@@ -37,7 +37,7 @@ use Adlexone\support\Communications;
  * action package specific constants
  */
 if (!defined('NOT_BASE_URL')) {
-    define('NOT_BASE_URL', 'index.php?controller=administration_main&subcontroller=administration_actions');
+    define('NOT_BASE_URL', 'index.php?controller=administration_actions');
 }
 /**
  * Action methods for sending an email when a custom field value changes to a defined value.

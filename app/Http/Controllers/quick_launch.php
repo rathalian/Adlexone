@@ -64,40 +64,25 @@ function launchGroup(string $label, array $tiles): string
 }
 
 $applications = [];
-if (Access::can(Permission::SERVICECENTRE_USE)) {
+foreach (\Adlexone\Application\ApplicationStore::menuItems() as $item) {
+    $hint = trim((string) $item['hint']);
     $applications[] = launchTile(
-        'index.php?controller=app_servicecentre_main',
-        'Service Centre',
-        'Tickets and announcements',
-        'ic-servicecentre'
-    );
-}
-if (Access::can(Permission::KNOWLEDGEBASE_USE)) {
-    $applications[] = launchTile(
-        'index.php?controller=app_oneorzeroknowledgebase_main',
-        'Knowledge Hub',
-        'Articles and search',
-        'ic-knowledgebase'
-    );
-}
-if (Access::can(Permission::REPORTS_USE)) {
-    $applications[] = launchTile(
-        'index.php?controller=app_oneorzeroreportmanager_main',
-        'Report Manager',
-        'Reports and saved views',
-        'ic-search'
-    );
-}
-if (Access::can(Permission::APP_ACCESS)) {
-    $applications[] = launchTile(
-        'index.php?controller=app_oneorzerotimemanager_main',
-        'Time Manager',
-        'Time entries',
-        'ic-time'
+        (string) $item['href'],
+        (string) $item['label'],
+        $hint !== '' ? $hint : (string) $item['label'],
+        (string) $item['icon']
     );
 }
 
 $manage = [];
+if (Access::can(Permission::ADMIN_SETTINGS)) {
+    $manage[] = launchTile(
+        'index.php?controller=administration_applications',
+        'Applications',
+        'Create and arrange applications',
+        'ic-launch'
+    );
+}
 if (Access::can(Permission::ADMIN_ITEMS)) {
     $manage[] = launchTile(
         'index.php?controller=administration_item_settings&option=manage_fields',

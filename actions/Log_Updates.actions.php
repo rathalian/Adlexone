@@ -33,7 +33,7 @@ use Adlexone\support\Actions;
  * action package specific constants
  */
 if (!defined('NOT_BASE_URL')) {
-	define('NOT_BASE_URL', 'index.php?controller=administration_main&subcontroller=administration_actions');
+	define('NOT_BASE_URL', 'index.php?controller=administration_actions');
 }
 function showSetupUpdateLog($actionID = '')
 {
@@ -224,5 +224,3 @@ function executeUpdateLog($itemID, $dataArray, $preCondition, $triggerCondition,
  */
 $actionName['UpdateLog'] = ACT_PAK_49;
 $actionDescription['UpdateLog'] = ACT_PAK_50;
-
-'}'}'?>

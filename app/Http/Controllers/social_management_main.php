@@ -24,20 +24,10 @@ declare(strict_types=1);
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
-use Adlexone\support\RenderViews;
-
 /**
- * Controller Contstants
+ * Retired section. Service Centre replaced this controller.
  */
-if (!isset($_GET['controller'])) {
-    // Handle instances where this is the first page after login
-    define('SOC_BASE_URL', 'index.php?controller=social_management_main&subcontroller=social_management_manage');
-} else {
-    define('SOC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=social_management_manage');
-}
-/**
- * Page rendered from controller
- */
-RenderViews::includeControllerFile(@$_GET['subcontroller'], 'social_management_manage');
+header('Location: index.php?controller=app_servicecentre_main');
+exit;
 
 ?>

@@ -42,4 +42,10 @@ use Adlexone\support\RenderViews;
 /*******************************************************************************
  * Page rendered from controller
  ******************************************************************************/
-RenderViews::renderThemePage('main_page_content',  SET_LANGUAGE, SET_THEME);
+if (!defined('PAGE_TITLE')) {
+    define('PAGE_TITLE', '');
+}
+if (!defined('BODY_CONTENT')) {
+    define('BODY_CONTENT', '');
+}
+RenderViews::renderThemePage('main_page_content', SET_THEME);

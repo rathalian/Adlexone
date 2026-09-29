@@ -27,42 +27,22 @@ declare(strict_types=1);
 use Adlexone\support\RenderViews;
 
 /**
- * Controller Template Wrapper Functions
+ * Old administration hub. Manage opens each screen directly. Forward the four
+ * screens that action packages and bookmarks still address as subcontrollers.
+ * The portal and the missing procedures controller go home.
  */
-/**
- * Creates secured navigation buildSelectDropdown
- */
-function showControllerMenu (): string
-{
-    $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=modify_user', TXT_24, 'URL'), $_SESSION['access_role_id'], 5);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security', TXT_28, 'URL'), $_SESSION['access_role_id'], 1);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_item_settings', TXT_49, 'URL'), $_SESSION['access_role_id'], 1);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_actions', TXT_128, 'URL'), $_SESSION['access_role_id'], 1);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_settings', TXT_55, 'URL'), $_SESSION['access_role_id'], 1);
-    $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_procedures', TXT_230, 'URL'), $_SESSION['access_role_id'], 0);
-    return $html;
+$subcontroller = basename((string)($_GET['subcontroller'] ?? ''));
+$forward = [
+    'administration_security',
+    'administration_item_settings',
+    'administration_actions',
+    'administration_settings',
+];
+if (in_array($subcontroller, $forward, true)) {
+    RenderViews::includeControllerFile($subcontroller, $subcontroller);
+    return;
 }
-/**
- * SubController()
- *
- * @return
- */
-function SubController()
-{
-    if ($_SESSION['access_role_id'] <= 1){
-    	RenderViews::includeControllerFile(@$_GET['subcontroller'], 'administration_portal');
-    }else{
-    	RenderViews::includeControllerFile(@$_GET['subcontroller'], 'administration_security');
-    }
-    
-	
-}
-/**
- * Page rendered from controller
- */
-if ($_SESSION['access_role_id'] <= 1){
-	RenderViews::includeControllerFile(@$_GET['subcontroller'], 'administration_portal');
-}else{
-	RenderViews::includeControllerFile(@$_GET['subcontroller'], 'administration_security');
-}
+
+header('Location: index.php?controller=quick_launch');
+exit;
 ?>
