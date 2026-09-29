@@ -1024,15 +1024,16 @@ function showSavedSearches($userID, $application = '')
     $toolbar = '';
     if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG === 'service-centre') {
         $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE') ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE) : '';
-        $toolbar = '<div class="form-actions" style="margin-top:0">'
+        $toolbar = '<div class="record-list__tools">'
             . RenderViews::buildURL($base . '&option=show_quick_search', APP_SC_TXT_62, '', 'btn btn--primary btn--sm')
             . RenderViews::buildURL($base . '&option=show_item_search&item_types=' . $itemType, APP_SC_TXT_61, '', 'btn btn--sm')
             . '</div>';
     }
-    $list = $toolbar . RenderViews::buildRecordList([
+    $list = RenderViews::buildRecordList([
         'column' => TXT_151,
         'searchLabel' => TXT_3,
         'empty' => TXT_115,
+        'toolbar' => $toolbar,
         'groups' => [['rows' => $rows]],
     ]);
     define('BODY_CONTENT', RenderViews::buildVerticalCards([

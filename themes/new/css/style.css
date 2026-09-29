@@ -655,10 +655,12 @@ body{
     color:var(--title); background:var(--title-strip); border:1px solid var(--title-strip-border);
 }
 .record-list__bar .btn--primary{ margin-left:auto; text-decoration:none; }
+.record-list__tools{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; margin-left:auto; }
+.record-list__tools .btn--primary{ margin-left:0; }
 .record-list__tablewrap{ overflow-x:auto; }
 .record-list .table{ margin:0; }
 .record-list td, .record-list th{ vertical-align:middle; }
-.record-list__actions{ display:inline-flex; align-items:center; gap:6px; }
+.record-list__actions{ display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; }
 .record-list__meta{ margin-top:2px; color:var(--placeholder); font-size:12.5px; line-height:1.35; }
 .record-list__grouphead th{
     padding-top:18px; padding-bottom:6px; background:transparent; border-bottom:none;
@@ -671,7 +673,7 @@ body{
     margin-left:6px; padding:1px 7px; border-radius:999px; font-size:11px; letter-spacing:0;
     text-transform:none; background:var(--title-strip); border:1px solid var(--title-strip-border);
 }
-.record-list__manage{ width:1%; white-space:nowrap; text-align:right; }
+.record-list__manage{ width:1%; text-align:right; white-space:nowrap; }
 .record-list__empty, .record-list__nomatch{ margin:0; color:var(--placeholder); }
 .record-list__sr{
     position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
@@ -679,6 +681,7 @@ body{
 }
 @media (max-width:640px){
     .record-list__bar .btn--primary{ margin-left:0; }
+    .record-list__tools{ margin-left:0; }
     .record-list__search{ max-width:none; flex-basis:100%; }
 }
 

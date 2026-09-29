@@ -1,35 +1,134 @@
 <?php
 declare(strict_types=1);
 
+use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 
 /**
- * The work list is a saved search. This screen sends that request to the
- * shared search controller, or shows the empty state when none is configured.
+ * Work is the items this person can open: ones they own, created, or share
+ * through a group.
  */
 function showServiceCentreWork(): void
 {
-    $id = (string) ($_GET['id'] ?? '');
-    if ($id === '' && defined('SERVICECENTRE_SET_SAVED_SEARCH') && ctype_digit((string) SERVICECENTRE_SET_SAVED_SEARCH)) {
-        $id = (string) SERVICECENTRE_SET_SAVED_SEARCH;
-    }
-
-    if ($id !== '' && ctype_digit($id)) {
-        header('Location: ' . serviceCentreUrl(
-            'subcontroller=search_management_manage&option=saved_search&id=' . rawurlencode($id)
-        ));
-        exit;
+    $ids = serviceCentreAccessibleItemIds();
+    $base = defined('MAN_BASE_URL')
+        ? (string) MAN_BASE_URL
+        : serviceCentreUrl('subcontroller=item_management_manage');
+    $rows = [];
+    if ($ids !== []) {
+        $result = Database::query(
+            Database::sqlSelect(
+                'items',
+                ['item_id', 'item_title', 'create_date', 'item_type_id'],
+                'WHERE item_id IN (' . implode(',', $ids) . ') ORDER BY item_id DESC'
+            ),
+            DSN
+        );
+        $typeNames = [];
+        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        while ($row = Database::fetchArray($result)) {
+            $itemId = (int) $row['item_id'];
+            $title = trim((string) ($row['item_title'] ?? ''));
+            if ($title === '') {
+                $title = (string) TXT_357;
+            }
+            $typeId = (string) ($row['item_type_id'] ?? '');
+            if (!isset($typeNames[$typeId])) {
+                $typeRow = Database::firstResultParams(
+                    'SELECT item_type_name FROM item_types WHERE item_type_id = ?',
+                    [$typeId]
+                );
+                $typeNames[$typeId] = (string) ($typeRow['item_type_name'] ?? '');
+            }
+            $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId
+                . ' · ' . date(SET_DATE_FORMAT, (int) ($row['create_date'] ?? 0));
+            if ($typeNames[$typeId] !== '') {
+                $meta .= ' · ' . $typeNames[$typeId];
+            }
+            $actions = [];
+            if ($role <= 4) {
+                $actions[] = ['href' => $base . '&option=log_entry&item_id=' . $itemId, 'label' => TXT_246];
+                $actions[] = ['href' => $base . '&option=show_attachments&item_id=' . $itemId, 'label' => TXT_389];
+            }
+            if ($role <= 3) {
+                $actions[] = ['href' => $base . '&option=change_security&item_id=' . $itemId, 'label' => TXT_28];
+            }
+            if ($role <= 5) {
+                $actions[] = [
+                    'href' => 'index.php?controller=full_page_view&option=print_item&item_id=' . $itemId,
+                    'label' => TXT_625,
+                    'target' => '_blank',
+                ];
+            }
+            if ($role <= 2) {
+                $actions[] = [
+                    'href' => $base . '&option=delete_item&item_id=' . $itemId,
+                    'label' => TXT_315,
+                    'tone' => 'danger',
+                    'confirm' => TXT_400,
+                ];
+            }
+            $rows[] = [
+                'name' => $title,
+                'href' => $base . '&option=show_item&item_id=' . $itemId,
+                'meta' => $meta,
+                'actions' => $actions,
+            ];
+        }
     }
 
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
         [
             'title' => APP_SC_TXT_1,
-            'html' => '<p class="record-list__empty">' . htmlspecialchars(APP_SC_TXT_84, ENT_QUOTES, 'UTF-8') . '</p>'
-                . '<div class="form-actions">'
-                . RenderViews::buildURL(serviceCentreUrl('subcontroller=search_management_manage&option=show_quick_search'), APP_SC_TXT_62, '', 'btn btn--primary btn--sm')
-                . RenderViews::buildURL(serviceCentreUrl('subcontroller=search_management_manage&option=show_saved_searches'), APP_SC_TXT_60, '', 'btn btn--sm')
-                . '</div>',
+            'html' => RenderViews::buildRecordList([
+                'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
+                'searchLabel' => TXT_3,
+                'empty' => TXT_115,
+                'groups' => [['rows' => $rows]],
+            ]),
         ],
     ]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * @return list<int>
+ */
+function serviceCentreAccessibleItemIds(): array
+{
+    $userId = (string) ($_SESSION['access_user_id'] ?? '');
+    if ($userId === '') {
+        return [];
+    }
+
+    $ids = [];
+    $owned = Database::queryParams(
+        'SELECT item_id FROM items WHERE user_security = ? OR creator_security = ?',
+        [$userId, $userId]
+    );
+    while ($row = Database::fetchArray($owned)) {
+        $ids[] = (int) $row['item_id'];
+    }
+
+    $membership = Database::firstResultParams(
+        'SELECT groups FROM group_members WHERE user_id = ?',
+        [$userId]
+    );
+    foreach (preg_split('/\}-\{/', (string) ($membership['groups'] ?? '')) ?: [] as $group) {
+        $group = trim($group, " \t\n\r\0\x0B{}-");
+        if ($group === '' || !ctype_digit($group)) {
+            continue;
+        }
+        $groupItems = Database::queryParams(
+            "SELECT item_id FROM items WHERE group_security LIKE ?",
+            ['%}-{' . $group . '}-{%']
+        );
+        while ($row = Database::fetchArray($groupItems)) {
+            $ids[] = (int) $row['item_id'];
+        }
+    }
+
+    $ids = array_values(array_unique(array_filter($ids)));
+    rsort($ids);
+    return $ids;
 }

@@ -516,9 +516,11 @@ class RenderViews
             }
         }
 
+        $toolbar = (string) ($list['toolbar'] ?? '');
         if ($rows === []) {
+            $bar = $primary . $toolbar;
             return '<div class="record-list">'
-                . ($primary !== '' ? '<div class="record-list__bar">' . $primary . '</div>' : '')
+                . ($bar !== '' ? '<div class="record-list__bar">' . $bar . '</div>' : '')
                 . '<p class="record-list__empty">' . htmlspecialchars($emptyText, ENT_QUOTES, 'UTF-8') . '</p>'
                 . '</div>';
         }
@@ -552,6 +554,7 @@ class RenderViews
             . '<div class="record-list__bar">'
             . '<input id="' . $searchId . '" class="input record-list__search" type="search" placeholder="' . htmlspecialchars($searchLabel, ENT_QUOTES, 'UTF-8') . '" aria-label="' . htmlspecialchars($searchLabel, ENT_QUOTES, 'UTF-8') . '" autocomplete="off">'
             . '<span class="record-list__count" aria-live="polite">' . count($rows) . '</span>'
+            . $toolbar
             . $primary
             . '</div>'
             . '<div class="record-list__tablewrap"><table class="table table-hover">'
