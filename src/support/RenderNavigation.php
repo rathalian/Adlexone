@@ -447,7 +447,9 @@ final class RenderNavigation
             return '';
         }
 
-        $html = '<nav class="sectionnav" aria-label="' . self::e($label) . '">';
+        $html = '<div class="sectionbar">';
+        $html .= '<p class="sectionbar__name">' . self::e($label) . '</p>';
+        $html .= '<nav class="sectionnav" aria-label="' . self::e($label) . '">';
         foreach ($links as $lnk) {
             $href = (string)($lnk['href'] ?? '#');
             $current = self::linkIsCurrent($href) ? ' aria-current="page"' : '';
@@ -461,7 +463,7 @@ final class RenderNavigation
                 . $icon
                 . '<span class="sectionnav__label">' . self::e(trim((string)($lnk['label'] ?? ''))) . '</span></a>';
         }
-        $html .= '</nav>';
+        $html .= '</nav></div>';
 
         return $html;
     }

@@ -15,7 +15,7 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
     <link rel="stylesheet" href="themes/new/css/style.css">
 </head>
 <body>
-    <div class="brandbar">
+    <div class="brandbar appbar">
     <div class="brandrow">
         <a class="brandhome" href="index.php" aria-label="Home">
         <div class="brandwrap">
@@ -28,10 +28,6 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
             <div class="brandtext"><span class="title-static">Adlexone</span></div>
         </div>
         </a>
-
-        <?php if ($hasSectionNav) {
-            echo APP_SECTION_NAV;
-        } ?>
 
         <nav class="topnav" aria-label="Top">
             <?php
@@ -88,21 +84,58 @@ $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
             </div>
             <?php
             $signedInName = trim((string)($_SESSION['access_user_name'] ?? ''));
+            $initials = '';
+            foreach (array_slice(preg_split('/\s+/', $signedInName) ?: [], 0, 2) as $part) {
+                if ($part !== '') {
+                    $initials .= strtoupper(substr($part, 0, 1));
+                }
+            }
             if ($signedInName !== ''):
             ?>
-            <span class="topnav__user"><?php echo htmlspecialchars((defined('TXT_6') ? TXT_6 . ' ' : '') . $signedInName, ENT_QUOTES, 'UTF-8'); ?></span>
-            <?php endif; ?>
+            <div class="menu menu--account" data-menu>
+                <button class="menu__button account__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-account">
+                    <span class="account__mark" aria-hidden="true"><?php echo htmlspecialchars($initials !== '' ? $initials : 'A', ENT_QUOTES, 'UTF-8'); ?></span>
+                    <span class="menu__label account__name"><?php echo htmlspecialchars($signedInName, ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php echo $chevron; ?>
+                </button>
+                <div class="menu__panel menu__panel--account" id="menu-account" role="menu" hidden>
+                    <div class="menu__account">
+                        <span class="menu__account-label"><?php echo htmlspecialchars(defined('TXT_6') ? (string) TXT_6 : 'Signed in', ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="menu__account-name"><?php echo htmlspecialchars($signedInName, ENT_QUOTES, 'UTF-8'); ?></span>
+                    </div>
+                    <div class="menu__divider" role="separator"></div>
+                    <a role="menuitem" class="menu__item" href="?action=logoff">
+                        <svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+            <?php else: ?>
             <a class="topnav__logout" href="?action=logoff" aria-label="Logout">
                 <svg class="icon" aria-hidden="true"><use href="themes/new/assets/adlexone.sprite.svg#ic-logoff"></use></svg>
                 <span class="topnav__logout-label">Logout</span>
             </a>
+            <?php endif; ?>
         </nav>
     </div>
+    <?php if ($hasSectionNav) {
+        echo APP_SECTION_NAV;
+    } ?>
 </div>
 
-<?php if (defined('PAGE_TITLE') && PAGE_TITLE !== ''): ?>
+<?php
+$sectionLabel = defined('APPLICATION_NAV_LABEL') ? (string) APPLICATION_NAV_LABEL : '';
+$titleRepeatsSection = $hasSectionNav
+    && defined('PAGE_TITLE')
+    && PAGE_TITLE !== ''
+    && $sectionLabel !== ''
+    && PAGE_TITLE === $sectionLabel;
+?>
+<?php if (defined('PAGE_TITLE') && PAGE_TITLE !== '' && $titleRepeatsSection): ?>
+<h1 class="pagehead__title pagehead__title--sr"><?php echo htmlspecialchars(PAGE_TITLE, ENT_QUOTES, 'UTF-8'); ?></h1>
+<?php elseif (defined('PAGE_TITLE') && PAGE_TITLE !== ''): ?>
 <header class="pagehead">
-    <?php if (defined('PAGE_EYEBROW') && PAGE_EYEBROW !== ''): ?>
+    <?php if (!$hasSectionNav && defined('PAGE_EYEBROW') && PAGE_EYEBROW !== ''): ?>
         <p class="pagehead__eyebrow"><?php echo htmlspecialchars(PAGE_EYEBROW, ENT_QUOTES, 'UTF-8'); ?></p>
     <?php endif; ?>
     <h1 class="pagehead__title"><?php echo htmlspecialchars(PAGE_TITLE, ENT_QUOTES, 'UTF-8'); ?></h1>

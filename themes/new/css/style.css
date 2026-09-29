@@ -147,91 +147,151 @@ body{
     left:auto; right:0; transform-origin:top right;
 }
 
-/* Section links sit between the wordmark and the right-hand menu */
+/* App shell: global bar, then the current area as a tab strip */
+.appbar{
+    padding:0;
+}
+.appbar .brandrow{
+    min-height:52px;
+    padding:0 16px 0 20px;
+    gap:16px;
+    flex-wrap:nowrap;
+}
+.appbar .logoA{
+    width:28px; height:28px; border-radius:8px;
+    box-shadow:none;
+}
+.appbar .logoA svg{ width:16px; height:16px; }
+.appbar .brandhome:hover .logoA{ transform:none; box-shadow:none; }
+.appbar .brandtext{ font-size:15px; font-weight:700; letter-spacing:-0.02em; }
+.appbar .topnav .menu__button{
+    min-height:36px;
+    padding:0 10px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    color:#334155;
+}
+.account__button{ gap:8px; }
+.account__mark{
+    width:28px; height:28px; border-radius:999px;
+    display:grid; place-items:center; flex:0 0 auto;
+    background:#e8eefc; color:var(--brand2);
+    font-size:12px; font-weight:700; letter-spacing:0;
+}
+.account__name{
+    max-width:9rem;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.menu__panel--account{ min-width:220px; }
+.menu__account{ display:grid; gap:2px; padding:8px 12px 6px; }
+.menu__account-label{ font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#64748b; }
+.menu__account-name{ font-size:14px; font-weight:650; color:var(--text); }
+
+.sectionbar{
+    display:flex;
+    align-items:stretch;
+    gap:4px;
+    min-height:42px;
+    padding:0 8px 0 20px;
+    border-top:1px solid #eef1f4;
+    background:#fff;
+}
+.sectionbar__name{
+    display:flex;
+    align-items:center;
+    margin:8px 8px 8px 0;
+    padding-right:16px;
+    border-right:1px solid #e6e8eb;
+    font-size:13px;
+    font-weight:650;
+    letter-spacing:-0.01em;
+    color:#0f172a;
+    white-space:nowrap;
+}
 .sectionnav{
     display:flex;
     flex:1 1 auto;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:4px;
+    flex-wrap:nowrap;
+    align-items:stretch;
+    gap:2px;
     min-width:0;
     margin:0;
     padding:0;
+    overflow-x:auto;
+    scrollbar-width:none;
 }
+.sectionnav::-webkit-scrollbar{ display:none; }
 .sectionnav.is-overflowing:not(.is-scrolled-end){
-    -webkit-mask-image:none;
-    mask-image:none;
+    -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent);
 }
 .sectionnav__link{
     display:inline-flex;
     align-items:center;
     flex:0 0 auto;
-    gap:8px;
-    min-height:40px;
-    padding:0 12px 0 6px;
-    border-radius:12px;
+    gap:6px;
+    min-height:42px;
+    margin-bottom:-1px;
+    padding:0 12px;
+    border-bottom:2px solid transparent;
+    border-radius:0;
     text-decoration:none;
-    color:rgba(15,23,42,.82);
-    font-weight:600;
-    font-size:13.5px;
+    color:#64748b;
+    font-weight:500;
+    font-size:13px;
     line-height:1.2;
 }
 .sectionnav__link .icon{
-    width:16px; height:16px; opacity:1; box-sizing:content-box;
-    padding:6px; border-radius:8px;
-    background:color-mix(in srgb, var(--brand) 14%, white);
-    color:var(--brand2);
+    width:16px; height:16px; padding:0; border-radius:0;
+    background:none; color:currentColor; opacity:.72;
+    box-sizing:content-box;
 }
-.sectionnav__link--group{ margin-left:0; }
+.sectionnav__link--group{ margin-left:8px; }
 .sectionnav__link:hover,
 .sectionnav__link:focus-visible{
-    background:color-mix(in srgb, var(--brand) 8%, white);
+    background:transparent;
+    color:#0f172a;
 }
-.sectionnav__link:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
+.sectionnav__link:focus-visible{ outline:2px solid var(--ring); outline-offset:-2px; }
 .sectionnav__link[aria-current="page"]{
-    background:color-mix(in srgb, var(--brand) 12%, white);
+    background:transparent;
     color:var(--brand2);
-    font-weight:700;
+    font-weight:600;
+    border-bottom-color:var(--brand2);
 }
 .sectionnav__label{ display:inline-block; }
 .sectionnav__link[aria-current="page"] .icon{
-    background:var(--brand2);
-    color:#fff;
+    background:none;
+    color:var(--brand2);
     opacity:1;
 }
 
 @media (max-width:1500px){
-    .brandrow{ flex-wrap:wrap; row-gap:8px; }
-    .brandhome{ order:1; flex:0 0 auto; }
-    .topnav{ order:2; flex:1 1 auto; min-width:0; justify-content:flex-end; }
-    .sectionnav{
-        order:3;
-        flex:1 0 100%;
-        padding-left:52px;
-    }
+    .brandbar:not(.appbar) .brandrow{ flex-wrap:wrap; row-gap:8px; }
 }
 @media (max-width:640px){
-    .brandbar{ padding:10px 12px; }
-    .brandrow{ gap:6px; }
-    .brandwrap{ flex:0 0 auto; gap:8px; }
-    .logoA{ width:34px; height:34px; border-radius:10px; }
-    .logoA svg{ width:18px; height:18px; }
-    .brandtext{ font-size:17px; }
-    .sectionnav{ padding-left:42px; }
+    .brandbar:not(.appbar){ padding:10px 12px; }
+    .brandbar:not(.appbar) .brandrow{ gap:6px; }
+    .brandbar:not(.appbar) .logoA{ width:34px; height:34px; border-radius:10px; }
+    .brandbar:not(.appbar) .logoA svg{ width:18px; height:18px; }
+    .brandbar:not(.appbar) .brandtext{ font-size:17px; }
+    .appbar .brandrow{ padding:0 8px 0 12px; gap:8px; }
+    .appbar .brandtext{ font-size:15px; }
+    .account__name{ display:none; }
     .topnav{ flex-wrap:nowrap; min-width:0; gap:2px; }
-    .topnav .menu{ min-width:0; flex:1 1 auto; }
-    .topnav .menu__button{ min-height:44px; padding:8px 6px; gap:4px; }
+    .topnav .menu__button{ min-height:44px; padding:8px 8px; gap:4px; }
     .topnav .menu__label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .topnav .chev{ flex:0 0 auto; }
     .topnav__logout{ min-width:44px; min-height:44px; padding:8px; justify-content:center; }
     .topnav__logout-label{ display:none; }
     .topnav .menu__item{ min-height:44px; }
-    .sectionnav{ gap:4px; }
-    .sectionnav__link{ min-height:44px; padding:0 12px 0 6px; }
+    .sectionbar{ padding-left:12px; }
+    .sectionbar__name{ display:none; }
+    .sectionnav__link{ min-height:44px; }
 }
 @media (max-width:380px){
-    .brandtext{ display:none; }
-    .sectionnav{ padding-left:0; }
+    .brandbar:not(.appbar) .brandtext{ display:none; }
 }
 
 /* ---------- Layout spacing & grid ---------- */
@@ -648,7 +708,7 @@ body{
 }
 .record-list{ display:flex; flex-direction:column; gap:14px; }
 .record-list__bar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-.record-list__search{ flex:1 1 220px; width:auto; max-width:420px; min-width:0; }
+.record-list__search{ flex:1 1 220px; width:auto; max-width:none; min-width:0; }
 .record-list__count{
     display:inline-flex; align-items:center; justify-content:center; min-width:2rem;
     padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;
@@ -674,6 +734,24 @@ body{
     text-transform:none; background:var(--title-strip); border:1px solid var(--title-strip-border);
 }
 .record-list__manage{ width:1%; text-align:right; white-space:nowrap; }
+.record-list__cell{
+    width:1%; white-space:nowrap; color:#334155; font-size:13px; font-weight:500;
+}
+.record-list th.record-list__cell{ font-weight:700; }
+.rowmenu{ position:relative; display:inline-block; text-align:left; }
+.rowmenu > summary{ list-style:none; cursor:pointer; }
+.rowmenu > summary::-webkit-details-marker{ display:none; }
+.rowmenu__panel{
+    position:fixed; z-index:40; min-width:180px; padding:6px;
+    border-radius:10px; background:#fff; border:1px solid var(--border);
+    box-shadow:0 12px 24px rgba(0,0,0,.12);
+}
+.rowmenu__item{
+    display:block; padding:8px 10px; border-radius:6px; text-decoration:none;
+    color:#0f172a; font-weight:600; font-size:13px;
+}
+.rowmenu__item:hover, .rowmenu__item:focus-visible{ background:var(--hover); outline:none; }
+.rowmenu__item--danger{ color:#b91c1c; }
 .record-list__empty, .record-list__nomatch{ margin:0; color:var(--placeholder); }
 .record-list__sr{
     position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
@@ -729,7 +807,11 @@ body{
 .log-heading{ margin:0 0 6px; font-size:13px; color:var(--placeholder); }
 .log-text{ line-height:1.5; overflow-wrap:anywhere; }
 
-.pagehead{ padding:18px 20px 0; }
+.pagehead{ padding:20px 20px 4px; }
+.pagehead__title--sr{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
 .pagehead__eyebrow{
     margin:0;
     font-size:12px;

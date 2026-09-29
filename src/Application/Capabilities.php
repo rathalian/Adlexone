@@ -172,9 +172,6 @@ final class Capabilities
         if (!defined('APPLICATION_NAV_ID')) {
             define('APPLICATION_NAV_ID', $navId);
         }
-        if (!defined('PAGE_TITLE')) {
-            define('PAGE_TITLE', (string) $app['name']);
-        }
 
         $base = \Adlexone\Http\Router::applicationUrl($slug, $navId);
         if (!defined('MAN_BASE_URL')) {

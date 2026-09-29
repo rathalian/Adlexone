@@ -58,6 +58,9 @@ if ($requested > 0) {
     }
 }
 $_SESSION['application_nav_id'] = (int) $current['nav_id'];
+if (!defined('APPLICATION_NAV_LABEL')) {
+    define('APPLICATION_NAV_LABEL', (string) $current['label']);
+}
 
 $_GET['nav'] = (string) $current['nav_id'];
 Capabilities::sectionNavigation($app, $visible);

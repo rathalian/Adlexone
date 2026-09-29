@@ -483,6 +483,18 @@ class RenderViews
         $id = 'record-list-' . $sequence;
 
         $column = (string)($list['column'] ?? TXT_151);
+        $columns = [];
+        foreach ($list['columns'] ?? [] as $columnDef) {
+            if (!is_array($columnDef)) {
+                continue;
+            }
+            $key = trim((string)($columnDef['key'] ?? ''));
+            $label = trim((string)($columnDef['label'] ?? ''));
+            if ($key === '' || $label === '') {
+                continue;
+            }
+            $columns[] = ['key' => $key, 'label' => $label];
+        }
         $searchLabel = (string)($list['searchLabel'] ?? TXT_3);
         $emptyText = (string)($list['empty'] ?? TXT_115);
         $noMatch = (string)($list['noMatch'] ?? TXT_689);
@@ -509,7 +521,7 @@ class RenderViews
                 . '</div>';
         }
 
-        $colCount = $hasActions ? 2 : 1;
+        $colCount = 1 + count($columns) + ($hasActions ? 1 : 0);
         $body = '';
         foreach ($groups as $group) {
             $groupRows = $group['rows'] ?? [];
@@ -524,11 +536,15 @@ class RenderViews
                     . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
             }
             foreach ($groupRows as $row) {
-                $body .= self::recordListRow($row, $label, $hasActions);
+                $body .= self::recordListRow($row, $label, $hasActions, $columns);
             }
             $body .= '</tbody>';
         }
 
+        $columnHeads = '';
+        foreach ($columns as $columnDef) {
+            $columnHeads .= '<th class="record-list__cell">' . htmlspecialchars($columnDef['label'], ENT_QUOTES, 'UTF-8') . '</th>';
+        }
         $manageHead = $hasActions
             ? '<th class="record-list__manage"><span class="record-list__sr">' . htmlspecialchars(TXT_388, ENT_QUOTES, 'UTF-8') . '</span></th>'
             : '';
@@ -542,7 +558,7 @@ class RenderViews
             . $primary
             . '</div>'
             . '<div class="record-list__tablewrap"><table class="table table-hover">'
-            . '<thead><tr><th>' . htmlspecialchars($column, ENT_QUOTES, 'UTF-8') . '</th>' . $manageHead . '</tr></thead>'
+            . '<thead><tr><th>' . htmlspecialchars($column, ENT_QUOTES, 'UTF-8') . '</th>' . $columnHeads . $manageHead . '</tr></thead>'
             . $body
             . '</table></div>'
             . '<p class="record-list__nomatch" hidden>' . htmlspecialchars($noMatch, ENT_QUOTES, 'UTF-8') . '</p>'
@@ -563,9 +579,10 @@ class RenderViews
     }
 
     /**
-     * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string}>} $row
+     * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, cells?: array<string, string>, actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string, target?: string}>} $row
+     * @param list<array{key: string, label: string}> $columns
      */
-    private static function recordListRow(array $row, string $groupLabel, bool $hasActions): string
+    private static function recordListRow(array $row, string $groupLabel, bool $hasActions, array $columns = []): string
     {
         $name = (string)($row['name'] ?? '');
         $meta = (string)($row['meta'] ?? '');
@@ -579,28 +596,68 @@ class RenderViews
             $search .= ' ' . strtolower($title);
         }
 
-        $actionsHtml = '';
-        if ($hasActions) {
-            $buttons = '';
-            foreach ($row['actions'] ?? [] as $action) {
-                $tone = ($action['tone'] ?? '') === 'danger' ? 'btn--danger' : 'btn--quiet';
-                $confirm = isset($action['confirm']) && $action['confirm'] !== ''
-                    ? ' onclick="' . self::confirmAttribute((string)$action['confirm']) . '"'
-                    : '';
-                $target = (string)($action['target'] ?? '');
-                $targetAttr = $target !== '' ? ' target="' . htmlspecialchars($target, ENT_QUOTES, 'UTF-8') . '"' : '';
-                $label = (string)$action['label'];
-                $buttons .= '<a class="btn btn--sm ' . $tone . '" href="' . htmlspecialchars((string)$action['href'], ENT_QUOTES, 'UTF-8') . '"'
-                    . $targetAttr
-                    . $confirm
-                    . ' aria-label="' . htmlspecialchars($label . ': ' . $name, ENT_QUOTES, 'UTF-8') . '">'
-                    . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
-                $search .= ' ' . strtolower($label);
-            }
-            $actionsHtml = '<td class="record-list__manage"><span class="record-list__actions">' . $buttons . '</span></td>';
+        $cellsHtml = '';
+        $cellValues = is_array($row['cells'] ?? null) ? $row['cells'] : [];
+        foreach ($columns as $columnDef) {
+            $value = trim((string)($cellValues[$columnDef['key']] ?? ''));
+            $search .= ' ' . strtolower($value);
+            $cellsHtml .= '<td class="record-list__cell">'
+                . ($value === '' ? '—' : htmlspecialchars($value, ENT_QUOTES, 'UTF-8'))
+                . '</td>';
         }
 
-        return '<tr data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '"><td>' . $nameHtml . '</td>' . $actionsHtml . '</tr>';
+        $actionsHtml = '';
+        if ($hasActions) {
+            $actions = is_array($row['actions'] ?? null) ? $row['actions'] : [];
+            foreach ($actions as $action) {
+                $search .= ' ' . strtolower((string)($action['label'] ?? ''));
+            }
+            $actionsHtml = '<td class="record-list__manage">' . self::recordListActions($actions, $name) . '</td>';
+        }
+
+        return '<tr data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '"><td>' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
+    }
+
+    /**
+     * @param array<int, array{href?: string, label?: string, tone?: string, confirm?: string, target?: string}> $actions
+     */
+    private static function recordListActions(array $actions, string $name): string
+    {
+        if ($actions === []) {
+            return '';
+        }
+        $asMenu = count($actions) >= 3;
+        $buttons = '';
+        foreach ($actions as $action) {
+            $label = (string)($action['label'] ?? '');
+            $confirm = isset($action['confirm']) && $action['confirm'] !== ''
+                ? ' onclick="' . self::confirmAttribute((string)$action['confirm']) . '"'
+                : '';
+            $target = (string)($action['target'] ?? '');
+            $targetAttr = $target !== '' ? ' target="' . htmlspecialchars($target, ENT_QUOTES, 'UTF-8') . '"' : '';
+            $href = htmlspecialchars((string)($action['href'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $aria = ' aria-label="' . htmlspecialchars($label . ': ' . $name, ENT_QUOTES, 'UTF-8') . '"';
+            if ($asMenu) {
+                $danger = ($action['tone'] ?? '') === 'danger' ? ' rowmenu__item--danger' : '';
+                $buttons .= '<a class="rowmenu__item' . $danger . '" role="menuitem" href="' . $href . '"'
+                    . $targetAttr . $confirm . $aria . '>'
+                    . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+                continue;
+            }
+            $tone = ($action['tone'] ?? '') === 'danger' ? 'btn--danger' : 'btn--quiet';
+            $buttons .= '<a class="btn btn--sm ' . $tone . '" href="' . $href . '"'
+                . $targetAttr . $confirm . $aria . '>'
+                . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+        }
+        if (!$asMenu) {
+            return '<span class="record-list__actions">' . $buttons . '</span>';
+        }
+
+        return '<details class="rowmenu">'
+            . '<summary class="btn btn--sm btn--quiet" aria-label="' . htmlspecialchars(TXT_388 . ': ' . $name, ENT_QUOTES, 'UTF-8') . '">'
+            . htmlspecialchars(TXT_388, ENT_QUOTES, 'UTF-8') . '</summary>'
+            . '<div class="rowmenu__panel" role="menu">' . $buttons . '</div>'
+            . '</details>';
     }
 
     private static function recordListScript(string $id): string
@@ -612,7 +669,12 @@ class RenderViews
             . 'root.querySelectorAll("tr[data-search]").forEach(function(row){var hit=q===""||(row.getAttribute("data-search")||"").indexOf(q)!==-1;row.hidden=!hit;if(hit)shown++;});'
             . 'root.querySelectorAll("tbody[data-group]").forEach(function(group){var visible=group.querySelectorAll("tr[data-search]:not([hidden])").length;group.hidden=visible===0;var badge=group.querySelector(".record-list__badge");if(badge)badge.textContent=String(visible);});'
             . 'if(count)count.textContent=q===""?String(total):(shown+" / "+total);if(empty)empty.hidden=shown!==0;}'
-            . 'input.addEventListener("input",apply);})(document.getElementById(' . $idJson . '));</script>';
+            . 'input.addEventListener("input",apply);'
+            . 'function place(menu){var panel=menu.querySelector(".rowmenu__panel");var summary=menu.querySelector("summary");if(!panel||!summary)return;var rect=summary.getBoundingClientRect();panel.style.top=(rect.bottom+4)+"px";panel.style.right=Math.max(8,window.innerWidth-rect.right)+"px";}'
+            . 'root.querySelectorAll("details.rowmenu").forEach(function(menu){menu.addEventListener("toggle",function(){if(!menu.open)return;root.querySelectorAll("details.rowmenu[open]").forEach(function(other){if(other!==menu)other.open=false;});place(menu);});});'
+            . 'document.addEventListener("click",function(event){if(event.target.closest(".rowmenu"))return;root.querySelectorAll("details.rowmenu[open]").forEach(function(menu){menu.open=false;});});'
+            . 'window.addEventListener("resize",function(){root.querySelectorAll("details.rowmenu[open]").forEach(place);});'
+            . '})(document.getElementById(' . $idJson . '));</script>';
     }
 
     /**

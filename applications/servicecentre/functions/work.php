@@ -34,11 +34,7 @@ function showServiceCentreWork(): void
                 $typeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$typeId]);
                 $typeNames[$typeId] = (string) ($typeRow['item_type_name'] ?? '');
             }
-            $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId
-                . ' · ' . date(SET_DATE_FORMAT, (int) ($row['create_date'] ?? 0));
-            if ($typeNames[$typeId] !== '') {
-                $meta .= ' · ' . $typeNames[$typeId];
-            }
+            $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId;
             $actions = [];
             if ($role <= 4) {
                 $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
@@ -66,6 +62,10 @@ function showServiceCentreWork(): void
                 'name' => $title,
                 'href' => $base . '&item=' . $itemId,
                 'meta' => $meta,
+                'cells' => [
+                    'type' => $typeNames[$typeId],
+                    'opened' => date(SET_DATE_FORMAT, (int) ($row['create_date'] ?? 0)),
+                ],
                 'actions' => $actions,
             ];
         }
@@ -76,6 +76,10 @@ function showServiceCentreWork(): void
             'title' => APP_SC_TXT_1,
             'html' => RenderViews::buildRecordList([
                 'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
+                'columns' => [
+                    ['key' => 'type', 'label' => TXT_119],
+                    ['key' => 'opened', 'label' => TXT_103],
+                ],
                 'searchLabel' => TXT_3,
                 'empty' => TXT_115,
                 'groups' => [['rows' => $rows]],
