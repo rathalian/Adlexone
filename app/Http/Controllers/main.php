@@ -43,9 +43,7 @@ function showLoggedOnUser() {
 	// Get users first and last name from database
 	$columnArray = array('first_name', 'last_name');
 	$condition = "WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-	$sql = Database::sqlSelect('users', $columnArray, $condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$fieldValues = Database::fetchArray($result);
+	$fieldValues = Database::first('users', $columnArray, $condition);
 
 	echo TXT_600 . ' : ' . $fieldValues['first_name'] . ' ' . $fieldValues['last_name'];
 

@@ -52,7 +52,7 @@ function updateKnowledgeCount($knowledgeIds): void
         if (substr($values, -1) == '*') {
             $values = substr($values, 0, -1);
             $validId = false;
-            if (Database::sqlLookup('items', 'WHERE item_id =' . $values . ' AND item_type_id = ' . APP_COUNT_ITEM_TYPE, DSN, SET_SHOW_SQL)) {
+            if (Database::exists('items', 'WHERE item_id =' . $values . ' AND item_type_id = ' . APP_COUNT_ITEM_TYPE)) {
                 $validId = true;
             }
         } else {
@@ -61,7 +61,7 @@ function updateKnowledgeCount($knowledgeIds): void
         $event_id = (isset($_GET['event_id'])) ? $_GET['event_id'] : '';
         $selectionCriteria = 'WHERE item_id =' . $values . ' AND event_id = "' . $event_id . '"';
         if ($validId == True) {
-            if (Database::sqlLookup('system_log', $selectionCriteria, DSN, SET_SHOW_SQL)) {
+            if (Database::exists('system_log', $selectionCriteria)) {
                 $sql = 'UPDATE ' . 'system_log SET event_counter = event_counter + 1 ' . $selectionCriteria;
             } else {
                 unset($columnArray);
@@ -69,10 +69,10 @@ function updateKnowledgeCount($knowledgeIds): void
                 $columnArray['create_date'] = time();
                 $columnArray['event_counter'] = 1;
                 $columnArray['event_id'] = $event_id;
-                $sql = Database::sqlInsert('system_log', $columnArray);
+                Database::insert('system_log', $columnArray);
                 unset($columnArray);
             }
-            Database::query($sql, DSN, SET_SHOW_SQL);
+
         }
     }
 }
@@ -164,7 +164,7 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
     }
 
     $newsort = "";
-    $result = Database::query($origSQL, DSN, SET_SHOW_SQL);
+        $result = Database::rows($origSQL);
 
     $listHtml = '';
     $sortLinks = '';
@@ -180,10 +180,10 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
             . '</div>';
     }
 
-    if (Database::numRows($result) > 0) {
+    if (count($result) > 0) {
         $itemTypeID = '';
         $itemTypeName = '';
-        while ($row = Database::fetchArray($result)) {
+        foreach ($result as $row) {
             if ($row['item_title'] == '') {
                 $title = TXT_357;
             } else {
@@ -194,9 +194,7 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '')
             if ($itemTypeID != $row['item_type_id']) {
                 $columnArray = array('item_type_name');
                 $condition = "WHERE item_type_id = '" . $row['item_type_id'] . "'";
-                $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-                $itemTypeResult = Database::query($sql, DSN, SET_SHOW_SQL);
-                $itemTypeRow = Database::fetchArray($itemTypeResult);
+                $itemTypeRow = Database::first('item_types', $columnArray, $condition);
                 $itemTypeName = $itemTypeRow['item_type_name'];
                 $itemTypeID = $row['item_type_id'];
             }
@@ -298,25 +296,24 @@ function showItemTypes($defaultItemType = '')
     // Get all item types
     $columnArray = ['item_type_id', 'item_type_name', 'group_security'];
     $condition = "WHERE enabled = 'Yes' ORDER BY item_type_name ASC";
-    $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('item_types', $columnArray, $condition);
 
     $noItemTypes = false;
-    if (Database::numRows($result) > 0) {
+    if (count($result) > 0) {
         if (SET_SECURE_TYPE != 'yes') {
-            while ($row = Database::fetchArray($result)) {
+            foreach ($result as $row) {
                 $valueArray[] = $row['item_type_id'];
                 $displayArray[] = $row['item_type_name'];
             }
         } else {
             $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-            $userResult = Database::query($sql, DSN, SET_SHOW_SQL);
-            $userRow = Database::fetchArray($userResult);
-            if (Database::numRows($userResult) == 0) {
+                        $userResult = Database::rows($sql);
+            $userRow = $userResult[0] ?? null;
+            if (count($userResult) == 0) {
                 $noItemTypes = true;
             } else {
                 $groupArray = explode('}-{', $userRow['groups']);
-                while ($row = Database::fetchArray($result)) {
+                foreach ($result as $row) {
                     $typeFound = false;
                     $viewerGroupFound = false;
                     foreach ($groupArray as $group) {
@@ -324,8 +321,8 @@ function showItemTypes($defaultItemType = '')
                             $typeFound = true;
                             if ($_SESSION['access_role_id'] > 2) {
                                 $sql = "SELECT role FROM groups WHERE group_id = '$group'";
-                                $groupResult = Database::query($sql, DSN, SET_SHOW_SQL);
-                                $groupRow = Database::fetchArray($groupResult);
+                                                                $groupResult = Database::rows($sql);
+                                $groupRow = $groupResult[0] ?? null;
                                 if ($groupRow['role'] == '5') {
                                     $viewerGroupFound = true;
                                 }
@@ -402,9 +399,7 @@ function showItemAdd($itemTypeID, $values)
         // Setup item type information for display and later use when the item is first created
         $columnArray = array('*');
         $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-        $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $itemTypeFields = Database::fetchArray($result);
+        $itemTypeFields = Database::first('item_types', $columnArray, $condition);
         if (!is_array($itemTypeFields)) {
             $itemTypeFields = [];
         }
@@ -419,9 +414,7 @@ function showItemAdd($itemTypeID, $values)
     // Get item type name
     $columnArray = array('item_type_name');
     $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-    $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+    $row = Database::first('item_types', $columnArray, $condition);
     if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
         $picker = 'index.php?controller=' . rawurlencode((string)($_GET['controller'] ?? 'item_management_manage'))
             . '&subcontroller=item_management_manage&option=show_item_types';
@@ -445,17 +438,17 @@ function showItemAdd($itemTypeID, $values)
         //set default role
         //Get role specific to item
         $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        if (Database::numRows($result) != 0) {
-            $row = Database::fetchArray($result);
+                $result = Database::rows($sql);
+        if (count($result) != 0) {
+            $row = $result[0] ?? null;
             $userGroups = $row['groups'];
             $groupArray = explode('}-{', $userGroups);
             $itemGroupArray = explode('}-{', $itemTypeFields['group_security']);
             foreach ($itemGroupArray as $a) {
                 if (stristr($userGroups, '}-{' . $a . '}-{')) {
                     $sql = "SELECT role FROM groups WHERE group_id = '" . $a . "'";
-                    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                    $row = Database::fetchArray($result);
+                                        $result = Database::rows($sql);
+                    $row = $result[0] ?? null;
                     $itemRole = ($row['role'] < $itemRole) ? $row['role'] : $itemRole;
                 }
             }
@@ -472,18 +465,14 @@ function showItemAdd($itemTypeID, $values)
         // Security is setup by default from the item
         $columnArray = array('user_id', 'user_name');
         $condition = "WHERE lastactive <> 'inactive' ORDER BY user_name ASC";
-        $sql = Database::sqlSelect('users', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        while ($row = Database::fetchArray($result)) {
+        foreach (Database::select('users', $columnArray, $condition) as $row) {
             $userIDArray[] = $row['user_id'];
             $userArray[] = $row['user_name'];
         }// while
         $fields[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = RenderViews::buildSelectDropdown('creator_security', $userIDArray, $userArray, $itemTypeFields['creator_security']);
         $columnArray = array('user_id', 'user_name');
         $condition = "WHERE lastactive <> 'inactive' AND role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
-        $sql = Database::sqlSelect('users', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        while ($row = Database::fetchArray($result)) {
+        foreach (Database::select('users', $columnArray, $condition) as $row) {
             $filterdUserIDArray[] = $row['user_id'];
             $filteredUserArray[] = $row['user_name'];
         }// while
@@ -491,23 +480,17 @@ function showItemAdd($itemTypeID, $values)
     } else {
         $columnArray = array('user_name');
         $condition = "WHERE user_id ='" . $_SESSION['access_user_id'] . "'";
-        $sql = Database::sqlSelect('users', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $row = Database::fetchArray($result);
+        $row = Database::first('users', $columnArray, $condition);
         $fields[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = RenderViews::buildHiddenInput('creator_security', $_SESSION['access_user_id']) . $row['user_name'];
         if ($itemTypeFields['user_security'] == '') {
             $columnArray = array('user_name');
             $condition = "WHERE user_id ='" . $_SESSION['access_user_id'] . "'";
-            $sql = Database::sqlSelect('users', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            $row = Database::fetchArray($result);
+            $row = Database::first('users', $columnArray, $condition);
             $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = RenderViews::buildHiddenInput('user_security', $_SESSION['access_user_id']) . $row['user_name'];
         } else {
             $columnArray = array('user_name');
             $condition = "WHERE user_id ='" . $itemTypeFields['user_security'] . "'";
-            $sql = Database::sqlSelect('users', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            $row = Database::fetchArray($result);
+            $row = Database::first('users', $columnArray, $condition);
             $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = RenderViews::buildHiddenInput('user_security', $itemTypeFields['user_security']) . $row['user_name'];
         }
     }
@@ -531,10 +514,9 @@ function showItemAdd($itemTypeID, $values)
         }
         if ($condition !== '') {
             $columnArray = array('group_id', 'group_name');
-            $sql = Database::sqlSelect('groups', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
+            $result = Database::select('groups', $columnArray, $condition);
             $i = 0;
-            while ($row = Database::fetchArray($result)) {
+            foreach ($result as $row) {
                 if ($i == 0) {
                     $groupMembership = $row['group_name'];
                 } else {
@@ -549,20 +531,17 @@ function showItemAdd($itemTypeID, $values)
     $fields[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildTextInput('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
     $columnArray = array('custom_field_id');
     $condition = "WHERE item_type_id = '" . $itemTypeID . "' ORDER BY custom_field_order ASC";
-    $sql = Database::sqlSelect('item_type_custom_fields', $columnArray, $condition);
-    $customFieldResult = Database::query($sql, DSN, SET_SHOW_SQL);
+    $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
     $JSValidation = array();
     $dtFormat = (SET_DATE_FORMAT == "d-m-Y, h:i A") ? ",DMY" : ",MDY";
     $JSValidation[0] = 'onclick="javascript:return fieldCheck(\'' . TXT_468 . '\',';
     $JSValidation[6] = '])"';
     $jsValFields = 0;
     $sep = 0;
-    while ($customFields = Database::fetchArray($customFieldResult)) {
+    foreach ($customFieldResult as $customFields) {
         $columnArray = array('*');
         $condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $row = Database::fetchArray($result);
+        $row = Database::first('custom_fields', $columnArray, $condition);
         $row['field_type'] = FieldTypes::normalise($row['field_type']);
         if ($row['enabled'] != 'Yes') {
             continue;
@@ -683,16 +662,13 @@ function showItemAdd($itemTypeID, $values)
             case 'workerFieldMenu' :
                 $columnArray = array('default_value');
                 $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $defaultValueArray = Database::fetchArray($result);
+                $defaultValueArray = Database::first('custom_fields', $columnArray, $condition);
                 // Get any menus values
                 $columnArray = array('menu_value');
                 $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
+                $result = Database::select('custom_field_menu_values', $columnArray, $condition);
                 // Build buildSelectDropdown array
-                while ($menuRow = Database::fetchArray($result)) {
+                foreach ($result as $menuRow) {
                     $menuArray[] = $menuRow['menu_value'];
                 }// while
                 $fields[$row['custom_field_name']] = RenderViews::buildSelectDropdown('worker_field_menu_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValueArray['default_value']);
@@ -763,8 +739,8 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
 {
     //Check to see if the item exists
     $sql = "SELECT item_id FROM items WHERE item_id='" . $itemID . "'";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    if (Database::numRows($result) == 0) {
+        $result = Database::rows($sql);
+    if (count($result) == 0) {
        RenderViews::buildResponse(TXT_616);
     } else {
         $i = 0;
@@ -773,19 +749,19 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
         } else {
             // Check to see if we have access to it
             $sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security  = '" . $_SESSION['access_user_id'] . "') and item_id='" . $itemID . "'";
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            if (Database::numRows($result) > 0) {
+                        $result = Database::rows($sql);
+            if (count($result) > 0) {
                 $i++;
                 //No need to go any further
             } else {
                 // Get all items by group assignment
                 $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $row = Database::fetchArray($result);
+                                $result = Database::rows($sql);
+                $row = $result[0] ?? null;
                 $groupArray = explode('}-{', $row['groups']);
                 $sql = "SELECT group_security FROM items WHERE item_id='" . $itemID . "'";
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $row = Database::fetchArray($result);
+                                $result = Database::rows($sql);
+                $row = $result[0] ?? null;
                 foreach ($groupArray as $a) {
                     if (stristr($row['group_security'], '}-{' . $a . '}-{')) {
                         $i++;
@@ -801,9 +777,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 // Setup item  information for display
                 $columnArray = array('*');
                 $condition = "WHERE item_id = '" . $itemID . "'";
-                $sql = Database::sqlSelect('items', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $itemFields = Database::fetchArray($result);
+                $itemFields = Database::first('items', $columnArray, $condition);
                 // Build item table
             } else {
                 // Use passed in values.  Only occurs when user comes back to incomplete form
@@ -815,9 +789,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             // Get item type name
             $columnArray = array('item_type_name');
             $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
-            $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            $row = Database::fetchArray($result);
+            $row = Database::first('item_types', $columnArray, $condition);
             $itemTypeName = $row['item_type_name'];
 
             if ($_SESSION['access_role_id'] < 4) {//Managers, admins and oneorzero admins and global admins
@@ -825,18 +797,14 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 // Security is setup by default from the item
                 $columnArray = array('user_id', 'user_name');
                 $condition = "ORDER BY user_name ASC";
-                $sql = Database::sqlSelect('users', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                while ($row = Database::fetchArray($result)) {
+                foreach (Database::select('users', $columnArray, $condition) as $row) {
                     $userIDArray[] = $row['user_id'];
                     $userArray[] = $row['user_name'];
                 }// while
                 $itemField[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = RenderViews::buildSelectDropdown('creator_security', $userIDArray, $userArray, $itemFields['creator_security']);
                 $columnArray = array('user_id', 'user_name');
                 $condition = "WHERE role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
-                $sql = Database::sqlSelect('users', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                while ($row = Database::fetchArray($result)) {
+                foreach (Database::select('users', $columnArray, $condition) as $row) {
                     $filterdUserIDArray[] = $row['user_id'];
                     $filteredUserArray[] = $row['user_name'];
                 }// while
@@ -844,33 +812,29 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             } else {
                 $columnArray = array('user_name');
                 $condition = "WHERE user_id = '" . $itemFields['creator_security'] . "'";
-                $sql = Database::sqlSelect('users', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $row = Database::fetchArray($result);
+                $row = Database::first('users', $columnArray, $condition);
                 $itemField[TXT_551] = RenderViews::buildHiddenInput('creator_security', $itemFields['creator_security']) . $row['user_name'];
                 $columnArray = array('user_name');
                 $condition = "WHERE user_id = '" . $itemFields['user_security'] . "'";
-                $sql = Database::sqlSelect('users', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $row = Database::fetchArray($result);
+                $row = Database::first('users', $columnArray, $condition);
                 $itemField[TXT_269] = RenderViews::buildHiddenInput('user_security', $itemFields['user_security']) . $row['user_name'];
             }
             $itemRole = 5;
             //set default role
             //Get role specific to item
             $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            if (Database::numRows($result) != 0) {
+                        $result = Database::rows($sql);
+            if (count($result) != 0) {
 
-                $row = Database::fetchArray($result);
+                $row = $result[0] ?? null;
                 $groupArray = explode('}-{', $row['groups']);
                 $itemGroupArray = explode('}-{', $itemFields['group_security']);
                 if (is_array($itemGroupArray)) {
                     foreach ($itemGroupArray as $a) {
                         if (stristr(@$row['groups'], '}-{' . $a . '}-{')) {
                             $sql = "SELECT role FROM groups WHERE group_id = '" . $a . "'";
-                            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                            $row = Database::fetchArray($result);
+                                                        $result = Database::rows($sql);
+                            $row = $result[0] ?? null;
                             $itemRole = ($row['role'] < $itemRole) ? $row['role'] : $itemRole;
                         }
                     }
@@ -900,11 +864,10 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                     $i++;
                 }
                 $columnArray = array('group_id', 'group_name');
-                $sql = Database::sqlSelect('groups', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
+                $result = Database::select('groups', $columnArray, $condition);
                 $i = 0;
                 $groupMembership = '';
-                while ($row = Database::fetchArray($result)) {
+                foreach ($result as $row) {
                     if ($i == 0) {
                         $groupMembership = $row['group_name'];
                     } else {
@@ -930,20 +893,17 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             // Setup custom field display
             $columnArray = array('custom_field_id');
             $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
-            $sql = Database::sqlSelect('item_type_custom_fields', $columnArray, $condition);
-            $customFieldResult = Database::query($sql, DSN, SET_SHOW_SQL);
+            $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
             $JSValidation = array();
             $dtFormat = (SET_DATE_FORMAT == "d-m-Y, h:i A") ? ",DMY" : ",MDY";
             $JSValidation[0] = 'onclick="javascript:return fieldCheck(\'' . TXT_468 . '\',';
             $JSValidation[6] = '])"';
             $jsValFields = 0;
             $sep = 0;
-            while ($customFields = Database::fetchArray($customFieldResult)) {
+            foreach ($customFieldResult as $customFields) {
                 $columnArray = array('*');
                 $condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-                $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                $row = Database::fetchArray($result);
+                $row = Database::first('custom_fields', $columnArray, $condition);
                 $row['field_type'] = FieldTypes::normalise($row['field_type']);
                 if ($row['enabled'] != 'Yes') {
                     continue;
@@ -1096,16 +1056,13 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                     case 'workerFieldMenu' :
                         $columnArray = array('default_value');
                         $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                        $defaultValueArray = Database::fetchArray($result);
+                        $defaultValueArray = Database::first('custom_fields', $columnArray, $condition);
                         // Get any menus values
                         $columnArray = array('menu_value');
                         $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                        $sql = Database::sqlSelect('custom_field_menu_values', $columnArray, $condition);
-                        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+                        $result = Database::select('custom_field_menu_values', $columnArray, $condition);
                         // Build buildSelectDropdown array
-                        while ($menuRow = Database::fetchArray($result)) {
+                        foreach ($result as $menuRow) {
                             $menuArray[] = $menuRow['menu_value'];
                         }// while
                         $itemField[$row['custom_field_name']] = RenderViews::buildSelectDropdown('worker_field_menu_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValueArray['default_value']);
@@ -1166,10 +1123,9 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             if ($_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
                 // Administrative functions
                 $columnArray = array('item_type_id', 'item_type_name');
-                $sql = Database::sqlSelect('item_types', $columnArray);
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
-                if (Database::numRows($result) > 0) {
-                    while ($row = Database::fetchArray($result)) {
+                $result = Database::select('item_types', $columnArray);
+                if (count($result) > 0) {
+                    foreach ($result as $row) {
                         $valueArray[] = $row['item_type_id'];
                         $displayArray[] = $row['item_type_name'];
                     }
@@ -1237,8 +1193,7 @@ function addItem()
         }
         $insertArray = array_merge($array, $dbArray);
         // Insert form field values into row
-        $sql = Database::sqlInsert('items', $insertArray);
-        Database::query($sql, DSN, SET_SHOW_SQL);
+        Database::insert('items', $insertArray);
         // Execute actions
         Actions::executeAction($array['item_id'], 'create_item', false);
         if ($_FILES['attachment']['name'] != '') {
@@ -1264,8 +1219,7 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
             //Alter existing item to new item type (retains old field data if required)
             $columnArray['item_type_id'] = $targetItemTypeID;
             $condition = "WHERE item_id = '" . $itemID . "'";
-            $sql = Database::sqlUpdate('items', $columnArray, $condition);
-            Database::query($sql, DSN, SET_SHOW_SQL);
+            Database::update('items', $columnArray, $condition);
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
             RenderViews::buildResponse(TXT_450, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
@@ -1276,9 +1230,7 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
             //Get existing data
             $columnArray = array('*');
             $condition = "WHERE item_id = '" . $itemID . "'";
-            $sql = Database::sqlSelect('items', $columnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            $row = Database::fetchArray($result);
+            $row = Database::first('items', $columnArray, $condition);
             //Create new item based on existing data
             foreach ($row as $key => $value) {
                 if (!is_integer($key)) {//ignore integer keys in array
@@ -1289,14 +1241,11 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
             //get new item id value
             $newItemColumnArray['item_type_id'] = $targetItemTypeID;
             //override item type id
-            $sql = Database::sqlInsert('items', $newItemColumnArray);
-            Database::query($sql, DSN, SET_SHOW_SQL);
+            Database::insert('items', $newItemColumnArray);
             //Copy log entries
             $logColumnArray = array('*');
             $condition = "WHERE item_id = '" . $itemID . "'";
-            $sql = Database::sqlSelect('core_log', $logColumnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            while ($row = Database::fetchArray($result)) {
+            foreach (Database::select('core_log', $logColumnArray, $condition) as $row) {
                 //Create new log entries based on existing data
                 foreach ($row as $key => $value) {
                     if (!is_integer($key)) {//ignore integer keys in array
@@ -1307,15 +1256,12 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
                 //get new id value;
                 $newLogColumnArray['item_id'] = $newItemColumnArray['item_id'];
                 //override id
-                $sql = Database::sqlInsert('core_log', $newLogColumnArray);
-                Database::query($sql, DSN, SET_SHOW_SQL);
+                Database::insert('core_log', $newLogColumnArray);
             }
             //Copy attachment entries
             $attachmentColumnArray = array('*');
             $condition = "WHERE item_id = '" . $itemID . "'";
-            $sql = Database::sqlSelect('item_attachments', $attachmentColumnArray, $condition);
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            while ($row = Database::fetchArray($result)) {
+            foreach (Database::select('item_attachments', $attachmentColumnArray, $condition) as $row) {
                 //Create new attachment entries based on existing data
                 foreach ($row as $key => $value) {
                     if (!is_integer($key)) {//ignore integer keys in array
@@ -1326,8 +1272,7 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
                 //get new id value;
                 $newAttachmentColumnArray['item_id'] = $newItemColumnArray['item_id'];
                 //override id
-                $sql = Database::sqlInsert('item_attachments', $newAttachmentColumnArray);
-                Database::query($sql, DSN, SET_SHOW_SQL);
+                Database::insert('item_attachments', $newAttachmentColumnArray);
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
@@ -1371,8 +1316,7 @@ function updateItem($itemID)
         }
         // Update system fields, they are the only remaining POST variables
         $condition = "WHERE item_id='$itemID'";
-        $sql = Database::sqlUpdate('items', $_POST, $condition);
-        Database::query($sql, DSN, SET_SHOW_SQL);
+        Database::update('items', $_POST, $condition);
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
         $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $message = ($_POST['item_title'] != '') ? TXT_263 : TXT_272;
@@ -1399,10 +1343,9 @@ function showLogEntry($itemID)
 
     $columnArray = array('*');
     $condition = "WHERE item_id = '" . $itemID . "'";
-    $sql = Database::sqlSelect('items', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('items', $columnArray, $condition);
     $hidden = '';
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         foreach ($row as $key => $value) {
             if (!is_numeric($key) and $value != '') {
                 $hidden .= RenderViews::buildHiddenInput($key, $value);
@@ -1446,13 +1389,11 @@ function addLogEntry($itemID, $showInformation = true, $executeAction = true)
     $columnArray['security_id'] = $_SESSION['access_user_id'];
     $columnArray['role_id'] = $_POST['role_id'];
     // Insert into log table
-    $sql = Database::sqlInsert('core_log', $columnArray);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::insert('core_log', $columnArray);
     // Update entry in item table
     $condition = "WHERE item_id = '$itemID'";
     $itemColumnArray['core_log_updated'] = $columnArray['create_date'];
-    $sql = Database::sqlUpdate('items', $itemColumnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::update('items', $itemColumnArray, $condition);
     if ($executeAction == true) {
         // Execute actions
         Actions::executeAction($itemID, 'update_item_log_entry', false);
@@ -1477,16 +1418,14 @@ function showItemLog($itemID)
     $itemsHtml = '';
     $columnArray = ['*'];
     $condition = "WHERE item_id = :item_id ORDER BY log_item_sequence DESC";
-    $sql = Database::sqlSelect('core_log', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL, ['item_id' => $itemID]);
+    $result = Database::select('core_log', $columnArray, $condition, ['item_id' => $itemID]);
 
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         if ($_SESSION['access_role_id'] <= $row['role_id']) {
             $userName = '';
             if ((string)$row['security_id'] !== '') {
-                $userSql = Database::sqlSelect('users', ['user_name'], 'WHERE user_id = ' . (int)$row['security_id']);
-                $userResult = Database::query($userSql, DSN, SET_SHOW_SQL);
-                $userRow = Database::fetchArray($userResult);
+                $userResult = Database::select('users', ['user_name'], 'WHERE user_id = ' . (int)$row['security_id']);
+                $userRow = $userResult[0] ?? null;
                 $userName = is_array($userRow) ? (string)($userRow['user_name'] ?? '') : '';
             }
             $role = match ((int)$row['role_id']) {
@@ -1530,11 +1469,10 @@ function showCustomFields(): string
     // Load all custom fields once
     $columnArray = ['custom_field_id', 'custom_field_name'];
     $condition = ' ORDER BY custom_field_name ASC';
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('custom_fields', $columnArray, $condition);
 
     $rows = [];
-    while ($r = Database::fetchArray($result)) {
+    foreach ($result as $r) {
         $rows[] = $r;
     }
 
@@ -1582,12 +1520,12 @@ function showUsers()
 {
     // Grab data from database
     $sql = "select user_id, user_name FROM users ORDER BY user_name";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $result = Database::rows($sql);
     // Set the selected option to 'All item definitions'
     $listValues[0] = '';
     $listDisplayValues[0] = TXT_105;
     $i = 1;
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $listValues[$i] = $row[0];
         $listDisplayValues[$i] = $row[1];
         $i++;
@@ -1601,13 +1539,12 @@ function showSecurityGroups()
     // Get security groups from database
     $columnArray = array('group_id', 'group_name');
     $condition = 'ORDER BY group_name';
-    $sql = Database::sqlSelect('groups', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('groups', $columnArray, $condition);
     // Set the selected option to 'All item definitions'
     $listValues[0] = '';
     $listDisplayValues[0] = TXT_104;
     $i = 1;
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $listValues[$i] = $row[0];
         $listDisplayValues[$i] = $row[1];
         $i++;
@@ -1620,8 +1557,7 @@ function showItemTypeMenu($filterArray = '', $showAll = false)
 {
     // Get all item item definitions from database
     $columnArray = array('item_type_id', 'item_type_name');
-    $sql = Database::sqlSelect('item_types', $columnArray);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('item_types', $columnArray);
     // Set the selected option to 'All item definitions'
     $i = 0;
     if ($showAll == true) {
@@ -1631,7 +1567,7 @@ function showItemTypeMenu($filterArray = '', $showAll = false)
     }
     $a = 0;
     // Display all item types or only a subset based on the filter array
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         if ($filterArray != '') {
             if (trim($filterArray[$a]) == $row[1]) {
                 $listValues[$i] = $row[0];
@@ -1657,8 +1593,7 @@ function deleteLog($itemID, $logItemSequence)
 {
     // Setup log sql and execute query
     $condition = "WHERE item_id='" . $itemID . "' AND log_item_sequence='" . $logItemSequence . "'";
-    $sql = Database::sqlDelete('core_log', $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::delete('core_log', $condition);
     showLogEntry($itemID);
 }
 
@@ -1668,10 +1603,7 @@ function showSecurityAssignment(string $itemID): void
     $action = MAN_BASE_URL . '&option=update_security&item_id=' . $itemID;
 
     // Fetch current group membership (use parameterised query)
-    $row = Database::firstResultParams(
-        'SELECT group_security FROM items WHERE item_id = :item_id',
-        ['item_id' => (int)$itemID]
-    );
+    $row = Database::first('items', ['group_security'], 'item_id = ?', [(int) $itemID]);
     $groupArray = [];
     if (!empty($row['group_security'])) {
         $groupArray = array_values(array_filter(array_map(
@@ -1682,10 +1614,10 @@ function showSecurityAssignment(string $itemID): void
 
     // Fetch all groups (ordered)
     $sql = "SELECT group_id, group_name, description FROM groups ORDER BY group_name";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $result = Database::rows($sql);
 
     $list = '<div class="group-security-list">';
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $groupId = (string)$row['group_id'];
         $groupName = (string)$row['group_name'];
         $description = (string)($row['description'] ?? '');
@@ -1732,9 +1664,8 @@ function updateSecurityAssignment(string $itemID): void
     Actions::executeAction($itemID, 'update_item', false);
 
     // Parameterised update to avoid SQL injection
-    $sql = "UPDATE items SET group_security = :group_security WHERE item_id = :item_id";
     try {
-        Database::queryParams($sql, ['group_security' => $groups, 'item_id' => (int)$itemID]);
+        Database::update('items', ['group_security' => $groups], 'item_id = ?', [(int) $itemID]);
     } catch (\Throwable $e) {
         // Render an error response (keeps behaviour simple and user-friendly)
         RenderViews::buildResponse(TXT_321 ?? 'Update failed', $e->getMessage());
@@ -1754,16 +1685,16 @@ function showMyItems($userID, $itemID = '')
 {
     // Get all items by user assignment
     $sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security = '" . $_SESSION['access_user_id'] . "')";
-    $userItemArray = Database::buildArray($sql, DSN, SET_SHOW_SQL);
+    $userItemArray = Database::rows($sql);
     // Get all items by group assignment
     $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+        $result = Database::rows($sql);
+    $row = $result[0] ?? null;
     $groupArray = explode('}-{', $row['groups']);
     foreach ($groupArray as $group) {
         $sql = "SELECT item_id FROM items WHERE group_security LIKE '%}-{" . $group . "}-{%'";
-        if (Database::buildArray($sql, DSN, SET_SHOW_SQL)) {
-            $groupItemArray = Database::buildArray($sql, DSN, SET_SHOW_SQL);
+        if (Database::rows($sql)) {
+            $groupItemArray = Database::rows($sql);
         }
     }
     if (!is_array($userItemArray)) {
@@ -1791,15 +1722,14 @@ function addAttachment($itemID, $showAttachments = true, $executeAction = true)
     $columnArray['file_size'] = $fileArray['size'];
     $columnArray['added_by'] = $_SESSION['access_user_id'];
     // Insert into attachment table
-    $sql = Database::sqlInsert('item_attachments', $columnArray);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::insert('item_attachments', $columnArray);
     // Execute actions
 
     if (($columnArray['file_size'] > 0) && ($executeAction == true)) {
         if (!isset($_POST['creator_security'])) {
             $sql = "SELECT * from items WHERE item_id = '" . $itemID . "'";
-            $result = Database::query($sql, DSN, SET_SHOW_SQL);
-            $row = Database::fetchArray($result);
+                        $result = Database::rows($sql);
+            $row = $result[0] ?? null;
             foreach ($row as $key => $value) {
                 if (!is_int($key)) {
                     $_POST[$key] = $value;
@@ -1818,9 +1748,9 @@ function showAttachments($itemID)
 {
     $canDelete = $_SESSION['access_role_id'] <= 2;
     $sql = "SELECT * FROM item_attachments WHERE item_id = '$itemID'";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $result = Database::rows($sql);
     $rows = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $actions = [];
         if ($canDelete) {
             $actions[] = [
@@ -1867,9 +1797,7 @@ function downloadAttachment($id)
 {
     // Get attachment information
     $condition = "WHERE id='$id'";
-    $sql = Database::sqlSelect('item_attachments', array('*'), $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+    $row = Database::first('item_attachments', array('*'), $condition);
     $fileName = SET_ATTACHMENTS_PATH . $row['file_name'];
     // Output to browser after emptying the output buffer
     ob_clean();
@@ -1887,20 +1815,16 @@ function deleteAttachment($id, $itemID)
 {
     // Delete attachment file
     $condition = "WHERE id='$id'";
-    $sql = Database::sqlSelect('item_attachments', array('file_name'), $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+    $row = Database::first('item_attachments', array('file_name'), $condition);
     // Check for dependant items and only delete file if 1 item is associated
     $condition = "WHERE file_name='" . $row['file_name'] . "'";
-    $sql = Database::sqlSelect('item_attachments', array('file_name'), $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    if (Database::numRows($result) == 1) {
+    $result = Database::select('item_attachments', array('file_name'), $condition);
+    if (count($result) == 1) {
         unlink(SET_ATTACHMENTS_PATH . $row['file_name']);
     }
     // Delete entry from attachment table
     $condition = "WHERE id='$id'";
-    $sql = Database::sqlDelete('item_attachments', $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::delete('item_attachments', $condition);
     showAttachments($itemID);
 }
 
@@ -1908,13 +1832,13 @@ function deleteItem($itemID)
 {
     // Delete item
     $sql = "DELETE FROM items WHERE item_id = '$itemID'";
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::run($sql);
     // Delete logs
     $sql = "DELETE FROM core_log WHERE item_id = '$itemID'";
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::run($sql);
     // Delete attachments
     $sql = "DELETE FROM item_attachments WHERE item_id = '$itemID'";
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::run($sql);
     showMyItems($_SESSION['access_user_id']);
 
 }

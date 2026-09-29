@@ -8,7 +8,7 @@ use Adlexone\support\RenderViews;
 
 function showAnnouncementItem(string $id = ''): void
 {
-    $row = Database::firstResultParams('SELECT subject, message, time FROM announcements WHERE id = ?', [$id]);
+    $row = Database::first('announcements', ['subject', 'message', 'time'], 'id = ?', [$id]);
     if ($row === null) {
         RenderViews::buildResponse(TXT_115, RenderViews::buildURL(serviceCentreUrl('option=show_announcements'), APP_SC_TXT_26, 'URL'));
         return;
@@ -45,25 +45,22 @@ function newAnnouncement(): void
 
 function addAnnouncement(): void
 {
-    Database::queryParams(
-        'INSERT INTO announcements (id, time, message, subject, type) VALUES (?, ?, ?, ?, ?)',
-        [
-            Database::newID('announcements', 'id'),
-            time(),
-            (string) ($_POST['message'] ?? ''),
-            (string) ($_POST['subject'] ?? ''),
-            'user',
-        ]
-    );
+    Database::insert('announcements', [
+        'id' => Database::newID('announcements', 'id'),
+        'time' => time(),
+        'message' => (string) ($_POST['message'] ?? ''),
+        'subject' => (string) ($_POST['subject'] ?? ''),
+        'type' => 'user',
+    ]);
     showAnnouncements();
 }
 
 function showAnnouncements(): void
 {
-    $result = Database::query('SELECT id, subject, message, time FROM announcements ORDER BY time DESC', DSN);
+        $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], '', [], 'time DESC');
     $html = '';
 
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $editURL = '';
         $deleteURL = '';
         if (Access::can(Permission::SERVICECENTRE_ANNOUNCE)) {
@@ -113,10 +110,7 @@ function showAnnouncements(): void
 
 function editAnnouncement(string $id): void
 {
-    $row = Database::firstResultParams(
-        'SELECT subject, message FROM announcements WHERE id = ?',
-        [(int) $id]
-    );
+    $row = Database::first('announcements', ['subject', 'message'], 'id = ?', [(int) $id]);
     if ($row === null) {
         RenderViews::buildResponse(TXT_115, RenderViews::buildURL(serviceCentreUrl('option=show_announcements'), APP_SC_TXT_26, 'URL'));
         return;
@@ -141,19 +135,15 @@ function editAnnouncement(string $id): void
 
 function updateAnnouncement(): void
 {
-    Database::queryParams(
-        'UPDATE announcements SET message = ?, subject = ? WHERE id = ?',
-        [
-            (string) ($_POST['message'] ?? ''),
-            (string) ($_POST['subject'] ?? ''),
-            (int) ($_POST['id'] ?? 0),
-        ]
-    );
+    Database::update('announcements', [
+        'message' => (string) ($_POST['message'] ?? ''),
+        'subject' => (string) ($_POST['subject'] ?? ''),
+    ], 'id = ?', [(int) ($_POST['id'] ?? 0)]);
     showAnnouncements();
 }
 
 function deleteAnnouncement(string $id): void
 {
-    Database::queryParams('DELETE FROM announcements WHERE id = ?', [(int) $id]);
+    Database::delete('announcements', 'id = ?', [(int) $id]);
     showAnnouncements();
 }

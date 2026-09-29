@@ -152,13 +152,12 @@ function showDefinedactions ()
 {
 	$columnArray = array('action_id', 'action_name', 'package_file', 'package_function');
 	$condition = 'ORDER BY package_file ASC, action_name ASC';
-	$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	$result = Database::select('action_definitions', $columnArray, $condition);
 	$canDelete = \Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
 
 	$groups = [];
-	if ($result && Database::numRows($result) > 0) {
-		while ($row = Database::fetchArray($result)) {
+	if ($result && count($result) > 0) {
+		foreach ($result as $row) {
 			$groups[(string)$row['package_file']][] = $row;
 		}
 	}
@@ -221,9 +220,7 @@ function showDefinedaction ($actionID)
 	// Get action details from database and open the update function
 	$columnArray = array('package_function', 'action_name', 'package_file');
 	$condition = "WHERE action_id = '$actionID'";
-	$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$row = Database::fetchArray($result);
+	$row = Database::first('action_definitions', $columnArray, $condition);
 	$functionName = 'showSetup' . $row['package_function'];
 	require_once  'actions/' . $row['package_file'];
 	// Run the function to show the update page for actions
@@ -232,7 +229,7 @@ function showDefinedaction ($actionID)
 function deleteAction($actionID)
 {
 	$sql = "DELETE FROM action_definitions WHERE action_id = '$actionID'";
-	Database::query($sql, DSN, SET_SHOW_SQL);
+	Database::run($sql);
 	showDefinedactions();
 }
 /**

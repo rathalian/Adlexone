@@ -53,12 +53,11 @@ final class Access
      */
     public static function seedIfEmpty(): void
     {
-        $existing = Database::firstResultParams('SELECT COUNT(*) AS c FROM group_permissions', []);
-        if ($existing !== null && (int) ($existing['c'] ?? 0) > 0) {
+        if (Database::count('group_permissions') > 0) {
             return;
         }
 
-        $groups = Database::buildArray('SELECT group_id, group_name, role FROM groups');
+        $groups = Database::select('groups', ['group_id', 'group_name', 'role']);
         foreach ($groups as $group) {
             $groupId = (int) $group['group_id'];
             $legacyRole = (int) ($group['role'] ?? 5);
@@ -70,10 +69,10 @@ final class Access
             }
 
             foreach ($permissions as $permission) {
-                Database::queryParams(
-                    'INSERT OR IGNORE INTO group_permissions (group_id, permission) VALUES (?, ?)',
-                    [$groupId, $permission]
-                );
+                Database::insertIgnore('group_permissions', [
+                    'group_id' => $groupId,
+                    'permission' => $permission,
+                ]);
             }
         }
     }
@@ -87,10 +86,7 @@ final class Access
         $permissions = self::permissionsForUser($userId);
         $_SESSION['access_permissions'] = $permissions;
         $_SESSION['access_role_id'] = self::legacyRoleFromPermissions($permissions);
-        $identity = Database::firstResultParams(
-            'SELECT user_name FROM users WHERE user_id = ?',
-            [$userId]
-        );
+        $identity = Database::first('users', ['user_name'], 'user_id = ?', [$userId]);
         if ($identity !== null) {
             $_SESSION['access_user_name'] = (string) ($identity['user_name'] ?? '');
         }
@@ -103,10 +99,7 @@ final class Access
     {
         self::ensureReady();
 
-        $user = Database::firstResultParams(
-            'SELECT role FROM users WHERE user_id = ?',
-            [$userId]
-        );
+        $user = Database::first('users', ['role'], 'user_id = ?', [$userId]);
         if ($user === null) {
             return [];
         }
@@ -118,20 +111,12 @@ final class Access
 
         $granted = [];
 
-        $directResult = Database::queryParams(
-            'SELECT permission FROM user_permissions WHERE user_id = ?',
-            [$userId]
-        );
-        while ($row = Database::fetchArray($directResult)) {
+        foreach (Database::select('user_permissions', ['permission'], 'user_id = ?', [$userId]) as $row) {
             $granted[$row['permission']] = true;
         }
 
         foreach (self::groupIdsForUser($userId) as $groupId) {
-            $result = Database::queryParams(
-                'SELECT permission FROM group_permissions WHERE group_id = ?',
-                [$groupId]
-            );
-            while ($row = Database::fetchArray($result)) {
+            foreach (Database::select('group_permissions', ['permission'], 'group_id = ?', [$groupId]) as $row) {
                 $granted[$row['permission']] = true;
             }
         }
@@ -149,10 +134,7 @@ final class Access
      */
     public static function groupIdsForUser(int $userId): array
     {
-        $member = Database::firstResultParams(
-            'SELECT groups FROM group_members WHERE user_id = ?',
-            [$userId]
-        );
+        $member = Database::first('group_members', ['groups'], 'user_id = ?', [$userId]);
         if ($member === null || empty($member['groups'])) {
             return [];
         }
@@ -254,12 +236,8 @@ final class Access
     public static function permissionsForGroup(int $groupId): array
     {
         self::ensureReady();
-        $result = Database::queryParams(
-            'SELECT permission FROM group_permissions WHERE group_id = ? ORDER BY permission',
-            [$groupId]
-        );
         $list = [];
-        while ($row = Database::fetchArray($result)) {
+        foreach (Database::select('group_permissions', ['permission'], 'group_id = ?', [$groupId], 'permission') as $row) {
             $list[] = (string) $row['permission'];
         }
         return $list;
@@ -273,17 +251,17 @@ final class Access
     public static function setGroupPermissions(int $groupId, array $permissions): void
     {
         self::ensureReady();
-        Database::queryParams('DELETE FROM group_permissions WHERE group_id = ?', [$groupId]);
+        Database::delete('group_permissions', 'group_id = ?', [$groupId]);
         $allowed = array_fill_keys(Permission::all(), true);
         foreach ($permissions as $permission) {
             $permission = (string) $permission;
             if (!isset($allowed[$permission])) {
                 continue;
             }
-            Database::queryParams(
-                'INSERT OR IGNORE INTO group_permissions (group_id, permission) VALUES (?, ?)',
-                [$groupId, $permission]
-            );
+            Database::insertIgnore('group_permissions', [
+                'group_id' => $groupId,
+                'permission' => $permission,
+            ]);
         }
     }
 

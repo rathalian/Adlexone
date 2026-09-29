@@ -2,118 +2,319 @@
 declare(strict_types=1);
 
 namespace Adlexone\support;
+
 /**
+ * PDO access shared by the whole site.
+ *
+ * Single-table work uses select(), first(), insert(), update(), delete(), and exists().
+ * Joins, calculations, and other SQL that is not a straight row write use rows(), row(),
+ * and run(). Schema changes use exec().
+ *
+ * The connection is the DSN constant (sqlite:… today). MySQL and PostgreSQL use the
+ * same calls when DSN is a mysql: or pgsql: string. Optional DB_USER and DB_PASSWORD
+ * constants are sent for those drivers.
  */
 class Database
 {
     /** @var array<string, \PDO> */
     private static array $pdoPool = [];
 
-    /** Return a PDO connection, creating if needed. DSN can be array-like string "Database=/path/file.sqlite" */
-private static function pdo(?string $dsn = null): \PDO
-{
-    if ($dsn === null && defined('DSN')) {
-        $dsn = (string)constant('DSN');
-    }
-    if ($dsn === null || $dsn === '') {
-        throw new \InvalidArgumentException('No DSN provided for SQLite connection.');
-    }
-    if (!isset(self::$pdoPool[$dsn])) {
-        $pdo = new \PDO($dsn, null, null, [
-            \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
-            \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-            \PDO::ATTR_EMULATE_PREPARES   => false,
-        ]);
-        $pdo->exec('PRAGMA journal_mode = WAL;');
-        $pdo->exec('PRAGMA synchronous = NORMAL;');
-        $pdo->exec('PRAGMA foreign_keys = ON;');
-        $pdo->exec('PRAGMA busy_timeout = 5000;');
-        self::$pdoPool[$dsn] = $pdo;
-    }
-    return self::$pdoPool[$dsn];
-}
-    /** Parse DSN-like string and return filesystem path for SQLite Database */
-  private static function resolveDatabasePath(?string $dsn): string
-  {
-      // Preferred: constant SQLITE_DB_PATH (if present)
-      if (defined('SQLITE_DB_PATH')) {
-          $path = (string)constant('SQLITE_DB_PATH');
-          if ($path !== '') { return $path; }
-      }
-      // If DSN looks like "sqlite:/path/file.sqlite"
-      if ($dsn && stripos($dsn, 'sqlite:') === 0) {
-          return substr($dsn, 7);
-      }
-      // If DSN "Database=...;..." or "database=..."
-      if ($dsn && stripos($dsn, 'database=') !== false) {
-          // Extract Database=... token
-          $parts = preg_split('/[;\\s]+/i', $dsn);
-          foreach ($parts as $p) {
-              if (stripos($p, 'database=') === 0) {
-                  $val = trim(substr($p, 9));
-                  if ($val !== '') return $val;
-              }
-          }
-      }
-      // Default return value
-      return '';
-  }
-
-    // --------------------- High-level helpers used by controllers ---------------------
-
-    /** Execute a SELECT/INSERT/UPDATE/DELETE. Returns a DB_Result wrapper for SELECT, or effect wrapper for non-SELECT. */
-    public static function query(string $sql, ?string $dsn = null)
-    {
-       $pdo = self::pdo($dsn);
-       $sql2 = self::translateMysqlToSqlite($sql);
-        $stmt = $pdo->prepare($sql2);
-        if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
-            echo '<!-- SQL: ' . htmlspecialchars($sql2, ENT_QUOTES|ENT_SUBSTITUTE) . ' -->' . "\n";
+    /**
+     * @param array<int|string, mixed> $params
+     * @return list<array<string, mixed>>
+     */
+    public static function select(
+        string $table,
+        array|string $columns = '*',
+        string $where = '',
+        array $params = [],
+        string $orderBy = '',
+        ?int $limit = null,
+        ?int $offset = null
+    ): array {
+        $sql = 'SELECT ' . self::columnList($columns) . ' FROM ' . self::tableRef($table);
+        $sql .= self::clause($where);
+        if (trim($orderBy) !== '') {
+            $sql .= ' ORDER BY ' . $orderBy;
         }
-        $stmt->execute();
-        // For SELECT, buffer rows so numRows() works reliably
-        if (preg_match('/^\\s*SELECT\\b/i', $sql2)) {
-            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-            return new DB_Result($rows);
+        if ($limit !== null) {
+            $sql .= ' LIMIT ' . $limit;
+            if ($offset !== null) {
+                $sql .= ' OFFSET ' . $offset;
+            }
         }
-        // Non-SELECT: return DB_Result with affected rows count
-        $count = $stmt->rowCount();
-        return new DB_Result([], $count);
+        return self::rows($sql, $params);
     }
 
     /**
-     * Parameterized query. Prefer this for auth and other user-supplied values.
+     * @param array<int|string, mixed> $params
+     * @return array<string, mixed>|null
+     */
+    public static function first(
+        string $table,
+        array|string $columns = '*',
+        string $where = '',
+        array $params = [],
+        string $orderBy = ''
+    ): ?array {
+        $rows = self::select($table, $columns, $where, $params, $orderBy, self::clauseHasLimit($where) ? null : 1);
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function insert(string $table, array $data): int
+    {
+        self::writeRow('INSERT', $table, $data);
+        return (int) self::pdo()->lastInsertId();
+    }
+
+    /**
+     * Insert a row and skip the write when a unique key already exists.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function insertIgnore(string $table, array $data): void
+    {
+        $driver = self::driver();
+        if ($driver === 'mysql') {
+            self::writeRow('INSERT IGNORE', $table, $data);
+            return;
+        }
+        if ($driver === 'pgsql') {
+            self::writeRow('INSERT', $table, $data, ' ON CONFLICT DO NOTHING');
+            return;
+        }
+        self::writeRow('INSERT OR IGNORE', $table, $data);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param array<int|string, mixed> $params
+     */
+    public static function update(string $table, array $data, string $where = '', array $params = []): int
+    {
+        if ($data === []) {
+            throw new \InvalidArgumentException('update() requires at least one column.');
+        }
+        $sets = [];
+        $values = [];
+        foreach ($data as $column => $value) {
+            $sets[] = self::columnName((string) $column) . ' = ?';
+            $values[] = $value;
+        }
+        $sql = 'UPDATE ' . self::tableRef($table) . ' SET ' . implode(', ', $sets) . self::clause($where);
+        return self::run($sql, array_merge($values, $params));
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     */
+    public static function delete(string $table, string $where = '', array $params = []): int
+    {
+        return self::run('DELETE FROM ' . self::tableRef($table) . self::clause($where), $params);
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     */
+    public static function exists(string $table, string $where = '', array $params = []): bool
+    {
+        $sql = 'SELECT 1 AS present FROM ' . self::tableRef($table) . self::clause($where);
+        if (!self::clauseHasLimit($where)) {
+            $sql .= ' LIMIT 1';
+        }
+        return self::row($sql, $params) !== null;
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     */
+    public static function count(string $table, string $where = '', array $params = []): int
+    {
+        $row = self::first($table, 'COUNT(*) AS c', $where, $params);
+        return (int) ($row['c'] ?? 0);
+    }
+
+    public static function tableExists(string $table): bool
+    {
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table)) {
+            return false;
+        }
+        $driver = self::driver();
+        if ($driver === 'mysql') {
+            $row = self::row(
+                'SELECT 1 AS present FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
+                [$table]
+            );
+            return $row !== null;
+        }
+        if ($driver === 'pgsql') {
+            $row = self::row(
+                'SELECT 1 AS present FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ?',
+                [$table]
+            );
+            return $row !== null;
+        }
+        $row = self::row("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = ?", [$table]);
+        return $row !== null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function columns(string $table): array
+    {
+        self::columnName($table);
+        $driver = self::driver();
+        if ($driver === 'mysql') {
+            $rows = self::rows(
+                'SELECT COLUMN_NAME AS name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
+                [$table]
+            );
+        } elseif ($driver === 'pgsql') {
+            $rows = self::rows(
+                'SELECT column_name AS name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? ORDER BY ordinal_position',
+                [$table]
+            );
+        } else {
+            $rows = self::rows('PRAGMA table_info(' . self::escapeIdentifier($table) . ')');
+        }
+        $names = [];
+        foreach ($rows as $row) {
+            $name = (string) ($row['name'] ?? $row['NAME'] ?? '');
+            if ($name !== '') {
+                $names[] = $name;
+            }
+        }
+        return $names;
+    }
+
+    public static function columnExists(string $table, string $column): bool
+    {
+        return in_array($column, self::columns($table), true);
+    }
+
+    /**
+     * Read every row from a SELECT, WITH, or PRAGMA statement.
+     *
+     * @param array<int|string, mixed> $params
+     * @return list<array<string, mixed>>
+     */
+    public static function rows(string $sql, array $params = [], ?string $dsn = null): array
+    {
+        $statement = self::statement($sql, $params, $dsn);
+        if (!self::isRead($sql)) {
+            return [];
+        }
+        $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
+        return $rows === false ? [] : $rows;
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     * @return array<string, mixed>|null
+     */
+    public static function row(string $sql, array $params = [], ?string $dsn = null): ?array
+    {
+        $rows = self::rows($sql, $params, $dsn);
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * Run INSERT, UPDATE, DELETE, or other SQL that is not a row read.
      *
      * @param array<int|string, mixed> $params
      */
-    public static function queryParams(string $sql, array $params = [], ?string $dsn = null)
+    public static function run(string $sql, array $params = [], ?string $dsn = null): int
     {
-        $pdo = self::pdo($dsn);
-        $sql2 = self::translateMysqlToSqlite($sql);
-        if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
-            echo '<!-- SQL: ' . htmlspecialchars($sql2, ENT_QUOTES|ENT_SUBSTITUTE) . ' -->' . "\n";
-        }
-        $stmt = $pdo->prepare($sql2);
-        $stmt->execute($params);
-        if (preg_match('/^\\s*SELECT\\b/i', $sql2)) {
-            return new DB_Result($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []);
-        }
-        return new DB_Result([], $stmt->rowCount());
+        return self::statement($sql, $params, $dsn)->rowCount();
     }
 
-    /** @param array<int|string, mixed> $params */
-    public static function firstResultParams(string $sql, array $params = [], ?string $dsn = null): ?array
-    {
-        return self::fetchArray(self::queryParams($sql, $params, $dsn));
-    }
-
-    /** Run DDL/exec without result buffering. */
     public static function exec(string $sql, ?string $dsn = null): void
     {
-        self::pdo($dsn)->exec(self::translateMysqlToSqlite($sql));
+        $pdo = self::pdo($dsn);
+        $sql = self::adapt($sql);
+        self::trace($sql);
+        $pdo->exec($sql);
     }
 
-    /** Fetch next assoc row from a DB_Result */
+    /**
+     * Next integer id. Matches the existing MAX(id)+1 keys used across the tables.
+     */
+    public static function newID(string $table, string $idColumn, string $condition = ''): int
+    {
+        $sql = 'SELECT COALESCE(MAX(' . self::columnName($idColumn) . '), 0) + 1 AS next_id FROM ' . self::tableRef($table);
+        $sql .= self::clause($condition);
+        $row = self::row($sql);
+        return isset($row['next_id']) ? (int) $row['next_id'] : 1;
+    }
+
+    public static function escape(string $value): string
+    {
+        $value = str_replace(["\0"], '', $value);
+        return str_replace("'", "''", $value);
+    }
+
+    public static function escapeIdentifier(string $name): string
+    {
+        if ($name === '*') {
+            return '*';
+        }
+        $quote = self::quoteChar();
+        $parts = preg_split('/\./', $name) ?: [];
+        $parts = array_map(static function (string $part) use ($quote): string {
+            $part = trim($part, "\"'` \t\n\r\0\x0B");
+            if ($part === '' || preg_match('/[^A-Za-z0-9_]/', $part)) {
+                return $part;
+            }
+            return $quote . str_replace($quote, $quote . $quote, $part) . $quote;
+        }, $parts);
+        return implode('.', $parts);
+    }
+
+    public static function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
+    // --- Older call shapes. New code uses the methods above. ---
+
+    public static function query(string $sql, ?string $dsn = null, mixed ...$extra): DB_Result
+    {
+        $params = [];
+        foreach ($extra as $value) {
+            if (is_array($value)) {
+                $params = $value;
+            }
+        }
+        if (self::isRead($sql)) {
+            return new DB_Result(self::rows($sql, $params, $dsn));
+        }
+        return new DB_Result([], self::run($sql, $params, $dsn));
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     */
+    public static function queryParams(string $sql, array $params = [], ?string $dsn = null): DB_Result
+    {
+        if (self::isRead($sql)) {
+            return new DB_Result(self::rows($sql, $params, $dsn));
+        }
+        return new DB_Result([], self::run($sql, $params, $dsn));
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     * @return array<string, mixed>|null
+     */
+    public static function firstResultParams(string $sql, array $params = [], ?string $dsn = null): ?array
+    {
+        return self::row($sql, $params, $dsn);
+    }
+
     public static function fetchArray($result): ?array
     {
         if ($result instanceof DB_Result) {
@@ -122,7 +323,6 @@ private static function pdo(?string $dsn = null): \PDO
         return null;
     }
 
-    /** Row count for last SELECT */
     public static function numRows($result): int
     {
         if ($result instanceof DB_Result) {
@@ -131,7 +331,6 @@ private static function pdo(?string $dsn = null): \PDO
         return 0;
     }
 
-    /** Build a SELECT SQL string */
     public static function sqlSelect(string $table, $columns, string $condition = ''): string
     {
         $cols = $columns;
@@ -141,216 +340,312 @@ private static function pdo(?string $dsn = null): \PDO
             $cols = '*';
         }
         $sql = 'SELECT ' . $cols . ' FROM ' . self::escapeIdentifier($table);
-        $condition = trim($condition);
-        if ($condition !== '') {
-            // condition may already include WHERE/ORDER/GROUP/LIMIT
-            if (preg_match('/^(WHERE|ORDER|GROUP|LIMIT)\\b/i', $condition) === 1) {
-                $sql .= ' ' . $condition;
-            } else {
-                $sql .= ' WHERE ' . $condition;
-            }
-        }
-        return $sql;
+        return $sql . self::clause($condition);
     }
 
-    /** Build an INSERT SQL string from associative array */
+    /**
+     * @param array<string, mixed> $columnArray
+     */
     public static function sqlInsert(string $table, array $columnArray): string
     {
         $cols = [];
         $vals = [];
-        foreach ($columnArray as $k => $v) {
-            $cols[] = self::escapeIdentifier($k);
-            if ($v === null) {
-                $vals[] = 'NULL';
-            } elseif (is_numeric($v) && !is_string($v)) {
-                $vals[] = (string)$v;
-            } else {
-                $vals[] = "'" . self::escape((string)$v) . "'";
-            }
+        foreach ($columnArray as $column => $value) {
+            $cols[] = self::escapeIdentifier((string) $column);
+            $vals[] = self::literal($value);
         }
-        return 'INSERT INTO ' . self::escapeIdentifier($table) .
-               ' (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $vals) . ')';
+        return 'INSERT INTO ' . self::escapeIdentifier($table)
+            . ' (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $vals) . ')';
     }
 
-    /** Build an UPDATE SQL string from associative array */
+    /**
+     * @param array<string, mixed> $columnArray
+     */
     public static function sqlUpdate(string $table, array $columnArray, string $condition = ''): string
     {
         $sets = [];
-        foreach ($columnArray as $k => $v) {
-            $id = self::escapeIdentifier($k);
-            if ($v === null) {
-                $sets[] = $id . ' = NULL';
-            } elseif (is_numeric($v) && !is_string($v)) {
-                $sets[] = $id . ' = ' . (string)$v;
-            } else {
-                $sets[] = $id . " = '" . self::escape((string)$v) . "'";
-            }
+        foreach ($columnArray as $column => $value) {
+            $sets[] = self::escapeIdentifier((string) $column) . ' = ' . self::literal($value);
         }
-        $sql = 'UPDATE ' . self::escapeIdentifier($table) . ' SET ' . implode(', ', $sets);
-        $condition = trim($condition);
-        if ($condition !== '') {
-            if (preg_match('/^(WHERE)\\b/i', $condition) === 1) {
-                $sql .= ' ' . $condition;
-            } else {
-                $sql .= ' WHERE ' . $condition;
-            }
-        }
-        return $sql;
+        return 'UPDATE ' . self::escapeIdentifier($table) . ' SET ' . implode(', ', $sets) . self::clause($condition);
     }
 
-    /** Build a DELETE SQL string */
     public static function sqlDelete(string $table, string $condition = ''): string
     {
-        $sql = 'DELETE FROM ' . self::escapeIdentifier($table);
-        $condition = trim($condition);
-        if ($condition !== '') {
-            if (preg_match('/^(WHERE)\\b/i', $condition) === 1) {
-                $sql .= ' ' . $condition;
-            } else {
-                $sql .= ' WHERE ' . $condition;
-            }
-        }
-        return $sql;
+        return 'DELETE FROM ' . self::escapeIdentifier($table) . self::clause($condition);
     }
 
-    /** Convenience: SELECT * with given condition */
-    public static function sqlLookup(string $table, string $condition = ''): string
+    public static function sqlLookup(string $table, string $condition = '', ?string $dsn = null, mixed $show = null): string
     {
+        unset($dsn, $show);
         return self::sqlSelect($table, '*', $condition);
     }
 
-    /** Run a query and return array of rows */
-    public static function buildArray(string $sql, ?string $dsn = null, ...$ignore): array
+    public static function buildArray(string $sql, ?string $dsn = null, mixed ...$ignore): array
     {
-             $result = self::query($sql, $dsn);
-        $rows = [];
-        while ($row = self::fetchArray($result)) {
-            $rows[] = $row;
-        }
-        return $rows;
+        unset($ignore);
+        return self::rows($sql, [], $dsn);
     }
 
-    /** Return first row (assoc) or null */
     public static function firstResult($sql, ?string $dsn = null): ?array
     {
-        $result = self::query($sql, $dsn);
-        return self::fetchArray($result);
+        return self::row((string) $sql, [], $dsn);
     }
 
-    /** Escape scalar for embedding in SQL string literals */
-    public static function escape(string $value): string
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function writeRow(string $verb, string $table, array $data, string $suffix = ''): void
     {
-        // Normalize newlines and null bytes
-        $value = str_replace(["\0"], '', $value);
-        // Standard SQL escape: single-quote by doubling
-        $value = str_replace("'", "''", $value);
-        return $value;
-    }
-
-    /** Quote identifier safely (very conservative) */
-    public static function escapeIdentifier(string $name): string
-    {
-        // If already quoted, return
-        if ($name === '*') return '*';
-        // Allow schema.table or prefix concatenations, quote parts that look like identifiers
-        $parts = preg_split('/\\./', $name);
-        $parts = array_map(function($p) {
-            $p = trim($p, "\"` \t\n\r\0\x0B");
-            // Preserve functions or expressions (has non-word chars other than underscore/digit)
-            if ($p === '' || preg_match('/[^A-Za-z0-9_]/', $p)) {
-                return $p;
-            }
-            return '"' . $p . '"';
-        }, $parts);
-        return implode('.', $parts);
-    }
-
-    /** Escape a single identifier list item used in SELECT columns */
-    private static function escapeIdentifierListItem(string $name): string
-    {
-        // support "col AS alias" or "col alias"
-        if (preg_match('/\\bas\\b/i', $name)) {
-            [$left, $right] = preg_split('/\\bas\\b/i', $name, 2);
-            return self::escapeIdentifier(trim($left)) . ' AS ' . self::escapeIdentifier(trim($right));
+        if ($data === []) {
+            throw new \InvalidArgumentException('insert() requires at least one column.');
         }
-        // Simple alias without AS
-        if (preg_match('/\\s+([A-Za-z_][A-Za-z0-9_]*)$/', $name, $m)) {
-            $left = substr($name, 0, -strlen($m[0]));
-            $alias = $m[1];
-            return self::escapeIdentifier(trim($left)) . ' AS ' . self::escapeIdentifier($alias);
+        $cols = [];
+        $holders = [];
+        $params = [];
+        foreach ($data as $column => $value) {
+            $cols[] = self::columnName((string) $column);
+            $holders[] = '?';
+            $params[] = $value;
+        }
+        $sql = $verb . ' INTO ' . self::tableRef($table)
+            . ' (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $holders) . ')' . $suffix;
+        self::run($sql, $params);
+    }
+
+    /**
+     * @param array<int|string, mixed> $params
+     */
+    private static function statement(string $sql, array $params, ?string $dsn): \PDOStatement
+    {
+        $pdo = self::pdo($dsn);
+        $sql = self::adapt($sql);
+        self::trace($sql);
+        $statement = $pdo->prepare($sql);
+        $statement->execute(self::bindable($params));
+        return $statement;
+    }
+
+    private static function pdo(?string $dsn = null): \PDO
+    {
+        $dsn = self::resolveDsn($dsn);
+        if (!isset(self::$pdoPool[$dsn])) {
+            $driver = self::driverFromDsn($dsn);
+            $options = [
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                \PDO::ATTR_EMULATE_PREPARES => false,
+            ];
+            if ($driver === 'sqlite') {
+                $pdo = new \PDO($dsn, null, null, $options);
+                $pdo->exec('PRAGMA journal_mode = WAL;');
+                $pdo->exec('PRAGMA synchronous = NORMAL;');
+                $pdo->exec('PRAGMA foreign_keys = ON;');
+                $pdo->exec('PRAGMA busy_timeout = 5000;');
+            } else {
+                $user = defined('DB_USER') ? (string) constant('DB_USER') : null;
+                $password = defined('DB_PASSWORD') ? (string) constant('DB_PASSWORD') : null;
+                $pdo = new \PDO($dsn, $user !== '' ? $user : null, $password, $options);
+                if ($driver === 'mysql') {
+                    $pdo->exec("SET NAMES utf8mb4");
+                }
+            }
+            self::$pdoPool[$dsn] = $pdo;
+        }
+        return self::$pdoPool[$dsn];
+    }
+
+    private static function resolveDsn(?string $dsn): string
+    {
+        if ($dsn !== null && self::looksLikeDsn($dsn)) {
+            return $dsn;
+        }
+        if (defined('DSN') && (string) constant('DSN') !== '') {
+            return (string) constant('DSN');
+        }
+        throw new \InvalidArgumentException('No database DSN is configured.');
+    }
+
+    private static function looksLikeDsn(string $value): bool
+    {
+        return preg_match('/^(sqlite|mysql|pgsql|sqlsrv):/i', $value) === 1;
+    }
+
+    private static function driver(?string $dsn = null): string
+    {
+        return self::driverFromDsn(self::resolveDsn($dsn));
+    }
+
+    private static function driverFromDsn(string $dsn): string
+    {
+        $name = strtolower((string) strtok($dsn, ':'));
+        return $name !== '' ? $name : 'sqlite';
+    }
+
+    private static function adapt(string $sql): string
+    {
+        $driver = self::driver();
+        if ($driver === 'sqlite') {
+            return self::mysqlToSqlite($sql);
+        }
+        if ($driver === 'mysql') {
+            $sql = preg_replace('/\bINSERT\s+OR\s+IGNORE\b/i', 'INSERT IGNORE', $sql) ?? $sql;
+            return preg_replace('/\bAUTOINCREMENT\b/i', 'AUTO_INCREMENT', $sql) ?? $sql;
+        }
+        if ($driver === 'pgsql' && preg_match('/\bINSERT\s+OR\s+IGNORE\b/i', $sql)) {
+            $sql = preg_replace('/\bINSERT\s+OR\s+IGNORE\b/i', 'INSERT', $sql) ?? $sql;
+            if (!preg_match('/\bON\s+CONFLICT\b/i', $sql)) {
+                $sql = rtrim($sql, " \t;") . ' ON CONFLICT DO NOTHING';
+            }
+        }
+        return $sql;
+    }
+
+    private static function mysqlToSqlite(string $sql): string
+    {
+        $sql = str_replace('`', '"', $sql);
+        $sql = preg_replace('~\bNOW\(\s*\)~i', 'CURRENT_TIMESTAMP', $sql) ?? $sql;
+        $sql = preg_replace('~\bRAND\(\s*\)~i', 'RANDOM()', $sql) ?? $sql;
+        $sql = preg_replace('~\bSUBSTRING\s*\(~i', 'SUBSTR(', $sql) ?? $sql;
+        $sql = preg_replace('~\bCHAR_LENGTH\s*\(~i', 'LENGTH(', $sql) ?? $sql;
+        $sql = preg_replace('~\bUNIX_TIMESTAMP\s*\(~i', "strftime('%s', ", $sql) ?? $sql;
+        $sql = preg_replace('~\bFROM_UNIXTIME\s*\(~i', 'datetime(', $sql) ?? $sql;
+        $sql = preg_replace_callback('~\bLIMIT\s+(\d+)\s*,\s*(\d+)\b~i', static function (array $match): string {
+            return 'LIMIT ' . (int) $match[2] . ' OFFSET ' . (int) $match[1];
+        }, $sql) ?? $sql;
+        $sql = preg_replace('~\s+COLLATE\s+\w+~i', '', $sql) ?? $sql;
+        $sql = preg_replace('~ENGINE\s*=\s*\w+~i', '', $sql) ?? $sql;
+        return preg_replace('~DEFAULT\s+CHARSET\s*=\s*\w+~i', '', $sql) ?? $sql;
+    }
+
+    private static function clause(string $where): string
+    {
+        $where = trim($where);
+        if ($where === '') {
+            return '';
+        }
+        if (preg_match('/^(WHERE|ORDER|GROUP|LIMIT|HAVING)\b/i', $where) === 1) {
+            return ' ' . $where;
+        }
+        return ' WHERE ' . $where;
+    }
+
+    private static function clauseHasLimit(string $where): bool
+    {
+        return preg_match('/\bLIMIT\b/i', $where) === 1;
+    }
+
+    private static function isRead(string $sql): bool
+    {
+        return preg_match('/^\s*(SELECT|WITH|PRAGMA|EXPLAIN)\b/i', $sql) === 1;
+    }
+
+    private static function tableRef(string $table): string
+    {
+        if (preg_match('/[^A-Za-z0-9_.]/', $table)) {
+            return $table;
+        }
+        return self::escapeIdentifier($table);
+    }
+
+    private static function columnName(string $name): string
+    {
+        $name = trim($name);
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name) !== 1) {
+            throw new \InvalidArgumentException('Invalid column name: ' . $name);
         }
         return self::escapeIdentifier($name);
     }
 
-    /** Escape for LIKE (escape % and _ with backslash) */
-    public static function escapeLike(string $value): string
+    /**
+     * @param array<int|string>|string $columns
+     */
+    private static function columnList(array|string $columns): string
     {
-        $value = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
-        return $value;
+        if ($columns === '*' || $columns === '' || $columns === []) {
+            return '*';
+        }
+        if (is_string($columns)) {
+            return $columns;
+        }
+        $items = [];
+        foreach ($columns as $column) {
+            $items[] = self::escapeIdentifierListItem((string) $column);
+        }
+        return implode(', ', $items);
+    }
+
+    private static function escapeIdentifierListItem(string $name): string
+    {
+        if (preg_match('/\bas\b/i', $name)) {
+            [$left, $right] = preg_split('/\bas\b/i', $name, 2);
+            return self::escapeIdentifier(trim((string) $left)) . ' AS ' . self::escapeIdentifier(trim((string) $right));
+        }
+        if (preg_match('/\s+([A-Za-z_][A-Za-z0-9_]*)$/', $name, $match)) {
+            $left = substr($name, 0, -strlen($match[0]));
+            return self::escapeIdentifier(trim($left)) . ' AS ' . self::escapeIdentifier($match[1]);
+        }
+        return self::escapeIdentifier($name);
+    }
+
+    private static function literal(mixed $value): string
+    {
+        if ($value === null) {
+            return 'NULL';
+        }
+        if (is_numeric($value) && !is_string($value)) {
+            return (string) $value;
+        }
+        return "'" . self::escape((string) $value) . "'";
     }
 
     /**
-     * Generate a new integer ID by taking MAX(idColumn)+1 with optional condition.
-     * This matches legacy pattern and avoids changing controllers.
+     * @param array<int|string, mixed> $params
+     * @return array<int|string, mixed>
      */
-    public static function newID(string $table, string $idColumn, string $condition = ''): int
+    private static function bindable(array $params): array
     {
-        $sql = 'SELECT COALESCE(MAX(' . self::escapeIdentifier($idColumn) . '), 0) + 1 AS next_id FROM ' . self::escapeIdentifier($table);
-        $condition = trim($condition);
-        if ($condition !== '') {
-            if (preg_match('/^(WHERE)\\b/i', $condition) === 1) {
-                $sql .= ' ' . $condition;
-            } else {
-                $sql .= ' WHERE ' . $condition;
+        $bound = [];
+        foreach ($params as $key => $value) {
+            if (is_bool($value)) {
+                $value = $value ? 1 : 0;
             }
+            $bound[$key] = $value;
         }
-        $row = self::firstResult($sql);
-        return isset($row['next_id']) ? (int)$row['next_id'] : 1;
+        return $bound;
     }
 
-    // --------------------- Minimal MySQL→SQLite translator ---------------------
-
-    private static function translateMysqlToSqlite(string $sql): string
+    private static function quoteChar(): string
     {
-        $s = $sql;
-        // Remove backticks
-        $s = str_replace('`', '"', $s);
-        // MySQL functions -> SQLite
-        $s = preg_replace('~\\bNOW\\(\\s*\\)~i', 'CURRENT_TIMESTAMP', $s);
-        $s = preg_replace('~\\bRAND\\(\\s*\\)~i', 'RANDOM()', $s);
-        $s = preg_replace('~\\bSUBSTRING\\s*\\(~i', 'SUBSTR(', $s);
-        $s = preg_replace('~\\bCHAR_LENGTH\\s*\\(~i', 'LENGTH(', $s);
-        // UNIX_TIMESTAMP(x) -> strftime('%s', x)
-        $s = preg_replace('~\bUNIX_TIMESTAMP\s*\(~i', "strftime('%s', ", $s);
-        // FROM_UNIXTIME(x) -> datetime(x, 'unixepoch')
-        $s = preg_replace('~\bFROM_UNIXTIME\s*\(~i', "datetime(", $s);
+        try {
+            $driver = self::driver();
+        } catch (\InvalidArgumentException) {
+            return '"';
+        }
+        return $driver === 'mysql' ? '`' : '"';
+    }
 
-        // LIMIT offset,count -> LIMIT count OFFSET offset
-        $s = preg_replace_callback('~\\bLIMIT\\s+(\\d+)\\s*,\\s*(\\d+)\\b~i', function($m){
-            return 'LIMIT ' . (int)$m[2] . ' OFFSET ' . (int)$m[1];
-        }, $s);
-
-        // COLLATE clauses (not generally needed in SQLite default builds)
-        $s = preg_replace('~\\s+COLLATE\\s+\\w+~i', '', $s);
-
-        // ENGINE / CHARSET from DDL
-        $s = preg_replace('~ENGINE\\s*=\\s*\\w+~i', '', $s);
-        $s = preg_replace('~DEFAULT\\s+CHARSET\\s*=\\s*\\w+~i', '', $s);
-
-        return $s;
+    private static function trace(string $sql): void
+    {
+        if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
+            echo '<!-- SQL: ' . htmlspecialchars($sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . " -->\n";
+        }
     }
 }
 
 /**
- * Lightweight buffered result wrapper so that Database::numRows() works reliably with SQLite.
+ * Buffered result for older query() callers.
  */
-final class DB_Result
+final class DB_Result implements \IteratorAggregate
 {
     /** @var array<int, array<string, mixed>> */
     private array $rows;
     private int $pos = 0;
     private int $affected;
 
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     */
     public function __construct(array $rows = [], int $affected = 0)
     {
         $this->rows = array_values($rows);
@@ -359,7 +654,9 @@ final class DB_Result
 
     public function fetchArray(): ?array
     {
-        if ($this->pos >= count($this->rows)) return null;
+        if ($this->pos >= count($this->rows)) {
+            return null;
+        }
         return $this->rows[$this->pos++] ?? null;
     }
 
@@ -371,5 +668,10 @@ final class DB_Result
     public function affectedRows(): int
     {
         return $this->affected;
+    }
+
+    public function getIterator(): \Traversable
+    {
+        return new \ArrayIterator($this->rows);
     }
 }

@@ -41,19 +41,19 @@ function printItem($itemID)
 	}else{
 		// Check to see if we have access to it
 		$sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security  = '" . $_SESSION['access_user_id'] . "') and item_id='".$itemID."'";
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		if(Database::numRows($result) > 0){
+				$result = Database::rows($sql);
+		if(count($result) > 0){
 			$i++;
 			//No need to go any further
 		}else{
 			// Get all items by group assignment
 			$sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-			$result = Database::query($sql, DSN, SET_SHOW_SQL);
-			$row = Database::fetchArray($result);
+						$result = Database::rows($sql);
+			$row = $result[0] ?? null;
 			$groupArray = explode('}-{', $row['groups']);
 			$sql = "SELECT group_security FROM items WHERE item_id='".$itemID."'";
-			$result = Database::query($sql, DSN, SET_SHOW_SQL);
-			$row = Database::fetchArray($result);
+						$result = Database::rows($sql);
+			$row = $result[0] ?? null;
 			foreach ($groupArray as $a){
 				if(stristr($row['group_security'],'}-{'.$a.'}-{')){
 					$i++;
@@ -65,28 +65,20 @@ function printItem($itemID)
 		// Setup item  information for display
 		$columnArray = array ('*');
 		$condition = "WHERE item_id = '" . $itemID . "'";
-		$sql = Database::sqlSelect('items', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$itemFields = Database::fetchArray($result); // Build item table
+		$itemFields = Database::first('items', $columnArray, $condition); // Build item table
 		// Get item type name
 		$columnArray = array ('item_type_name');
 		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
-		$sql = Database::sqlSelect('item_types', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$row = Database::fetchArray($result);
+		$row = Database::first('item_types', $columnArray, $condition);
 		$itemTypeName = $row['item_type_name'];
 		// Set the creator and owner values
 		$columnArray = array('user_name');
 		$condition = "WHERE user_id = '".$itemFields['creator_security']."'";
-		$sql = Database::sqlSelect('users', $columnArray,$condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$row = Database::fetchArray($result);
+		$row = Database::first('users', $columnArray,$condition);
 		$itemField[TXT_551] = $row['user_name'];
 		$columnArray = array('user_name');
 		$condition = "WHERE user_id = '".$itemFields['user_security']."'";
-		$sql = Database::sqlSelect('users', $columnArray,$condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$row = Database::fetchArray($result);
+		$row = Database::first('users', $columnArray,$condition);
 		$itemField[TXT_269] = $row['user_name'];
 		// Create group membership list
 		$groupArray = explode('}-{', $itemFields['group_security']);
@@ -100,11 +92,10 @@ function printItem($itemID)
 			$i++;
 		}
 		$columnArray = array ('group_id', 'group_name');
-		$sql = Database::sqlSelect('groups', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+		$result = Database::select('groups', $columnArray, $condition);
 		$i = 0;
 		$groupMembership = '';
-		while ($row = Database::fetchArray($result)) {
+		foreach ($result as $row) {
 			if ($i == 0) {
 				$groupMembership = $row['group_name'];
 			} else {
@@ -117,14 +108,10 @@ function printItem($itemID)
 		// Setup custom field display
 		$columnArray = array ('custom_field_id');
 		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
-		$sql = Database::sqlSelect('item_type_custom_fields', $columnArray, $condition);
-		$customFieldResult = Database::query($sql, DSN, SET_SHOW_SQL);
-		while ($customFields = Database::fetchArray($customFieldResult)) {
+		foreach (Database::select('item_type_custom_fields', $columnArray, $condition) as $customFields) {
 			$columnArray = array ('*');
 			$condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-			$sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-			$result = Database::query($sql, DSN, SET_SHOW_SQL);
-			$row = Database::fetchArray($result);
+			$row = Database::first('custom_fields', $columnArray, $condition);
 			$row['field_type'] = FieldTypes::normalise($row['field_type']);
 			if ($row['enabled'] != 'Yes'){
 				continue;
@@ -147,8 +134,8 @@ function printItem($itemID)
 		}
 		$html = RenderViews::buildFormFieldsGrid($displayFields);
 		$sql = "SELECT sum(minutes) AS total_minutes FROM timemanager_time_table WHERE item_id = '$itemID'";
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$timeRow = Database::fetchArray($result);
+				$result = Database::rows($sql);
+		$timeRow = $result[0] ?? null;
 		if ($timeRow && $timeRow['total_minutes'] > 0){
 			$html .= RenderViews::buildFormFieldsGrid([TXT_639 => htmlspecialchars((string)$timeRow['total_minutes'], ENT_QUOTES, 'UTF-8')]);
 		}
@@ -156,18 +143,14 @@ function printItem($itemID)
 		// Get item log information from database
 		$columnArray = array ('*');
 		$condition = "WHERE item_id = '" . $itemID . "' ORDER BY log_item_sequence DESC";
-		$sql = Database::sqlSelect('core_log', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		while ($row = Database::fetchArray($result)) {
+		foreach (Database::select('core_log', $columnArray, $condition) as $row) {
 			//Restrict log viewing
 			if ($_SESSION['access_role_id'] <= $row['role_id']){
 				// Get user name if applicable
 				if ($row['security_id'] != '') {
 					$columnArray = array ('user_name', 'first_name', 'last_name');
 					$condition = "WHERE user_id = '" . $row['security_id'] . "'";
-					$sql = Database::sqlSelect('users', $columnArray, $condition);
-					$resultUser = Database::query($sql, DSN, SET_SHOW_SQL);
-					$rowUser = Database::fetchArray($resultUser);
+					$rowUser = Database::first('users', $columnArray, $condition);
 				}
 				$role = '';
 				switch ($row['role_id']) {

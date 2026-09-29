@@ -61,8 +61,7 @@ final class ApplicationStore
 
     public static function seedIfEmpty(): void
     {
-        $existing = Database::firstResultParams('SELECT COUNT(*) AS c FROM applications', []);
-        if ($existing !== null && (int) ($existing['c'] ?? 0) > 0) {
+        if (Database::count('applications') > 0) {
             return;
         }
 
@@ -139,7 +138,7 @@ final class ApplicationStore
     public static function all(): array
     {
         self::ensureReady();
-        $rows = Database::buildArray('SELECT * FROM applications ORDER BY sort_order ASC, name ASC');
+        $rows = Database::select('applications', '*', '', [], 'sort_order ASC, name ASC');
         return array_map([self::class, 'application'], $rows);
     }
 
@@ -172,7 +171,7 @@ final class ApplicationStore
     public static function find(int $id): ?array
     {
         self::ensureReady();
-        $row = Database::firstResultParams('SELECT * FROM applications WHERE application_id = ?', [$id]);
+        $row = Database::first('applications', '*', 'application_id = ?', [$id]);
         return $row === null ? null : self::application($row);
     }
 
@@ -180,15 +179,17 @@ final class ApplicationStore
     public static function findBySlug(string $slug): ?array
     {
         self::ensureReady();
-        $row = Database::firstResultParams('SELECT * FROM applications WHERE slug = ?', [$slug]);
+        $row = Database::first('applications', '*', 'slug = ?', [$slug]);
         return $row === null ? null : self::application($row);
     }
 
     public static function slugInUse(string $slug, int $exceptId = 0): bool
     {
         self::ensureReady();
-        $row = Database::firstResultParams(
-            'SELECT application_id FROM applications WHERE slug = ? AND application_id <> ?',
+        $row = Database::first(
+            'applications',
+            ['application_id'],
+            'slug = ? AND application_id <> ?',
             [$slug, $exceptId]
         );
         return $row !== null;
@@ -201,24 +202,19 @@ final class ApplicationStore
     {
         self::ensureReady();
         $id = Database::newID('applications', 'application_id');
-        Database::queryParams(
-            'INSERT INTO applications (
-                application_id, slug, name, hint, icon, permission, enabled, sort_order, entry_mode, legacy_controller, legacy_key
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                $id,
-                $fields['slug'],
-                $fields['name'],
-                $fields['hint'] ?? '',
-                $fields['icon'] ?? 'ic-launch',
-                $fields['permission'],
-                (int) ($fields['enabled'] ?? 1),
-                (int) ($fields['sort_order'] ?? 0),
-                $fields['entry_mode'] ?? 'shell',
-                $fields['legacy_controller'] ?? '',
-                $fields['legacy_key'] ?? '',
-            ]
-        );
+        Database::insert('applications', [
+            'application_id' => $id,
+            'slug' => $fields['slug'],
+            'name' => $fields['name'],
+            'hint' => $fields['hint'] ?? '',
+            'icon' => $fields['icon'] ?? 'ic-launch',
+            'permission' => $fields['permission'],
+            'enabled' => (int) ($fields['enabled'] ?? 1),
+            'sort_order' => (int) ($fields['sort_order'] ?? 0),
+            'entry_mode' => $fields['entry_mode'] ?? 'shell',
+            'legacy_controller' => $fields['legacy_controller'] ?? '',
+            'legacy_key' => $fields['legacy_key'] ?? '',
+        ]);
         return $id;
     }
 
@@ -228,33 +224,27 @@ final class ApplicationStore
     public static function updateApplication(int $id, array $fields): void
     {
         self::ensureReady();
-        Database::queryParams(
-            'UPDATE applications
-             SET slug = ?, name = ?, hint = ?, icon = ?, permission = ?, enabled = ?
-             WHERE application_id = ?',
-            [
-                $fields['slug'],
-                $fields['name'],
-                $fields['hint'] ?? '',
-                $fields['icon'] ?? 'ic-launch',
-                $fields['permission'],
-                (int) ($fields['enabled'] ?? 0),
-                $id,
-            ]
-        );
+        Database::update('applications', [
+            'slug' => $fields['slug'],
+            'name' => $fields['name'],
+            'hint' => $fields['hint'] ?? '',
+            'icon' => $fields['icon'] ?? 'ic-launch',
+            'permission' => $fields['permission'],
+            'enabled' => (int) ($fields['enabled'] ?? 0),
+        ], 'application_id = ?', [$id]);
     }
 
     public static function deleteApplication(int $id): void
     {
         self::ensureReady();
-        Database::queryParams('DELETE FROM application_nav WHERE application_id = ?', [$id]);
-        Database::queryParams('DELETE FROM applications WHERE application_id = ?', [$id]);
+        Database::delete('application_nav', 'application_id = ?', [$id]);
+        Database::delete('applications', 'application_id = ?', [$id]);
     }
 
     public static function moveApplication(int $id, string $direction): void
     {
         self::ensureReady();
-        $rows = Database::buildArray('SELECT application_id FROM applications ORDER BY sort_order ASC, name ASC');
+        $rows = Database::select('applications', ['application_id'], '', [], 'sort_order ASC, name ASC');
         self::swapOrder($rows, 'application_id', 'applications', 'application_id', $id, $direction);
     }
 
@@ -264,8 +254,12 @@ final class ApplicationStore
     public static function navigation(int $applicationId): array
     {
         self::ensureReady();
-        $rows = Database::buildArray(
-            'SELECT * FROM application_nav WHERE application_id = ' . (int) $applicationId . ' ORDER BY sort_order ASC, nav_id ASC'
+        $rows = Database::select(
+            'application_nav',
+            '*',
+            'application_id = ?',
+            [$applicationId],
+            'sort_order ASC, nav_id ASC'
         );
         return array_map([self::class, 'nav'], $rows);
     }
@@ -274,7 +268,7 @@ final class ApplicationStore
     public static function findNav(int $id): ?array
     {
         self::ensureReady();
-        $row = Database::firstResultParams('SELECT * FROM application_nav WHERE nav_id = ?', [$id]);
+        $row = Database::first('application_nav', '*', 'nav_id = ?', [$id]);
         return $row === null ? null : self::nav($row);
     }
 
@@ -293,27 +287,24 @@ final class ApplicationStore
         self::ensureReady();
         $id = Database::newID('application_nav', 'nav_id');
         if ($sortOrder === null) {
-            $max = Database::firstResultParams(
-                'SELECT COALESCE(MAX(sort_order), 0) AS s FROM application_nav WHERE application_id = ?',
+            $max = Database::first(
+                'application_nav',
+                'COALESCE(MAX(sort_order), 0) AS s',
+                'application_id = ?',
                 [$applicationId]
             );
             $sortOrder = (int) ($max['s'] ?? 0) + 10;
         }
-        Database::queryParams(
-            'INSERT INTO application_nav (
-                nav_id, application_id, label, capability, permission, icon, config_json, sort_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                $id,
-                $applicationId,
-                $label,
-                $capability,
-                $permission,
-                $icon,
-                json_encode($config, JSON_UNESCAPED_SLASHES),
-                $sortOrder,
-            ]
-        );
+        Database::insert('application_nav', [
+            'nav_id' => $id,
+            'application_id' => $applicationId,
+            'label' => $label,
+            'capability' => $capability,
+            'permission' => $permission,
+            'icon' => $icon,
+            'config_json' => json_encode($config, JSON_UNESCAPED_SLASHES),
+            'sort_order' => $sortOrder,
+        ]);
         return $id;
     }
 
@@ -323,18 +314,19 @@ final class ApplicationStore
     public static function updateNav(int $id, string $label, string $capability, string $permission, string $icon, array $config): void
     {
         self::ensureReady();
-        Database::queryParams(
-            'UPDATE application_nav
-             SET label = ?, capability = ?, permission = ?, icon = ?, config_json = ?
-             WHERE nav_id = ?',
-            [$label, $capability, $permission, $icon, json_encode($config, JSON_UNESCAPED_SLASHES), $id]
-        );
+        Database::update('application_nav', [
+            'label' => $label,
+            'capability' => $capability,
+            'permission' => $permission,
+            'icon' => $icon,
+            'config_json' => json_encode($config, JSON_UNESCAPED_SLASHES),
+        ], 'nav_id = ?', [$id]);
     }
 
     public static function deleteNav(int $id): void
     {
         self::ensureReady();
-        Database::queryParams('DELETE FROM application_nav WHERE nav_id = ?', [$id]);
+        Database::delete('application_nav', 'nav_id = ?', [$id]);
     }
 
     public static function moveNav(int $id, string $direction): void
@@ -344,8 +336,12 @@ final class ApplicationStore
         if ($nav === null) {
             return;
         }
-        $rows = Database::buildArray(
-            'SELECT nav_id FROM application_nav WHERE application_id = ' . (int) $nav['application_id'] . ' ORDER BY sort_order ASC, nav_id ASC'
+        $rows = Database::select(
+            'application_nav',
+            ['nav_id'],
+            'application_id = ?',
+            [(int) $nav['application_id']],
+            'sort_order ASC, nav_id ASC'
         );
         self::swapOrder($rows, 'nav_id', 'application_nav', 'nav_id', $id, $direction);
     }
@@ -356,20 +352,21 @@ final class ApplicationStore
      */
     private static function retireServiceCentreLegacy(): void
     {
-        Database::queryParams(
-            "UPDATE applications
-             SET legacy_controller = '', legacy_key = '', permission = ?
-             WHERE slug = ? AND legacy_key = ?",
-            [Permission::SERVICECENTRE_SEARCH, self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']
-        );
+        Database::update('applications', [
+            'legacy_controller' => '',
+            'legacy_key' => '',
+            'permission' => Permission::SERVICECENTRE_SEARCH,
+        ], 'slug = ? AND legacy_key = ?', [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']);
         if (self::tableExists('saved_searches')) {
-            Database::queryParams(
-                "UPDATE saved_searches SET application = ? WHERE application = ?",
-                [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']
+            Database::update(
+                'saved_searches',
+                ['application' => self::SERVICE_CENTRE_SLUG],
+                'application = ?',
+                ['app_servicecentre_main']
             );
         }
         if (self::tableExists('users')) {
-            Database::queryParams(
+            Database::run(
                 "UPDATE users SET home_controller = ? WHERE home_controller IN ('app_servicecentre_main', 'app_oneorzerohelpdesk_main')",
                 ['application:' . self::SERVICE_CENTRE_SLUG]
             );
@@ -384,32 +381,28 @@ final class ApplicationStore
         if (!self::tableExists('application_nav')) {
             return;
         }
-        Database::queryParams(
-            "UPDATE application_nav SET capability = 'servicecentre.work' WHERE capability = 'servicecentre.tickets'"
-        );
-        Database::queryParams(
+        Database::update('application_nav', ['capability' => 'servicecentre.work'], "capability = 'servicecentre.tickets'");
+        Database::run(
             "UPDATE application_nav SET label = 'Work' WHERE capability = 'servicecentre.work' AND label IN ('Tickets', 'Ticket')"
         );
-        Database::queryParams(
+        Database::run(
             "UPDATE application_nav SET label = 'New'
              WHERE capability = 'items.create'
                AND application_id = (SELECT application_id FROM applications WHERE slug = ?)
                AND label IN ('New ticket', 'New Ticket')",
             [self::SERVICE_CENTRE_SLUG]
         );
-        Database::queryParams(
-            "UPDATE applications SET hint = 'Work and announcements' WHERE slug = ? AND hint = 'Tickets and announcements'",
-            [self::SERVICE_CENTRE_SLUG]
+        Database::update(
+            'applications',
+            ['hint' => 'Work and announcements'],
+            'slug = ? AND hint = ?',
+            [self::SERVICE_CENTRE_SLUG, 'Tickets and announcements']
         );
     }
 
     private static function tableExists(string $table): bool
     {
-        $row = Database::firstResultParams(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
-            [$table]
-        );
-        return $row !== null;
+        return Database::tableExists($table);
     }
 
     /**
@@ -499,14 +492,8 @@ final class ApplicationStore
         $right = (int) $rows[$swap][$idKey];
         $leftOrder = ($index + 1) * 10;
         $rightOrder = ($swap + 1) * 10;
-        Database::queryParams(
-            'UPDATE ' . $table . ' SET sort_order = ? WHERE ' . $idColumn . ' = ?',
-            [$rightOrder, $left]
-        );
-        Database::queryParams(
-            'UPDATE ' . $table . ' SET sort_order = ? WHERE ' . $idColumn . ' = ?',
-            [$leftOrder, $right]
-        );
+        Database::update($table, ['sort_order' => $rightOrder], $idColumn . ' = ?', [$left]);
+        Database::update($table, ['sort_order' => $leftOrder], $idColumn . ' = ?', [$right]);
     }
 
     /**

@@ -9,8 +9,8 @@ function showServiceCentreSettings(): void
 {
     $valueArray = [];
     $displayArray = [];
-    $result = Database::query(Database::sqlSelect('item_types', ['item_type_id', 'item_type_name'], 'ORDER BY item_type_name ASC'), DSN);
-    while ($row = Database::fetchArray($result)) {
+        $result = Database::select('item_types', ['item_type_id', 'item_type_name'], 'ORDER BY item_type_name ASC');
+    foreach ($result as $row) {
         $valueArray[] = $row['item_type_id'];
         $displayArray[] = $row['item_type_name'];
     }

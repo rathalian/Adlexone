@@ -16,17 +16,14 @@ function showServiceCentreWork(): void
         : serviceCentreUrl('subcontroller=item_management_manage');
     $rows = [];
     if ($ids !== []) {
-        $result = Database::query(
-            Database::sqlSelect(
+                $result = Database::select(
                 'items',
                 ['item_id', 'item_title', 'create_date', 'item_type_id'],
                 'WHERE item_id IN (' . implode(',', $ids) . ') ORDER BY item_id DESC'
-            ),
-            DSN
-        );
+            );
         $typeNames = [];
         $role = (int) ($_SESSION['access_role_id'] ?? 5);
-        while ($row = Database::fetchArray($result)) {
+        foreach ($result as $row) {
             $itemId = (int) $row['item_id'];
             $title = trim((string) ($row['item_title'] ?? ''));
             if ($title === '') {
@@ -34,10 +31,7 @@ function showServiceCentreWork(): void
             }
             $typeId = (string) ($row['item_type_id'] ?? '');
             if (!isset($typeNames[$typeId])) {
-                $typeRow = Database::firstResultParams(
-                    'SELECT item_type_name FROM item_types WHERE item_type_id = ?',
-                    [$typeId]
-                );
+                $typeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$typeId]);
                 $typeNames[$typeId] = (string) ($typeRow['item_type_name'] ?? '');
             }
             $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId
@@ -102,28 +96,19 @@ function serviceCentreAccessibleItemIds(): array
     }
 
     $ids = [];
-    $owned = Database::queryParams(
-        'SELECT item_id FROM items WHERE user_security = ? OR creator_security = ?',
-        [$userId, $userId]
-    );
-    while ($row = Database::fetchArray($owned)) {
+    $owned = Database::select('items', ['item_id'], 'user_security = ? OR creator_security = ?', [$userId, $userId]);
+    foreach ($owned as $row) {
         $ids[] = (int) $row['item_id'];
     }
 
-    $membership = Database::firstResultParams(
-        'SELECT groups FROM group_members WHERE user_id = ?',
-        [$userId]
-    );
+    $membership = Database::first('group_members', ['groups'], 'user_id = ?', [$userId]);
     foreach (preg_split('/\}-\{/', (string) ($membership['groups'] ?? '')) ?: [] as $group) {
         $group = trim($group, " \t\n\r\0\x0B{}-");
         if ($group === '' || !ctype_digit($group)) {
             continue;
         }
-        $groupItems = Database::queryParams(
-            "SELECT item_id FROM items WHERE group_security LIKE ?",
-            ['%}-{' . $group . '}-{%']
-        );
-        while ($row = Database::fetchArray($groupItems)) {
+        $groupItems = Database::select('items', ['item_id'], 'group_security LIKE ?', ['%}-{' . $group . '}-{%']);
+        foreach ($groupItems as $row) {
             $ids[] = (int) $row['item_id'];
         }
     }

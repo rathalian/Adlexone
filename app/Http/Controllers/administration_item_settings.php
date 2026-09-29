@@ -74,9 +74,7 @@ function showCustomField($customFieldID = '', $values = '')
     } else {
         $columnArray = array('*');
         $condition = "WHERE custom_field_id = '$customFieldID'";
-        $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $fieldValues = Database::fetchArray($result);
+        $fieldValues = Database::first('custom_fields', $columnArray, $condition);
         $formAction = 'index.php?controller=administration_item_settings&option=update_custom_field';
         $title = TXT_285;
     }
@@ -200,9 +198,7 @@ function showItemType($itemTypeID, $values = [])
     } else {
         $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'group_security', 'enabled'];
         $condition = "WHERE item_type_id = '$itemTypeID'";
-        $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $fieldValues = Database::fetchArray($result);
+        $fieldValues = Database::first('item_types', $columnArray, $condition);
     }
 
     $fields = [];
@@ -210,11 +206,10 @@ function showItemType($itemTypeID, $values = [])
 
     // User assignment select
     $columnArray = ['user_id', 'user_name'];
-    $sql = Database::sqlSelect('users', $columnArray);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('users', $columnArray);
     $userIDArray = [''];
     $userArray = [TXT_267];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $userIDArray[] = $row['user_id'];
         $userArray[] = $row['user_name'];
     }
@@ -222,12 +217,11 @@ function showItemType($itemTypeID, $values = [])
 
     $columnArray = ['group_id', 'group_name'];
     $condition = "ORDER BY group_name ASC";
-    $sql = Database::sqlSelect('groups', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('groups', $columnArray, $condition);
 
     $groupMembershipArray = explode('}-{', (string)($fieldValues['group_security'] ?? ''));
     $groupMembershipHtml = '<div class="group-security-list">';
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $isChecked = in_array((string)$row['group_id'], $groupMembershipArray, true);
         $checkedValue = $isChecked ? (string)$row['group_id'] : '';
         $groupMembershipHtml .= RenderViews::buildCheckBox(
@@ -258,12 +252,11 @@ function showItemType($itemTypeID, $values = [])
     } else {
         $columnArray = ['custom_field_id', 'custom_field_order'];
         $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-        $sql = Database::sqlSelect('item_type_custom_fields', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $result = Database::select('item_type_custom_fields', $columnArray, $condition);
         $customFieldArray = [];
         $customFieldSortArray = [];
-        if (Database::numRows($result) != 0) {
-            while ($row = Database::fetchArray($result)) {
+        if (count($result) != 0) {
+            foreach ($result as $row) {
                 $customFieldArray[$row['custom_field_id']] = $row['custom_field_id'];
                 $customFieldSortArray['field_order_' . $row['custom_field_id']] = $row['custom_field_order'];
             }
@@ -284,12 +277,11 @@ function showItemType($itemTypeID, $values = [])
 
     $columnArray = ['*'];
     $condition = "WHERE enabled = 'Yes' ORDER BY custom_field_name";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('custom_fields', $columnArray, $condition);
 
     $availableItems = '';
     $selectedItems = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $fieldId = (string)$row['custom_field_id'];
         $isSelected = isset($customFieldArray[$fieldId]) || in_array($fieldId, $customFieldArray, true);
         $order = (int)($customFieldSortArray['field_order_' . $fieldId] ?? 0);
@@ -390,9 +382,8 @@ function addCustomField()
     // Check for duplicate and error handling
     $columnArray = array('custom_field_name');
     $condition = "WHERE custom_field_name = '" . $_POST['custom_field_name'] . "'";
-    $sql = Database::sqlSelect('custom_fields', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    if (Database::numRows($result) == 0) {
+    $result = Database::select('custom_fields', $columnArray, $condition);
+    if (count($result) == 0) {
         // Set new id
         $id = Database::newID('custom_fields', 'custom_field_id');
         $array['custom_field_id'] = $id;
@@ -403,12 +394,11 @@ function addCustomField()
         // Handle data column special characters
         $columnArray['data'] = html_entity_decode($columnArray['data'], ENT_COMPAT, 'UTF-8');
         // Insert form field values into row
-        $sql = Database::sqlInsert('custom_fields', $columnArray);
-        Database::query($sql, DSN, SET_SHOW_SQL);
+        Database::insert('custom_fields', $columnArray);
         if ($_POST['field_type'] != 'workerField' and $_POST['field_type'] != 'workerFieldMenu' and $_POST['field_type'] != 'multiLevelMenu') {
             // Create item table column
             $sql = "ALTER TABLE " . "items ADD custom_field_" . $id . " text";
-            Database::query($sql, DSN, SET_SHOW_SQL);
+            Database::run($sql);
         }
         RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
         return;
@@ -428,9 +418,8 @@ function addItemType()
     // Check for duplicate and error handling
     $columnArray = array('item_type_name');
     $condition = "WHERE item_type_name = '" . $_POST['item_type_name'] . "'";
-    $sql = Database::sqlSelect('item_types', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    if (Database::numRows($result) == 0) {
+    $result = Database::select('item_types', $columnArray, $condition);
+    if (count($result) == 0) {
         // Set new id
         $array['item_type_id'] = Database::newID('item_types', 'item_type_id');
         // Setup the item type custom fields db update
@@ -441,16 +430,14 @@ function addItemType()
                 'custom_field_id' => $fieldId,
                 'custom_field_order' => $order,
             ];
-            $sql = Database::sqlInsert('item_type_custom_fields', $customFieldArray);
-            Database::query($sql, DSN, SET_SHOW_SQL);
+            Database::insert('item_type_custom_fields', $customFieldArray);
         }
         $array['group_security'] = groupSecurityFromPost();
         stripItemTypeFormFields();
         // Build insert array
         $columnArray = array_merge($array, $_POST);
         // Insert form field values into row
-        $sql = Database::sqlInsert('item_types', $columnArray);
-        Database::query($sql, DSN, SET_SHOW_SQL);
+        Database::insert('item_types', $columnArray);
         RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_item_types', TXT_362));
         return;
     }
@@ -515,7 +502,7 @@ function showSearchOptions(): void
 function showFields(): void
 {
     $fieldRows = [];
-    foreach (Database::buildArray(Database::sqlSelect('custom_fields', '*', 'ORDER BY custom_field_name ASC')) as $row) {
+    foreach (Database::select('custom_fields', '*', 'ORDER BY custom_field_name ASC') as $row) {
         $fieldRows[] = customFieldRecord($row);
     }
 
@@ -531,7 +518,7 @@ function showFields(): void
 function showItemTypes(): void
 {
     $typeRows = [];
-    foreach (Database::buildArray(Database::sqlSelect('item_types', '*', 'ORDER BY item_type_name ASC')) as $row) {
+    foreach (Database::select('item_types', '*', 'ORDER BY item_type_name ASC') as $row) {
         $typeRows[] = itemTypeRecord($row);
     }
 
@@ -659,12 +646,11 @@ function showFieldTypeResults()
     } elseif ($_POST['operator'] == 'LIKE') {
         $condition = "WHERE " . $_POST['type'] . " LIKE '%" . $_POST['criteria'] . "%' ORDER BY enabled DESC, " . $_POST['type'] . " ASC";
     }
-    $sql = Database::sqlSelect($table, $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select($table, $columnArray, $condition);
     $rows = [];
     $isFields = $table === 'custom_fields';
-    if ($result && Database::numRows($result) > 0) {
-        while ($row = Database::fetchArray($result)) {
+    if ($result && count($result) > 0) {
+        foreach ($result as $row) {
             $rows[] = $isFields ? customFieldRecord($row) : itemTypeRecord($row);
         }
     }
@@ -696,16 +682,14 @@ function updateItemType($itemTypeID)
     stripItemTypeFormFields();
     // Remove all existing custom field table entries and then re add changed selection
     $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-    $sql = Database::sqlDelete('item_type_custom_fields', $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::delete('item_type_custom_fields', $condition);
     foreach ($selectedFields as $fieldId => $order) {
         $customFieldArray = [
             'item_type_id' => $itemTypeID,
             'custom_field_id' => $fieldId,
             'custom_field_order' => $order,
         ];
-        $sql = Database::sqlInsert('item_type_custom_fields', $customFieldArray);
-        Database::query($sql, DSN, SET_SHOW_SQL);
+        Database::insert('item_type_custom_fields', $customFieldArray);
     }
     $columnArray = $_POST;
     if ($groupSecurity !== '') {
@@ -714,8 +698,7 @@ function updateItemType($itemTypeID)
     // Set condition
     $condition = "WHERE item_type_id = '$itemTypeID'";
     // Update form field values into row
-    $sql = Database::sqlUpdate('item_types', $columnArray, $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::update('item_types', $columnArray, $condition);
     RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_item_types', TXT_362));
 }
 
@@ -737,8 +720,7 @@ function updateCustomField($customFieldID)
     // Set condition
     $condition = "WHERE custom_field_id = '$customFieldID'";
     // Update form field values into row
-    $sql = Database::sqlUpdate('custom_fields', $columnArray, $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::update('custom_fields', $columnArray, $condition);
     RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
 }
 
@@ -801,9 +783,7 @@ function deleteCustomField(): void
         return;
     }
 
-    $sql = Database::sqlSelect('custom_fields', '*', "WHERE custom_field_id = '" . $customFieldID . "'");
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+    $row = Database::first('custom_fields', '*', "WHERE custom_field_id = '" . $customFieldID . "'");
     if (!$row) {
         RenderViews::buildResponse(TXT_115, RenderViews::buildURL(ITEM_BASE_URL . '&option=manage_fields', TXT_362));
         return;
@@ -812,16 +792,15 @@ function deleteCustomField(): void
     $name = (string)$row['custom_field_name'];
     $type = (string)$row['field_type'];
     $condition = "WHERE custom_field_id = '" . $customFieldID . "'";
-    Database::query(Database::sqlDelete('custom_field_menu_values', $condition), DSN, SET_SHOW_SQL);
-    Database::query(Database::sqlDelete('item_type_custom_fields', $condition), DSN, SET_SHOW_SQL);
-    Database::query(Database::sqlDelete('custom_fields', $condition), DSN, SET_SHOW_SQL);
+    Database::delete('custom_field_menu_values', $condition);
+    Database::delete('item_type_custom_fields', $condition);
+    Database::delete('custom_fields', $condition);
 
     $addsColumn = !in_array($type, ['workerField', 'workerFieldMenu', 'multiLevelMenu'], true);
     if ($addsColumn) {
         $column = 'custom_field_' . $customFieldID;
-        $existing = Database::buildArray("SELECT name FROM pragma_table_info('items') WHERE name = '" . $column . "'");
-        if ($existing !== []) {
-            Database::query('ALTER TABLE items DROP COLUMN ' . Database::escapeIdentifier($column), DSN, SET_SHOW_SQL);
+        if (Database::columnExists('items', $column)) {
+            Database::exec('ALTER TABLE items DROP COLUMN ' . Database::escapeIdentifier($column));
         }
     }
 
@@ -840,23 +819,21 @@ function deleteItemType(): void
         return;
     }
 
-    $result = Database::query(Database::sqlSelect('item_types', '*', "WHERE item_type_id = '" . $itemTypeID . "'"), DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+        $row = Database::first('item_types', '*', 'item_type_id = ?', [$itemTypeID]);
     if (!$row) {
         RenderViews::buildResponse(TXT_115, $back);
         return;
     }
 
     $name = (string)$row['item_type_name'];
-    $inUse = Database::buildArray("SELECT item_id FROM items WHERE item_type_id = '" . $itemTypeID . "' LIMIT 1");
-    if ($inUse !== []) {
+    if (Database::exists('items', 'item_type_id = ?', [$itemTypeID])) {
         RenderViews::buildResponse($name . ' ' . TXT_691, $back);
         return;
     }
 
     $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-    Database::query(Database::sqlDelete('item_type_custom_fields', $condition), DSN, SET_SHOW_SQL);
-    Database::query(Database::sqlDelete('item_types', $condition), DSN, SET_SHOW_SQL);
+    Database::delete('item_type_custom_fields', $condition);
+    Database::delete('item_types', $condition);
     RenderViews::buildResponse($name . ' ' . TXT_47, $back);
 }
 

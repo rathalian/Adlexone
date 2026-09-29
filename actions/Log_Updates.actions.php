@@ -42,9 +42,7 @@ function showSetupUpdateLog($actionID = '')
 		// Get action information from database
 		$columnArray = array('*');
 		$condition = "WHERE action_id = '" . $actionID . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$fieldValues = Database::fetchArray($result);
+		$fieldValues = Database::first('action_definitions', $columnArray, $condition);
 		$action = NOT_BASE_URL . '&option=update_action&action_package=Log_Updates&descriptor_name=UpdateLog&action_id=' . $actionID;
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Log_Updates&descriptor_name=UpdateLog';
@@ -63,8 +61,8 @@ function showSetupUpdateLog($actionID = '')
 	$excludeArray = array('create_date','core_log_updated','item_type_id','creator_security','user_security','group_security');
 	$dynamicValues = 'LOG_ENTRY, ITEM_CREATOR, ITEM_OWNER';
 	$sql = "SHOW COLUMNS FROM items";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	while ($row = Database::fetchArray($result)){
+		$result = Database::rows($sql);
+	foreach ($result as $row){
 		if (!in_array($row[0],$excludeArray)){
 			@$dynamicValues .= ', '.strtoupper($row[0]);
 		}
@@ -103,9 +101,8 @@ function addUpdateUpdateLog($actionID = '', $add = false)
 		// Check for duplicate name
 		$columnArray = array('action_name');
 		$condition = "WHERE action_name = '" . $_POST['action_name'] . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		if (Database::numRows($result) > 0) {
+		$result = Database::select('action_definitions', $columnArray, $condition);
+		if (count($result) > 0) {
 			$html = ACT_PAK_15;
 			$html = RenderViews::showResponse(ACT_PAK_15,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
 			define('HEADING', TXT_352);
@@ -114,9 +111,8 @@ function addUpdateUpdateLog($actionID = '', $add = false)
 			// Check for duplicate name
 			$columnArray = array('item_identifier');
 			$condition = "WHERE item_identifier = '" . $_POST['item_identifier'] . "'";
-			$sql = Database::sqlSelect('core_log', $columnArray, $condition);
-			$result = Database::query($sql, DSN, SET_SHOW_SQL);
-			if (Database::numRows($result) > 0) {
+			$result = Database::select('core_log', $columnArray, $condition);
+			if (count($result) > 0) {
 				$html = ACT_PAK_15;
 				$html = RenderViews::showResponse(ACT_PAK_58,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
 				define('HEADING', TXT_352);
@@ -132,8 +128,7 @@ function addUpdateUpdateLog($actionID = '', $add = false)
 				$columnArray['package_file'] = 'Log_Updates.actions.php';
 				$columnArray['package_function'] = 'UpdateLog';
 				$columnArray['enabled'] = 'Yes';
-				$sql = Database::sqlInsert('action_definitions', $columnArray);
-				Database::query($sql, DSN, SET_SHOW_SQL);
+				Database::insert('action_definitions', $columnArray);
 				$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_301,RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 				define('HEADING', TXT_352);
 				define('BODY_CONTENT', $html);
@@ -150,8 +145,7 @@ function addUpdateUpdateLog($actionID = '', $add = false)
 		$columnArray['package_function'] = 'UpdateLog';
 		$columnArray['enabled'] = 'Yes';
 		$condition = "WHERE action_id ='$actionID'";
-		$sql = Database::sqlUpdate('action_definitions', $columnArray, $condition);
-		Database::query($sql, DSN, SET_SHOW_SQL);
+		Database::update('action_definitions', $columnArray, $condition);
 		$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_164, RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 		define('HEADING', TXT_352);
 		define('BODY_CONTENT', $html);
@@ -192,15 +186,15 @@ function executeUpdateLog($itemID, $dataArray, $preCondition, $triggerCondition,
 	}
 	//Match creator
 	$sql = "SELECT user_name from "."users WHERE user_id = '".$dataArray['creator_security']."'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$row = Database::fetchArray($result);
+		$result = Database::rows($sql);
+	$row = $result[0] ?? null;
 	if (preg_match("/\bITEM_CREATOR\b/",$logEntry)) {
 		$logEntry = preg_replace("/\bITEM_CREATOR\b/", $row['user_name'], $logEntry);
 	}
 	//Match owner
 	$sql = "SELECT user_name from "."users WHERE user_id = '".$dataArray['user_security']."'";
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$row = Database::fetchArray($result);
+		$result = Database::rows($sql);
+	$row = $result[0] ?? null;
 	if (preg_match("/\bITEM_OWNER\b/",$logEntry)) {
 		$logEntry = preg_replace("/\bITEM_OWNER\b/", $row['user_name'], $logEntry);
 	}
@@ -208,13 +202,11 @@ function executeUpdateLog($itemID, $dataArray, $preCondition, $triggerCondition,
 	$columnArray['security_id'] = $_SESSION['access_user_id'];
 	$columnArray['role_id'] = $actionParameters;
 	// Insert into log table
-	$sql = Database::sqlInsert('core_log', $columnArray);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	Database::insert('core_log', $columnArray);
 	// Update entry in item table
 	$condition = "WHERE item_id = '$itemID'";
 	$itemColumnArray['core_log_updated'] = $columnArray['create_date'];
-	$sql = Database::sqlUpdate('items', $itemColumnArray, $condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	Database::update('items', $itemColumnArray, $condition);
 
 	return true;
 }

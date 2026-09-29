@@ -36,16 +36,12 @@ define('POR_BASE_URL', 'index.php?controller='.$_GET['controller'].'&subcontroll
 function showAdminPortal (){
 
 	// User Information
-	$count = static function (string $sql): string {
-		$row = Database::firstResult($sql, DSN);
-		return (string)($row ? reset($row) : 0);
-	};
-	$oozGlobalAdminCount = $count("SELECT COUNT(*) FROM users WHERE role = '0'");
-	$oozAdminCount = $count("SELECT COUNT(*) FROM users WHERE role = '1'");
-	$adminCount = $count("SELECT COUNT(*) FROM users WHERE role = '2'");
-	$managerCount = $count("SELECT COUNT(*) FROM users WHERE role = '3'");
-	$userCount = $count("SELECT COUNT(*) FROM users WHERE role = '4'");
-	$viewerCount = $count("SELECT COUNT(*) FROM users WHERE role = '5'");
+	$oozGlobalAdminCount = (string) Database::count('users', 'role = ?', ['0']);
+	$oozAdminCount = (string) Database::count('users', 'role = ?', ['1']);
+	$adminCount = (string) Database::count('users', 'role = ?', ['2']);
+	$managerCount = (string) Database::count('users', 'role = ?', ['3']);
+	$userCount = (string) Database::count('users', 'role = ?', ['4']);
+	$viewerCount = (string) Database::count('users', 'role = ?', ['5']);
 	$users = RenderViews::buildFormFieldsGrid([
 		TXT_430 => htmlspecialchars((string)$oozGlobalAdminCount, ENT_QUOTES, 'UTF-8'),
 		TXT_431 => htmlspecialchars((string)$oozAdminCount, ENT_QUOTES, 'UTF-8'),
@@ -56,7 +52,7 @@ function showAdminPortal (){
 	]);
 	$sqliteFile = substr(DSN, strlen('sqlite:'));
 	$databaseSize = is_file($sqliteFile) ? round(filesize($sqliteFile) / 1024, 2) : 0;
-	$rowCount = $count("SELECT COUNT(*) FROM items");
+	$rowCount = (string) Database::count('items');
 	$data = RenderViews::buildFormFieldsGrid([
 		TXT_439 => htmlspecialchars((string)$databaseSize, ENT_QUOTES, 'UTF-8'),
 		TXT_440 => htmlspecialchars((string)$rowCount, ENT_QUOTES, 'UTF-8'),

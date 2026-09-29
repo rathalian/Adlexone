@@ -38,9 +38,7 @@ final class MenuOptions
         self::ensureParentColumn();
         self::importCommaChildren();
         self::importMultiLevelMenus();
-        Database::query(
-            "UPDATE custom_fields SET field_type = 'menu' WHERE field_type IN ('subMenu', 'subMenuChild', 'multiLevelMenu')"
-        );
+        Database::run("UPDATE custom_fields SET field_type = 'menu' WHERE field_type IN ('subMenu', 'subMenuChild', 'multiLevelMenu')");
         self::loadLinks();
     }
 
@@ -61,7 +59,7 @@ final class MenuOptions
         if ($parentId <= 0 || $itemTypeId <= 0) {
             return false;
         }
-        $row = Database::firstResult(
+        $row = Database::row(
             "SELECT custom_field_id FROM item_type_custom_fields WHERE item_type_id = " . $itemTypeId
             . " AND custom_field_id = " . $parentId . " LIMIT 1"
         );
@@ -251,7 +249,7 @@ final class MenuOptions
     public static function valueExists(int $fieldId, string $value, int $parentId): bool
     {
         self::prepare();
-        $row = Database::firstResult(
+        $row = Database::row(
             "SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId
             . " AND parent_menu_value_id = " . $parentId
             . " AND menu_value = '" . Database::escape($value) . "'"
@@ -266,12 +264,12 @@ final class MenuOptions
             $parentId = 0;
         }
         $id = Database::newID('custom_field_menu_values', 'menu_value_id');
-        Database::query(Database::sqlInsert('custom_field_menu_values', [
+        Database::insert('custom_field_menu_values', [
             'menu_value_id' => $id,
             'custom_field_id' => $fieldId,
             'menu_value' => $value,
             'parent_menu_value_id' => $parentId,
-        ]));
+        ]);
         unset(self::$nodeCache[$fieldId]);
     }
 
@@ -298,11 +296,11 @@ final class MenuOptions
             if ($previous === null || $newValue === '' || $newValue === $previous) {
                 continue;
             }
-            Database::query(Database::sqlUpdate(
+            Database::update(
                 'custom_field_menu_values',
                 ['menu_value' => $newValue],
                 "WHERE menu_value_id = '" . $id . "' AND custom_field_id = '" . $fieldId . "'"
-            ));
+            );
             if (!in_array($newValue, $oldValues, true)) {
                 self::renameStoredItems($fieldId, $previous, $newValue);
                 $childId = self::legacyChildId($fieldId);
@@ -324,11 +322,11 @@ final class MenuOptions
             if ($parentId === $id || self::isUnder($fieldId, $parentId, $id) || !self::parentBelongs($fieldId, $parentId)) {
                 continue;
             }
-            Database::query(Database::sqlUpdate(
+            Database::update(
                 'custom_field_menu_values',
                 ['parent_menu_value_id' => $parentId],
                 "WHERE menu_value_id = '" . $id . "' AND custom_field_id = '" . $fieldId . "'"
-            ));
+            );
         }
         unset(self::$nodeCache[$fieldId]);
     }
@@ -339,32 +337,27 @@ final class MenuOptions
         $ids = [$valueId];
         self::collectDescendants($fieldId, $valueId, $ids);
         $list = implode(', ', array_map(static fn(int $id): string => (string)$id, $ids));
-        Database::query(
-            "DELETE FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId . " AND menu_value_id IN (" . $list . ")"
-        );
+        Database::run("DELETE FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId . " AND menu_value_id IN (" . $list . ")");
         unset(self::$nodeCache[$fieldId]);
     }
 
     private static function ensureParentColumn(): void
     {
-        $columns = Database::buildArray("SELECT name FROM pragma_table_info('custom_field_menu_values')");
-        foreach ($columns as $column) {
-            if (($column['name'] ?? '') === 'parent_menu_value_id') {
-                return;
-            }
+        if (Database::columnExists('custom_field_menu_values', 'parent_menu_value_id')) {
+            return;
         }
-        Database::query('ALTER TABLE custom_field_menu_values ADD parent_menu_value_id INTEGER NOT NULL DEFAULT 0');
+        Database::exec('ALTER TABLE custom_field_menu_values ADD parent_menu_value_id INTEGER NOT NULL DEFAULT 0');
     }
 
     private static function importCommaChildren(): void
     {
-        $rows = Database::buildArray(
+        $rows = Database::rows(
             "SELECT menu_value_id, custom_field_id, sub_menu_values FROM custom_field_menu_values WHERE sub_menu_values IS NOT NULL AND sub_menu_values <> ''"
         );
         foreach ($rows as $row) {
             $parentId = (int)$row['menu_value_id'];
             $fieldId = (int)$row['custom_field_id'];
-            $existingChild = Database::firstResult(
+            $existingChild = Database::row(
                 "SELECT menu_value_id FROM custom_field_menu_values WHERE parent_menu_value_id = " . $parentId . " LIMIT 1"
             );
             if ($existingChild === null) {
@@ -376,17 +369,17 @@ final class MenuOptions
                     self::findOrCreate($fieldId, $parentId, $label);
                 }
             }
-            Database::query(Database::sqlUpdate(
+            Database::update(
                 'custom_field_menu_values',
                 ['sub_menu_values' => ''],
                 "WHERE menu_value_id = '" . $parentId . "'"
-            ));
+            );
         }
     }
 
     private static function importMultiLevelMenus(): void
     {
-        $menus = Database::buildArray(
+        $menus = Database::rows(
             "SELECT custom_field_id, menu_relationship, menu_value_links FROM custom_fields WHERE field_type = 'multiLevelMenu'"
         );
         foreach ($menus as $menu) {
@@ -407,7 +400,7 @@ final class MenuOptions
                     if ($valueId <= 0) {
                         continue;
                     }
-                    $source = Database::firstResult(
+                    $source = Database::row(
                         "SELECT menu_value FROM custom_field_menu_values WHERE menu_value_id = " . $valueId
                     );
                     $label = is_array($source) ? trim((string)($source['menu_value'] ?? '')) : '';
@@ -443,7 +436,7 @@ final class MenuOptions
             return;
         }
         $select = 'item_id, ' . $target . ', ' . implode(', ', array_map(static fn(int $id): string => 'custom_field_' . $id, $sources));
-        foreach (Database::buildArray('SELECT ' . $select . ' FROM items') as $item) {
+        foreach (Database::rows('SELECT ' . $select . ' FROM items') as $item) {
             if (trim((string)($item[$target] ?? '')) !== '') {
                 continue;
             }
@@ -464,11 +457,11 @@ final class MenuOptions
             if ($leaf === '') {
                 continue;
             }
-            Database::query(Database::sqlUpdate(
+            Database::update(
                 'items',
                 [$target => $leaf],
                 "WHERE item_id = '" . (int)$item['item_id'] . "'"
-            ));
+            );
         }
     }
 
@@ -492,7 +485,7 @@ final class MenuOptions
 
     private static function findOrCreate(int $fieldId, int $parentId, string $label): int
     {
-        $existing = Database::firstResult(
+        $existing = Database::row(
             "SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId
             . " AND parent_menu_value_id = " . $parentId
             . " AND menu_value = '" . Database::escape($label) . "'"
@@ -501,12 +494,12 @@ final class MenuOptions
             return (int)$existing['menu_value_id'];
         }
         $id = Database::newID('custom_field_menu_values', 'menu_value_id');
-        Database::query(Database::sqlInsert('custom_field_menu_values', [
+        Database::insert('custom_field_menu_values', [
             'menu_value_id' => $id,
             'custom_field_id' => $fieldId,
             'menu_value' => $label,
             'parent_menu_value_id' => $parentId,
-        ]));
+        ]);
         unset(self::$nodeCache[$fieldId]);
         return $id;
     }
@@ -516,7 +509,7 @@ final class MenuOptions
         if (!self::tableExists('items') || self::columnExists('items', 'custom_field_' . $fieldId)) {
             return;
         }
-        Database::query('ALTER TABLE items ADD ' . Database::escapeIdentifier('custom_field_' . $fieldId) . ' TEXT');
+        Database::run('ALTER TABLE items ADD ' . Database::escapeIdentifier('custom_field_' . $fieldId) . ' TEXT');
     }
 
     private static function columnExists(string $table, string $column): bool
@@ -524,10 +517,7 @@ final class MenuOptions
         if (!self::tableExists($table)) {
             return false;
         }
-        $existing = Database::buildArray(
-            "SELECT name FROM pragma_table_info('" . Database::escape($table) . "') WHERE name = '" . Database::escape($column) . "'"
-        );
-        return $existing !== [];
+        return Database::columnExists($table, $column);
     }
 
     private static function loadLinks(): void
@@ -535,7 +525,7 @@ final class MenuOptions
         self::$legacyChild = [];
         self::$childOf = [];
         self::$names = [];
-        $rows = Database::buildArray(Database::sqlSelect('custom_fields', ['custom_field_id', 'custom_field_name', 'sub_menu'], ''));
+        $rows = Database::select('custom_fields', ['custom_field_id', 'custom_field_name', 'sub_menu'], '');
         foreach ($rows as $row) {
             $id = (int)$row['custom_field_id'];
             self::$names[$id] = (string)$row['custom_field_name'];
@@ -645,7 +635,7 @@ final class MenuOptions
     private static function indexed(int $fieldId): array
     {
         if (!isset(self::$nodeCache[$fieldId])) {
-            $rows = Database::buildArray(
+            $rows = Database::rows(
                 "SELECT menu_value_id, custom_field_id, menu_value, parent_menu_value_id FROM custom_field_menu_values WHERE custom_field_id = "
                 . $fieldId . " ORDER BY menu_value_id ASC"
             );
@@ -734,22 +724,18 @@ final class MenuOptions
             return;
         }
         $column = 'custom_field_' . $fieldId;
-        $existing = Database::buildArray("SELECT name FROM pragma_table_info('items') WHERE name = '" . $column . "'");
-        if ($existing === []) {
+        if (!Database::columnExists('items', $column)) {
             return;
         }
-        Database::query(Database::sqlUpdate(
+        Database::update(
             'items',
             [$column => $new],
             "WHERE " . $column . " = '" . Database::escape($old) . "'"
-        ));
+        );
     }
 
     private static function tableExists(string $name): bool
     {
-        $row = Database::firstResult(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '" . Database::escape($name) . "'"
-        );
-        return $row !== null;
+        return Database::tableExists($name);
     }
 }

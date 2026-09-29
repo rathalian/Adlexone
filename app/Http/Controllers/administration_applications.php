@@ -382,7 +382,7 @@ function itemTypeSelect(string $selected): string
 {
     $values = [''];
     $labels = ['All item types'];
-    $rows = Database::buildArray(Database::sqlSelect('item_types', ['item_type_id', 'item_type_name'], 'ORDER BY item_type_name ASC'));
+    $rows = Database::select('item_types', ['item_type_id', 'item_type_name'], 'ORDER BY item_type_name ASC');
     foreach ($rows as $row) {
         $values[] = (string) $row['item_type_id'];
         $labels[] = htmlspecialchars((string) $row['item_type_name'], ENT_QUOTES, 'UTF-8');
@@ -394,9 +394,7 @@ function savedSearchSelect(string $selected, string $scope): string
 {
     $values = [''];
     $labels = ['Choose a saved search'];
-    $rows = Database::buildArray(
-        "SELECT search_id, search_name, application FROM saved_searches ORDER BY search_name ASC"
-    );
+    $rows = Database::select('saved_searches', ['search_id', 'search_name', 'application'], '', [], 'search_name ASC');
     foreach ($rows as $row) {
         $values[] = (string) $row['search_id'];
         $name = (string) $row['search_name'];

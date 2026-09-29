@@ -42,9 +42,7 @@ function showSetupAddTime($actionID = '')
 		// Get action information from database
 		$columnArray = array('*');
 		$condition = "WHERE action_id = '" . $actionID . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$fieldValues = Database::fetchArray($result);
+		$fieldValues = Database::first('action_definitions', $columnArray, $condition);
 		$action = NOT_BASE_URL . '&option=update_action&action_package=Time_Manager&descriptor_name=AddTime&action_id=' . $actionID;
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Time_Manager&descriptor_name=AddTime';
@@ -52,9 +50,7 @@ function showSetupAddTime($actionID = '')
 	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
 	$columnArray = array('custom_field_id','custom_field_name');
 	$condition = "WHERE field_type LIKE 'worker%'";
-	$sql = Database::sqlSelect('custom_fields', $columnArray,$condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	while ($row = Database::fetchArray($result)){
+	foreach (Database::select('custom_fields', $columnArray,$condition) as $row) {
 		$idArray[] = $row['custom_field_id'];
 		$nameArray[] = $row['custom_field_name'];
 	}
@@ -84,9 +80,8 @@ function addUpdateAddTime($actionID = '', $add = false)
 		// Check for duplicate name
 		$columnArray = array('action_name');
 		$condition = "WHERE action_name = '" . $_POST['action_name'] . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		if (Database::numRows($result) > 0) {
+		$result = Database::select('action_definitions', $columnArray, $condition);
+		if (count($result) > 0) {
 			$html = ACT_PAK_15;
 			$html = RenderViews::showResponse(ACT_PAK_15,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
 			define('HEADING', TXT_352);
@@ -102,8 +97,7 @@ function addUpdateAddTime($actionID = '', $add = false)
 			$columnArray['action_parameters'] = $_POST['custom_field_id'];
 			$columnArray['package_file'] = 'Time_Manager.actions.php';
 			$columnArray['package_function'] = 'AddTime';
-			$sql = Database::sqlInsert('action_definitions', $columnArray);
-			Database::query($sql, DSN, SET_SHOW_SQL);
+			Database::insert('action_definitions', $columnArray);
 			$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_301,RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 			define('HEADING', TXT_352);
 			define('BODY_CONTENT', $html);
@@ -119,8 +113,7 @@ function addUpdateAddTime($actionID = '', $add = false)
 		$columnArray['package_file'] = 'Time_Manager.actions.php';
 		$columnArray['package_function'] = 'AddTime';
 		$condition = "WHERE action_id ='$actionID'";
-		$sql = Database::sqlUpdate('action_definitions', $columnArray, $condition);
-		Database::query($sql, DSN, SET_SHOW_SQL);
+		Database::update('action_definitions', $columnArray, $condition);
 		$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_164, RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 		define('HEADING', TXT_352);
 		define('BODY_CONTENT', $html);
@@ -141,8 +134,7 @@ function executeAddTime($itemID, $dataArray, $preCondition, $triggerCondition, $
 	$condition = "WHERE item_id = '".$itemID."'";
 	$columnArray['sequence'] = Database::newID('timemanager_time_table', 'sequence',$condition);
 	$columnArray['minutes'] = intval($dataArray['worker_field_'.$actionParameters]);
-	$sql = Database::sqlInsert('timemanager_time_table', $columnArray);
-	Database::query($sql, DSN, SET_SHOW_SQL);
+	Database::insert('timemanager_time_table', $columnArray);
 	}
 	return true;
 }

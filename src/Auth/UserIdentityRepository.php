@@ -36,34 +36,22 @@ final class UserIdentityRepository
         $subject = self::subjectFromClaims($claims);
         $email = strtolower(trim((string) ($claims['email'] ?? $claims['preferred_username'] ?? '')));
 
-        $identity = Database::firstResultParams(
-            'SELECT * FROM user_identities WHERE provider = ? AND subject = ?',
-            [$connection->id, $subject]
-        );
+        $identity = Database::first('user_identities', '*', 'provider = ? AND subject = ?', [$connection->id, $subject]);
 
         if ($identity !== null) {
-            $user = Database::firstResultParams(
-                'SELECT * FROM users WHERE user_id = ?',
-                [(int) $identity['user_id']]
-            );
+            $user = Database::first('users', '*', 'user_id = ?', [(int) $identity['user_id']]);
             if ($user === null) {
                 throw new AuthException('The linked Adlexone account no longer exists.');
             }
             if ($email !== '') {
-                Database::queryParams(
-                    'UPDATE user_identities SET email = ? WHERE id = ?',
-                    [$email, (int) $identity['id']]
-                );
+                Database::update('user_identities', ['email' => $email], 'id = ?', [(int) $identity['id']]);
             }
             return $user;
         }
 
         $user = null;
         if ($email !== '') {
-            $user = Database::firstResultParams(
-                'SELECT * FROM users WHERE lower(email) = ?',
-                [$email]
-            );
+            $user = Database::first('users', '*', 'lower(email) = ?', [$email]);
         }
 
         if ($user === null) {
@@ -73,10 +61,13 @@ final class UserIdentityRepository
             $user = self::provisionUser($claims, $email);
         }
 
-        Database::queryParams(
-            'INSERT INTO user_identities (user_id, provider, subject, email, created_at) VALUES (?, ?, ?, ?, ?)',
-            [(int) $user['user_id'], $connection->id, $subject, $email !== '' ? $email : null, time()]
-        );
+        Database::insert('user_identities', [
+            'user_id' => (int) $user['user_id'],
+            'provider' => $connection->id,
+            'subject' => $subject,
+            'email' => $email !== '' ? $email : null,
+            'created_at' => time(),
+        ]);
 
         return $user;
     }
@@ -136,16 +127,16 @@ final class UserIdentityRepository
             'lastactive' => 'active',
         ];
 
-        Database::query(Database::sqlInsert('users', $user));
+        Database::insert('users', $user);
 
         if (defined('USER_REG_ACTION') && USER_REG_ACTION !== '' && USER_REG_ACTION !== 'None') {
-            Database::query(Database::sqlInsert('group_members', [
+            Database::insert('group_members', [
                 'user_id' => $userId,
                 'groups' => USER_REG_ACTION,
-            ]));
+            ]);
         }
 
-        $created = Database::firstResultParams('SELECT * FROM users WHERE user_id = ?', [$userId]);
+        $created = Database::first('users', '*', 'user_id = ?', [$userId]);
         if ($created === null) {
             throw new AuthException('Failed to create local account.');
         }
@@ -157,7 +148,7 @@ final class UserIdentityRepository
         $base = preg_replace('/[^A-Za-z0-9._-]/', '', $base) ?: 'user';
         $candidate = $base;
         $i = 1;
-        while (Database::firstResultParams('SELECT user_id FROM users WHERE user_name = ?', [$candidate]) !== null) {
+        while (Database::first('users', ['user_id'], 'user_name = ?', [$candidate]) !== null) {
             $candidate = $base . $i;
             $i++;
         }

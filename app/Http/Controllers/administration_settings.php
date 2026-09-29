@@ -94,19 +94,16 @@ function showAdlexoneSettings(): void
     $fields[TXT_297] = RenderViews::buildSelectDropdown('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION, 'form-control');
     // Get all item types
     $columnArray = array('item_type_id', 'item_type_name');
-    $sql = Database::sqlSelect('item_types', $columnArray);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    while ($row = Database::fetchArray($result)) {
+    foreach (Database::select('item_types', $columnArray) as $row) {
         $valueArray[] = $row['item_type_id'];
         $displayArray[] = $row['item_type_name'];
     }
     $fields[TXT_229] = RenderViews::buildSelectDropdown('SET_DEFAULT_ITEM_TYPE', $valueArray, $displayArray, SET_DEFAULT_ITEM_TYPE);
     $columnArray = array('group_id', 'group_name');
-    $sql = Database::sqlSelect('groups', $columnArray);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('groups', $columnArray);
     $listValuesArray[] = "None";
     $listDisplayValuesArray[] = "None";
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $listValuesArray[] = $row['group_id'];
         $listDisplayValuesArray[] = $row['group_name'];
     }

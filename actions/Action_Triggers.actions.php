@@ -23,19 +23,16 @@ function showSetupTriggerActionCustomField($actionID = '')
 		// Get action information from database
 		$columnArray = array('*');
 		$condition = "WHERE action_id = '" . $actionID . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$fieldValues = Database::fetchArray($result);
+		$fieldValues = Database::first('action_definitions', $columnArray, $condition);
 		$action = NOT_BASE_URL . '&option=update_action&action_package=Action_Triggers&descriptor_name=TriggerActionCustomField&action_id=' . $actionID;
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Action_Triggers&descriptor_name=TriggerActionCustomField';
 	}
 	// Get custom field buildSelectDropdown
 	$columnArray = array('custom_field_id', 'custom_field_name', 'field_type');
-	$sql = Database::sqlSelect('custom_fields', $columnArray);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
+	$result = Database::select('custom_fields', $columnArray);
 	$i = 0;
-	while ($row = Database::fetchArray($result)) {
+	foreach ($result as $row) {
 		if ($row['field_type'] == 'workerField'){
 			$customFieldIDArray[$i] = 'worker_field_' . $row['custom_field_id'];
 		}elseif ($row['field_type'] == 'workerFieldMenu'){
@@ -50,10 +47,8 @@ function showSetupTriggerActionCustomField($actionID = '')
 	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
 	// Get list of existing actions defined
 	$columnArray = array('action_id', 'action_name');
-	$condition = "WHERE package_function <> 'TriggerActionCustomField' AND package_function <> 'TriggerActionSystemField'";//exclude these action types as they are this action package	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
-	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	while ($row = Database::fetchArray($result)) {
+	$condition = "WHERE package_function <> 'TriggerActionCustomField' AND package_function <> 'TriggerActionSystemField'";//exclude these action types as they are this action package
+	foreach (Database::select('action_definitions', $columnArray,$condition) as $row) {
 		$actionIDArray[] = $row['action_id'];
 		$actionNameArray[] = $row['action_name'];
 	}
@@ -105,9 +100,8 @@ function addUpdateTriggerActionCustomField($actionID = '', $add = false)
 		// Check for duplicate name
 		$columnArray = array('action_name');
 		$condition = "WHERE action_name = '" . $_POST['action_name'] . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		if (Database::numRows($result) > 0) {
+		$result = Database::select('action_definitions', $columnArray, $condition);
+		if (count($result) > 0) {
 			$html = ACT_PAK_15;
 			$html = RenderViews::showResponse(ACT_PAK_15,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
 			define('HEADING', TXT_352);
@@ -125,8 +119,7 @@ function addUpdateTriggerActionCustomField($actionID = '', $add = false)
 			$columnArray['action_data'] = $_POST['action_data'];
 			$columnArray['package_file'] = 'Action_Triggers.actions.php';
 			$columnArray['package_function'] = 'TriggerActionCustomField';
-			$sql = Database::sqlInsert('action_definitions', $columnArray);
-			Database::query($sql, DSN, SET_SHOW_SQL);
+			Database::insert('action_definitions', $columnArray);
 			$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_301,RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 			define('HEADING', TXT_352);
 			define('BODY_CONTENT', $html);
@@ -142,8 +135,7 @@ function addUpdateTriggerActionCustomField($actionID = '', $add = false)
 		$columnArray['package_file'] = 'Action_Triggers.actions.php';
 		$columnArray['package_function'] = 'TriggerActionCustomField';
 		$condition = "WHERE action_id ='$actionID'";
-		$sql = Database::sqlUpdate('action_definitions', $columnArray, $condition);
-		Database::query($sql, DSN, SET_SHOW_SQL);
+		Database::update('action_definitions', $columnArray, $condition);
 		$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_164, RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 		define('HEADING', TXT_352);
 		define('BODY_CONTENT', $html);
@@ -194,9 +186,8 @@ function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $tr
 					$columnArray = array ('item_id');
 					// Get existing item data and evaluate pre condition
 					$condition = "WHERE ($preConditionArray[0] $preConditionArray[1] '$preConditionArray[2]') AND item_id='$itemID'";
-					$sql = Database::sqlSelect('items', $columnArray, $condition);
-					$result = Database::query($sql, DSN, SET_SHOW_SQL);
-					$preCheck = (Database::numRows($result) > 0) ? true : false;
+					$result = Database::select('items', $columnArray, $condition);
+					$preCheck = (count($result) > 0) ? true : false;
 					// We evaluate trigger condition using == and != and require the evaluation result
 					$postCheck = ($triggerConditionArray[1] == '==') ? @$dataArray[$triggerConditionArray[0]] == $triggerConditionArray[2] : @$dataArray[$triggerConditionArray[0]] != $triggerConditionArray[2];
 					// Both must evaluate as true or we return false
@@ -206,9 +197,7 @@ function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $tr
 					$columnArray = array ($triggerConditionArray[0]);
 					// Get existing item data and evaluate pre condition
 					$condition = "WHERE item_id='$itemID'";
-					$sql = Database::sqlSelect('items', $columnArray, $condition);
-					$result = Database::query($sql, DSN, SET_SHOW_SQL);
-					$row = Database::fetchArray($result);
+					$row = Database::first('items', $columnArray, $condition);
 					$conditionTrue = (@$dataArray[$triggerConditionArray[0]] != $row[$triggerConditionArray[0]]) ? true : false;
 					break;
 				case 'update_item_log_entry':
@@ -236,9 +225,7 @@ function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $tr
 		$columnArray = array ('*');
 		// Get all action information from actions triggered by this action
 		$condition = "WHERE action_id = '$actionData' AND enabled = 'Yes'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		while ($row = Database::fetchArray($result)) {
+		foreach (Database::select('action_definitions', $columnArray, $condition) as $row) {
 			// Execute actions
 			require_once 'actions/' . $row['package_file'];
 			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
@@ -263,9 +250,7 @@ function showSetupTriggerActionSystemField($actionID = '')
 		// Get action information from database
 		$columnArray = array('*');
 		$condition = "WHERE action_id = '" . $actionID . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		$fieldValues = Database::fetchArray($result);
+		$fieldValues = Database::first('action_definitions', $columnArray, $condition);
 		$action = NOT_BASE_URL . '&option=update_action&action_package=Action_Triggers&descriptor_name=TriggerActionSystemField&action_id=' . $actionID;
 	} else {
 		$action = NOT_BASE_URL . '&option=add_action&action_package=Action_Triggers&descriptor_name=TriggerActionSystemField';
@@ -273,10 +258,8 @@ function showSetupTriggerActionSystemField($actionID = '')
 	$actionField = Actions::startNewAction($actionID, @$fieldValues,true,true);
 	// Get list of existing actions defined
 	$columnArray = array('action_id', 'action_name');
-	$condition = "WHERE package_function <> 'TriggerActionCustomField' AND package_function <> 'TriggerActionSystemField'";//exclude these action types as they are this action package	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
-	$sql = Database::sqlSelect('action_definitions', $columnArray,$condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	while ($row = Database::fetchArray($result)) {
+	$condition = "WHERE package_function <> 'TriggerActionCustomField' AND package_function <> 'TriggerActionSystemField'";//exclude these action types as they are this action package
+	foreach (Database::select('action_definitions', $columnArray,$condition) as $row) {
 		$actionIDArray[] = $row['action_id'];
 		$actionNameArray[] = $row['action_name'];
 	}
@@ -316,9 +299,8 @@ function addUpdateTriggerActionSystemField($actionID = '', $add = false)
 		// Check for duplicate name
 		$columnArray = array('action_name');
 		$condition = "WHERE action_name = '" . $_POST['action_name'] . "'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		if (Database::numRows($result) > 0) {
+		$result = Database::select('action_definitions', $columnArray, $condition);
+		if (count($result) > 0) {
 			$html = ACT_PAK_15;
 			$html = RenderViews::showResponse(ACT_PAK_15,RenderViews::url('javascript: history.go(-1)', ACT_PAK_42, 'URL'));
 			define('HEADING', TXT_352);
@@ -335,8 +317,7 @@ function addUpdateTriggerActionSystemField($actionID = '', $add = false)
 			$columnArray['action_type'] = 'update_item';
 			$columnArray['package_file'] = 'Action_Triggers.actions.php';
 			$columnArray['package_function'] = 'TriggerActionSystemField';
-			$sql = Database::sqlInsert('action_definitions', $columnArray);
-			Database::query($sql, DSN, SET_SHOW_SQL);
+			Database::insert('action_definitions', $columnArray);
 			$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_301,RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 			define('HEADING', TXT_352);
 			define('BODY_CONTENT', $html);
@@ -351,8 +332,7 @@ function addUpdateTriggerActionSystemField($actionID = '', $add = false)
 		$columnArray['package_file'] = 'Action_Triggers.actions.php';
 		$columnArray['package_function'] = 'TriggerActionSystemField';
 		$condition = "WHERE action_id ='$actionID'";
-		$sql = Database::sqlUpdate('action_definitions', $columnArray, $condition);
-		Database::query($sql, DSN, SET_SHOW_SQL);
+		Database::update('action_definitions', $columnArray, $condition);
 		$html = RenderViews::showResponse($_POST['action_name'] . ' ' . TXT_164, RenderViews::url(NOT_BASE_URL . '&option=&option=show_defined_actions', ACT_PAK_21, 'URL'));
 		define('HEADING', TXT_352);
 		define('BODY_CONTENT', $html);
@@ -377,9 +357,7 @@ function executeTriggerActionSystemField($itemID, $dataArray, $preCondition, $tr
 	// Get existing item information - the update
 	$columnArray = array('item_title','creator_security','user_security','group_security');
 	$condition = "WHERE item_id = '$itemID'";
-	$sql = Database::sqlSelect('items', $columnArray, $condition);
-	$result = Database::query($sql, DSN, SET_SHOW_SQL);
-	$row = Database::fetchArray($result);
+	$row = Database::first('items', $columnArray, $condition);
 	switch ($preCondition) {
 		case 'item_title':
 			if ($row['item_title'] != $dataArray['item_title']){
@@ -407,9 +385,7 @@ function executeTriggerActionSystemField($itemID, $dataArray, $preCondition, $tr
 		$columnArray = array ('*');
 		// Get all action information from actions triggered by this action
 		$condition = "WHERE action_id = '$actionData'";
-		$sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
-		while ($row = Database::fetchArray($result)) {
+		foreach (Database::select('action_definitions', $columnArray, $condition) as $row) {
 			// Execute actions
 			require_once 'actions/' . $row['package_file'];
 			// This functions name is set from the package_function column value and returns a boolean value if the condition is met

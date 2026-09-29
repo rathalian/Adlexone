@@ -78,10 +78,7 @@ function itemTitles($ids)
         $whereStatement = substr($whereStatement, 0, -4);
     }
 
-    $sql = Database::sqlSelect('items', array('item_id', 'item_title'), $whereStatement); // Grab data from database
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
-    return $row;
+    return Database::first('items', ['item_id', 'item_title'], $whereStatement);
 }
 
 function kbLinkCard(string $title, string $toggleId, array $urls, string $emptyText, string $moreLabel): string
@@ -116,8 +113,7 @@ function showSubjects()
 
     if (defined('KNOWLEDGEBASE_SET_SUBJECT')) {
         $subjectsArray = getSubjectTitles(KNOWLEDGEBASE_SET_SUBJECT);
-        $sql = Database::sqlSelect('custom_fields', array('field_reference'), 'WHERE custom_field_id = ' . KNOWLEDGEBASE_SET_SUBJECT);
-        $fieldRow = Database::firstResult($sql, DSN);
+        $fieldRow = Database::first('custom_fields', ['field_reference'], 'custom_field_id = ?', [KNOWLEDGEBASE_SET_SUBJECT]);
         $fieldReference = is_array($fieldRow) ? (string)($fieldRow['field_reference'] ?? '') : (string)$fieldRow;
         $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
@@ -195,9 +191,7 @@ function mostPopularFrame()
 {
     $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-    $sql = Database::sqlSelect('system_log', array('item_id'), 'WHERE event_id = "view_item" ORDER BY event_counter LIMIT 1'); // Grab data from database
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::firstResult($result);
+    $row = Database::first('system_log', ['item_id'], 'event_id = ?', ['view_item'], 'event_counter');
     $titleArray = itemTitles($row);
     $html = APP_KB_TXT_62 . ": " . RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&event_id=view_item&item_id=' . $row['item_id'] . $logEntry . $attachments, $titleArray['item_title'], 'URL');
     return $html;
@@ -207,8 +201,7 @@ function showFeaturedArticles()
 {
     $urls = [];
     if (defined('KNOWLEDGEBASE_SET_FEATURES')) {
-        $sql = Database::sqlSelect('custom_fields', array('field_reference'), 'WHERE custom_field_id = ' . KNOWLEDGEBASE_SET_FEATURES);
-        $row = Database::firstResult($sql, DSN);
+        $row = Database::first('custom_fields', ['field_reference'], 'custom_field_id = ?', [KNOWLEDGEBASE_SET_FEATURES]);
         $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
         $subjectArticles = [];
@@ -229,9 +222,9 @@ function showFeaturedArticles()
 function showSavedArticles()
 {
     $sql = "SELECT * FROM saved_searches WHERE (user ='" . $_SESSION['access_user_id'] . "' OR user = 'all' or user = 'system') AND application = 'app_oneorzeroknowledgebase_main' ORDER BY search_name ASC";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $result = Database::rows($sql);
     $urls = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         if (!isset($row['search_name'])) {
             continue;
         }
@@ -249,10 +242,9 @@ function showNewestArticles()
 {
     $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-    $sql = Database::sqlSelect('items', array('item_id', 'item_title'), 'WHERE item_type_id = ' . KNOWLEDGEBASE_SET_KB_ITEM_TYPE . ' ORDER BY create_date DESC LIMIT 10');
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('items', array('item_id', 'item_title'), 'WHERE item_type_id = ' . KNOWLEDGEBASE_SET_KB_ITEM_TYPE . ' ORDER BY create_date DESC LIMIT 10');
     $urls = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $urls[] = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&event_id=view_item&item_id=' . $row['item_id'] . $logEntry . $attachments, (string)$row['item_title'], 'URL');
     }
 
@@ -263,10 +255,9 @@ function showTopTen()
 {
     $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-    $sql = Database::sqlSelect('system_log', array('item_id'), 'WHERE event_id = "view_item" ORDER BY event_counter DESC LIMIT 10');
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('system_log', array('item_id'), 'WHERE event_id = "view_item" ORDER BY event_counter DESC LIMIT 10');
     $urls = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $itemTitle = itemTitles($row['item_id']);
         $urls[] = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&event_id=view_item&item_id=' . $row['item_id'] . $logEntry . $attachments, (string)($itemTitle['item_title'] ?? ''), 'URL');
     }
@@ -277,11 +268,9 @@ function showTopTen()
 function getSubjectTitles($passedID)
 {
 
-    $sql = Database::sqlSelect('custom_field_menu_values', array('menu_value'), 'WHERE custom_field_id = ' . $passedID); // Grab data from database
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $subjectArray = array();
-    while ($row = Database::fetchArray($result)) {
-        $subjectArray[] = $row[0];
+    $subjectArray = [];
+    foreach (Database::select('custom_field_menu_values', ['menu_value'], 'custom_field_id = ?', [$passedID]) as $row) {
+        $subjectArray[] = $row['menu_value'];
     }
     return $subjectArray;
 }
@@ -289,11 +278,10 @@ function getSubjectTitles($passedID)
 function getSubjectArticles($subjectID, $subjectFieldNbr, $passedID)
 {
 
-    $sql = Database::sqlSelect('items', 'item_id', 'WHERE item_type_id = ' . $passedID . ' AND custom_field_' . $subjectFieldNbr . ' = "' . $subjectID . '"'); // Grab data from database
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $subjectArticlesArray = array();
-    while ($row = Database::fetchArray($result)) {
-        $subjectArticlesArray[] = $row[0];
+    $subjectArticlesArray = [];
+    $column = 'custom_field_' . (int) $subjectFieldNbr;
+    foreach (Database::select('items', ['item_id'], 'item_type_id = ? AND ' . $column . ' = ?', [$passedID, $subjectID]) as $row) {
+        $subjectArticlesArray[] = $row['item_id'];
     }
     return $subjectArticlesArray;
 }
@@ -302,22 +290,20 @@ function showKnowledgebaseSettings()
 {
     // Get Knowledge Hub settings from file
     $settings = @parse_ini_file(SET_WRITEABLE_DIRECTORY . 'applications/knowledgemanager/configuration/knowledgebase_settings.php');
-    $sql = Database::sqlSelect('item_types',  ['item_type_id', 'item_type_name']);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('item_types',  ['item_type_id', 'item_type_name']);
     $listValues = [];
     $listDisplayValues = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $listValues[] = $row['item_type_id'];
         $listDisplayValues[] = $row['item_type_name'];
     }
 
 $columnArray = ['custom_field_id', 'custom_field_name'];
-    $sql = Database::sqlSelect('custom_fields', $columnArray, "ORDER BY custom_field_name ASC");
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select('custom_fields', $columnArray, "ORDER BY custom_field_name ASC");
 
     $subjectValues = [];
     $subjectDisplayValues = [];
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $subjectValues[] = $row['custom_field_id'];
         $subjectDisplayValues[] = $row['custom_field_name'];
     }

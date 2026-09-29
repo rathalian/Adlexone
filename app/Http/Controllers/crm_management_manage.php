@@ -45,7 +45,7 @@ function showUser($userID = '', $itemID = ''): void
 		return;
 	}
 
-	$fieldValues = Database::firstResultParams('SELECT * FROM users WHERE user_id = ?', [$userID]);
+	$fieldValues = Database::first('users', '*', 'user_id = ?', [$userID]);
 	if ($fieldValues === null) {
 		RenderViews::buildResponse(TXT_620, $itemURL);
 		return;

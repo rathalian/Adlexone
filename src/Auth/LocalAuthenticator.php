@@ -17,10 +17,7 @@ final class LocalAuthenticator
             throw new AuthException(defined('TXT_219') ? TXT_219 : 'Invalid username or password.');
         }
 
-        $user = Database::firstResultParams(
-            'SELECT * FROM users WHERE user_name = ?',
-            [$username]
-        );
+        $user = Database::first('users', '*', 'user_name = ?', [$username]);
 
         if ($user === null || !self::passwordMatches((string) ($user['password'] ?? ''), $password, (int) $user['user_id'])) {
             throw new AuthException(defined('TXT_219') ? TXT_219 : 'Invalid username or password.');
@@ -49,9 +46,6 @@ final class LocalAuthenticator
 
     private static function storeHash(int $userId, string $hash): void
     {
-        Database::queryParams(
-            'UPDATE users SET password = ? WHERE user_id = ?',
-            [$hash, $userId]
-        );
+        Database::update('users', ['password' => $hash], 'user_id = ?', [$userId]);
     }
 }

@@ -60,9 +60,7 @@ function showSetupSendEmail($actionID = ''): void
         // Retrieve action information from the database
         $columnArray = array('*');
         $condition = "WHERE action_id = '" . $actionID . "'";
-        $sql = Database::sqlSelect('action_definitions', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $fieldValues = Database::fetchArray($result);
+        $fieldValues = Database::first('action_definitions', $columnArray, $condition);
         $action = NOT_BASE_URL . '&option=update_action&action_package=Email_Notifications&descriptor_name=SendEmail&action_id=' . $actionID;
     } else {
         // Set default values for a new action
@@ -96,10 +94,10 @@ function showSetupSendEmail($actionID = ''): void
     $actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 
     $sql = "SHOW COLUMNS FROM items";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+        $result = Database::rows($sql);
     $excludeArray = array('create_date', 'core_log_updated', 'item_type_id', 'creator_security', 'user_security', 'group_security');
     $dynamicValues = 'LOG_ENTRY, ITEM_CREATOR, ITEM_OWNER';
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         if (!in_array($row[0], $excludeArray)) {
             @$dynamicValues .= ', ' . strtoupper($row[0]);
         }
@@ -203,8 +201,8 @@ function executeSendEmail($itemID, $dataArray, $preCondition, $triggerCondition,
  */
 function getUserEmail($userID) {
     $sql = "SELECT email FROM users WHERE user_id = '$userID'";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+        $result = Database::rows($sql);
+    $row = $result[0] ?? null;
     return $row['email'] ?? '';
 }
 
@@ -217,8 +215,8 @@ function getUserEmail($userID) {
 function getUserName($userID)
 {
     $sql = "SELECT user_name FROM users WHERE user_id = '$userID'";
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    $row = Database::fetchArray($result);
+        $result = Database::rows($sql);
+    $row = $result[0] ?? null;
     return $row['user_name'] ?? '';
 }
 

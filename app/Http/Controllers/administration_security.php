@@ -68,11 +68,7 @@ function showSecurityOptions(): void
 function showUser($userID = '', $values = [], $adminEdit = true)
 {
 
-        $fieldValues = $userID === '' ? $values : (Database::fetchArray(Database::query(
-            Database::sqlSelect('users', ['*'], "WHERE user_id = '$userID'"),
-            DSN,
-            SET_SHOW_SQL
-        )) ?? []);
+        $fieldValues = $userID === '' ? $values : (Database::first('users', '*', 'user_id = ?', [$userID]) ?? []);
 
     $option = $userID === '' ? 'add_user' : 'update_user';
 
@@ -240,9 +236,7 @@ function showGroup($groupID = '', $values = '')
     } else {
         $columnArray = array('group_id', 'group_name', 'description', 'role');
         $condition = "WHERE group_id = '$groupID'";
-        $sql = Database::sqlSelect('groups', $columnArray, $condition);
-        $result = Database::query($sql, DSN, SET_SHOW_SQL);
-        $fieldValues = Database::fetchArray($result);
+        $fieldValues = Database::first('groups', $columnArray, $condition);
         $action = SEC_BASE_URL . '&option=update_group';
         $selectedPermissions = \Adlexone\Auth\Access::permissionsForGroup((int) $groupID);
     }
@@ -301,7 +295,7 @@ function buildGroupPermissionsField(array $selected): string
 function showUsers(): void
 {
     $rows = [];
-    foreach (Database::buildArray(Database::sqlSelect('users', '*', 'ORDER BY last_name ASC, first_name ASC, user_name ASC')) as $row) {
+    foreach (Database::select('users', '*', 'ORDER BY last_name ASC, first_name ASC, user_name ASC') as $row) {
         $rows[] = userRecord($row);
     }
 
@@ -317,7 +311,7 @@ function showUsers(): void
 function showGroups(): void
 {
     $rows = [];
-    foreach (Database::buildArray(Database::sqlSelect('groups', '*', 'ORDER BY group_name ASC')) as $row) {
+    foreach (Database::select('groups', '*', 'ORDER BY group_name ASC') as $row) {
         $rows[] = groupRecord($row);
     }
 
@@ -485,9 +479,9 @@ function recordMeta(array $parts): string
                 // Check for duplicate user name
                 $userName = $_POST['user_name'] ?? '';
                 $sql = "SELECT user_name FROM users WHERE user_name = '$userName'";
-                $result = Database::query($sql, DSN, SET_SHOW_SQL);
+                                $result = Database::rows($sql);
 
-                if (Database::numRows($result) == 0) {
+                if (count($result) == 0) {
                     // Prepare user data
                     $userId = Database::newID('users', 'user_id');
                     $password = md5($_POST['password_ftype'] ?? ''); // Consider password_hash for better security
@@ -514,8 +508,7 @@ function recordMeta(array $parts): string
                     unset($insertData['password_confirm'], $insertData['password_ftype'], $insertData['submit_button'], $insertData['reset'], $insertData['user_id'], $insertData['home_controller'], $insertData['show_hide']);
 
                     // Insert user data into the database
-                    $sql = Database::sqlInsert('users', $insertData);
-                    Database::query($sql, DSN, SET_SHOW_SQL);
+                    Database::insert('users', $insertData);
 
                     // Show group membership for the newly added user
                     showGroupMembership($userId);
@@ -555,18 +548,15 @@ function recordMeta(array $parts): string
             }
 
             // Fetch the current settings for the user from the database
-            $row = Database::fetchArray(Database::query(
-                Database::sqlSelect('users', ['settings'], $condition),
-                DSN,
-                SET_SHOW_SQL
-            ))['settings'] ?? '';
+            $row = Database::first('users', ['settings'], 'user_id = ?', [$userID]);
+            $currentSettings = (string) ($row['settings'] ?? '');
 
             // Update the 'show_hide' setting based on the POST data
             $showHide = ($_POST['show_hide'] ?? '') === "Yes" ? "{SHOW-HIDE=TRUE}" : "{SHOW-HIDE=FALSE}";
             $controllerFileArray['settings'] = str_replace(
                 ["{SHOW-HIDE=TRUE}", "{SHOW-HIDE=FALSE}"],
                 $showHide,
-                $row
+                $currentSettings
             );
 
             // Remove the 'show_hide' field from the POST data
@@ -585,7 +575,7 @@ function recordMeta(array $parts): string
             $columnArray = array_merge($password, $_POST, $controllerFileArray, $controllerNameArray);
 
             // Execute the update query in the database
-            Database::query(Database::sqlUpdate('users', $columnArray, $condition), DSN, SET_SHOW_SQL);
+            Database::update('users', $columnArray, $condition);
 
             // Render a success message after the update
             RenderViews::buildResponse(
@@ -603,9 +593,8 @@ function addGroup()
     // Check for duplicate and error handling
     $columnArray = array('group_name');
     $condition = "WHERE group_name = '" . $_POST['group_name'] . "'";
-    $sql = Database::sqlSelect('groups', $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
-    if (Database::numRows($result) == 0) {
+    $result = Database::select('groups', $columnArray, $condition);
+    if (count($result) == 0) {
         $permissions = $_POST['permissions'] ?? [];
         // Remove unwanted POST variables
         unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id'], $_POST['permissions']);
@@ -614,8 +603,7 @@ function addGroup()
         // Build insert array
         $columnArray = array_merge($array, $_POST);
         // Insert form field values into row
-        $sql = Database::sqlInsert('groups', $columnArray);
-        Database::query($sql, DSN, SET_SHOW_SQL);
+        Database::insert('groups', $columnArray);
         \Adlexone\Auth\Access::setGroupPermissions((int) $array['group_id'], is_array($permissions) ? $permissions : []);
         RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
         return;
@@ -638,8 +626,7 @@ function updateGroup($groupID)
     // Set condition
     $condition = "WHERE group_id = '$groupID'";
     // Updates form field values into row
-    $sql = Database::sqlUpdate('groups', $columnArray, $condition);
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::update('groups', $columnArray, $condition);
     \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, is_array($permissions) ? $permissions : []);
     RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
 }
@@ -683,11 +670,11 @@ function updateGroupMembership($userID)
     }
 
     $condition = "WHERE user_id = '" . $userID . "'";
-    Database::query(Database::sqlDelete('group_members', $condition), DSN, SET_SHOW_SQL);
-    Database::query(Database::sqlInsert('group_members', [
+    Database::delete('group_members', $condition);
+    Database::insert('group_members', [
         'user_id' => $userID,
         'groups' => $groups,
-    ]), DSN, SET_SHOW_SQL);
+    ]);
 
     RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
 }
@@ -724,13 +711,12 @@ function showUserGroupResults()
     }
 
     // Execute the SQL query
-    $sql = Database::sqlSelect($table, $columnArray, $condition);
-    $result = Database::query($sql, DSN, SET_SHOW_SQL);
+    $result = Database::select($table, $columnArray, $condition);
 
     $rows = [];
     $isUsers = $table === 'users';
-    if ($result && Database::numRows($result) > 0) {
-        while ($row = Database::fetchArray($result)) {
+    if ($result && count($result) > 0) {
+        foreach ($result as $row) {
             $rows[] = $isUsers ? userRecord($row) : groupRecord($row);
         }
     }
@@ -757,7 +743,7 @@ function showUserGroupResults()
 function deleteGroup($groupID = '')
 {
     $sql = "DELETE FROM groups WHERE group_id='" . $groupID . "'";
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::run($sql);
     \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, []);
     showGroups();
 }
@@ -774,9 +760,9 @@ function deleteUser($userID = '')
 {
 
     $sql = "DELETE FROM users WHERE user_id='" . $userID . "'";
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::run($sql);
     $sql = "DELETE FROM group_members WHERE user_id='" . $userID . "'";
-    Database::query($sql, DSN, SET_SHOW_SQL);
+    Database::run($sql);
     showUsers();
 }
 
@@ -788,20 +774,14 @@ function deleteUser($userID = '')
 function showGroupMembership($userID = '')
 {
     $userID = (int) $userID;
-    $user = Database::firstResultParams(
-        'SELECT user_name FROM users WHERE user_id = ?',
-        [$userID]
-    );
+    $user = Database::first('users', ['user_name'], 'user_id = ?', [$userID]);
     if ($user === null) {
         RenderViews::buildResponse('User not found.', RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
         return;
     }
     $userName = (string) $user['user_name'];
 
-    $member = Database::firstResultParams(
-        'SELECT groups FROM group_members WHERE user_id = ?',
-        [$userID]
-    );
+    $member = Database::first('group_members', ['groups'], 'user_id = ?', [$userID]);
     $groupArray = [];
     if ($member !== null && !empty($member['groups'])) {
         foreach (preg_split('/\}-\{/', (string) $member['groups']) ?: [] as $part) {
@@ -812,13 +792,9 @@ function showGroupMembership($userID = '')
         }
     }
 
-    $result = Database::query(
-        Database::sqlSelect('groups', ['group_id', 'group_name', 'description'], 'ORDER BY group_name ASC'),
-        DSN,
-        SET_SHOW_SQL
-    );
+        $result = Database::select('groups', ['group_id', 'group_name', 'description'], 'ORDER BY group_name ASC');
 
-    if (Database::numRows($result) === 0) {
+    if (count($result) === 0) {
         define('BODY_CONTENT', RenderViews::buildVerticalCards([[
             'title' => TXT_239 . ': ' . $userName,
             'html' => '<p class="form-help">' . htmlspecialchars(TXT_342, ENT_QUOTES, 'UTF-8') . '</p>'
@@ -829,7 +805,7 @@ function showGroupMembership($userID = '')
     }
 
     $groupMembershipHtml = '<div class="group-security-list">';
-    while ($row = Database::fetchArray($result)) {
+    foreach ($result as $row) {
         $groupId = (string) $row['group_id'];
         $checked = in_array($groupId, $groupArray, true) ? $groupId : '';
         $description = trim((string) ($row['description'] ?? ''));

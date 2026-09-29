@@ -37,16 +37,16 @@ class Actions {
 	public static function executeAction($itemID, $requestingAction, $showResponse = true){
 		// Get the action(s) associated with the items
 		$sql = "SELECT item_type_id FROM items WHERE item_id = '" . $itemID . "'";
-		$result = Database::query($sql, DSN, SET_SHOW_SQL);
+				$result = Database::rows($sql);
 		// Get the action package information and execute
 		$i = 0;
-		$rowaction = Database::fetchArray($result);
+		$rowaction = $result[0] ?? null;
 		// We specify the item type id to fetch the valid defintion and to exclude those Actions that are not bound to item type id's such as Actions
 		// triggered from another action
 		// SQL gets all action types like ActionTyps% as we use subset values i.e. update_item has update_item_criteria met etc
 		$sql = "SELECT * FROM action_definitions WHERE (item_type_id = '" . $rowaction['item_type_id'] . "' OR item_type_id = '0') AND (action_type LIKE '" . $requestingAction . "%' OR action_type = 'main_page_content') AND enabled = 'Yes'";
-		$resultactionPackage = Database::query($sql, DSN, SET_SHOW_SQL);
-		while ($rowActionPackage = Database::fetchArray($resultactionPackage)) {
+				$resultactionPackage = Database::rows($sql);
+		foreach ($resultactionPackage as $rowActionPackage) {
 			require_once 'actions/' . $rowActionPackage['package_file'];
 			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
 			$functionName = 'execute' . $rowActionPackage['package_function'];
@@ -93,11 +93,10 @@ class Actions {
 		}
 		if ($showItemTypes) {
 			$columnArray = array('item_type_id', 'item_type_name');
-			$sql = Database::sqlSelect('item_types', $columnArray);
-			$result = Database::query($sql, DSN, SET_SHOW_SQL);
+			$result = Database::select('item_types', $columnArray);
 			$typeIDArray[] = '0';
 			$typeValueArray[] = ACT_PAK_74;
-			while ($row = Database::fetchArray($result)) {
+			foreach ($result as $row) {
 				$typeIDArray[] = $row['item_type_id'];
 				$typeValueArray[] = $row['item_type_name'];
 			}
