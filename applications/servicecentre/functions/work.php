@@ -21,53 +21,13 @@ function showServiceCentreWork(): void
                 ['item_id', 'item_title', 'create_date', 'item_type_id'],
                 'WHERE item_id IN (' . implode(',', $ids) . ') ORDER BY item_id DESC'
             );
-        $typeNames = [];
-        $role = (int) ($_SESSION['access_role_id'] ?? 5);
         foreach ($result as $row) {
             $itemId = (int) $row['item_id'];
-            $title = trim((string) ($row['item_title'] ?? ''));
-            if ($title === '') {
-                $title = (string) TXT_357;
-            }
-            $typeId = (string) ($row['item_type_id'] ?? '');
-            if (!isset($typeNames[$typeId])) {
-                $typeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$typeId]);
-                $typeNames[$typeId] = (string) ($typeRow['item_type_name'] ?? '');
-            }
-            $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId;
-            $actions = [];
-            if ($role <= 4) {
-                $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
-                $actions[] = ['href' => $base . '&item=' . $itemId . '&option=show_attachments', 'label' => TXT_389];
-            }
-            if ($role <= 3) {
-                $actions[] = ['href' => $base . '&item=' . $itemId . '&option=change_security', 'label' => TXT_28];
-            }
-            if ($role <= 5) {
-                $actions[] = [
-                    'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
-                    'label' => TXT_625,
-                    'target' => '_blank',
-                ];
-            }
-            if ($role <= 2) {
-                $actions[] = [
-                    'href' => $base . '&item=' . $itemId . '&option=delete_item',
-                    'label' => TXT_315,
-                    'tone' => 'danger',
-                    'confirm' => TXT_400,
-                ];
-            }
-            $rows[] = [
-                'name' => $title,
-                'href' => $base . '&item=' . $itemId,
-                'meta' => $meta,
-                'cells' => [
-                    'type' => $typeNames[$typeId],
-                    'opened' => date(SET_DATE_FORMAT, (int) ($row['create_date'] ?? 0)),
-                ],
-                'actions' => $actions,
-            ];
+            $rows[] = RenderViews::itemRecord(
+                $row,
+                $base . '&item=' . $itemId,
+                RenderViews::itemActions($itemId, $base)
+            );
         }
     }
 
@@ -76,10 +36,7 @@ function showServiceCentreWork(): void
             'title' => APP_SC_TXT_1,
             'html' => RenderViews::buildRecordList([
                 'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
-                'columns' => [
-                    ['key' => 'type', 'label' => TXT_119],
-                    ['key' => 'opened', 'label' => TXT_103],
-                ],
+                'columns' => RenderViews::itemListColumns(),
                 'searchLabel' => TXT_3,
                 'empty' => TXT_115,
                 'groups' => [['rows' => $rows]],

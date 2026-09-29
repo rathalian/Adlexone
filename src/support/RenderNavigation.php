@@ -460,10 +460,14 @@ final class RenderNavigation
             if (preg_match('/<svg\b.*?<\/svg>/s', $inner, $match) === 1) {
                 $icon = $match[0];
             }
+            $linkLabel = trim((string)($lnk['label'] ?? ''));
+            if ($current !== '' && $linkLabel !== '' && !defined('APPLICATION_NAV_LABEL')) {
+                define('APPLICATION_NAV_LABEL', $linkLabel);
+            }
             $group = self::sectionNavGroup($href) ? ' sectionnav__link--group' : '';
             $html .= '<a class="sectionnav__link' . $group . '" href="' . self::e($href) . '"' . $current . '>'
                 . $icon
-                . '<span class="sectionnav__label">' . self::e(trim((string)($lnk['label'] ?? ''))) . '</span></a>';
+                . '<span class="sectionnav__label">' . self::e($linkLabel) . '</span></a>';
         }
         $html .= '</nav></div>';
 

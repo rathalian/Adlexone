@@ -1761,12 +1761,21 @@ function showAttachments($itemID)
         $rows[] = [
             'name' => str_replace('_', ' ', substr((string)$row['file_name'], 11)),
             'href' => MAN_BASE_URL . '&option=download_attachment&id=' . $row['id'],
-            'meta' => trim((string)$row['file_type'] . ' · ' . ($row['file_size'] / 1000) . ' KB · ' . date(SET_DATE_FORMAT, (int)$row['create_date'])),
+            'cells' => [
+                'type' => (string)$row['file_type'],
+                'size' => (string)round(((int)$row['file_size']) / 1000),
+                'opened' => date(SET_DATE_FORMAT, (int)$row['create_date']),
+            ],
             'actions' => $actions,
         ];
     }
     $list = RenderViews::buildRecordList([
         'column' => TXT_394,
+        'columns' => [
+            ['key' => 'type', 'label' => TXT_395],
+            ['key' => 'size', 'label' => TXT_396],
+            ['key' => 'opened', 'label' => TXT_397],
+        ],
         'empty' => TXT_399,
         'groups' => [['rows' => $rows]],
     ]);

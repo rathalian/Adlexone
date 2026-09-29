@@ -176,55 +176,14 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
     $result = Database::select('items', $columns, $condition . $orderClause);
 
     $base = \Adlexone\Http\Router::continueUrl('items');
-    $role = (int)($_SESSION['access_role_id'] ?? 5);
-    $typeNames = [];
     $rows = [];
     foreach ($result as $row) {
         $itemId = (int)$row['item_id'];
-        $title = trim((string)($row['item_title'] ?? ''));
-        if ($title === '') {
-            $title = (string)TXT_357;
-        }
-        $typeId = (string)($row['item_type_id'] ?? '');
-        if (!isset($typeNames[$typeId])) {
-            $typeResult = Database::select('item_types', ['item_type_name'], "WHERE item_type_id = '" . $typeId . "'");
-            $typeRow = $typeResult[0] ?? null;
-            $typeNames[$typeId] = is_array($typeRow) ? (string)($typeRow['item_type_name'] ?? '') : '';
-        }
-        $meta = RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId
-            . ' · ' . date(SET_DATE_FORMAT, (int)($row['create_date'] ?? 0));
-        if ($typeNames[$typeId] !== '') {
-            $meta .= ' · ' . $typeNames[$typeId];
-        }
-        $actions = [];
-        if ($role <= 4) {
-            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
-            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=show_attachments', 'label' => TXT_389];
-        }
-        if ($role <= 3) {
-            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=change_security', 'label' => TXT_28];
-        }
-        if ($role <= 5) {
-            $actions[] = [
-                'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
-                'label' => TXT_625,
-                'target' => '_blank',
-            ];
-        }
-        if ($role <= 2) {
-            $actions[] = [
-                'href' => $base . '&item=' . $itemId . '&option=delete_item',
-                'label' => TXT_315,
-                'tone' => 'danger',
-                'confirm' => TXT_400,
-            ];
-        }
-        $rows[] = [
-            'name' => $title,
-            'href' => $base . '&item=' . $itemId,
-            'meta' => $meta,
-            'actions' => $actions,
-        ];
+        $rows[] = RenderViews::itemRecord(
+            $row,
+            $base . '&item=' . $itemId,
+            RenderViews::itemActions($itemId, $base)
+        );
     }
 
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
@@ -232,6 +191,7 @@ function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $sa
             'title' => $heading,
             'html' => RenderViews::buildRecordList([
                 'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
+                'columns' => RenderViews::itemListColumns(),
                 'searchLabel' => TXT_3,
                 'empty' => TXT_115,
                 'groups' => [['rows' => $rows]],
@@ -996,7 +956,9 @@ function showSavedSearches($userID, $application = '')
             $rows[] = [
                 'name' => $name,
                 'href' => $href,
-                'meta' => (string)($row['search_description'] ?? ''),
+                'cells' => [
+                    'description' => (string)($row['search_description'] ?? ''),
+                ],
                 'actions' => $actions,
             ];
         }
@@ -1011,6 +973,9 @@ function showSavedSearches($userID, $application = '')
     }
     $list = RenderViews::buildRecordList([
         'column' => TXT_151,
+        'columns' => [
+            ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
+        ],
         'searchLabel' => TXT_3,
         'empty' => TXT_115,
         'toolbar' => $toolbar,

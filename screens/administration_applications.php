@@ -90,14 +90,13 @@ function showApplications(): void
     $rows = [];
     foreach (ApplicationStore::all() as $app) {
         $id = (int) $app['application_id'];
-        $meta = $app['enabled'] ? 'Shown in the Applications menu' : 'Hidden';
-        if ($app['entry_mode'] === 'legacy') {
-            $meta .= ' · opens the existing screens';
-        }
         $rows[] = [
             'name' => (string) $app['name'],
             'href' => APPLICATIONS_ADMIN_URL . '&option=edit&application_id=' . $id,
-            'meta' => $meta,
+            'cells' => [
+                'menu' => $app['enabled'] ? 'Shown' : 'Hidden',
+                'opens' => $app['entry_mode'] === 'legacy' ? 'Existing screens' : 'This application',
+            ],
             'search' => (string) $app['slug'],
             'actions' => [
                 [
@@ -126,6 +125,10 @@ function showApplications(): void
         'title' => 'Applications',
         'html' => RenderViews::buildRecordList([
             'column' => 'Application',
+            'columns' => [
+                ['key' => 'menu', 'label' => 'Menu'],
+                ['key' => 'opens', 'label' => 'Opens'],
+            ],
             'searchLabel' => 'Search',
             'primary' => ['href' => APPLICATIONS_ADMIN_URL . '&option=new', 'label' => 'New application'],
             'empty' => 'No applications yet.',
@@ -229,7 +232,9 @@ function showNavigation(int $applicationId): void
         $rows[] = [
             'name' => (string) $link['label'],
             'href' => APPLICATIONS_ADMIN_URL . '&option=edit_nav&nav_id=' . $id,
-            'meta' => Capabilities::label((string) $link['capability']),
+            'cells' => [
+                'screen' => Capabilities::label((string) $link['capability']),
+            ],
             'actions' => [
                 ['href' => APPLICATIONS_ADMIN_URL . '&option=move_nav&nav_id=' . $id . '&direction=up', 'label' => 'Up'],
                 ['href' => APPLICATIONS_ADMIN_URL . '&option=move_nav&nav_id=' . $id . '&direction=down', 'label' => 'Down'],
@@ -247,6 +252,9 @@ function showNavigation(int $applicationId): void
         'title' => (string) $app['name'],
         'html' => RenderViews::buildRecordList([
             'column' => 'Link',
+            'columns' => [
+                ['key' => 'screen', 'label' => 'Screen'],
+            ],
             'searchLabel' => 'Search',
             'primary' => [
                 'href' => APPLICATIONS_ADMIN_URL . '&option=new_nav&application_id=' . $applicationId,

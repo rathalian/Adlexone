@@ -200,18 +200,22 @@ class RenderViews
                 $titles[] = $rawTitle;
             }
         }
+        $inSection = defined('APP_SECTION_NAV');
         $liftTitle = count($bodyBlocks) === 1
             && count($titles) === 1
-            && !defined('PAGE_TITLE');
+            && !defined('PAGE_TITLE')
+            && !$inSection;
         if ($liftTitle) {
             define('PAGE_TITLE', trim(html_entity_decode(strip_tags($titles[0]), ENT_QUOTES, 'UTF-8')));
         }
 
         $html = '<div class="grid">';
         foreach ($bodyBlocks as $b) {
-            $title = isset($b['title']) ? htmlspecialchars((string)$b['title'], ENT_QUOTES, 'UTF-8') : '';
+            $rawTitle = trim((string)($b['title'] ?? ''));
+            $title = $rawTitle !== '' ? htmlspecialchars($rawTitle, ENT_QUOTES, 'UTF-8') : '';
+            $repeatsSection = self::titleRepeatsSection($rawTitle);
             $html .= '<section class="card span-2">';                      // full width always
-            if ($title !== '' && !$liftTitle) {
+            if ($title !== '' && !$liftTitle && !$repeatsSection) {
                 $html .= '<div class="card-title">' . $title . '</div>';
             }
             $html .= '<div class="form-block">';                         // consistent inner padding/visual
@@ -226,6 +230,16 @@ class RenderViews
         $html .= '</div>';
 
         return $html;
+    }
+
+    private static function titleRepeatsSection(string $title): bool
+    {
+        if (!defined('APP_SECTION_NAV') || !defined('APPLICATION_NAV_LABEL')) {
+            return false;
+        }
+        $plain = trim(html_entity_decode(strip_tags($title), ENT_QUOTES, 'UTF-8'));
+
+        return $plain !== '' && strcasecmp($plain, trim((string) APPLICATION_NAV_LABEL)) === 0;
     }
 
     /**
@@ -476,6 +490,83 @@ class RenderViews
      *   }>}>
      * } $list
      */
+    /**
+     * @return list<array{key: string, label: string}>
+     */
+    public static function itemListColumns(): array
+    {
+        return [
+            ['key' => 'type', 'label' => TXT_119],
+            ['key' => 'opened', 'label' => TXT_103],
+        ];
+    }
+
+    /**
+     * Logs, attachments, security, print, and delete for one item.
+     *
+     * @return list<array{href: string, label: string, tone?: string, confirm?: string, target?: string}>
+     */
+    public static function itemActions(int $itemId, string $base): array
+    {
+        $actions = [];
+        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        if ($role <= 4) {
+            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
+            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=show_attachments', 'label' => TXT_389];
+        }
+        if ($role <= 3) {
+            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=change_security', 'label' => TXT_28];
+        }
+        if ($role <= 5) {
+            $actions[] = [
+                'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
+                'label' => TXT_625,
+                'target' => '_blank',
+            ];
+        }
+        if ($role <= 2) {
+            $actions[] = [
+                'href' => $base . '&item=' . $itemId . '&option=delete_item',
+                'label' => TXT_315,
+                'tone' => 'danger',
+                'confirm' => TXT_400,
+            ];
+        }
+
+        return $actions;
+    }
+
+    /**
+     * @param array<string, mixed> $item
+     * @param list<array{href: string, label: string, tone?: string, confirm?: string, target?: string}> $actions
+     * @return array{name: string, href: string, meta: string, cells: array{type: string, opened: string}, actions: array}
+     */
+    public static function itemRecord(array $item, string $href, array $actions): array
+    {
+        static $typeNames = [];
+        $itemId = (int) ($item['item_id'] ?? 0);
+        $title = trim((string) ($item['item_title'] ?? ''));
+        if ($title === '') {
+            $title = (string) TXT_357;
+        }
+        $typeId = (string) ($item['item_type_id'] ?? '');
+        if (!array_key_exists($typeId, $typeNames)) {
+            $typeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$typeId]);
+            $typeNames[$typeId] = (string) ($typeRow['item_type_name'] ?? '');
+        }
+
+        return [
+            'name' => $title,
+            'href' => $href,
+            'meta' => self::getLanguageConstant('LA_102', 'TXT_102') . ' ' . $itemId,
+            'cells' => [
+                'type' => $typeNames[$typeId],
+                'opened' => date(SET_DATE_FORMAT, (int) ($item['create_date'] ?? 0)),
+            ],
+            'actions' => $actions,
+        ];
+    }
+
     public static function buildRecordList(array $list): string
     {
         static $sequence = 0;
@@ -493,7 +584,7 @@ class RenderViews
             if ($key === '' || $label === '') {
                 continue;
             }
-            $columns[] = ['key' => $key, 'label' => $label];
+            $columns[] = ['key' => $key, 'label' => $label, 'wrap' => !empty($columnDef['wrap'])];
         }
         $searchLabel = (string)($list['searchLabel'] ?? TXT_3);
         $emptyText = (string)($list['empty'] ?? TXT_115);
@@ -543,7 +634,8 @@ class RenderViews
 
         $columnHeads = '';
         foreach ($columns as $columnDef) {
-            $columnHeads .= '<th class="record-list__cell">' . htmlspecialchars($columnDef['label'], ENT_QUOTES, 'UTF-8') . '</th>';
+            $wrap = !empty($columnDef['wrap']) ? ' record-list__cell--wrap' : '';
+            $columnHeads .= '<th class="record-list__cell' . $wrap . '">' . htmlspecialchars($columnDef['label'], ENT_QUOTES, 'UTF-8') . '</th>';
         }
         $manageHead = $hasActions
             ? '<th class="record-list__manage"><span class="record-list__sr">' . htmlspecialchars(TXT_388, ENT_QUOTES, 'UTF-8') . '</span></th>'
@@ -601,7 +693,8 @@ class RenderViews
         foreach ($columns as $columnDef) {
             $value = trim((string)($cellValues[$columnDef['key']] ?? ''));
             $search .= ' ' . strtolower($value);
-            $cellsHtml .= '<td class="record-list__cell">'
+            $wrap = !empty($columnDef['wrap']) ? ' record-list__cell--wrap' : '';
+            $cellsHtml .= '<td class="record-list__cell' . $wrap . '">'
                 . ($value === '' ? '—' : htmlspecialchars($value, ENT_QUOTES, 'UTF-8'))
                 . '</td>';
         }
@@ -626,7 +719,7 @@ class RenderViews
         if ($actions === []) {
             return '';
         }
-        $asMenu = count($actions) >= 3;
+        $asMenu = count($actions) >= 2;
         $buttons = '';
         foreach ($actions as $action) {
             $label = (string)($action['label'] ?? '');
@@ -960,7 +1053,13 @@ class RenderViews
 
         $detail = trim((string)$url);
         $follow = $detail !== '' ? self::formatResponseDetail($detail) : self::responseBackLink();
-        $body = $follow !== '' ? '<div class="response" role="status">' . $follow . '</div>' : '';
+        $body = '';
+        if (defined('APP_SECTION_NAV')) {
+            $body .= '<p class="response__message">' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
+        }
+        if ($follow !== '') {
+            $body .= '<div class="response" role="status">' . $follow . '</div>';
+        }
 
         define('BODY_CONTENT', $body);
         self::renderThemePage('main_page_content', SET_THEME);

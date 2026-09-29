@@ -101,14 +101,19 @@ function showPackageactionList($actionPackage): void
 	$descriptions = (isset($actionDescription) && is_array($actionDescription)) ? $actionDescription : [];
 	$rows = [];
 	foreach ($names as $descriptorName => $value) {
-		$rows[] = [
-			'name' => (string)$value,
-			'href' => ACT_BASE_URL . '&option=new_action&action_package=' . rawurlencode((string)$actionPackage) . '&descriptor_name=' . rawurlencode((string)$descriptorName),
-			'meta' => (string)($descriptions[$descriptorName] ?? ''),
-		];
+	$rows[] = [
+		'name' => (string)$value,
+		'href' => ACT_BASE_URL . '&option=new_action&action_package=' . rawurlencode((string)$actionPackage) . '&descriptor_name=' . rawurlencode((string)$descriptorName),
+		'cells' => [
+			'description' => (string)($descriptions[$descriptorName] ?? ''),
+		],
+	];
 	}
 	$html = RenderViews::buildRecordList([
 		'column' => TXT_299,
+		'columns' => [
+			['key' => 'description', 'label' => TXT_153, 'wrap' => true],
+		],
 		'searchLabel' => TXT_3,
 		'empty' => TXT_412,
 		'noMatch' => TXT_688,
@@ -187,7 +192,9 @@ function renderDefinedActionsList(array $groups, bool $canDelete): string
 				'name' => $actionName,
 				'href' => ACT_BASE_URL . '&option=defined_action&action_id=' . $id,
 				'meta' => $descriptor['name'],
-				'metaTitle' => $descriptor['description'],
+				'cells' => [
+					'description' => $descriptor['description'],
+				],
 				'search' => $descriptor['description'],
 			];
 			if ($canDelete) {
@@ -205,6 +212,9 @@ function renderDefinedActionsList(array $groups, bool $canDelete): string
 
 	return RenderViews::buildRecordList([
 		'column' => TXT_299,
+		'columns' => [
+			['key' => 'description', 'label' => TXT_153, 'wrap' => true],
+		],
 		'searchLabel' => TXT_3,
 		'primary' => [
 			'href' => ACT_BASE_URL . '&option=show_action_packages',

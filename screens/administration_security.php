@@ -328,6 +328,12 @@ function userRecordList(array $rows): string
 {
     return RenderViews::buildRecordList([
         'column' => TXT_151,
+        'columns' => [
+            ['key' => 'username', 'label' => TXT_38],
+            ['key' => 'email', 'label' => TXT_514],
+            ['key' => 'role', 'label' => TXT_187],
+            ['key' => 'active', 'label' => TXT_653],
+        ],
         'searchLabel' => TXT_3,
         'primary' => ['href' => SEC_BASE_URL . '&option=new_user', 'label' => TXT_692],
         'empty' => TXT_115,
@@ -343,6 +349,10 @@ function groupRecordList(array $rows): string
 {
     return RenderViews::buildRecordList([
         'column' => TXT_151,
+        'columns' => [
+            ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
+            ['key' => 'role', 'label' => TXT_187],
+        ],
         'searchLabel' => TXT_3,
         'primary' => ['href' => SEC_BASE_URL . '&option=new_group', 'label' => TXT_692],
         'empty' => TXT_115,
@@ -365,17 +375,15 @@ function userRecord(array $row): array
     }
     $id = rawurlencode((string)$row['user_id']);
     $active = ((string)($row['lastactive'] ?? '') === 'inactive') ? TXT_94 : TXT_93;
-    $meta = recordMeta([
-        $userName,
-        (string)($row['email'] ?? ''),
-        securityRoleLabel($row['role'] ?? ''),
-        TXT_653 . ' ' . $active,
-    ]);
-
     return [
         'name' => $name,
         'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
-        'meta' => $meta,
+        'cells' => [
+            'username' => $userName,
+            'email' => (string)($row['email'] ?? ''),
+            'role' => securityRoleLabel($row['role'] ?? ''),
+            'active' => $active,
+        ],
         'actions' => [
             [
                 'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
@@ -406,15 +414,13 @@ function groupRecord(array $row): array
     $name = (string)($row['group_name'] ?? '');
     $id = rawurlencode((string)$row['group_id']);
     $description = trim((string)preg_replace('/\s+/', ' ', (string)($row['description'] ?? '')));
-    $meta = recordMeta([
-        $description,
-        securityRoleLabel($row['role'] ?? ''),
-    ]);
-
     return [
         'name' => $name,
         'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
-        'meta' => $meta,
+        'cells' => [
+            'description' => $description,
+            'role' => securityRoleLabel($row['role'] ?? ''),
+        ],
         'actions' => [
             [
                 'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
@@ -443,22 +449,6 @@ function securityRoleLabel(mixed $role): string
     ];
 
     return $labels[trim((string)$role)] ?? '';
-}
-
-/**
- * @param array<int, string> $parts
- */
-function recordMeta(array $parts): string
-{
-    $kept = [];
-    foreach ($parts as $part) {
-        $part = trim($part);
-        if ($part !== '') {
-            $kept[] = $part;
-        }
-    }
-
-    return implode(' · ', $kept);
 }
 
 /**

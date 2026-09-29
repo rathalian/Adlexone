@@ -535,6 +535,11 @@ function fieldRecordList(array $rows): string
 {
     return RenderViews::buildRecordList([
         'column' => TXT_151,
+        'columns' => [
+            ['key' => 'type', 'label' => TXT_395],
+            ['key' => 'key', 'label' => TXT_152],
+            ['key' => 'enabled', 'label' => TXT_451],
+        ],
         'searchLabel' => TXT_3,
         'empty' => TXT_115,
         'noMatch' => TXT_689,
@@ -549,6 +554,9 @@ function typeRecordList(array $rows): string
 {
     return RenderViews::buildRecordList([
         'column' => TXT_151,
+        'columns' => [
+            ['key' => 'enabled', 'label' => TXT_451],
+        ],
         'searchLabel' => TXT_3,
         'primary' => ['href' => 'index.php?controller=administration_item_settings&option=new_item_type', 'label' => TXT_692],
         'empty' => TXT_115,
@@ -592,7 +600,11 @@ function customFieldRecord(array $row): array
     return [
         'name' => $name,
         'href' => ITEM_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $id,
-        'meta' => $row['field_type'] . ' · ' . $key . ' · ' . TXT_451 . ' ' . $row['enabled'],
+        'cells' => [
+            'type' => (string)$row['field_type'],
+            'key' => $key,
+            'enabled' => (string)$row['enabled'],
+        ],
         'actions' => $actions,
     ];
 }
@@ -609,7 +621,9 @@ function itemTypeRecord(array $row): array
     return [
         'name' => $name,
         'href' => ITEM_BASE_URL . '&option=modify_item_type&item_type_id=' . $id,
-        'meta' => TXT_451 . ': ' . $row['enabled'],
+        'cells' => [
+            'enabled' => (string)$row['enabled'],
+        ],
         'actions' => [
             [
                 'href' => ITEM_BASE_URL . '&option=modify_item_type&item_type_id=' . $id,

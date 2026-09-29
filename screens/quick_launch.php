@@ -132,8 +132,5 @@ if ($applications === [] && $manage === []) {
     $html = '<p class="launchpad__empty">Nothing is available for this account.</p>';
 }
 
-if (!defined('PAGE_TITLE')) {
-    define('PAGE_TITLE', 'Home');
-}
 define('BODY_CONTENT', $html);
 RenderViews::renderThemePage('main_page_content', SET_THEME);
