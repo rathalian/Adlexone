@@ -12,51 +12,6 @@ use function libxml_use_internal_errors;
 final class NavigationHelper
 {
 
-    /**
-     * Unused left-nav builder kept in step with the Service Centre section nav.
-     */
-    public static function serviceCentreNavigationURLS(): string
-    {
-        $controller = 'index.php?controller=app_servicecentre_main';
-        $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE')
-            ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE)
-            : '';
-
-        $html = RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL($controller . '&option=show_tickets', APP_SC_TXT_1, 'ic-search'),
-            $_SESSION['access_role_id'],
-            5
-        );
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                $controller . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . $itemType,
-                APP_SC_TXT_2, 'ic-create-ticket'
-            ),
-            $_SESSION['access_role_id'],
-            4
-        );
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL(
-                $controller . '&subcontroller=search_management_manage&option=show_saved_searches',
-                APP_SC_TXT_60, 'ic-my-ticket-searches'
-            ),
-            $_SESSION['access_role_id'],
-            5
-        );
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL($controller . '&option=show_announcements', APP_SC_TXT_38, 'ic-announcements'),
-            $_SESSION['access_role_id'],
-            4
-        );
-        $html .= RenderViews::outputIfRoleAllowed(
-            RenderViews::buildURL($controller . '&option=settings', APP_SC_TXT_79, 'ic-settings'),
-            $_SESSION['access_role_id'],
-            1
-        );
-
-        return $html;
-    }
-
     public static function knowledgebaseNavigationURLS()
     {
         $html = RenderViews::outputIfRoleAllowed(

@@ -13,62 +13,6 @@ use function libxml_use_internal_errors;
 final class RenderNavigation
 {
 
-    /**
-     * Service Centre links for the top section navigation.
-     */
-    public static function serviceCentreNavigationURLS(): string
-    {
-        $controller = 'index.php?controller=app_servicecentre_main';
-        $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE')
-            ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE)
-            : '';
-
-        $html = RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                $controller . '&option=show_tickets',
-                APP_SC_TXT_1, 'ic-search'
-            ),
-            Permission::SERVICECENTRE_SEARCH,
-            Permission::SERVICECENTRE_USE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                $controller . '&subcontroller=item_management_manage&option=show_item_types&default_item_type=' . $itemType,
-                APP_SC_TXT_2, 'ic-create-ticket'
-            ),
-            Permission::SERVICECENTRE_USE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                $controller . '&subcontroller=search_management_manage&option=show_saved_searches',
-                APP_SC_TXT_60, 'ic-my-ticket-searches'
-            ),
-            Permission::SERVICECENTRE_SEARCH,
-            Permission::SERVICECENTRE_USE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                $controller . '&option=show_announcements',
-                APP_SC_TXT_38, 'ic-announcements'
-            ),
-            Permission::SERVICECENTRE_USE,
-            Permission::SERVICECENTRE_ANNOUNCE
-        );
-
-        $html .= RenderViews::outputIfAllowed(
-            RenderViews::buildURL(
-                $controller . '&option=settings',
-                APP_SC_TXT_79, 'ic-settings'
-            ),
-            Permission::SERVICECENTRE_SETTINGS
-        );
-
-        return $html;
-    }
-
     public static function knowledgebaseNavigationURLS()
     {
         $html = RenderViews::outputIfAllowed(

@@ -110,8 +110,16 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     \Adlexone\Auth\Access::hydrateSession((int) $_SESSION['access_user_id']);
 
     // Handle accessing the root / with session variables still set
-    if (!isset($_GET['controller'])) {
-        $_GET['controller'] = $_SESSION['access_home_controller'];
+    if (!isset($_GET['controller']) || (string) $_GET['controller'] === '') {
+        $_GET['controller'] = (string) $_SESSION['access_home_controller'];
+    }
+    $requestedController = (string) $_GET['controller'];
+    if (str_contains($requestedController, ':')) {
+        [$requestedController, $requestedApp] = explode(':', $requestedController, 2);
+        $_GET['controller'] = $requestedController;
+        if (trim((string) ($_GET['app'] ?? '')) === '') {
+            $_GET['app'] = $requestedApp;
+        }
     }
     // Setup theme and other user options.  If user is not logged in the theme is set to use default
     // Override default theme which represents a empty value for the users theme setting

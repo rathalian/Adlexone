@@ -99,7 +99,7 @@ final class Capabilities
             'items.create' => self::includeShared('item_management_manage'),
             'search.quick', 'search.advanced', 'search.saved', 'search.saved_list' => self::includeShared('search_management_manage'),
             'announcements', 'servicecentre.tickets', 'servicecentre.settings' => self::includeScreen(
-                'app/Http/Controllers/Applications/servicecentre/controllers/app_servicecentre_main.php'
+                'applications/servicecentre/servicecentre.php'
             ),
             'knowledge.home', 'knowledge.settings' => self::includeKnowledge(),
             default => RenderViews::buildResponse('This screen is not available.'),
@@ -191,7 +191,7 @@ final class Capabilities
 
     private static function includeShared(string $controller): void
     {
-        $file = SET_INSTALL_PATH . 'app/Http/Controllers/' . $controller . '.php';
+        $file = SET_INSTALL_PATH . 'app/Http/Controllers/shared/' . $controller . '.php';
         if (!is_file($file)) {
             RenderViews::buildResponse('The shared screen is missing.');
             return;

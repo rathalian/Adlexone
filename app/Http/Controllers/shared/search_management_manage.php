@@ -1022,7 +1022,7 @@ function showSavedSearches($userID, $application = '')
         }
     }
     $toolbar = '';
-    if (str_starts_with($controller, 'app_servicecentre')) {
+    if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG === 'service-centre') {
         $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE') ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE) : '';
         $toolbar = '<div class="form-actions" style="margin-top:0">'
             . RenderViews::buildURL($base . '&option=show_quick_search', APP_SC_TXT_62, '', 'btn btn--primary btn--sm')

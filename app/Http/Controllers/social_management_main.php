@@ -27,7 +27,7 @@ declare(strict_types=1);
 /**
  * Retired section. Service Centre replaced this controller.
  */
-header('Location: index.php?controller=app_servicecentre_main');
+header('Location: index.php?controller=application&app=service-centre');
 exit;
 
 ?>

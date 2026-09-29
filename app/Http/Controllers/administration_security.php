@@ -24,6 +24,7 @@ declare(strict_types=1);
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
+use Adlexone\Application\ApplicationStore;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\RenderViews;
@@ -184,6 +185,7 @@ function showUser($userID = '', $values = [], $adminEdit = true)
     }
     array_unshift($nameArray, 'Home');
     array_unshift($baseURLArray, 'quick_launch}-{Home');
+    ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
     $application = empty($fieldValues['home_controller']) ? SET_DEFAULT_APPLICATION : $fieldValues['home_controller'] . '}-{' . @$fieldValues['home_controller_name'];
     $userPreferences[TXT_297] = RenderViews::buildSelectDropdown('home_controller', $baseURLArray, $nameArray, $application);
     $userPreferences[TXT_63] = RenderViews::buildSelectDropdown('show_header', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_header']);

@@ -115,10 +115,12 @@ class RenderViews
     public static function includeControllerFile(?string $controller, string $defaultPage): void
     {
         // Use defaultPage if controller is null or empty
-        $controller = $controller ?? $defaultPage;
-        $controller = basename($controller);
-        if ($controller === 'app_oneorzerohelpdesk_main') {
-            $controller = 'app_servicecentre_main';
+        $controller = basename($controller ?? $defaultPage);
+        if (str_contains($controller, ':')) {
+            [$controller, $appSlug] = explode(':', $controller, 2);
+            if (trim((string) ($_GET['app'] ?? '')) === '') {
+                $_GET['app'] = $appSlug;
+            }
         }
 
         include self::controllerFile($controller);
@@ -131,6 +133,9 @@ class RenderViews
     private static function controllerFile(string $controller): string
     {
         $root = SET_INSTALL_PATH . 'app/Http/Controllers/';
+        if (in_array($controller, ['item_management_manage', 'search_management_manage'], true)) {
+            return $root . 'shared/' . $controller . '.php';
+        }
         if (str_starts_with($controller, 'app_')) {
             $app = explode('_', $controller)[1] ?? '';
             return $root . 'Applications/' . $app . '/controllers/' . $controller . '.php';
@@ -1204,9 +1209,15 @@ class RenderViews
 
     private static function applicationPrefix(): ?string
     {
+        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG === 'service-centre') {
+            return 'APP_SC_';
+        }
+        if ((string) ($_GET['app'] ?? '') === 'service-centre') {
+            return 'APP_SC_';
+        }
+
         $controller = (string)($_GET['controller'] ?? '');
         $prefixes = [
-            'app_servicecentre' => 'APP_SC_',
             'app_oneorzeroknowledgebase' => 'APP_KB_',
             'app_oneorzeroreportmanager' => 'APP_RM_',
             'app_oneorzerotimemanager' => 'APP_TM_',

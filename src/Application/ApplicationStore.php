@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
 
 /**
@@ -11,6 +12,8 @@ use Adlexone\support\Database;
  */
 final class ApplicationStore
 {
+    private const SERVICE_CENTRE_SLUG = 'service-centre';
+
     private static bool $ready = false;
 
     public static function ensureReady(): void
@@ -21,6 +24,7 @@ final class ApplicationStore
         self::ensureSchema();
         self::$ready = true;
         self::seedIfEmpty();
+        self::retireServiceCentreLegacy();
     }
 
     public static function ensureSchema(): void
@@ -72,14 +76,14 @@ final class ApplicationStore
             'name' => 'Service Centre',
             'hint' => 'Tickets and announcements',
             'icon' => 'ic-servicecentre',
-            'permission' => 'servicecentre.use',
+            'permission' => Permission::SERVICECENTRE_SEARCH,
             'enabled' => 1,
             'sort_order' => 10,
             'entry_mode' => 'shell',
-            'legacy_controller' => 'app_servicecentre_main',
-            'legacy_key' => 'app_servicecentre_main',
+            'legacy_controller' => '',
+            'legacy_key' => '',
         ]);
-        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Tickets'), 'servicecentre.tickets', 'servicecentre.search', 'ic-search', [], 10);
+        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Tickets'), 'servicecentre.tickets', Permission::SERVICECENTRE_SEARCH, 'ic-search', [], 10);
         self::insertNav($serviceId, $text('APP_SC_TXT_2', 'New ticket'), 'items.create', 'servicecentre.use', 'ic-create-ticket', ['item_type_id' => $serviceType], 20);
         self::insertNav($serviceId, $text('APP_SC_TXT_60', 'Searches'), 'search.saved_list', 'servicecentre.search', 'ic-my-ticket-searches', [], 30);
         self::insertNav($serviceId, $text('APP_SC_TXT_38', 'Announcements'), 'announcements', 'servicecentre.use', 'ic-announcements', [], 40);
@@ -343,6 +347,86 @@ final class ApplicationStore
             'SELECT nav_id FROM application_nav WHERE application_id = ' . (int) $nav['application_id'] . ' ORDER BY sort_order ASC, nav_id ASC'
         );
         self::swapOrder($rows, 'nav_id', 'application_nav', 'nav_id', $id, $direction);
+    }
+
+    /**
+     * Drop the old Service Centre controller name. Saved searches and home
+     * pages follow the application slug.
+     */
+    private static function retireServiceCentreLegacy(): void
+    {
+        Database::queryParams(
+            "UPDATE applications
+             SET legacy_controller = '', legacy_key = '', permission = ?
+             WHERE slug = ? AND legacy_key = ?",
+            [Permission::SERVICECENTRE_SEARCH, self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']
+        );
+        if (self::tableExists('saved_searches')) {
+            Database::queryParams(
+                "UPDATE saved_searches SET application = ? WHERE application = ?",
+                [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']
+            );
+        }
+        if (self::tableExists('users')) {
+            Database::queryParams(
+                "UPDATE users SET home_controller = ? WHERE home_controller IN ('app_servicecentre_main', 'app_oneorzerohelpdesk_main')",
+                ['application:' . self::SERVICE_CENTRE_SLUG]
+            );
+        }
+    }
+
+    private static function tableExists(string $table): bool
+    {
+        $row = Database::firstResultParams(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            [$table]
+        );
+        return $row !== null;
+    }
+
+    /**
+     * Home-page choices for configured applications.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    public static function homeChoices(): array
+    {
+        self::ensureReady();
+        $choices = [];
+        foreach (self::all() as $app) {
+            if (empty($app['enabled'])) {
+                continue;
+            }
+            $legacy = trim((string) ($app['legacy_controller'] ?? ''));
+            if ((string) $app['entry_mode'] === 'shell' && $legacy === '') {
+                $choices[] = ['application:' . $app['slug'], (string) $app['name']];
+                continue;
+            }
+            if ($legacy !== '') {
+                $choices[] = [$legacy, (string) $app['name']];
+            }
+        }
+        return $choices;
+    }
+
+    /**
+     * @param list<string> $values
+     * @param list<string> $labels
+     */
+    public static function mergeHomeChoices(array &$values, array &$labels): void
+    {
+        $known = [];
+        foreach ($values as $value) {
+            $known[] = explode('}-{', (string) $value, 2)[0];
+        }
+        foreach (self::homeChoices() as [$controller, $name]) {
+            if (in_array($controller, $known, true)) {
+                continue;
+            }
+            $values[] = $controller . '}-{' . $name;
+            $labels[] = $name;
+            $known[] = $controller;
+        }
     }
 
     public static function scopeKey(array $app): string

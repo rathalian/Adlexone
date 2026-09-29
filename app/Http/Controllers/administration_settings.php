@@ -23,6 +23,7 @@
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
+use Adlexone\Application\ApplicationStore;
 use Adlexone\support\RenderViews;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
@@ -89,6 +90,7 @@ function showAdlexoneSettings(): void
     $baseURLArray = $baseURLArray ?? [];
     array_unshift($nameArray, 'Home');
     array_unshift($baseURLArray, 'quick_launch}-{Home');
+    ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
     $fields[TXT_297] = RenderViews::buildSelectDropdown('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION, 'form-control');
     // Get all item types
     $columnArray = array('item_type_id', 'item_type_name');
