@@ -4,10 +4,10 @@ declare(strict_types=1);
 use Adlexone\support\RenderViews;
 
 /**
- * The ticket list is a saved search. This screen sends that request to the
+ * The work list is a saved search. This screen sends that request to the
  * shared search controller, or shows the empty state when none is configured.
  */
-function showServiceCentreTickets(): void
+function showServiceCentreWork(): void
 {
     $id = (string) ($_GET['id'] ?? '');
     if ($id === '' && defined('SERVICECENTRE_SET_SAVED_SEARCH') && ctype_digit((string) SERVICECENTRE_SET_SAVED_SEARCH)) {

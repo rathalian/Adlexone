@@ -1014,13 +1014,13 @@ class RenderViews
      * @param string $spriteName (Optional) Image source for the link. If provided, the image is shown instead of text. Sprite names:
      * ic-servicecentre               (Service Centre)
      * ic-announcements             (Announcements)
-     * ic-search                   (Tickets)
+     * ic-search                   (Work)
      * ic-settings                 (Settings)
      *
-     * ic-create-ticket                   (Create A New Ticket)
-     * ic-quick-search              (Quick Ticket Search)
-     * ic-my-ticket-searches            (View My Ticket Searches)
-     * ic-create-ticket-search              (Create A Ticket Search)
+     * ic-create-ticket                   (New)
+     * ic-quick-search              (Quick Search)
+     * ic-my-ticket-searches            (Searches)
+     * ic-create-ticket-search              (Create A Search)
      *
      * ic-knowledgebase            (Knowledgebase)
      * ic-subjects                 (Knowledge Subjects)

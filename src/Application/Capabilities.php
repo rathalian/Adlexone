@@ -24,7 +24,7 @@ final class Capabilities
             'search.saved' => ['label' => 'Saved search', 'icon' => 'ic-my-ticket-searches', 'config' => 'saved_search'],
             'search.saved_list' => ['label' => 'Saved search list', 'icon' => 'ic-my-ticket-searches', 'config' => 'none'],
             'announcements' => ['label' => 'Announcements', 'icon' => 'ic-announcements', 'config' => 'none'],
-            'servicecentre.tickets' => ['label' => 'Service Centre tickets', 'icon' => 'ic-search', 'config' => 'none'],
+            'servicecentre.work' => ['label' => 'Service Centre work', 'icon' => 'ic-search', 'config' => 'none'],
             'servicecentre.settings' => ['label' => 'Service Centre settings', 'icon' => 'ic-settings', 'config' => 'none'],
             'knowledge.home' => ['label' => 'Knowledge home', 'icon' => 'ic-knowledgebase', 'config' => 'none'],
             'knowledge.settings' => ['label' => 'Knowledge settings', 'icon' => 'ic-kb-settings', 'config' => 'none'],
@@ -98,7 +98,7 @@ final class Capabilities
         match ($capability) {
             'items.create' => self::includeShared('item_management_manage'),
             'search.quick', 'search.advanced', 'search.saved', 'search.saved_list' => self::includeShared('search_management_manage'),
-            'announcements', 'servicecentre.tickets', 'servicecentre.settings' => self::includeScreen(
+            'announcements', 'servicecentre.work', 'servicecentre.settings' => self::includeScreen(
                 'applications/servicecentre/servicecentre.php'
             ),
             'knowledge.home', 'knowledge.settings' => self::includeKnowledge(),
@@ -132,7 +132,7 @@ final class Capabilities
                 'search.saved' => 'saved_search',
                 'search.saved_list' => 'show_saved_searches',
                 'announcements' => 'show_announcements',
-                'servicecentre.tickets' => 'show_tickets',
+                'servicecentre.work' => 'show_work',
                 'servicecentre.settings' => 'settings',
                 'knowledge.home' => 'show_knowledge',
                 'knowledge.settings' => 'knowledgebase_settings',

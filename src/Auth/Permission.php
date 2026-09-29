@@ -78,7 +78,7 @@ final class Permission
                 'legacy_max_role' => 4,
             ],
             self::SERVICECENTRE_SEARCH => [
-                'label' => 'Search Service Centre tickets',
+                'label' => 'Search Service Centre',
                 'legacy_max_role' => 5,
             ],
             self::KNOWLEDGEBASE_USE => [

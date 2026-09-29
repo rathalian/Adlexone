@@ -25,6 +25,7 @@ final class ApplicationStore
         self::$ready = true;
         self::seedIfEmpty();
         self::retireServiceCentreLegacy();
+        self::renameServiceCentreWork();
     }
 
     public static function ensureSchema(): void
@@ -74,7 +75,7 @@ final class ApplicationStore
         $serviceId = self::insertApplication([
             'slug' => 'service-centre',
             'name' => 'Service Centre',
-            'hint' => 'Tickets and announcements',
+            'hint' => 'Work and announcements',
             'icon' => 'ic-servicecentre',
             'permission' => Permission::SERVICECENTRE_SEARCH,
             'enabled' => 1,
@@ -83,8 +84,8 @@ final class ApplicationStore
             'legacy_controller' => '',
             'legacy_key' => '',
         ]);
-        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Tickets'), 'servicecentre.tickets', Permission::SERVICECENTRE_SEARCH, 'ic-search', [], 10);
-        self::insertNav($serviceId, $text('APP_SC_TXT_2', 'New ticket'), 'items.create', 'servicecentre.use', 'ic-create-ticket', ['item_type_id' => $serviceType], 20);
+        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Work'), 'servicecentre.work', Permission::SERVICECENTRE_SEARCH, 'ic-search', [], 10);
+        self::insertNav($serviceId, $text('APP_SC_TXT_2', 'New'), 'items.create', 'servicecentre.use', 'ic-create-ticket', ['item_type_id' => $serviceType], 20);
         self::insertNav($serviceId, $text('APP_SC_TXT_60', 'Searches'), 'search.saved_list', 'servicecentre.search', 'ic-my-ticket-searches', [], 30);
         self::insertNav($serviceId, $text('APP_SC_TXT_38', 'Announcements'), 'announcements', 'servicecentre.use', 'ic-announcements', [], 40);
         self::insertNav($serviceId, $text('APP_SC_TXT_79', 'Settings'), 'servicecentre.settings', 'servicecentre.settings', 'ic-settings', [], 50);
@@ -373,6 +374,33 @@ final class ApplicationStore
                 ['application:' . self::SERVICE_CENTRE_SLUG]
             );
         }
+    }
+
+    /**
+     * The Service Centre list is work, and creating an item is New.
+     */
+    private static function renameServiceCentreWork(): void
+    {
+        if (!self::tableExists('application_nav')) {
+            return;
+        }
+        Database::queryParams(
+            "UPDATE application_nav SET capability = 'servicecentre.work' WHERE capability = 'servicecentre.tickets'"
+        );
+        Database::queryParams(
+            "UPDATE application_nav SET label = 'Work' WHERE capability = 'servicecentre.work' AND label IN ('Tickets', 'Ticket')"
+        );
+        Database::queryParams(
+            "UPDATE application_nav SET label = 'New'
+             WHERE capability = 'items.create'
+               AND application_id = (SELECT application_id FROM applications WHERE slug = ?)
+               AND label IN ('New ticket', 'New Ticket')",
+            [self::SERVICE_CENTRE_SLUG]
+        );
+        Database::queryParams(
+            "UPDATE applications SET hint = 'Work and announcements' WHERE slug = ? AND hint = 'Tickets and announcements'",
+            [self::SERVICE_CENTRE_SLUG]
+        );
     }
 
     private static function tableExists(string $table): bool

@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Service Centre.
  *
- * Announcements, settings, and the ticket landing live here.
+ * Announcements, settings, and the work list live here.
  * The application shell opens search and items on the shared controllers.
  */
 
@@ -31,7 +31,7 @@ function serviceCentreUrl(string $query = ''): string
 
 require_once __DIR__ . '/functions/announcements.php';
 require_once __DIR__ . '/functions/settings.php';
-require_once __DIR__ . '/functions/tickets.php';
+require_once __DIR__ . '/functions/work.php';
 
 switch ((string) ($_GET['option'] ?? '')) {
     case 'show_announcements':
@@ -62,9 +62,9 @@ switch ((string) ($_GET['option'] ?? '')) {
         Access::require(Permission::SERVICECENTRE_ANNOUNCE);
         deleteAnnouncement((string) ($_GET['id'] ?? ''));
         break;
-    case 'show_tickets':
+    case 'show_work':
         Access::require(Permission::SERVICECENTRE_SEARCH, Permission::SERVICECENTRE_USE);
-        showServiceCentreTickets();
+        showServiceCentreWork();
         break;
     case 'settings':
         Access::require(Permission::SERVICECENTRE_SETTINGS);
