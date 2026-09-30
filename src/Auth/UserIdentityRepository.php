@@ -117,7 +117,7 @@ final class UserIdentityRepository
             'last_name' => $family,
             'user_name' => $username,
             'email' => $email,
-            'theme' => defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'new',
+            'theme' => defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'inlay-stone',
             'language' => defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English',
             'show_header' => 'Yes',
             'show_graphics' => 'Yes',

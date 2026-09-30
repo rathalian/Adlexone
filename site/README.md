@@ -11,7 +11,7 @@ Core product code lives outside this folder (`layouts/`, `src/`, `inlay_function
 
 ## New theme (skin)
 
-1. Copy `site/themes/new/` to `site/themes/my-skin/`
+1. Copy `site/themes/inlay-stone/` to `site/themes/my-skin/`
 2. Edit `theme.json` label and `theme.css` CSS variables
 3. Replace `brand/favicon.svg` if needed
 4. Pick it under Settings → Theme (or on a user account)

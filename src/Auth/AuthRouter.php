@@ -137,6 +137,6 @@ final class AuthRouter
         define('AUTH_PAGE_SHOW_LOCAL', AuthConfig::localEnabled());
         define('AUTH_PAGE_SHOW_OAUTH', AuthConfig::oauthEnabled());
 
-        RenderViews::renderThemePage('login', defined('SET_THEME') ? SET_THEME : 'new');
+        RenderViews::renderThemePage('login', defined('SET_THEME') ? SET_THEME : 'inlay-stone');
     }
 }

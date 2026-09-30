@@ -75,7 +75,7 @@ PublicBaseUrl::defineConstants();
 
 // Set default values
 if (!defined('SET_DEFAULT_THEME')) {
-    define('SET_DEFAULT_THEME', 'new');
+    define('SET_DEFAULT_THEME', 'inlay-stone');
 }
 if (!defined('SET_DEFAULT_LANGUAGE')) {
     define('SET_DEFAULT_LANGUAGE', 'English');
@@ -99,7 +99,7 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     // Set random secure id
     $_SESSION['secure_id'] = md5(substr(md5(uniqid(rand(), true)), 0, 20));
     SharedMethods::loadConstantFromIni(SET_INSTALL_PATH . 'translations/' . SET_DEFAULT_LANGUAGE . '.lang.php');
-    define('SET_THEME', SET_DEFAULT_THEME);
+    define('SET_THEME', \Adlexone\Theme\Theme::canonicalize((string) SET_DEFAULT_THEME));
     Router::open('login');
 
 } else {
@@ -118,9 +118,9 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     // Setup theme and other user options.  If user is not logged in the theme is set to use default
     // Override default theme which represents a empty value for the users theme setting
     if ($_SESSION['access_theme'] != '') {
-        define('SET_THEME', $_SESSION['access_theme']);
+        define('SET_THEME', \Adlexone\Theme\Theme::canonicalize((string) $_SESSION['access_theme']));
     } else {
-        define('SET_THEME', SET_DEFAULT_THEME);
+        define('SET_THEME', \Adlexone\Theme\Theme::canonicalize((string) SET_DEFAULT_THEME));
     }
     // Set other user defined constants
     define('SET_DEFAULT_PAGE', $_SESSION['access_home_controller']); //Softwares Default Page

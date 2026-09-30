@@ -9,7 +9,7 @@
     "ADD_ATTACHMENTS": "yes",
     "SET_MAX_ATTACHMENT": "1",
     "SET_DATE_FORMAT": "d-m-Y, h:i A",
-    "SET_DEFAULT_THEME": "new",
+    "SET_DEFAULT_THEME": "inlay-stone",
     "SET_DEFAULT_APPLICATION": "home}-{Home",
     "SET_DEFAULT_ITEM_TYPE": "1",
     "SET_DEFAULT_LANGUAGE": "English",

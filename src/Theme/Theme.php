@@ -10,20 +10,31 @@ namespace Adlexone\Theme;
 final class Theme
 {
     private const KNOWN_LABELS = [
-        'new' => 'Inlay',
+        'inlay-stone' => 'Inlay Stone',
         'inlay-blue' => 'Inlay Blue',
     ];
+
+    /** Former slug kept so saved user/settings values still resolve. */
+    private const ALIASES = [
+        'new' => 'inlay-stone',
+    ];
+
+    public static function canonicalize(string $theme): string
+    {
+        $theme = trim($theme);
+        return self::ALIASES[$theme] ?? $theme;
+    }
 
     public static function name(): string
     {
         if (defined('SET_THEME') && (string) SET_THEME !== '') {
-            return (string) SET_THEME;
+            return self::canonicalize((string) SET_THEME);
         }
         if (defined('SET_DEFAULT_THEME') && (string) SET_DEFAULT_THEME !== '') {
-            return (string) SET_DEFAULT_THEME;
+            return self::canonicalize((string) SET_DEFAULT_THEME);
         }
 
-        return 'new';
+        return 'inlay-stone';
     }
 
     public static function rootFs(): string
@@ -44,7 +55,7 @@ final class Theme
 
     public static function dirUrl(string $theme = ''): string
     {
-        $theme = $theme !== '' ? $theme : self::name();
+        $theme = self::canonicalize($theme !== '' ? $theme : self::name());
         $path = defined('THEME_PATH') ? (string) THEME_PATH : 'site/themes/';
 
         return rtrim(str_replace('\\', '/', $path), '/') . '/' . rawurlencode($theme);
@@ -68,7 +79,7 @@ final class Theme
 
     public static function cssFile(string $theme = ''): string
     {
-        $theme = $theme !== '' ? $theme : self::name();
+        $theme = self::canonicalize($theme !== '' ? $theme : self::name());
         $meta = self::meta($theme);
         $css = (string) ($meta['css'] ?? 'theme.css');
 
@@ -85,7 +96,7 @@ final class Theme
 
     public static function cssHref(string $theme = ''): string
     {
-        $theme = $theme !== '' ? $theme : self::name();
+        $theme = self::canonicalize($theme !== '' ? $theme : self::name());
         $file = self::cssFile($theme);
         $fs = self::rootFs() . $theme . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $file);
         $v = is_file($fs) ? (int) @filemtime($fs) : 0;
@@ -118,7 +129,7 @@ final class Theme
 
     public static function label(string $theme = ''): string
     {
-        $theme = $theme !== '' ? $theme : self::name();
+        $theme = self::canonicalize($theme !== '' ? $theme : self::name());
         $meta = self::meta($theme);
         if (trim((string) ($meta['label'] ?? '')) !== '') {
             return (string) $meta['label'];
@@ -154,6 +165,7 @@ final class Theme
 
     public static function exists(string $theme): bool
     {
+        $theme = self::canonicalize($theme);
         $dir = self::rootFs() . $theme;
         if (!is_dir($dir)) {
             return false;
@@ -168,7 +180,7 @@ final class Theme
      */
     public static function meta(string $theme = ''): array
     {
-        $theme = $theme !== '' ? $theme : self::name();
+        $theme = self::canonicalize($theme !== '' ? $theme : self::name());
         $file = self::rootFs() . $theme . DIRECTORY_SEPARATOR . 'theme.json';
         if (!is_file($file)) {
             return [];

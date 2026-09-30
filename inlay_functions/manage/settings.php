@@ -186,7 +186,8 @@ function installedThemes(): array
 function showThemeSettings(): void
 {
     $themes = installedThemes();
-    $current = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'new';
+    $current = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'inlay-stone';
+    $current = \Adlexone\Theme\Theme::canonicalize($current);
     if (!isset($themes[$current]) && $current !== '') {
         $themes[$current] = $current;
     }
@@ -252,10 +253,11 @@ switch (@$_GET['option']) {
             );
             break;
         }
-        $previous = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : (string) ($decoded['SET_DEFAULT_THEME'] ?? 'new');
+        $previous = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : (string) ($decoded['SET_DEFAULT_THEME'] ?? 'inlay-stone');
+        $previous = \Adlexone\Theme\Theme::canonicalize($previous);
         $decoded['SET_DEFAULT_THEME'] = $theme;
         if ($previous !== $theme) {
-            Database::update('users', ['theme' => $theme], 'theme = ? OR theme = ? OR theme IS NULL', [$previous, '']);
+            Database::update('users', ['theme' => $theme], 'theme = ? OR theme = ? OR theme = ? OR theme IS NULL', [$previous, 'new', '']);
         }
         if (!empty($_SESSION['access_user_id'])) {
             Database::update('users', ['theme' => $theme], 'user_id = ?', [(int) $_SESSION['access_user_id']]);
@@ -267,7 +269,7 @@ switch (@$_GET['option']) {
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
         $settings = $_POST;
         unset($settings['submit_button']);
-        $settings['SET_DEFAULT_THEME'] = defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'new';
+        $settings['SET_DEFAULT_THEME'] = defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'inlay-stone';
         $settings['SET_DEFAULT_LANGUAGE'] = defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English';
         SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'adlexone_settings.json', $settings);
         break;
