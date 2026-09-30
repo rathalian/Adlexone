@@ -241,7 +241,10 @@ class Database
     }
 
     /**
-     * Next integer id. Matches the existing MAX(id)+1 keys used across the tables.
+     * Allocate the next integer for sequenced columns (e.g. log_item_sequence).
+     *
+     * Prefer omitting INTEGER PRIMARY KEY on insert and using insert()'s lastInsertId
+     * for new rows. newID remains for per-parent sequences and legacy call sites.
      */
     public static function newID(string $table, string $idColumn, string $condition = ''): int
     {

@@ -22,13 +22,6 @@ final class Permission
     public const SERVICECENTRE_ANNOUNCE = 'servicecentre.announce';
     public const SERVICECENTRE_SETTINGS = 'servicecentre.settings';
 
-    public const KNOWLEDGEBASE_USE = 'knowledgebase.use';
-    public const KNOWLEDGEBASE_MANAGE = 'knowledgebase.manage';
-    public const KNOWLEDGEBASE_SETTINGS = 'knowledgebase.settings';
-
-    public const REPORTS_USE = 'reports.use';
-    public const REPORTS_MANAGE = 'reports.manage';
-
     public const APP_ACCESS = 'app.access';
 
     /**
@@ -61,17 +54,9 @@ final class Permission
                 'label' => 'Service Centre settings',
                 'legacy_max_role' => 1,
             ],
-            self::KNOWLEDGEBASE_MANAGE => [
-                'label' => 'Knowledgebase administration',
-                'legacy_max_role' => 1,
-            ],
             self::SERVICECENTRE_ANNOUNCE => [
                 'label' => 'Manage Service Centre announcements',
                 'legacy_max_role' => 2,
-            ],
-            self::REPORTS_MANAGE => [
-                'label' => 'Create and manage reports',
-                'legacy_max_role' => 3,
             ],
             self::SERVICECENTRE_USE => [
                 'label' => 'Use Service Centre',
@@ -79,18 +64,6 @@ final class Permission
             ],
             self::SERVICECENTRE_SEARCH => [
                 'label' => 'Search Service Centre',
-                'legacy_max_role' => 5,
-            ],
-            self::KNOWLEDGEBASE_USE => [
-                'label' => 'Use the knowledgebase',
-                'legacy_max_role' => 5,
-            ],
-            self::KNOWLEDGEBASE_SETTINGS => [
-                'label' => 'Knowledgebase settings',
-                'legacy_max_role' => 5,
-            ],
-            self::REPORTS_USE => [
-                'label' => 'View reports',
                 'legacy_max_role' => 5,
             ],
             self::APP_ACCESS => [

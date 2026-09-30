@@ -6,6 +6,8 @@ Open the forwarded port **8000** to view the site. Routes use query strings such
 
 `config/*.json` and `storage/database/*.sqlite` are not in git. A new environment gets the example settings and an empty database file created by PHP on first connection. The live database and real settings stay on the machine that already has them; copy those in only when this environment should use that data.
 
+`Adlexone\Database\SchemaMigrator` runs on bootstrap and keeps the **shared platform schema** current (no application-private tables). Reference DDL: `storage/database/shared_schema.sql`.
+
 ## Site customizations
 
 Installation-specific work belongs under **`site/`** (not the product core):

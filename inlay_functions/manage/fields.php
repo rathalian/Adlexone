@@ -153,22 +153,13 @@ function addCustomField()
     $condition = "WHERE custom_field_name = '" . $_POST['custom_field_name'] . "'";
     $result = Database::select('custom_fields', $columnArray, $condition);
     if (count($result) == 0) {
-        // Set new id
-        $id = Database::newID('custom_fields', 'custom_field_id');
-        $array['custom_field_id'] = $id;
-        // Setup a new field reference
-        $array['field_reference'] = Database::newID('custom_fields', 'field_reference');
-        // Build insert array
-        $columnArray = array_merge($array, $_POST);
-        // Handle data column special characters
-        $columnArray['data'] = html_entity_decode($columnArray['data'], ENT_COMPAT, 'UTF-8');
-        // Insert form field values into row
-        Database::insert('custom_fields', $columnArray);
-        if ($_POST['field_type'] != 'workerField' and $_POST['field_type'] != 'workerFieldMenu' and $_POST['field_type'] != 'multiLevelMenu') {
-            // Create item table column
-            $sql = "ALTER TABLE " . "items ADD custom_field_" . $id . " text";
-            Database::run($sql);
-        }
+        // Insert form field values into row (AUTOINCREMENT custom_field_id)
+        $columnArray = $_POST;
+        unset($columnArray['custom_field_id']);
+        $columnArray['data'] = html_entity_decode((string) ($columnArray['data'] ?? ''), ENT_COMPAT, 'UTF-8');
+        $id = Database::insert('custom_fields', $columnArray);
+        Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
+        // Field values live in item_field_values — items schema is not altered.
         RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_162, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
         return;
     }
@@ -410,14 +401,7 @@ function deleteCustomField(): void
     Database::delete('custom_field_menu_values', $condition);
     Database::delete('item_type_custom_fields', $condition);
     Database::delete('custom_fields', $condition);
-
-    $addsColumn = !in_array($type, ['workerField', 'workerFieldMenu', 'multiLevelMenu'], true);
-    if ($addsColumn) {
-        $column = 'custom_field_' . $customFieldID;
-        if (Database::columnExists('items', $column)) {
-            Database::exec('ALTER TABLE items DROP COLUMN ' . Database::escapeIdentifier($column));
-        }
-    }
+    \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
     RenderViews::buildResponse($name . ' ' . TXT_47, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
 }

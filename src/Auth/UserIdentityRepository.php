@@ -109,9 +109,7 @@ final class UserIdentityRepository
         $defaultApplication = defined('SET_DEFAULT_APPLICATION') ? (string) SET_DEFAULT_APPLICATION : 'home}-{Home';
         $defaultApplicationArray = explode('}-{', $defaultApplication);
 
-        $userId = Database::newID('users', 'user_id');
         $user = [
-            'user_id' => $userId,
             'password' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
             'first_name' => $given,
             'last_name' => $family,
@@ -127,13 +125,15 @@ final class UserIdentityRepository
             'lastactive' => 'active',
         ];
 
-        Database::insert('users', $user);
+        $userId = Database::insert('users', $user);
+        $user['user_id'] = $userId;
 
         if (defined('USER_REG_ACTION') && USER_REG_ACTION !== '' && USER_REG_ACTION !== 'None') {
-            Database::insert('group_members', [
-                'user_id' => $userId,
-                'groups' => USER_REG_ACTION,
-            ]);
+            $groupIds = \Adlexone\Data\GroupMembership::parseDelimited((string) USER_REG_ACTION);
+            if ($groupIds === [] && ctype_digit((string) USER_REG_ACTION)) {
+                $groupIds = [(int) USER_REG_ACTION];
+            }
+            \Adlexone\Data\GroupMembership::setUserGroups($userId, $groupIds);
         }
 
         $created = Database::first('users', '*', 'user_id = ?', [$userId]);

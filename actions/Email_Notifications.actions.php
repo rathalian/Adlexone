@@ -93,14 +93,10 @@ function showSetupSendEmail($actionID = ''): void
     $actionField[ACT_PAK_7] = RenderViews::buildTextArea('email_contents', $fieldValueArray[2], '15');
     $actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 
-    $sql = "SHOW COLUMNS FROM items";
-        $result = Database::rows($sql);
     $excludeArray = array('create_date', 'core_log_updated', 'item_type_id', 'creator_security', 'user_security', 'group_security');
-    $dynamicValues = 'LOG_ENTRY, ITEM_CREATOR, ITEM_OWNER';
-    foreach ($result as $row) {
-        if (!in_array($row[0], $excludeArray)) {
-            @$dynamicValues .= ', ' . strtoupper($row[0]);
-        }
+    $dynamicValues = 'LOG_ENTRY, ITEM_CREATOR, ITEM_OWNER, ITEM_TITLE';
+    foreach (Database::select('custom_fields', ['custom_field_id'], '', [], 'custom_field_id ASC') as $row) {
+        $dynamicValues .= ', CUSTOM_FIELD_' . (int) $row['custom_field_id'];
     }
     $actionField[ACT_PAK_60] = $dynamicValues;
 
@@ -143,6 +139,12 @@ function showSetupSendEmail($actionID = ''): void
 function executeSendEmail($itemID, $dataArray, $preCondition, $triggerCondition, $actionParameters, $actionData, $actionType = '', $requestingAction = ''): bool
 {
     if (!is_array($dataArray)) return false;
+
+    $itemRow = Database::first('items', '*', 'item_id = ?', [(int) $itemID]) ?? [];
+    $dataArray = array_merge(
+        \Adlexone\Data\ItemFields::hydrate($itemRow),
+        $dataArray
+    );
 
     // Parse action data and parameters
     $paramaterArray = explode('}-{', $actionData);
@@ -243,10 +245,64 @@ function resolveRecipients($itemID, $option, $recipients, $dataArray)
                 getUserEmail($dataArray['user_security']),
                 getUserEmail($dataArray['creator_security'])
             ]));
-        // Add simplified group logic as needed
+        case 'groups':
+            return emailsForItemGroups((int) $itemID);
+        case 'creator_groups':
+            return emailsForUserGroups((int) ($dataArray['creator_security'] ?? 0));
+        case 'owner_groups':
+            return emailsForUserGroups((int) ($dataArray['user_security'] ?? 0));
+        case 'creator_owner_groups':
+            return implode(',', array_filter([
+                emailsForUserGroups((int) ($dataArray['creator_security'] ?? 0)),
+                emailsForUserGroups((int) ($dataArray['user_security'] ?? 0)),
+            ]));
         default:
             return $recipients;
     }
+}
+
+/**
+ * @return string comma-separated emails
+ */
+function emailsForUserGroups(int $userId): string
+{
+    if ($userId <= 0) {
+        return '';
+    }
+    $groupIds = \Adlexone\Data\GroupMembership::userGroupIds($userId);
+    return emailsForGroupIds($groupIds);
+}
+
+/**
+ * @return string comma-separated emails
+ */
+function emailsForItemGroups(int $itemId): string
+{
+    return emailsForGroupIds(\Adlexone\Data\GroupMembership::itemGroupIds($itemId));
+}
+
+/**
+ * @param list<int> $groupIds
+ */
+function emailsForGroupIds(array $groupIds): string
+{
+    $emails = [];
+    foreach ($groupIds as $groupId) {
+        $rows = Database::rows(
+            'SELECT u.email
+             FROM users u
+             INNER JOIN user_groups ug ON ug.user_id = u.user_id
+             WHERE ug.group_id = ? AND u.email IS NOT NULL AND u.email <> \'\'',
+            [(int) $groupId]
+        );
+        foreach ($rows as $row) {
+            $email = trim((string) ($row['email'] ?? ''));
+            if ($email !== '') {
+                $emails[$email] = $email;
+            }
+        }
+    }
+    return implode(',', array_values($emails));
 }
 
 /**

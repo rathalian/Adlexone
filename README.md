@@ -1,6 +1,6 @@
 # Adlexone Inlay
 
-PHP 8.1+ / SQLite action and information management system (helpdesk, knowledge base, report manager, time manager), ported from OneOrZero AIMS.
+PHP 8.1+ / SQLite action and information management system. The database is a **shared platform schema** (users, items, fields, applications registry). Application packs consume shared data and may store an application slug on shared rows — they must not own private tables.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ PHP 8.1+ / SQLite action and information management system (helpdesk, knowledge 
 
    Public URL (redirects / OAuth): leave `SET_PUBLIC_BASE_URL` empty for automatic detection from the request Host. For production, set it to the site origin (e.g. `https://inlay.example.com`). Optionally set `SET_ALLOWED_HOSTS` (comma-separated) and `SET_TRUSTED_PROXIES` (IPs/CIDRs) when behind a reverse proxy — forwarded headers are ignored unless the client IP is trusted.
 
-2. **Database.** `storage/database/adlexone.sqlite` is not committed. Restore it from a backup or the server. Note that `storage/database/aims_sqlite_schema_and_seed.sql` still uses the old `aims_`-prefixed table names, while the code expects unprefixed names (`users`, `items`, ...).
+2. **Database.** `storage/database/adlexone.sqlite` is not committed. Restore it from a backup or the server. On boot, `Adlexone\Database\SchemaMigrator` upgrades the live file to the shared platform shape (ACL junctions, EAV `item_field_values`, `saved_searches.criteria_json`, retired-app cleanup). Reference DDL: `storage/database/shared_schema.sql`.
 
 3. **Attachments.** Make sure `storage/attachments/` exists and is writable by the web server.
 

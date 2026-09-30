@@ -40,8 +40,6 @@ final class Capabilities
             'search.advanced' => $inlay('Advanced search', 'ic-search', 'item_type'),
             'search.saved' => $inlay('Saved search', 'ic-my-ticket-searches', 'saved_search'),
             'search.saved_list' => $inlay('Saved search list', 'ic-my-ticket-searches', 'none'),
-            'knowledge.home' => $inlay('Knowledge home', 'ic-knowledgebase', 'none'),
-            'knowledge.settings' => $inlay('Knowledge settings', 'ic-kb-settings', 'none'),
         ];
     }
 
@@ -148,7 +146,6 @@ final class Capabilities
         match ($capability) {
             'items.create' => self::includeShared('item_management_manage'),
             'search.quick', 'search.advanced', 'search.saved', 'search.saved_list' => self::includeShared('search_management_manage'),
-            'knowledge.home', 'knowledge.settings' => self::includeKnowledge(),
             default => RenderViews::buildResponse('This screen is not available.'),
         };
     }
@@ -182,8 +179,6 @@ final class Capabilities
                     'search.advanced' => 'show_item_search',
                     'search.saved' => 'saved_search',
                     'search.saved_list' => 'show_saved_searches',
-                    'knowledge.home' => 'show_knowledge',
-                    'knowledge.settings' => 'knowledgebase_settings',
                     default => '',
                 };
             }
@@ -251,14 +246,6 @@ final class Capabilities
             return;
         }
         include $file;
-    }
-
-    private static function includeKnowledge(): void
-    {
-        if (!defined('KNOWLEDGEBASE_SET_KB_ITEM_TYPE')) {
-            define('KNOWLEDGEBASE_SET_KB_ITEM_TYPE', (string) ($_GET['default_item_type'] ?? ''));
-        }
-        self::includeScreen('app/Http/Controllers/Applications/oneorzeroknowledgebase/controllers/app_oneorzeroknowledgebase_main.php');
     }
 
     /**

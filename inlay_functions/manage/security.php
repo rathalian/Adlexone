@@ -468,7 +468,6 @@ function securityRoleLabel(mixed $role): string
 
                 if (count($result) == 0) {
                     // Prepare user data
-                    $userId = Database::newID('users', 'user_id');
                     $password = md5($_POST['password_ftype'] ?? ''); // Consider password_hash for better security
 
                     // Extract home controller details
@@ -481,7 +480,6 @@ function securityRoleLabel(mixed $role): string
 
                     // Build insert array with user data
                     $insertData = [
-                        'user_id' => $userId,
                         'user_name' => $userName,
                         'password' => $password,
                         'home_controller' => $homeController,
@@ -493,7 +491,7 @@ function securityRoleLabel(mixed $role): string
                     unset($insertData['password_confirm'], $insertData['password_ftype'], $insertData['submit_button'], $insertData['reset'], $insertData['user_id'], $insertData['home_controller'], $insertData['show_hide']);
 
                     // Insert user data into the database
-                    Database::insert('users', $insertData);
+                    $userId = Database::insert('users', $insertData);
 
                     // Show group membership for the newly added user
                     showGroupMembership($userId);
@@ -583,13 +581,11 @@ function addGroup()
         $permissions = $_POST['permissions'] ?? [];
         // Remove unwanted POST variables
         unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id'], $_POST['permissions']);
-        // Set unique id
-        $array['group_id'] = Database::newID('groups', 'group_id');
         // Build insert array
-        $columnArray = array_merge($array, $_POST);
+        $columnArray = $_POST;
         // Insert form field values into row
-        Database::insert('groups', $columnArray);
-        \Adlexone\Auth\Access::setGroupPermissions((int) $array['group_id'], is_array($permissions) ? $permissions : []);
+        $groupId = Database::insert('groups', $columnArray);
+        \Adlexone\Auth\Access::setGroupPermissions((int) $groupId, is_array($permissions) ? $permissions : []);
         RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
         return;
     }
@@ -637,29 +633,10 @@ function updateGroupMembership($userID)
 {
     $userID = (int) $userID;
 
-    $groups = '';
-    $i = 0;
-    foreach ($_POST as $key => $value) {
-        if (!str_starts_with((string) $key, 'group_') || $value === '' || !is_scalar($value)) {
-            continue;
-        }
-        $value = trim((string) $value);
-        if (!ctype_digit($value)) {
-            continue;
-        }
-        $groups .= ($i === 0 ? '}-{' : '') . $value . '}-{';
-        $i++;
-    }
-    if ($groups === '') {
-        $groups = '}-{';
-    }
-
-    $condition = "WHERE user_id = '" . $userID . "'";
-    Database::delete('group_members', $condition);
-    Database::insert('group_members', [
-        'user_id' => $userID,
-        'groups' => $groups,
-    ]);
+    \Adlexone\Data\GroupMembership::setUserGroups(
+        (int) $userID,
+        \Adlexone\Data\GroupMembership::idsFromPost($_POST)
+    );
 
     RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
 }
@@ -727,9 +704,12 @@ function showUserGroupResults()
  */
 function deleteGroup($groupID = '')
 {
-    $sql = "DELETE FROM groups WHERE group_id='" . $groupID . "'";
-    Database::run($sql);
-    \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, []);
+    $groupID = (int) $groupID;
+    Database::run("DELETE FROM groups WHERE group_id='" . $groupID . "'");
+    Database::delete('user_groups', 'group_id = ?', [$groupID]);
+    Database::delete('item_groups', 'group_id = ?', [$groupID]);
+    Database::delete('item_type_groups', 'group_id = ?', [$groupID]);
+    \Adlexone\Auth\Access::setGroupPermissions($groupID, []);
     showGroups();
 }
 
@@ -746,8 +726,7 @@ function deleteUser($userID = '')
 
     $sql = "DELETE FROM users WHERE user_id='" . $userID . "'";
     Database::run($sql);
-    $sql = "DELETE FROM group_members WHERE user_id='" . $userID . "'";
-    Database::run($sql);
+    \Adlexone\Data\GroupMembership::setUserGroups((int) $userID, []);
     showUsers();
 }
 
@@ -766,16 +745,7 @@ function showGroupMembership($userID = '')
     }
     $userName = (string) $user['user_name'];
 
-    $member = Database::first('group_members', ['groups'], 'user_id = ?', [$userID]);
-    $groupArray = [];
-    if ($member !== null && !empty($member['groups'])) {
-        foreach (preg_split('/\}-\{/', (string) $member['groups']) ?: [] as $part) {
-            $id = trim($part, " \t\n\r\0\x0B{}-");
-            if ($id !== '' && ctype_digit($id)) {
-                $groupArray[] = $id;
-            }
-        }
-    }
+    $groupArray = array_map('strval', \Adlexone\Data\GroupMembership::userGroupIds($userID));
 
         $result = Database::select('groups', ['group_id', 'group_name', 'description'], 'ORDER BY group_name ASC');
 

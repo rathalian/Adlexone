@@ -263,9 +263,7 @@ final class MenuOptions
         if (!self::parentBelongs($fieldId, $parentId)) {
             $parentId = 0;
         }
-        $id = Database::newID('custom_field_menu_values', 'menu_value_id');
         Database::insert('custom_field_menu_values', [
-            'menu_value_id' => $id,
             'custom_field_id' => $fieldId,
             'menu_value' => $value,
             'parent_menu_value_id' => $parentId,
@@ -493,9 +491,7 @@ final class MenuOptions
         if ($existing !== null) {
             return (int)$existing['menu_value_id'];
         }
-        $id = Database::newID('custom_field_menu_values', 'menu_value_id');
-        Database::insert('custom_field_menu_values', [
-            'menu_value_id' => $id,
+        $id = (int) Database::insert('custom_field_menu_values', [
             'custom_field_id' => $fieldId,
             'menu_value' => $label,
             'parent_menu_value_id' => $parentId,
@@ -506,10 +502,8 @@ final class MenuOptions
 
     private static function ensureItemColumn(int $fieldId): void
     {
-        if (!self::tableExists('items') || self::columnExists('items', 'custom_field_' . $fieldId)) {
-            return;
-        }
-        Database::run('ALTER TABLE items ADD ' . Database::escapeIdentifier('custom_field_' . $fieldId) . ' TEXT');
+        // Values are stored in item_field_values; items has a fixed core schema.
+        unset($fieldId);
     }
 
     private static function columnExists(string $table, string $column): bool

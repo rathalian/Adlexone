@@ -109,7 +109,6 @@ function addUpdateTriggerActionCustomField($actionID = '', $add = false)
 		} else {
 			// Add action to database
 			unset($columnArray);
-			$columnArray['action_id'] = Database::newID('action_definitions', 'action_id');
 			$columnArray['action_name'] = $_POST['action_name'];
 			$columnArray['enabled'] = $_POST['enabled'];
 			$columnArray['item_type_id'] = $_POST['item_type_id'] ;
@@ -183,11 +182,19 @@ function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $tr
 					$conditionTrue = ($triggerConditionArray[1] == '==') ? @$dataArray[$triggerConditionArray[0]] == $triggerConditionArray[2] : @$dataArray[$triggerConditionArray[0]] != $triggerConditionArray[2];
 					break;
 				case 'update_item_all_met':
-					$columnArray = array ('item_id');
-					// Get existing item data and evaluate pre condition
-					$condition = "WHERE ($preConditionArray[0] $preConditionArray[1] '$preConditionArray[2]') AND item_id='$itemID'";
-					$result = Database::select('items', $columnArray, $condition);
-					$preCheck = (count($result) > 0) ? true : false;
+					// Get existing item data and evaluate pre condition via EAV-aware SQL
+					$preField = (string) ($preConditionArray[0] ?? '');
+					$preOp = (string) ($preConditionArray[1] ?? '=');
+					$preVal = (string) ($preConditionArray[2] ?? '');
+					if (preg_match('/^custom_field_(\d+)$/', $preField, $m)) {
+						$preSql = 'SELECT item_id FROM items WHERE item_id = ' . (int) $itemID
+							. ' AND ' . \Adlexone\Data\ItemFields::matchSql((int) $m[1], $preOp, $preVal);
+						$preCheck = count(Database::rows($preSql)) > 0;
+					} else {
+						$condition = "WHERE ($preField $preOp '$preVal') AND item_id='$itemID'";
+						$result = Database::select('items', ['item_id'], $condition);
+						$preCheck = (count($result) > 0) ? true : false;
+					}
 					// We evaluate trigger condition using == and != and require the evaluation result
 					$postCheck = ($triggerConditionArray[1] == '==') ? @$dataArray[$triggerConditionArray[0]] == $triggerConditionArray[2] : @$dataArray[$triggerConditionArray[0]] != $triggerConditionArray[2];
 					// Both must evaluate as true or we return false
@@ -197,7 +204,8 @@ function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $tr
 					$columnArray = array ($triggerConditionArray[0]);
 					// Get existing item data and evaluate pre condition
 					$condition = "WHERE item_id='$itemID'";
-					$row = Database::first('items', $columnArray, $condition);
+					$row = Database::first('items', '*', $condition);
+					$row = \Adlexone\Data\ItemFields::hydrate($row ?? []);
 					$conditionTrue = (@$dataArray[$triggerConditionArray[0]] != $row[$triggerConditionArray[0]]) ? true : false;
 					break;
 				case 'update_item_log_entry':
@@ -308,7 +316,6 @@ function addUpdateTriggerActionSystemField($actionID = '', $add = false)
 		} else {
 			// Add action to database
 			unset($columnArray);
-			$columnArray['action_id'] = Database::newID('action_definitions', 'action_id');
 			$columnArray['action_name'] = $_POST['action_name'] ;
 			$columnArray['item_type_id'] = $_POST['item_type_id'] ;
 			$columnArray['action_condition_pre'] = $_POST['system_field_pre'];
@@ -355,7 +362,7 @@ function executeTriggerActionSystemField($itemID, $dataArray, $preCondition, $tr
 	// Set the conditionTrue variable to false and get our arguments ot prove otherwise
 	$conditionTrue = false;
 	// Get existing item information - the update
-	$columnArray = array('item_title','creator_security','user_security','group_security');
+	$columnArray = array('item_title','creator_security','user_security');
 	$condition = "WHERE item_id = '$itemID'";
 	$row = Database::first('items', $columnArray, $condition);
 	switch ($preCondition) {
@@ -375,7 +382,11 @@ function executeTriggerActionSystemField($itemID, $dataArray, $preCondition, $tr
 			}
 			break;
 		case 'group_security':
-			if ($row['group_security'] != $dataArray['group_security']){
+			$before = \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID);
+			$after = \Adlexone\Data\GroupMembership::parseDelimited((string) ($dataArray['group_security'] ?? ''));
+			sort($before);
+			sort($after);
+			if ($before !== $after) {
 				$conditionTrue = true;
 			}
 			break;

@@ -68,7 +68,6 @@ final class ApplicationStore
         }
 
         $serviceType = defined('SERVICECENTRE_SET_ITEM_TYPE') ? (string) SERVICECENTRE_SET_ITEM_TYPE : '';
-        $knowledgeType = defined('KNOWLEDGEBASE_SET_KB_ITEM_TYPE') ? (string) KNOWLEDGEBASE_SET_KB_ITEM_TYPE : '';
         $text = static function (string $constant, string $fallback): string {
             return defined($constant) ? (string) constant($constant) : $fallback;
         };
@@ -90,48 +89,6 @@ final class ApplicationStore
         self::insertNav($serviceId, $text('APP_SC_TXT_60', 'Searches'), 'search.saved_list', 'servicecentre.search', 'ic-my-ticket-searches', [], 30);
         self::insertNav($serviceId, $text('APP_SC_TXT_38', 'Announcements'), 'contact_centre.announcements', 'servicecentre.use', 'ic-announcements', [], 40);
         self::insertNav($serviceId, $text('APP_SC_TXT_79', 'Settings'), 'contact_centre.settings', 'servicecentre.settings', 'ic-settings', [], 50);
-
-        $knowledgeId = self::insertApplication([
-            'slug' => 'knowledge-hub',
-            'name' => 'Knowledge Hub',
-            'hint' => 'Articles and search',
-            'icon' => 'ic-knowledgebase',
-            'permission' => 'knowledgebase.use',
-            'enabled' => 1,
-            'sort_order' => 20,
-            'entry_mode' => 'shell',
-            'legacy_controller' => 'app_oneorzeroknowledgebase_main',
-            'legacy_key' => 'app_oneorzeroknowledgebase_main',
-        ]);
-        self::insertNav($knowledgeId, $text('APP_KB_TXT_68', 'Knowledge'), 'knowledge.home', 'knowledgebase.use', 'ic-knowledgebase', [], 10);
-        self::insertNav($knowledgeId, $text('APP_KB_TXT_49', 'New article'), 'items.create', 'knowledgebase.use', 'ic-new-article', ['item_type_id' => $knowledgeType], 20);
-        self::insertNav($knowledgeId, $text('APP_KB_TXT_47', 'Search'), 'search.advanced', 'knowledgebase.use', 'ic-article-search', ['item_type_id' => $knowledgeType], 30);
-        self::insertNav($knowledgeId, $text('APP_KB_TXT_31', 'Settings'), 'knowledge.settings', 'knowledgebase.settings', 'ic-kb-settings', [], 40);
-
-        self::insertApplication([
-            'slug' => 'report-manager',
-            'name' => 'Report Manager',
-            'hint' => 'Reports and saved views',
-            'icon' => 'ic-search',
-            'permission' => 'reports.use',
-            'enabled' => 1,
-            'sort_order' => 30,
-            'entry_mode' => 'legacy',
-            'legacy_controller' => 'app_oneorzeroreportmanager_main',
-            'legacy_key' => 'app_oneorzeroreportmanager_main',
-        ]);
-        self::insertApplication([
-            'slug' => 'time-manager',
-            'name' => 'Time Manager',
-            'hint' => 'Time entries',
-            'icon' => 'ic-time',
-            'permission' => 'app.access',
-            'enabled' => 1,
-            'sort_order' => 40,
-            'entry_mode' => 'legacy',
-            'legacy_controller' => 'app_oneorzerotimemanager_main',
-            'legacy_key' => 'app_oneorzerotimemanager_main',
-        ]);
     }
 
     /**
@@ -203,9 +160,7 @@ final class ApplicationStore
     public static function insertApplication(array $fields): int
     {
         self::ensureReady();
-        $id = Database::newID('applications', 'application_id');
-        Database::insert('applications', [
-            'application_id' => $id,
+        return Database::insert('applications', [
             'slug' => $fields['slug'],
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
@@ -217,7 +172,6 @@ final class ApplicationStore
             'legacy_controller' => $fields['legacy_controller'] ?? '',
             'legacy_key' => $fields['legacy_key'] ?? '',
         ]);
-        return $id;
     }
 
     /**
@@ -287,7 +241,6 @@ final class ApplicationStore
         ?int $sortOrder = null
     ): int {
         self::ensureReady();
-        $id = Database::newID('application_nav', 'nav_id');
         if ($sortOrder === null) {
             $max = Database::first(
                 'application_nav',
@@ -297,8 +250,7 @@ final class ApplicationStore
             );
             $sortOrder = (int) ($max['s'] ?? 0) + 10;
         }
-        Database::insert('application_nav', [
-            'nav_id' => $id,
+        return Database::insert('application_nav', [
             'application_id' => $applicationId,
             'label' => $label,
             'capability' => $capability,
@@ -307,7 +259,6 @@ final class ApplicationStore
             'config_json' => json_encode($config, JSON_UNESCAPED_SLASHES),
             'sort_order' => $sortOrder,
         ]);
-        return $id;
     }
 
     /**

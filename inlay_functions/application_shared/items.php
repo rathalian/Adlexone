@@ -29,6 +29,34 @@ use Adlexone\support\RenderViews;
 use Adlexone\support\Actions;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
+use Adlexone\Data\GroupMembership;
+
+/**
+ * True when the signed-in user may open the item (owner, creator, admin, or shared group).
+ */
+function userCanAccessItem(int $itemId): bool
+{
+    $role = (int) ($_SESSION['access_role_id'] ?? 5);
+    if ($role <= 2) {
+        return true;
+    }
+    $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+    if ($userId <= 0) {
+        return false;
+    }
+    if (Database::exists('items', 'item_id = ? AND (user_security = ? OR creator_security = ?)', [$itemId, $userId, $userId])) {
+        return true;
+    }
+    return GroupMembership::userSharesItemGroup($userId, $itemId);
+}
+
+/**
+ * Sync item_groups from a legacy group_security string (or POST value).
+ */
+function syncItemGroupsFromSecurity(int $itemId, ?string $encoded): void
+{
+    GroupMembership::setItemGroups($itemId, GroupMembership::parseDelimited($encoded));
+}
 
 /**
  * Controller Constants
@@ -294,9 +322,8 @@ function showItemTypes($defaultItemType = '')
     $fields = [];
 
     // Get all item types
-    $columnArray = ['item_type_id', 'item_type_name', 'group_security'];
     $condition = "WHERE enabled = 'Yes' ORDER BY item_type_name ASC";
-    $result = Database::select('item_types', $columnArray, $condition);
+    $result = Database::select('item_types', ['item_type_id', 'item_type_name'], $condition);
 
     $noItemTypes = false;
     if (count($result) > 0) {
@@ -306,24 +333,20 @@ function showItemTypes($defaultItemType = '')
                 $displayArray[] = $row['item_type_name'];
             }
         } else {
-            $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-                        $userResult = Database::rows($sql);
-            $userRow = $userResult[0] ?? null;
-            if (count($userResult) == 0) {
+            $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
+            if ($userGroupIds === []) {
                 $noItemTypes = true;
             } else {
-                $groupArray = explode('}-{', $userRow['groups']);
                 foreach ($result as $row) {
                     $typeFound = false;
                     $viewerGroupFound = false;
-                    foreach ($groupArray as $group) {
-                        if (stristr($row['group_security'], '}-{' . $group . '}-{')) {
+                    $typeGroupIds = GroupMembership::itemTypeGroupIds((int) $row['item_type_id']);
+                    foreach ($userGroupIds as $group) {
+                        if (in_array((int) $group, $typeGroupIds, true)) {
                             $typeFound = true;
                             if ($_SESSION['access_role_id'] > 2) {
-                                $sql = "SELECT role FROM groups WHERE group_id = '$group'";
-                                                                $groupResult = Database::rows($sql);
-                                $groupRow = $groupResult[0] ?? null;
-                                if ($groupRow['role'] == '5') {
+                                $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $group]);
+                                if ($groupRow !== null && (string) $groupRow['role'] === '5') {
                                     $viewerGroupFound = true;
                                 }
                             }
@@ -434,22 +457,12 @@ function showItemAdd($itemTypeID, $values)
         $itemRole = 2;
     } else {
         $itemRole = 5;
-        //set default role
-        //Get role specific to item
-        $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-                $result = Database::rows($sql);
-        if (count($result) != 0) {
-            $row = $result[0] ?? null;
-            $userGroups = $row['groups'];
-            $groupArray = explode('}-{', $userGroups);
-            $itemGroupArray = explode('}-{', $itemTypeFields['group_security']);
-            foreach ($itemGroupArray as $a) {
-                if (stristr($userGroups, '}-{' . $a . '}-{')) {
-                    $sql = "SELECT role FROM groups WHERE group_id = '" . $a . "'";
-                                        $result = Database::rows($sql);
-                    $row = $result[0] ?? null;
-                    $itemRole = ($row['role'] < $itemRole) ? $row['role'] : $itemRole;
-                }
+        $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
+        $typeGroupIds = GroupMembership::itemTypeGroupIds((int) ($itemTypeFields['item_type_id'] ?? 0));
+        foreach (array_intersect($userGroupIds, $typeGroupIds) as $groupId) {
+            $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
+            if ($groupRow !== null) {
+                $itemRole = ((int) $groupRow['role'] < $itemRole) ? (int) $groupRow['role'] : $itemRole;
             }
         }
     }
@@ -495,7 +508,9 @@ function showItemAdd($itemTypeID, $values)
     }
     // Create group membership list
     $groupMembership = '';
-    $groupSecurity = (string)($itemTypeFields['group_security'] ?? '');
+    $groupSecurity = \Adlexone\Data\GroupMembership::toDelimited(
+        \Adlexone\Data\GroupMembership::itemTypeGroupIds((int) ($itemTypeFields['item_type_id'] ?? 0))
+    );
     if ($groupSecurity !== '') {
         $groupArray = explode('}-{', $groupSecurity);
         $i = 0;
@@ -742,32 +757,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
     if (count($result) == 0) {
        RenderViews::buildResponse(TXT_616);
     } else {
-        $i = 0;
-        if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin have access
-            $i++;
-        } else {
-            // Check to see if we have access to it
-            $sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security  = '" . $_SESSION['access_user_id'] . "') and item_id='" . $itemID . "'";
-                        $result = Database::rows($sql);
-            if (count($result) > 0) {
-                $i++;
-                //No need to go any further
-            } else {
-                // Get all items by group assignment
-                $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-                                $result = Database::rows($sql);
-                $row = $result[0] ?? null;
-                $groupArray = explode('}-{', $row['groups']);
-                $sql = "SELECT group_security FROM items WHERE item_id='" . $itemID . "'";
-                                $result = Database::rows($sql);
-                $row = $result[0] ?? null;
-                foreach ($groupArray as $a) {
-                    if (stristr($row['group_security'], '}-{' . $a . '}-{')) {
-                        $i++;
-                    }
-                }
-            }
-        }
+        $i = userCanAccessItem((int) $itemID) ? 1 : 0;
         if ($i > 0) {//The user is allowed to access the task
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
@@ -777,6 +767,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 $columnArray = array('*');
                 $condition = "WHERE item_id = '" . $itemID . "'";
                 $itemFields = Database::first('items', $columnArray, $condition);
+                $itemFields = ItemFields::hydrate($itemFields ?? []);
                 // Build item table
             } else {
                 // Use passed in values.  Only occurs when user comes back to incomplete form
@@ -819,24 +810,12 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 $itemField[TXT_269] = RenderViews::buildHiddenInput('user_security', $itemFields['user_security']) . $row['user_name'];
             }
             $itemRole = 5;
-            //set default role
-            //Get role specific to item
-            $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-                        $result = Database::rows($sql);
-            if (count($result) != 0) {
-
-                $row = $result[0] ?? null;
-                $groupArray = explode('}-{', $row['groups']);
-                $itemGroupArray = explode('}-{', $itemFields['group_security']);
-                if (is_array($itemGroupArray)) {
-                    foreach ($itemGroupArray as $a) {
-                        if (stristr(@$row['groups'], '}-{' . $a . '}-{')) {
-                            $sql = "SELECT role FROM groups WHERE group_id = '" . $a . "'";
-                                                        $result = Database::rows($sql);
-                            $row = $result[0] ?? null;
-                            $itemRole = ($row['role'] < $itemRole) ? $row['role'] : $itemRole;
-                        }
-                    }
+            $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
+            $itemGroupIds = GroupMembership::itemGroupIds((int) $itemID);
+            foreach (array_intersect($userGroupIds, $itemGroupIds) as $groupId) {
+                $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
+                if ($groupRow !== null) {
+                    $itemRole = ((int) $groupRow['role'] < $itemRole) ? (int) $groupRow['role'] : $itemRole;
                 }
             }
             $html = '';
@@ -852,7 +831,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             }
             if ($itemRole < 4) {
                 // Create group membership list
-                $groupArray = explode('}-{', $itemFields['group_security']);
+                $groupArray = $itemGroupIds;
                 $i = 0;
                 foreach ($groupArray as $a) {
                     if ($i == 0) {
@@ -882,7 +861,12 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 );
                 $itemField[TXT_270] = '<div class="criteria-row"><div class="readonly-value">' . htmlspecialchars($groupMembership, ENT_QUOTES, 'UTF-8') . '</div>'
                     . $changeSecurityURL . '</div>'
-                    . RenderViews::buildHiddenInput('group_security', (string)$itemFields['group_security']);
+                    . RenderViews::buildHiddenInput(
+                        'group_security',
+                        \Adlexone\Data\GroupMembership::toDelimited(
+                            \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID)
+                        )
+                    );
             }
             if ($itemRole >= 4) {//Users and viewers can read only
                 $itemField[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildHiddenInput('item_title', $itemFields['item_title']) . $itemFields['item_title'];
@@ -1172,34 +1156,35 @@ function addItem()
         // Reload form setting values based on posted form values, triggered from javascript submits
         showItemAdd($_POST['item_type_id'], $_POST);
     } else {
-        $array['item_id'] = Database::newID('items', 'item_id');
-        if (ADD_ATTACHMENTS == 'yes' and $_FILES['attachment']['name'] != '') {
-            addAttachment($array['item_id'], false, false);
+        if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') != '') {
+            // Item row must exist before attachment metadata references it.
         }
-        // Set create date and core log updated as array
+        $array = [];
         $array['create_date'] = time();
         $array['core_log_updated'] = time();
-        // Remove unwanted form variables
-        unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment']);
+        unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id']);
         MenuOptions::collapseRequest($_POST);
-        // Set item id as array
-        // Merge arrays for item insert query
+        $dbArray = [];
         foreach ($_POST as $key => $value) {
-            //Don't insert work field values - they aren't persistent
             if (!stristr($key, 'worker_field') and !stristr($key, 'worker_field_menu')) {
                 $dbArray[$key] = $value;
             }
         }
         $insertArray = array_merge($array, $dbArray);
-        // Insert form field values into row
-        Database::insert('items', $insertArray);
-        // Execute actions
-        Actions::executeAction($array['item_id'], 'create_item', false);
-        if ($_FILES['attachment']['name'] != '') {
-            Actions::executeAction($array['item_id'], 'item_attachment', false);
+        $fieldPayload = $insertArray;
+        $insertArray = ItemFields::withoutFieldColumns($insertArray);
+        $itemId = Database::insert('items', $insertArray);
+        ItemFields::saveFromArray($itemId, $fieldPayload);
+        GroupMembership::setItemGroups(
+            $itemId,
+            GroupMembership::parseDelimited((string) ($fieldPayload['group_security'] ?? ''))
+        );
+        if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') != '') {
+            addAttachment($itemId, false, false);
+            Actions::executeAction($itemId, 'item_attachment', false);
         }
-        // Deal with empty item title but add the item first
-        header('Location: ' . MAN_BASE_URL . '&option=show_item&item_id=' . rawurlencode((string)$array['item_id']));
+        Actions::executeAction($itemId, 'create_item', false);
+        header('Location: ' . MAN_BASE_URL . '&option=show_item&item_id=' . rawurlencode((string) $itemId));
         exit;
     }
 }
@@ -1230,17 +1215,20 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
             $columnArray = array('*');
             $condition = "WHERE item_id = '" . $itemID . "'";
             $row = Database::first('items', $columnArray, $condition);
+            $row = ItemFields::hydrate($row ?? []);
             //Create new item based on existing data
             foreach ($row as $key => $value) {
                 if (!is_integer($key)) {//ignore integer keys in array
                     $newItemColumnArray[$key] = addslashes($value);
                 }
             }
-            $newItemColumnArray['item_id'] = Database::newID('items', 'item_id');
-            //get new item id value
+            unset($newItemColumnArray['item_id']);
+            $newItemColumnArray = ItemFields::withoutFieldColumns($newItemColumnArray);
             $newItemColumnArray['item_type_id'] = $targetItemTypeID;
-            //override item type id
-            Database::insert('items', $newItemColumnArray);
+            $newId = Database::insert('items', $newItemColumnArray);
+            ItemFields::copyItem((int) $itemID, $newId);
+            GroupMembership::setItemGroups($newId, GroupMembership::itemGroupIds((int) $itemID));
+            $newItemColumnArray['item_id'] = $newId;
             //Copy log entries
             $logColumnArray = array('*');
             $condition = "WHERE item_id = '" . $itemID . "'";
@@ -1251,10 +1239,8 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
                         $newLogColumnArray[$key] = addslashes($value);
                     }
                 }
-                $newLogColumnArray['id'] = Database::newID('core_log', 'id');
-                //get new id value;
-                $newLogColumnArray['item_id'] = $newItemColumnArray['item_id'];
-                //override id
+                unset($newLogColumnArray['id']);
+                $newLogColumnArray['item_id'] = $newId;
                 Database::insert('core_log', $newLogColumnArray);
             }
             //Copy attachment entries
@@ -1267,10 +1253,8 @@ function transformItem($itemID, $transformType, $targetItemTypeID)
                         $newAttachmentColumnArray[$key] = $value;
                     }
                 }
-                $newAttachmentColumnArray['id'] = Database::newID('item_attachments', 'id');
-                //get new id value;
+                unset($newAttachmentColumnArray['id']);
                 $newAttachmentColumnArray['item_id'] = $newItemColumnArray['item_id'];
-                //override id
                 Database::insert('item_attachments', $newAttachmentColumnArray);
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
@@ -1315,7 +1299,12 @@ function updateItem($itemID)
         }
         // Update system fields, they are the only remaining POST variables
         $condition = "WHERE item_id='$itemID'";
-        Database::update('items', $_POST, $condition);
+        $fieldPayload = $_POST;
+        Database::update('items', ItemFields::withoutFieldColumns($_POST), $condition);
+        ItemFields::saveFromArray((int) $itemID, $fieldPayload);
+        if (isset($fieldPayload['group_security'])) {
+            syncItemGroupsFromSecurity((int) $itemID, (string) $fieldPayload['group_security']);
+        }
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
         $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $message = ($_POST['item_title'] != '') ? TXT_263 : TXT_272;
@@ -1373,12 +1362,10 @@ function addLogEntry($itemID, $showInformation = true, $executeAction = true)
 {
     // Remove unwanted form variables
     unset($_POST['submit_button'], $_POST['reset']);
-    // Get new log id and sequence
-    $LogID = Database::newID('core_log', 'id');
+    // Get new log sequence (id is AUTOINCREMENT)
     $condition = "WHERE item_id='$itemID'";
     $SequenceID = Database::newID('core_log', 'log_item_sequence', $condition);
     // Add log entry
-    $columnArray['id'] = $LogID;
     $columnArray['item_id'] = $itemID;
     $columnArray['create_date'] = time();
     $columnArray['item_identifier'] = 0;
@@ -1601,15 +1588,7 @@ function showSecurityAssignment(string $itemID): void
     // Build form action
     $action = MAN_BASE_URL . '&option=update_security&item_id=' . $itemID;
 
-    // Fetch current group membership (use parameterised query)
-    $row = Database::first('items', ['group_security'], 'item_id = ?', [(int) $itemID]);
-    $groupArray = [];
-    if (!empty($row['group_security'])) {
-        $groupArray = array_values(array_filter(array_map(
-            static fn ($part) => trim((string)$part, "{}- \t"),
-            explode('}-{', (string)$row['group_security'])
-        ), static fn ($part) => $part !== ''));
-    }
+    $groupArray = array_map('strval', \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID));
 
     // Fetch all groups (ordered)
     $sql = "SELECT group_id, group_name, description FROM groups ORDER BY group_name";
@@ -1651,20 +1630,13 @@ function updateSecurityAssignment(string $itemID): void
 
     // Collect selected group values, trim and ignore empty entries
     $selected = array_values(array_filter($_POST, fn($v) => trim((string)$v) !== ''));
-
-    // Build the legacy delimiter format '}-\{val1\}-\{val2\}-\{'
-    $groups = '';
-    if (!empty($selected)) {
-        $selected = array_map(fn($v) => (string)$v, $selected);
-        $groups = '}-{' . implode('}-{', $selected) . '}-{';
-    }
+    $ids = array_map(static fn($v) => (int) $v, $selected);
 
     // Execute any configured actions for this update
     Actions::executeAction($itemID, 'update_item', false);
 
-    // Parameterised update to avoid SQL injection
     try {
-        Database::update('items', ['group_security' => $groups], 'item_id = ?', [(int) $itemID]);
+        \Adlexone\Data\GroupMembership::setItemGroups((int) $itemID, $ids);
     } catch (\Throwable $e) {
         // Render an error response (keeps behaviour simple and user-friendly)
         RenderViews::buildResponse(TXT_321 ?? 'Update failed', $e->getMessage());
@@ -1681,28 +1653,14 @@ function updateSecurityAssignment(string $itemID): void
 
 function showMyItems($userID, $itemID = '')
 {
-    // Get all items by user assignment
-    $sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security = '" . $_SESSION['access_user_id'] . "')";
-    $userItemArray = Database::rows($sql);
-    // Get all items by group assignment
-    $sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-        $result = Database::rows($sql);
-    $row = $result[0] ?? null;
-    $groupArray = explode('}-{', $row['groups']);
-    foreach ($groupArray as $group) {
-        $sql = "SELECT item_id FROM items WHERE group_security LIKE '%}-{" . $group . "}-{%'";
-        if (Database::rows($sql)) {
-            $groupItemArray = Database::rows($sql);
-        }
-    }
-    if (!is_array($userItemArray)) {
-        $userItemArray[] = '';
-    }
-    if (!is_array(@$groupItemArray)) {
-        $groupItemArray[] = '';
-    }
+    $uid = (int) ($_SESSION['access_user_id'] ?? 0);
+    $userItemArray = Database::select('items', ['item_id'], 'user_security = ? OR creator_security = ?', [$uid, $uid]);
+    $groupItemArray = array_map(
+        static fn(int $id): array => ['item_id' => $id],
+        \Adlexone\Data\GroupMembership::itemIdsForUser($uid)
+    );
     $mergedArray = array_merge($groupItemArray, $userItemArray);
-    $itemArray = array_unique($mergedArray);
+    $itemArray = array_unique($mergedArray, SORT_REGULAR);
     showItems($itemArray, $itemID, 'item_id DESC');
 }
 
@@ -1711,8 +1669,6 @@ function addAttachment($itemID, $showAttachments = true, $executeAction = true)
     // Upload the attachment
     $fileArray = File::uploadItemAttachment(SET_MAX_ATTACHMENT, 'attachment', time(), SET_ATTACHMENTS_PATH);
     // Add attachment
-    $columnArray['id'] = Database::newID('item_attachments', 'id');
-    //get new id value;
     $columnArray['item_id'] = $itemID;
     $columnArray['create_date'] = time();
     $columnArray['file_name'] = $fileArray['time_name'];
@@ -1837,17 +1793,13 @@ function deleteAttachment($id, $itemID)
 
 function deleteItem($itemID)
 {
-    // Delete item
-    $sql = "DELETE FROM items WHERE item_id = '$itemID'";
-    Database::run($sql);
-    // Delete logs
-    $sql = "DELETE FROM core_log WHERE item_id = '$itemID'";
-    Database::run($sql);
-    // Delete attachments
-    $sql = "DELETE FROM item_attachments WHERE item_id = '$itemID'";
-    Database::run($sql);
+    $itemID = (int) $itemID;
+    Database::run("DELETE FROM items WHERE item_id = '$itemID'");
+    Database::run("DELETE FROM core_log WHERE item_id = '$itemID'");
+    Database::run("DELETE FROM item_attachments WHERE item_id = '$itemID'");
+    ItemFields::deleteForItem($itemID);
+    GroupMembership::setItemGroups($itemID, []);
     showMyItems($_SESSION['access_user_id']);
-
 }
 
 /**

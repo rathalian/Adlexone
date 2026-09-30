@@ -31,18 +31,12 @@ final class Access
 
     public static function ensureSchema(): void
     {
+        \Adlexone\Database\SchemaMigrator::migrate();
         Database::exec(
             'CREATE TABLE IF NOT EXISTS group_permissions (
                 group_id INTEGER NOT NULL,
                 permission TEXT NOT NULL,
                 PRIMARY KEY (group_id, permission)
-            )'
-        );
-        Database::exec(
-            'CREATE TABLE IF NOT EXISTS user_permissions (
-                user_id INTEGER NOT NULL,
-                permission TEXT NOT NULL,
-                PRIMARY KEY (user_id, permission)
             )'
         );
     }
@@ -115,10 +109,6 @@ final class Access
 
         $granted = [];
 
-        foreach (Database::select('user_permissions', ['permission'], 'user_id = ?', [$userId]) as $row) {
-            $granted[$row['permission']] = true;
-        }
-
         foreach (self::groupIdsForUser($userId) as $groupId) {
             foreach (Database::select('group_permissions', ['permission'], 'group_id = ?', [$groupId]) as $row) {
                 $granted[$row['permission']] = true;
@@ -138,20 +128,7 @@ final class Access
      */
     public static function groupIdsForUser(int $userId): array
     {
-        $member = Database::first('group_members', ['groups'], 'user_id = ?', [$userId]);
-        if ($member === null || empty($member['groups'])) {
-            return [];
-        }
-
-        $ids = [];
-        $parts = preg_split('/\}-\{/', (string) $member['groups']) ?: [];
-        foreach ($parts as $part) {
-            $id = trim($part, " \t\n\r\0\x0B{}-");
-            if ($id !== '' && ctype_digit($id)) {
-                $ids[] = (int) $id;
-            }
-        }
-        return array_values(array_unique($ids));
+        return \Adlexone\Data\GroupMembership::userGroupIds($userId);
     }
 
     public static function can(string ...$permissions): bool

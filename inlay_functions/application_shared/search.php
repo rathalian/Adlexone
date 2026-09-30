@@ -220,39 +220,16 @@ function showItems1($itemIDArray, $itemID = '', $orderSQL = '',  $userID = '', $
 
 	if (is_array($itemIDArray)){
 		if ($_SESSION['access_role_id'] >1){ //Everyone except admins and global admins
-			// Get all items by user assignment
-			$sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security = '" . $_SESSION['access_user_id'] . "')";
-			if (Database::rows($sql)) {
-				$userItemArray = Database::rows($sql);
-			}
-			// Get all items by group assignment
-			$sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-						$result = Database::rows($sql);
-			$row = $result[0] ?? null;
-			$groupArray = explode('}-{', $row['groups']);
-			$i=0;
-			foreach($groupArray as $group) {
-				$sql = "SELECT item_id FROM items WHERE group_security LIKE '%}-{" . $group . "}-{%'";
-								$result = Database::rows($sql);
-				if (count($result) > 0) {
-					$itemArray = Database::rows($sql);
-					$groupItemArray = ($i == 0) ? $itemArray : array_merge($groupItemArray,$itemArray);
-					$i++;
-				}
-			}
-			if (!is_array(@$userItemArray)){
-				$userItemArray[] = '';
-			}
-			if (!is_array(@$groupItemArray)){
-				$groupItemArray[] = '';
-			}
-			$userItemArray = array_unique(array_merge($groupItemArray,$userItemArray));
+			$uid = (int) $_SESSION['access_user_id'];
+			$userItemArray = Database::select('items', ['item_id'], 'user_security = ? OR creator_security = ?', [$uid, $uid]);
+			$groupItemArray = array_map(
+				static fn(int $id): array => ['item_id' => $id],
+				\Adlexone\Data\GroupMembership::itemIdsForUser($uid)
+			);
+			$userItemArray = array_values(array_unique(array_merge($groupItemArray, $userItemArray), SORT_REGULAR));
 		}else{
 			// Get all items is is administrator (for searching only)
-			$sql = "SELECT item_id FROM items";
-			if (Database::rows($sql)) {
-				$userItemArray = Database::rows($sql);
-			}
+			$userItemArray = Database::select('items', ['item_id']);
 		}
 		// Get data from database
 		$columnArray = array();
@@ -793,10 +770,11 @@ if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['
         }
         // Security Group
         if (!empty($_POST['security_groups'])) {
+            $groupId = (int) $_POST['security_groups'];
             if (html_entity_decode($_POST['security_groups_operator'], ENT_COMPAT, 'UTF-8') == '=') {
-                $condition .= $andOr . " group_security LIKE '%-{" . $_POST['security_groups'] . "}-%' ";
+                $condition .= $andOr . " item_id IN (SELECT item_id FROM item_groups WHERE group_id = " . $groupId . ") ";
             } else {
-                $condition .= $andOr . " group_security NOT LIKE '%-{" . $_POST['security_groups'] . "}-%' ";
+                $condition .= $andOr . " item_id NOT IN (SELECT item_id FROM item_groups WHERE group_id = " . $groupId . ") ";
             }
             $andOr = $_POST['security_groups_andor'];
         }
@@ -814,32 +792,21 @@ if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['
         $i = 0;
         while ($i < @$_POST['custom_field_count']) {
             if (!empty($_POST['custom_field_value_' . $i]) or $_POST['custom_field_value_' . $i] != '') {
-                switch (html_entity_decode($_POST['custom_field_operator_' . $i], ENT_COMPAT, 'UTF-8')) {
-                    case '=':
-                        $condition .= $andOr . " custom_field_" . $_POST['custom_field_' . $i] . " = '" . $_POST['custom_field_value_' . $i] . "' ";
-                        break;
-                    case 'LIKE':
-                        $condition .= $andOr . " custom_field_" . $_POST['custom_field_' . $i] . " LIKE '%" . $_POST['custom_field_value_' . $i] . "%' ";
-                        break;
-                    case '<>':
-                        $condition .= $andOr . " custom_field_" . $_POST['custom_field_' . $i] . " <> '" . $_POST['custom_field_value_' . $i] . "' ";
-                        break;
-                    case '>':
-                        $condition .= $andOr . " custom_field_" . $_POST['custom_field_' . $i] . " > '" . $_POST['custom_field_value_' . $i] . "' ";
-                        break;
-                    case '<':
-                        $condition .= $andOr . " custom_field_" . $_POST['custom_field_' . $i] . " < '" . $_POST['custom_field_value_' . $i] . "' ";
-                        break;
-                    default:
-                } // switch
+                $fieldId = (int) $_POST['custom_field_' . $i];
+                $op = html_entity_decode($_POST['custom_field_operator_' . $i], ENT_COMPAT, 'UTF-8');
+                $val = (string) $_POST['custom_field_value_' . $i];
+                $condition .= $andOr . ' ' . \Adlexone\Data\ItemFields::matchSql($fieldId, $op, $val) . ' ';
                 $andOr = $_POST['custom_field_andor_' . $i];
             }
             $i++;
         }
-        $columnArray = array();
+        $columnArray = array('item_id', 'item_type_id', 'item_title');
         foreach ($_POST as $key => $value) {
-            if (substr($key, 0, 4) == "disp") {
-                $columnArray[] = substr($key, 5);
+            if (substr($key, 0, 4) == "disp" && $value !== '') {
+                $col = substr($key, 5);
+                if ($col !== '' && !preg_match('/^custom_field_\d+$/', $col) && !in_array($col, $columnArray, true)) {
+                    $columnArray[] = $col;
+                }
             }
         }
         $condition = ($condition == 'WHERE') ? '' : $condition;  // If condition is equal to where it means we have set no field values
@@ -890,10 +857,19 @@ if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['
     // Show search results or move to save search page
     if (isset($_POST['search'])) {
         $sql = str_replace('session_user',(string) $_SESSION['access_user_id'], $sql);
+        $sql = \Adlexone\Data\ItemFields::rewriteLegacySql($sql);
         showItems(Database::rows($sql), '', $newsort, $_SESSION['access_user_id']);
     } elseif (isset($_POST['new_favourite'])) {
         $sql = addslashes($sql);
-        addSavedSearch($_SESSION['access_user_id'], $sql, $_POST['search_name'], $_POST['search_description'], $_POST['application'], $_POST['security']);
+        addSavedSearch(
+            $_SESSION['access_user_id'],
+            $sql,
+            $_POST['search_name'],
+            $_POST['search_description'],
+            $_POST['application'],
+            $_POST['security'],
+            \Adlexone\Data\SavedSearch::criteriaFromPost($_POST)
+        );
     } else {
 //		echo RenderViews::showInformation(TXT_375, 'tcBorder', 'tdcHeading', 'tdc2', 'Yes', '', '', false);
 //
@@ -990,7 +966,7 @@ function showSavedSearches($userID, $application = '')
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
-function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescription, $application, $security)
+function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescription, $application, $security, array $criteria = [])
 {
     // Check for duplicate and respond with a return message if exists
     $sql = "SELECT user FROM saved_searches WHERE search_name = '$searchName' AND user = '$userID'";
@@ -1003,7 +979,6 @@ function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescriptio
         RenderViews::buildResponse(TXT_367, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
         return;
     }
-    $columnArray['search_id'] = Database::newID('saved_searches', 'search_id');
         if ($security == 'all') {
             $columnArray['user'] = 'all';
         } elseif ($security == 'mine') {
@@ -1015,6 +990,10 @@ function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescriptio
         $columnArray['search_description'] = $searchDescription;
         $columnArray['saved_search_sql'] = $savedSearchSQL;
         $columnArray['application'] = $application;
+        if ($criteria === []) {
+            $criteria = ['version' => 1, 'legacy_sql' => stripslashes((string) $savedSearchSQL)];
+        }
+        $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode($criteria);
         Database::insert('saved_searches', $columnArray);
         // Success messagae
     RenderViews::buildResponse(TXT_25, RenderViews::buildURL('javascript: history.go(-1)', TXT_404, 'URL'));
@@ -1039,8 +1018,7 @@ function savedSearch($searchID, $userID, $global = false, $rss = false)
         // Set title constant for language alias in showitems function
         define('SEARCH_NAME', $row['search_name']);
 
-        // Replace session_user placeholder and build result array
-        $savedSql = str_replace('session_user', (string)$_SESSION['access_user_id'], $row['saved_search_sql']);
+        $savedSql = \Adlexone\Data\SavedSearch::resolveSql($row);
         $built = Database::rows($savedSql);
 
         // Normalize to flat list of item IDs when buildArray returned rows
@@ -1052,11 +1030,11 @@ function savedSearch($searchID, $userID, $global = false, $rss = false)
             $itemIDs = [];
         }
 
-        showItems($itemIDs, '', 'item_id DESC', $_SESSION['access_user_id'], $row['saved_search_sql']);
+        showItems($itemIDs, '', 'item_id DESC', $_SESSION['access_user_id'], $savedSql);
     } else {
         //Prep for output of XML RSS feed
         ob_clean();
-        $itemArray = Database::rows($row['saved_search_sql']);
+        $itemArray = Database::rows(\Adlexone\Data\SavedSearch::resolveSql($row));
         foreach ($itemArray as $id) {
             $sql = "SELECT item_id, item_title FROM items WHERE item_id = '$id'";
                         $result = Database::rows($sql);
@@ -1482,8 +1460,13 @@ function editSavedSearch($id)
 
 function updateSavedSearch($id)
 {
-    $columnArray['saved_search_sql'] = html_entity_decode($_POST['saved_search_sql'], ENT_COMPAT, 'UTF-8');
+    $sql = html_entity_decode($_POST['saved_search_sql'], ENT_COMPAT, 'UTF-8');
+    $columnArray['saved_search_sql'] = $sql;
     $columnArray['search_name'] = html_entity_decode($_POST['search_name'], ENT_COMPAT, 'UTF-8');
+    $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode([
+        'version' => 1,
+        'legacy_sql' => $sql,
+    ]);
     $condition = "WHERE search_id = '" . $id . "'";
     Database::update('saved_searches', $columnArray, $condition);
     // Success messagae

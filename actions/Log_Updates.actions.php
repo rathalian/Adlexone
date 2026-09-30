@@ -59,13 +59,9 @@ function showSetupUpdateLog($actionID = '')
 	$actionField[ACT_PAK_55] = RenderViews::buildTextArea('log_text', @$fieldValueArray[1], '15');
 	$actionField[''] = RenderViews::buildHiddenInput('action_id', @$fieldValues['action_id']);
 	$excludeArray = array('create_date','core_log_updated','item_type_id','creator_security','user_security','group_security');
-	$dynamicValues = 'LOG_ENTRY, ITEM_CREATOR, ITEM_OWNER';
-	$sql = "SHOW COLUMNS FROM items";
-		$result = Database::rows($sql);
-	foreach ($result as $row){
-		if (!in_array($row[0],$excludeArray)){
-			@$dynamicValues .= ', '.strtoupper($row[0]);
-		}
+	$dynamicValues = 'LOG_ENTRY, ITEM_CREATOR, ITEM_OWNER, ITEM_TITLE';
+	foreach (Database::select('custom_fields', ['custom_field_id'], '', [], 'custom_field_id ASC') as $row) {
+		$dynamicValues .= ', CUSTOM_FIELD_' . (int) $row['custom_field_id'];
 	}
 	$actionField[ACT_PAK_60] = $dynamicValues;
 	$jsFieldNameArray = "['action_name','item_identifier','log_text']";
@@ -120,7 +116,6 @@ function addUpdateUpdateLog($actionID = '', $add = false)
 			}else{
 				// Add action to database
 				unset($columnArray);
-				$columnArray['action_id'] = Database::newID('action_definitions', 'action_id');
 				$columnArray['action_name'] = $_POST['action_name'];
 				// Reverse the stripScripts function by decoding html entities as emails will appear scrambled
 				$columnArray['action_data'] = $_POST['item_identifier'] . '}-{' . html_entity_decode($_POST['log_text'], ENT_COMPAT, 'UTF-8');
@@ -164,12 +159,10 @@ function addUpdateUpdateLog($actionID = '', $add = false)
  */
 function executeUpdateLog($itemID, $dataArray, $preCondition, $triggerCondition, $actionParameters, $actionData, $actionType = '', $requestingAction = '')
 {
-	// Get new log id and sequence
-	$LogID = Database::newID('core_log', 'id');
+	// Get new log sequence (id is AUTOINCREMENT)
 	$condition = "WHERE item_id='$itemID'";
 	$SequenceID = Database::newID('core_log', 'log_item_sequence', $condition);
 	// Add log entry
-	$columnArray['id'] = $LogID;
 	$columnArray['item_id'] = $itemID;
 	$columnArray['create_date'] = time();
 	$logEntryArray = explode('}-{',$actionData);

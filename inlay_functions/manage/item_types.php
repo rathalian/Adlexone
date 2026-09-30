@@ -29,7 +29,7 @@ function showItemType($itemTypeID, $values = [])
     if ($isNew) {
         $fieldValues = $values;
     } else {
-        $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'group_security', 'enabled'];
+        $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'enabled'];
         $condition = "WHERE item_type_id = '$itemTypeID'";
         $fieldValues = Database::first('item_types', $columnArray, $condition);
     }
@@ -52,7 +52,7 @@ function showItemType($itemTypeID, $values = [])
     $condition = "ORDER BY group_name ASC";
     $result = Database::select('groups', $columnArray, $condition);
 
-    $groupMembershipArray = explode('}-{', (string)($fieldValues['group_security'] ?? ''));
+    $groupMembershipArray = array_map('strval', \Adlexone\Data\GroupMembership::itemTypeGroupIds((int) ($fieldValues['item_type_id'] ?? 0)));
     $groupMembershipHtml = '<div class="group-security-list">';
     foreach ($result as $row) {
         $isChecked = in_array((string)$row['group_id'], $groupMembershipArray, true);
@@ -219,24 +219,21 @@ function addItemType()
     $condition = "WHERE item_type_name = '" . $_POST['item_type_name'] . "'";
     $result = Database::select('item_types', $columnArray, $condition);
     if (count($result) == 0) {
-        // Set new id
-        $array['item_type_id'] = Database::newID('item_types', 'item_type_id');
-        // Setup the item type custom fields db update
+        // Set new id via AUTOINCREMENT
         $selectedFields = selectedCustomFieldsFromPost();
+        $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
+        stripItemTypeFormFields();
+        $columnArray = $_POST;
+        unset($columnArray['group_security'], $columnArray['item_type_id']);
+        $typeId = Database::insert('item_types', $columnArray);
         foreach ($selectedFields as $fieldId => $order) {
-            $customFieldArray = [
-                'item_type_id' => $array['item_type_id'],
+            Database::insert('item_type_custom_fields', [
+                'item_type_id' => $typeId,
                 'custom_field_id' => $fieldId,
                 'custom_field_order' => $order,
-            ];
-            Database::insert('item_type_custom_fields', $customFieldArray);
+            ]);
         }
-        $array['group_security'] = groupSecurityFromPost();
-        stripItemTypeFormFields();
-        // Build insert array
-        $columnArray = array_merge($array, $_POST);
-        // Insert form field values into row
-        Database::insert('item_types', $columnArray);
+        \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
         RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
         return;
     }
@@ -328,7 +325,7 @@ function updateItemType($itemTypeID)
     // Remove unwanted POST variables
     unset ($_POST['submit_button'], $_POST['reset']);
     $selectedFields = selectedCustomFieldsFromPost();
-    $groupSecurity = groupSecurityFromPost();
+    $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
     stripItemTypeFormFields();
     // Remove all existing custom field table entries and then re add changed selection
     $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
@@ -342,13 +339,12 @@ function updateItemType($itemTypeID)
         Database::insert('item_type_custom_fields', $customFieldArray);
     }
     $columnArray = $_POST;
-    if ($groupSecurity !== '') {
-        $columnArray['group_security'] = $groupSecurity;
-    }
+    unset($columnArray['group_security']);
     // Set condition
     $condition = "WHERE item_type_id = '$itemTypeID'";
     // Update form field values into row
     Database::update('item_types', $columnArray, $condition);
+    \Adlexone\Data\GroupMembership::setItemTypeGroups((int) $itemTypeID, $ids);
     RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
 }
 
@@ -375,19 +371,13 @@ function selectedCustomFieldsFromPost(): array
 
 
 /**
- * Group ids posted as group_{id}, in the }-{id}-{ storage format.
+ * Group ids posted as group_{id}.
  */
 function groupSecurityFromPost(): string
 {
-    $security = '';
-    $i = 0;
-    foreach ($_POST as $key => $value) {
-        if (str_starts_with((string)$key, 'group_') && $value !== '') {
-            $security .= ($i === 0 ? '}-{' : '') . $value . '}-{';
-            $i++;
-        }
-    }
-    return $security;
+    return \Adlexone\Data\GroupMembership::toDelimited(
+        \Adlexone\Data\GroupMembership::idsFromPost($_POST)
+    );
 }
 
 

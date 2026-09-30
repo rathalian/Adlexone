@@ -39,33 +39,18 @@ function printItem($itemID)
 	if ($_SESSION['access_role_id'] <=2){//Admin, Inlay Admin, Global Inlay Admin have access
 		$i++;
 	}else{
-		// Check to see if we have access to it
-		$sql = "SELECT item_id FROM items WHERE (user_security = '" . $_SESSION['access_user_id'] . "' OR creator_security  = '" . $_SESSION['access_user_id'] . "') and item_id='".$itemID."'";
-				$result = Database::rows($sql);
-		if(count($result) > 0){
+		if (\Adlexone\Data\GroupMembership::userSharesItemGroup((int) $_SESSION['access_user_id'], (int) $itemID)
+			|| Database::exists('items', 'item_id = ? AND (user_security = ? OR creator_security = ?)', [(int) $itemID, (int) $_SESSION['access_user_id'], (int) $_SESSION['access_user_id']])
+		) {
 			$i++;
-			//No need to go any further
-		}else{
-			// Get all items by group assignment
-			$sql = "SELECT groups FROM group_members WHERE user_id = '" . $_SESSION['access_user_id'] . "'";
-						$result = Database::rows($sql);
-			$row = $result[0] ?? null;
-			$groupArray = explode('}-{', $row['groups']);
-			$sql = "SELECT group_security FROM items WHERE item_id='".$itemID."'";
-						$result = Database::rows($sql);
-			$row = $result[0] ?? null;
-			foreach ($groupArray as $a){
-				if(stristr($row['group_security'],'}-{'.$a.'}-{')){
-					$i++;
-				}
-			}
 		}
 	}
 	if ($i > 0){ //The user is allowed to access the task
 		// Setup item  information for display
 		$columnArray = array ('*');
 		$condition = "WHERE item_id = '" . $itemID . "'";
-		$itemFields = Database::first('items', $columnArray, $condition); // Build item table
+        $itemFields = Database::first('items', $columnArray, $condition); // Build item table
+		$itemFields = \Adlexone\Data\ItemFields::hydrate($itemFields ?? []);
 		// Get item type name
 		$columnArray = array ('item_type_name');
 		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
@@ -81,7 +66,7 @@ function printItem($itemID)
 		$row = Database::first('users', $columnArray,$condition);
 		$itemField[TXT_269] = $row['user_name'];
 		// Create group membership list
-		$groupArray = explode('}-{', $itemFields['group_security']);
+		$groupArray = \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemFields['item_id']);
 		$i = 0;
 		foreach($groupArray as $a) {
 			if ($i == 0) {
@@ -133,12 +118,7 @@ function printItem($itemID)
 			$displayFields[$name] = '<div>' . $field . '</div>';
 		}
 		$html = RenderViews::buildFormFieldsGrid($displayFields);
-		$sql = "SELECT sum(minutes) AS total_minutes FROM timemanager_time_table WHERE item_id = '$itemID'";
-				$result = Database::rows($sql);
-		$timeRow = $result[0] ?? null;
-		if ($timeRow && $timeRow['total_minutes'] > 0){
-			$html .= RenderViews::buildFormFieldsGrid([TXT_639 => htmlspecialchars((string)$timeRow['total_minutes'], ENT_QUOTES, 'UTF-8')]);
-		}
+		// Time Manager removed from shared schema.
 		$logHtml = '';
 		// Get item log information from database
 		$columnArray = array ('*');

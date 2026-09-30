@@ -66,8 +66,8 @@ function showContactCentreWork(): void
  */
 function contactCentreAccessibleItemIds(): array
 {
-    $userId = (string) ($_SESSION['access_user_id'] ?? '');
-    if ($userId === '') {
+    $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+    if ($userId <= 0) {
         return [];
     }
 
@@ -76,17 +76,8 @@ function contactCentreAccessibleItemIds(): array
     foreach ($owned as $row) {
         $ids[] = (int) $row['item_id'];
     }
-
-    $membership = Database::first('group_members', ['groups'], 'user_id = ?', [$userId]);
-    foreach (preg_split('/\}-\{/', (string) ($membership['groups'] ?? '')) ?: [] as $group) {
-        $group = trim($group, " \t\n\r\0\x0B{}-");
-        if ($group === '' || !ctype_digit($group)) {
-            continue;
-        }
-        $groupItems = Database::select('items', ['item_id'], 'group_security LIKE ?', ['%}-{' . $group . '}-{%']);
-        foreach ($groupItems as $row) {
-            $ids[] = (int) $row['item_id'];
-        }
+    foreach (\Adlexone\Data\GroupMembership::itemIdsForUser($userId) as $itemId) {
+        $ids[] = $itemId;
     }
 
     $ids = array_values(array_unique(array_filter($ids)));

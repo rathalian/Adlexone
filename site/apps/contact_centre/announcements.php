@@ -90,7 +90,6 @@ function newAnnouncement(): void
 function addAnnouncement(): void
 {
     Database::insert('announcements', [
-        'id' => Database::newID('announcements', 'id'),
         'time' => time(),
         'message' => (string) ($_POST['message'] ?? ''),
         'subject' => (string) ($_POST['subject'] ?? ''),

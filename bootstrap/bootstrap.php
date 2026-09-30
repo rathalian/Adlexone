@@ -26,6 +26,9 @@ define('SET_ATTACHMENTS_PATH', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'att
 define('DSN', 'sqlite:' . $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
 define('SET_WRITEABLE_DIRECTORY', $baseDir . 'writeable' . DIRECTORY_SEPARATOR);
 
+// Shared platform schema (app packs must not own tables).
+\Adlexone\Database\SchemaMigrator::migrate();
+
 /**
  * Load configuration settings from JSON files in the config directory and its subdirectories
  */
