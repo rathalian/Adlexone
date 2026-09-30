@@ -26,6 +26,8 @@ final class ApplicationStore
         self::seedIfEmpty();
         self::retireServiceCentreLegacy();
         self::renameServiceCentreWork();
+        self::renameServiceCentreAnnouncements();
+        self::renameContactCentreCapabilities();
     }
 
     public static function ensureSchema(): void
@@ -83,11 +85,11 @@ final class ApplicationStore
             'legacy_controller' => '',
             'legacy_key' => '',
         ]);
-        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Work'), 'servicecentre.work', Permission::SERVICECENTRE_SEARCH, 'ic-search', [], 10);
+        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Work'), 'contact_centre.work', Permission::SERVICECENTRE_SEARCH, 'ic-search', [], 10);
         self::insertNav($serviceId, $text('APP_SC_TXT_2', 'New'), 'items.create', 'servicecentre.use', 'ic-create-ticket', ['item_type_id' => $serviceType], 20);
         self::insertNav($serviceId, $text('APP_SC_TXT_60', 'Searches'), 'search.saved_list', 'servicecentre.search', 'ic-my-ticket-searches', [], 30);
-        self::insertNav($serviceId, $text('APP_SC_TXT_38', 'Announcements'), 'announcements', 'servicecentre.use', 'ic-announcements', [], 40);
-        self::insertNav($serviceId, $text('APP_SC_TXT_79', 'Settings'), 'servicecentre.settings', 'servicecentre.settings', 'ic-settings', [], 50);
+        self::insertNav($serviceId, $text('APP_SC_TXT_38', 'Announcements'), 'contact_centre.announcements', 'servicecentre.use', 'ic-announcements', [], 40);
+        self::insertNav($serviceId, $text('APP_SC_TXT_79', 'Settings'), 'contact_centre.settings', 'servicecentre.settings', 'ic-settings', [], 50);
 
         $knowledgeId = self::insertApplication([
             'slug' => 'knowledge-hub',
@@ -398,6 +400,41 @@ final class ApplicationStore
             'slug = ? AND hint = ?',
             [self::SERVICE_CENTRE_SLUG, 'Tickets and announcements']
         );
+    }
+
+    /**
+     * Announcements live in the Contact Centre function pack.
+     */
+    private static function renameServiceCentreAnnouncements(): void
+    {
+        if (!self::tableExists('application_nav')) {
+            return;
+        }
+        Database::update(
+            'application_nav',
+            ['capability' => 'servicecentre.announcements'],
+            "capability = 'announcements'"
+        );
+    }
+
+    /**
+     * Function packs use contact_centre.* ids under application_functions/.
+     */
+    private static function renameContactCentreCapabilities(): void
+    {
+        if (!self::tableExists('application_nav')) {
+            return;
+        }
+        $map = [
+            'servicecentre.work' => 'contact_centre.work',
+            'servicecentre.tickets' => 'contact_centre.work',
+            'servicecentre.announcements' => 'contact_centre.announcements',
+            'announcements' => 'contact_centre.announcements',
+            'servicecentre.settings' => 'contact_centre.settings',
+        ];
+        foreach ($map as $from => $to) {
+            Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
+        }
     }
 
     private static function tableExists(string $table): bool

@@ -13,22 +13,72 @@ use Adlexone\support\RenderViews;
 final class Capabilities
 {
     /**
-     * @return array<string, array{label: string, icon: string, config: string}>
+     * Built-in shared screens, plus any application function packs.
+     *
+     * @return array<string, array{label: string, origin: string, icon: string, config: string}>
      */
     public static function catalog(): array
     {
-        return [
-            'items.create' => ['label' => 'Create item', 'icon' => 'ic-create-ticket', 'config' => 'item_type'],
-            'search.quick' => ['label' => 'Quick search', 'icon' => 'ic-quick-search', 'config' => 'none'],
-            'search.advanced' => ['label' => 'Advanced search', 'icon' => 'ic-search', 'config' => 'item_type'],
-            'search.saved' => ['label' => 'Saved search', 'icon' => 'ic-my-ticket-searches', 'config' => 'saved_search'],
-            'search.saved_list' => ['label' => 'Saved search list', 'icon' => 'ic-my-ticket-searches', 'config' => 'none'],
-            'announcements' => ['label' => 'Announcements', 'icon' => 'ic-announcements', 'config' => 'none'],
-            'servicecentre.work' => ['label' => 'Service Centre work', 'icon' => 'ic-search', 'config' => 'none'],
-            'servicecentre.settings' => ['label' => 'Service Centre settings', 'icon' => 'ic-settings', 'config' => 'none'],
-            'knowledge.home' => ['label' => 'Knowledge home', 'icon' => 'ic-knowledgebase', 'config' => 'none'],
-            'knowledge.settings' => ['label' => 'Knowledge settings', 'icon' => 'ic-kb-settings', 'config' => 'none'],
+        return array_merge(self::builtIn(), AppFunctions::catalog());
+    }
+
+    /**
+     * @return array<string, array{label: string, origin: string, icon: string, config: string}>
+     */
+    private static function builtIn(): array
+    {
+        $inlay = static fn (string $label, string $icon, string $config): array => [
+            'label' => $label,
+            'origin' => 'Inlay',
+            'icon' => $icon,
+            'config' => $config,
         ];
+
+        return [
+            'items.create' => $inlay('Create item', 'ic-create-ticket', 'item_type'),
+            'search.quick' => $inlay('Quick search', 'ic-quick-search', 'none'),
+            'search.advanced' => $inlay('Advanced search', 'ic-search', 'item_type'),
+            'search.saved' => $inlay('Saved search', 'ic-my-ticket-searches', 'saved_search'),
+            'search.saved_list' => $inlay('Saved search list', 'ic-my-ticket-searches', 'none'),
+            'knowledge.home' => $inlay('Knowledge home', 'ic-knowledgebase', 'none'),
+            'knowledge.settings' => $inlay('Knowledge settings', 'ic-kb-settings', 'none'),
+        ];
+    }
+
+    public static function label(string $capability): string
+    {
+        return self::catalog()[$capability]['label'] ?? $capability;
+    }
+
+    /**
+     * Manage Applications screen choice: "Announcements — Contact Centre".
+     */
+    public static function choiceLabel(string $capability): string
+    {
+        $meta = self::catalog()[$capability] ?? null;
+        if ($meta === null) {
+            return $capability;
+        }
+        return $meta['label'] . ' — ' . $meta['origin'];
+    }
+
+    /**
+     * Capability ids sorted by origin, then label, for Manage dropdowns.
+     *
+     * @return list<string>
+     */
+    public static function choiceKeys(): array
+    {
+        $catalog = self::catalog();
+        $keys = array_keys($catalog);
+        usort($keys, static function (string $left, string $right) use ($catalog): int {
+            $origin = ($catalog[$left]['origin'] ?? '') <=> ($catalog[$right]['origin'] ?? '');
+            if ($origin !== 0) {
+                return $origin;
+            }
+            return ($catalog[$left]['label'] ?? $left) <=> ($catalog[$right]['label'] ?? $right);
+        });
+        return $keys;
     }
 
     /**
@@ -52,11 +102,6 @@ final class Capabilities
             'ic-item-mgmt',
             'ic-manage-fields',
         ];
-    }
-
-    public static function label(string $capability): string
-    {
-        return self::catalog()[$capability]['label'] ?? $capability;
     }
 
     public static function icon(string $capability, string $chosen = ''): string
@@ -95,12 +140,14 @@ final class Capabilities
             return;
         }
 
+        if (AppFunctions::has($capability)) {
+            AppFunctions::open($capability);
+            return;
+        }
+
         match ($capability) {
             'items.create' => self::includeShared('item_management_manage'),
             'search.quick', 'search.advanced', 'search.saved', 'search.saved_list' => self::includeShared('search_management_manage'),
-            'announcements', 'servicecentre.work', 'servicecentre.settings' => self::includeScreen(
-                'applications/servicecentre/servicecentre.php'
-            ),
             'knowledge.home', 'knowledge.settings' => self::includeKnowledge(),
             default => RenderViews::buildResponse('This screen is not available.'),
         };
@@ -125,19 +172,21 @@ final class Capabilities
     {
         $option = (string) ($_GET['option'] ?? '');
         if ($option === '') {
-            $_GET['option'] = match ($capability) {
-                'items.create' => 'show_item_types',
-                'search.quick' => 'show_quick_search',
-                'search.advanced' => 'show_item_search',
-                'search.saved' => 'saved_search',
-                'search.saved_list' => 'show_saved_searches',
-                'announcements' => 'show_announcements',
-                'servicecentre.work' => 'show_work',
-                'servicecentre.settings' => 'settings',
-                'knowledge.home' => 'show_knowledge',
-                'knowledge.settings' => 'knowledgebase_settings',
-                default => '',
-            };
+            $fromPack = AppFunctions::defaultOption($capability);
+            if ($fromPack !== '') {
+                $_GET['option'] = $fromPack;
+            } else {
+                $_GET['option'] = match ($capability) {
+                    'items.create' => 'show_item_types',
+                    'search.quick' => 'show_quick_search',
+                    'search.advanced' => 'show_item_search',
+                    'search.saved' => 'saved_search',
+                    'search.saved_list' => 'show_saved_searches',
+                    'knowledge.home' => 'show_knowledge',
+                    'knowledge.settings' => 'knowledgebase_settings',
+                    default => '',
+                };
+            }
         }
 
         if ($capability === 'items.create' && (string) ($_GET['default_item_type'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_types') {

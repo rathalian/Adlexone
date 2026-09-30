@@ -1,16 +1,60 @@
 <?php
 declare(strict_types=1);
 
+use Adlexone\Application\AppFunctions;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 
+AppFunctions::register('contact_centre.announcements', [
+    'label' => 'Announcements',
+    'icon' => 'ic-announcements',
+    'config' => 'none',
+    'default_option' => 'show_announcements',
+    'open' => 'openContactCentreAnnouncements',
+]);
+
+function openContactCentreAnnouncements(): void
+{
+    switch ((string) ($_GET['option'] ?? 'show_announcements')) {
+        case 'show_announcement_item':
+            Access::require(Permission::SERVICECENTRE_USE, Permission::SERVICECENTRE_SEARCH);
+            showAnnouncementItem((string) ($_GET['id'] ?? ''));
+            break;
+        case 'new_announcement':
+            Access::require(Permission::SERVICECENTRE_ANNOUNCE);
+            newAnnouncement();
+            break;
+        case 'add_announcement':
+            Access::require(Permission::SERVICECENTRE_ANNOUNCE);
+            addAnnouncement();
+            break;
+        case 'edit_announcement':
+            Access::require(Permission::SERVICECENTRE_ANNOUNCE);
+            editAnnouncement((string) ($_GET['id'] ?? ''));
+            break;
+        case 'update_announcement':
+            Access::require(Permission::SERVICECENTRE_ANNOUNCE);
+            updateAnnouncement();
+            break;
+        case 'delete_announcement':
+            Access::require(Permission::SERVICECENTRE_ANNOUNCE);
+            deleteAnnouncement((string) ($_GET['id'] ?? ''));
+            break;
+        case 'show_announcements':
+        default:
+            Access::require(Permission::SERVICECENTRE_USE, Permission::SERVICECENTRE_SEARCH);
+            showAnnouncements();
+            break;
+    }
+}
+
 function showAnnouncementItem(string $id = ''): void
 {
     $row = Database::first('announcements', ['subject', 'message', 'time'], 'id = ?', [$id]);
     if ($row === null) {
-        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(serviceCentreUrl('option=show_announcements'), APP_SC_TXT_26, 'URL'));
+        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', APP_SC_TXT_26, 'URL'));
         return;
     }
 
@@ -33,7 +77,7 @@ function newAnnouncement(): void
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['subject'],[''],['" . TXT_547 . "'],[true]);\"";
     define('BODY_CONTENT', RenderViews::buildForm(
         APP_SC_TXT_75,
-        serviceCentreUrl('option=add_announcement'),
+        MAN_BASE_URL . '&option=add_announcement',
         $fields,
         [
             RenderViews::buildFormButton('submit', 'submit_button', TXT_345, $javascript),
@@ -57,7 +101,7 @@ function addAnnouncement(): void
 
 function showAnnouncements(): void
 {
-        $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], '', [], 'time DESC');
+    $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], '', [], 'time DESC');
     $html = '';
 
     foreach ($result as $row) {
@@ -65,13 +109,13 @@ function showAnnouncements(): void
         $deleteURL = '';
         if (Access::can(Permission::SERVICECENTRE_ANNOUNCE)) {
             $editURL = RenderViews::buildURL(
-                serviceCentreUrl('option=edit_announcement&id=' . $row['id']),
+                MAN_BASE_URL . '&option=edit_announcement&id=' . $row['id'],
                 APP_SC_TXT_22,
                 '',
                 'btn btn--sm btn--quiet'
             );
             $deleteURL = RenderViews::buildURL(
-                serviceCentreUrl('option=delete_announcement&id=' . $row['id']),
+                MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'],
                 TXT_47,
                 '',
                 'btn btn--sm btn--danger',
@@ -94,7 +138,7 @@ function showAnnouncements(): void
 
     if (Access::can(Permission::SERVICECENTRE_ANNOUNCE)) {
         $html = '<div class="form-actions" style="margin-top:0">'
-            . RenderViews::buildURL(serviceCentreUrl('option=new_announcement'), APP_SC_TXT_75, '', 'btn btn--primary btn--sm')
+            . RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', APP_SC_TXT_75, '', 'btn btn--primary btn--sm')
             . '</div>'
             . $html;
     }
@@ -112,14 +156,14 @@ function editAnnouncement(string $id): void
 {
     $row = Database::first('announcements', ['subject', 'message'], 'id = ?', [(int) $id]);
     if ($row === null) {
-        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(serviceCentreUrl('option=show_announcements'), APP_SC_TXT_26, 'URL'));
+        RenderViews::buildResponse(TXT_115, RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', APP_SC_TXT_26, 'URL'));
         return;
     }
 
     $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['subject'],[''],['" . TXT_547 . "'],[true]);\"";
     define('BODY_CONTENT', RenderViews::buildForm(
         TXT_349,
-        serviceCentreUrl('option=update_announcement'),
+        MAN_BASE_URL . '&option=update_announcement',
         [
             TXT_346 => RenderViews::buildTextInput('subject', (string) $row['subject']),
             TXT_347 => RenderViews::buildTextArea('message', (string) $row['message'], SET_FORM_FIELD_HEIGHT),

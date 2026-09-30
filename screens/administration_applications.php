@@ -233,7 +233,7 @@ function showNavigation(int $applicationId): void
             'name' => (string) $link['label'],
             'href' => APPLICATIONS_ADMIN_URL . '&option=edit_nav&nav_id=' . $id,
             'cells' => [
-                'screen' => Capabilities::label((string) $link['capability']),
+                'screen' => Capabilities::choiceLabel((string) $link['capability']),
             ],
             'actions' => [
                 ['href' => APPLICATIONS_ADMIN_URL . '&option=move_nav&nav_id=' . $id . '&direction=up', 'label' => 'Up'],
@@ -285,8 +285,8 @@ function showNavForm(int $applicationId, int $navId = 0): void
 
     $config = is_array($link['config'] ?? null) ? $link['config'] : [];
     $capability = (string) ($link['capability'] ?? 'items.create');
-    $keys = array_keys(Capabilities::catalog());
-    $labels = array_map(static fn (string $key): string => Capabilities::label($key), $keys);
+    $keys = Capabilities::choiceKeys();
+    $labels = array_map(static fn (string $key): string => Capabilities::choiceLabel($key), $keys);
     $fields = [
         'Label' => RenderViews::buildTextInput('label', htmlspecialchars((string) ($link['label'] ?? ''), ENT_QUOTES, 'UTF-8')),
         'Screen' => RenderViews::buildSelectDropdown('capability', $keys, $labels, $capability),

@@ -1,26 +1,41 @@
 <?php
 declare(strict_types=1);
 
+use Adlexone\Application\AppFunctions;
+use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
+
+AppFunctions::register('contact_centre.work', [
+    'label' => 'Work',
+    'icon' => 'ic-search',
+    'config' => 'none',
+    'default_option' => 'show_work',
+    'open' => 'openContactCentreWork',
+]);
+
+function openContactCentreWork(): void
+{
+    Access::require(Permission::SERVICECENTRE_SEARCH, Permission::SERVICECENTRE_USE);
+    showContactCentreWork();
+}
 
 /**
  * Work is the items this person can open: ones they own, created, or share
  * through a group.
  */
-function showServiceCentreWork(): void
+function showContactCentreWork(): void
 {
-    $ids = serviceCentreAccessibleItemIds();
-    $base = defined('MAN_BASE_URL')
-        ? (string) MAN_BASE_URL
-        : serviceCentreUrl();
+    $ids = contactCentreAccessibleItemIds();
+    $base = (string) MAN_BASE_URL;
     $rows = [];
     if ($ids !== []) {
-                $result = Database::select(
-                'items',
-                ['item_id', 'item_title', 'create_date', 'item_type_id'],
-                'WHERE item_id IN (' . implode(',', $ids) . ') ORDER BY item_id DESC'
-            );
+        $result = Database::select(
+            'items',
+            ['item_id', 'item_title', 'create_date', 'item_type_id'],
+            'WHERE item_id IN (' . implode(',', $ids) . ') ORDER BY item_id DESC'
+        );
         foreach ($result as $row) {
             $itemId = (int) $row['item_id'];
             $rows[] = RenderViews::itemRecord(
@@ -49,7 +64,7 @@ function showServiceCentreWork(): void
 /**
  * @return list<int>
  */
-function serviceCentreAccessibleItemIds(): array
+function contactCentreAccessibleItemIds(): array
 {
     $userId = (string) ($_SESSION['access_user_id'] ?? '');
     if ($userId === '') {
