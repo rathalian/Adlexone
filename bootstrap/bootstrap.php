@@ -126,7 +126,7 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     define('SET_DEFAULT_PAGE', $_SESSION['access_home_controller']); //Softwares Default Page
     define('SET_HOME_PAGE', $_SESSION['access_home_controller']); //Users home page
     define('SET_LANGUAGE', $_SESSION['access_language']); //Users language
-    define('SET_IMAGE_PATH', 'themes/' . SET_THEME . '/images/');
+    define('SET_IMAGE_PATH', \Adlexone\Theme\Theme::imagePath());
     if ($_SESSION['access_show_graphics'] === 'Yes') {
         define('SET_SHOW_IMAGES', 'Yes');
     } else {

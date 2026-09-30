@@ -418,7 +418,7 @@ final class ApplicationStore
     }
 
     /**
-     * Function packs use contact_centre.* ids under application_functions/.
+     * Function packs use contact_centre.* ids under site/apps/.
      */
     private static function renameContactCentreCapabilities(): void
     {

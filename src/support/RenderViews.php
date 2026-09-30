@@ -82,19 +82,23 @@ class RenderViews
     }
 
     /**
-     * Renders a specific page within the application.
-     *
-     * Includes the PHP file for the given page, using the specified language and theme.
-     * The file path is built from the `THEME_PATH` constant, theme, and page name.
-     *
-     * @param string $page The name of the page to render (without file extension).
-     * @param string $theme The theme to use for rendering the page.
-     *
-     * @return void
+     * Renders a layout page (shared chrome under layouts/pages/).
+     * $theme is kept for callers; the active skin is Theme::name() / SET_THEME.
      */
-    public static function renderThemePage(string $page, string $theme): void
+    public static function renderThemePage(string $page, string $theme = ''): void
     {
-        include THEME_PATH . "$theme/pages/$page.php";
+        $path = \Adlexone\Theme\Theme::pagePath($page);
+        if (!is_file($path)) {
+            echo '<!-- missing layout page: ' . htmlspecialchars($page, ENT_QUOTES, 'UTF-8') . ' -->';
+            return;
+        }
+        include $path;
+    }
+
+    /** @deprecated Use renderThemePage(); kept for older action scripts. */
+    public static function renderPage(string $page, string $theme = ''): void
+    {
+        self::renderThemePage($page, $theme);
     }
 
 
@@ -1212,8 +1216,8 @@ class RenderViews
         $svg = '';
         if ($spriteName !== '') {
             $spriteEsc = htmlspecialchars($spriteName, ENT_QUOTES, 'UTF-8');
-            $theme = defined('SET_THEME') ? rawurlencode((string) SET_THEME) : 'new';
-            $svg = '<svg class="icon" aria-hidden="true"><use href="themes/' . $theme . '/assets/adlexone.sprite.svg#' . $spriteEsc . '"></use></svg>&nbsp;&nbsp;';
+            $spriteHref = htmlspecialchars(\Adlexone\Theme\Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
+            $svg = '<svg class="icon" aria-hidden="true"><use href="' . $spriteHref . '#' . $spriteEsc . '"></use></svg>&nbsp;&nbsp;';
         }
 
         $textEsc = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');

@@ -180,22 +180,7 @@ function showSignInSettings(): void
  */
 function installedThemes(): array
 {
-    $known = ['new' => 'Inlay', 'inlay-blue' => 'Inlay Blue'];
-    $themes = [];
-    $root = rtrim(THEME_PATH, '/\\') . DIRECTORY_SEPARATOR;
-    foreach (scandir($root) ?: [] as $name) {
-        if ($name === '.' || $name === '..' || !preg_match('/^[A-Za-z0-9_-]+$/', $name)) {
-            continue;
-        }
-        $directory = $root . $name;
-        if (!is_dir($directory) || !is_file($directory . '/pages/main_page.php')) {
-            continue;
-        }
-        $themes[$name] = $known[$name] ?? $name;
-    }
-    asort($themes, SORT_NATURAL | SORT_FLAG_CASE);
-
-    return $themes;
+    return \Adlexone\Theme\Theme::installed();
 }
 
 function showThemeSettings(): void

@@ -6,7 +6,7 @@ namespace Adlexone\Application;
 use Adlexone\support\RenderViews;
 
 /**
- * Extra screens shipped as packs under application_functions/{pack}/.
+ * Extra screens shipped as packs under site/apps/{pack}/.
  *
  * Packs are code libraries, not managed application names. Each screen
  * registers itself and appears in Manage Applications with its pack origin.
@@ -112,8 +112,15 @@ final class AppFunctions
         }
 
         self::$registry = [];
-        $root = (defined('SET_INSTALL_PATH') ? (string) SET_INSTALL_PATH : '') . 'application_functions';
-        if ($root === 'application_functions' || !is_dir($root)) {
+        $base = defined('SET_INSTALL_PATH') ? (string) SET_INSTALL_PATH : '';
+        $appsRel = defined('SITE_APPS_PATH') ? (string) SITE_APPS_PATH : 'site/apps/';
+        $root = rtrim($base . $appsRel, '/\\');
+        if (!is_dir($root)) {
+            // Legacy path used before site/apps/
+            $legacy = $base . 'application_functions';
+            $root = is_dir($legacy) ? $legacy : '';
+        }
+        if ($root === '') {
             return;
         }
 

@@ -123,14 +123,9 @@ function showUser($userID = '', $values = [], $adminEdit = true)
 
     $userPreferences = [];
     if ($adminEdit) {
-        $themeArray = [];
-        foreach (scandir(THEME_PATH) as $themeName) {
-            if ($themeName !== '.' && $themeName !== '..' && is_dir(THEME_PATH . $themeName)) {
-                $themeArray[] = $themeName;
-            }
-        }
+        $themes = \Adlexone\Theme\Theme::installed();
         $theme = empty($fieldValues['theme']) ? SET_DEFAULT_THEME : $fieldValues['theme'];
-        $userPreferences[TXT_182] = RenderViews::buildSelectDropdown('theme', $themeArray, $themeArray, $theme);
+        $userPreferences[TXT_182] = RenderViews::buildSelectDropdown('theme', array_keys($themes), array_values($themes), $theme);
     }
 
     $languageFileArray = [];

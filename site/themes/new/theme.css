@@ -1,0 +1,30 @@
+/* Inlay — warm stone skin (tokens only) */
+:root{
+    --ink:#172033;
+    --inlay:#8c6239;
+    --stone:#efe6d4;
+    --brand:var(--inlay);
+    --brand2:var(--ink);
+    --text:#172033;
+    --panel:rgba(255,255,255,.94);
+    --border:rgba(23,32,51,.08);
+    --hover:rgba(23,32,51,.06);
+    --ring:rgba(23,32,51,.22);
+    --title:rgba(15,23,42,.78);
+    --label:rgba(15,23,42,.74);
+    --body:rgba(15,23,42,.86);
+    --input:rgba(15,23,42,.84);
+    --placeholder:rgba(15,23,42,.48);
+    --title-strip: color-mix(in srgb, var(--brand) 6%, white);
+    --title-strip-border: color-mix(in srgb, var(--brand2) 8%, rgba(0,0,0,.07));
+    --title-size:11.5px;
+    --title-weight:700;
+    --title-tracking:.045em;
+    --form-surface: color-mix(in srgb, var(--stone) 42%, white);
+    --form-border: color-mix(in srgb, var(--ink) 12%, rgba(0,0,0,.08));
+    --form-hover-shadow: 0 0 0 3px rgba(140,98,57,.14);
+    --page-bg:#f3f1ec;
+    --brandbar-border:#e4dfd6;
+    --brandmaker:#6d6458;
+    --btn-primary-hover:#2c4158;
+}

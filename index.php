@@ -27,7 +27,9 @@
 //***** Initialize Adlexone - source / full version build
 define('VERSION','3.0');
 define('TYPE','');
-//define('INCLUDE_PATH','/');
-define('THEME_PATH','themes/');
+define('LAYOUT_PATH', 'layouts/');
+define('SITE_PATH', 'site/');
+define('THEME_PATH', 'site/themes/');
+define('SITE_APPS_PATH', 'site/apps/');
 include 'bootstrap/bootstrap.php'; #Allows viewing of source
 
