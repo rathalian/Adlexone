@@ -1,5 +1,5 @@
 {
-  "name": "adlexone-flowiq",
+  "name": "adlexone-inlay",
   "build": {
     "dockerfile": "Dockerfile"
   },
@@ -9,7 +9,7 @@
     {
       "name": "web",
       "command": "php -S 0.0.0.0:8000",
-      "description": "FlowIQ on port 8000"
+      "description": "Inlay on port 8000"
     }
   ]
 }

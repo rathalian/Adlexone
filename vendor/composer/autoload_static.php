@@ -38,6 +38,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Auth\\OauthConnection' => __DIR__ . '/../..' . '/src/Auth/OauthConnection.php',
         'Adlexone\\Auth\\Permission' => __DIR__ . '/../..' . '/src/Auth/Permission.php',
         'Adlexone\\Auth\\UserIdentityRepository' => __DIR__ . '/../..' . '/src/Auth/UserIdentityRepository.php',
+        'Adlexone\\Http\\PublicBaseUrl' => __DIR__ . '/../..' . '/src/Http/PublicBaseUrl.php',
         'Adlexone\\Http\\Router' => __DIR__ . '/../..' . '/src/Http/Router.php',
         'Adlexone\\support\\Actions' => __DIR__ . '/../..' . '/src/support/Actions.php',
         'Adlexone\\support\\Communications' => __DIR__ . '/../..' . '/src/support/Communications.php',

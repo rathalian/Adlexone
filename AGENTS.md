@@ -1,6 +1,6 @@
 # Cursor Cloud specific instructions
 
-FlowIQ is PHP 8.1+ with SQLite. The cloud environment installs Composer dependencies, copies any missing files from `config.example/` into `config/`, and serves the app with `php -S 0.0.0.0:8000` from the repository root.
+Inlay is PHP 8.1+ with SQLite. The cloud environment installs Composer dependencies, copies any missing files from `config.example/` into `config/`, and serves the app with `php -S 0.0.0.0:8000` from the repository root.
 
 Open the forwarded port **8000** to view the site. Routes use query strings such as `/?controller=login`.
 

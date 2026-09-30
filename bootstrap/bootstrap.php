@@ -12,6 +12,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 /** * Import necessary classes
  */
+use Adlexone\Http\PublicBaseUrl;
 use Adlexone\Http\Router;
 use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
@@ -67,15 +68,10 @@ ob_start();
 
 
 /**
- * Define URL constants
+ * Public origin for redirects / OAuth. See Adlexone\Http\PublicBaseUrl.
+ * Override with SET_PUBLIC_BASE_URL; trust X-Forwarded-* only via SET_TRUSTED_PROXIES.
  */
-$urlArray = explode('/index.php', $_SERVER['PHP_SELF']);
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-$port = ($_SERVER['SERVER_PORT'] != '80') ? ':' . $_SERVER['SERVER_PORT'] : '';
-// Return the base URL of the installation e.g
-define('BASE_URL', $protocol . $_SERVER['SERVER_NAME'] . $port . $urlArray[0]);
-// Return the full URL of the current script e.g http://mydomain.com/adlexone/index.php
-define('FULL_SCRIPT_PATH', $protocol . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF']);
+PublicBaseUrl::defineConstants();
 
 // Set default values
 if (!defined('SET_DEFAULT_THEME')) {

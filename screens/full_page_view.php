@@ -36,7 +36,7 @@ function printItem($itemID)
 {
 
 	$i = 0;
-	if ($_SESSION['access_role_id'] <=2){//Admin, FlowIQ Admin, Global FlowIQ Admin have access
+	if ($_SESSION['access_role_id'] <=2){//Admin, Inlay Admin, Global Inlay Admin have access
 		$i++;
 	}else{
 		// Check to see if we have access to it

@@ -13,5 +13,8 @@
     "SET_DEFAULT_APPLICATION": "quick_launch}-{Home",
     "SET_DEFAULT_ITEM_TYPE": "1",
     "SET_DEFAULT_LANGUAGE": "English",
-    "USER_REG_ACTION": "2"
+    "USER_REG_ACTION": "2",
+    "SET_PUBLIC_BASE_URL": "",
+    "SET_ALLOWED_HOSTS": "",
+    "SET_TRUSTED_PROXIES": ""
 }

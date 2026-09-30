@@ -430,7 +430,7 @@ function showItemAdd($itemTypeID, $values)
         return;
     }
     $itemTypeName = $row['item_type_name'];
-    if ($_SESSION['access_role_id'] <= 2) {//Admin, FlowIQ Admin, Global FlowIQ Admin have write access
+    if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin have write access
         $itemRole = 2;
     } else {
         $itemRole = 5;
@@ -743,7 +743,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
        RenderViews::buildResponse(TXT_616);
     } else {
         $i = 0;
-        if ($_SESSION['access_role_id'] <= 2) {//Admin, FlowIQ Admin, Global FlowIQ Admin have access
+        if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin have access
             $i++;
         } else {
             // Check to see if we have access to it
@@ -841,7 +841,7 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             }
             $html = '';
             //Override at a user level if we have to
-            if ($_SESSION['access_role_id'] <= 2) {//Admin, FlowIQ Admin, Global FlowIQ Admin and owners have write access
+            if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin and owners have write access
                 $itemRole = $_SESSION['access_role_id'];
                 //they are the administrator so give them administrator rights
             }

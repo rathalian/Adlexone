@@ -18,6 +18,7 @@ return array(
     'Adlexone\\Auth\\OauthConnection' => $baseDir . '/src/Auth/OauthConnection.php',
     'Adlexone\\Auth\\Permission' => $baseDir . '/src/Auth/Permission.php',
     'Adlexone\\Auth\\UserIdentityRepository' => $baseDir . '/src/Auth/UserIdentityRepository.php',
+    'Adlexone\\Http\\PublicBaseUrl' => $baseDir . '/src/Http/PublicBaseUrl.php',
     'Adlexone\\Http\\Router' => $baseDir . '/src/Http/Router.php',
     'Adlexone\\support\\Actions' => $baseDir . '/src/support/Actions.php',
     'Adlexone\\support\\Communications' => $baseDir . '/src/support/Communications.php',

@@ -1,4 +1,4 @@
-# Adlexone FlowIQ
+# Adlexone Inlay
 
 PHP 8.1+ / SQLite action and information management system (helpdesk, knowledge base, report manager, time manager), ported from OneOrZero AIMS.
 
@@ -16,6 +16,8 @@ PHP 8.1+ / SQLite action and information management system (helpdesk, knowledge 
    ```
 
    Keep templates out of `config/` itself: `bootstrap/bootstrap.php` loads every `*.json` in `config/` (and one level of subfolders) as constants, and the first definition wins.
+
+   Public URL (redirects / OAuth): leave `SET_PUBLIC_BASE_URL` empty for automatic detection from the request Host. For production, set it to the site origin (e.g. `https://inlay.example.com`). Optionally set `SET_ALLOWED_HOSTS` (comma-separated) and `SET_TRUSTED_PROXIES` (IPs/CIDRs) when behind a reverse proxy — forwarded headers are ignored unless the client IP is trusted.
 
 2. **Database.** `storage/database/adlexone.sqlite` is not committed. Restore it from a backup or the server. Note that `storage/database/aims_sqlite_schema_and_seed.sql` still uses the old `aims_`-prefixed table names, while the code expects unprefixed names (`users`, `items`, ...).
 
