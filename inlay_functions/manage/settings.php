@@ -89,7 +89,7 @@ function showAdlexoneSettings(): void
     $nameArray = $nameArray ?? [];
     $baseURLArray = $baseURLArray ?? [];
     array_unshift($nameArray, 'Home');
-    array_unshift($baseURLArray, 'quick_launch}-{Home');
+    array_unshift($baseURLArray, 'home}-{Home');
     ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
     $fields[TXT_297] = RenderViews::buildSelectDropdown('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION, 'form-control');
     // Get all item types
@@ -109,7 +109,7 @@ function showAdlexoneSettings(): void
     }
     $fields[TXT_604] = RenderViews::buildSelectDropdown('USER_REG_ACTION', $listValuesArray, $listDisplayValuesArray, USER_REG_ACTION);
     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $bodyContent = RenderViews::buildForm(TXT_42,'index.php?controller=administration_settings&option=update_adlexone_settings',$fields,$buttons);
+    $bodyContent = RenderViews::buildForm(TXT_42,'index.php?manage=settings&option=update_adlexone_settings',$fields,$buttons);
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -121,7 +121,7 @@ function showAdvancedSettings(): void
     $fields[TXT_351] = RenderViews::buildSelectDropdown('SET_SHOW_SQL', array('Yes', 'No'), array(TXT_93, TXT_94), SET_SHOW_SQL);
     $fields[TXT_205] = RenderViews::buildSelectDropdown('SET_ERROR_REPORTING_LEVEL', array('6135', '6143'), array(TXT_504, TXT_207), SET_ERROR_REPORTING_LEVEL);
     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-    $bodyContent = RenderViews::buildForm(TXT_130,'index.php?controller=administration_settings&option=update_advanced_settings',$fields,$buttons);
+    $bodyContent = RenderViews::buildForm(TXT_130,'index.php?manage=settings&option=update_advanced_settings',$fields,$buttons);
     define('BODY_CONTENT', $bodyContent);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -166,7 +166,7 @@ function showSignInSettings(): void
 
     define('BODY_CONTENT', RenderViews::buildForm(
         'Sign-in',
-        'index.php?controller=administration_settings&option=update_sign_in_settings',
+        'index.php?manage=settings&option=update_sign_in_settings',
         $fields,
         [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
     ));
@@ -211,7 +211,7 @@ function showThemeSettings(): void
     ];
     define('BODY_CONTENT', RenderViews::buildForm(
         'Theme',
-        'index.php?controller=administration_settings&option=update_theme_settings',
+        'index.php?manage=settings&option=update_theme_settings',
         $fields,
         [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
     ));
@@ -231,7 +231,7 @@ function showEmailSettings(): void
     ];
     define('BODY_CONTENT', RenderViews::buildForm(
         TXT_565,
-        'index.php?controller=administration_settings&option=update_email_settings',
+        'index.php?manage=settings&option=update_email_settings',
         $fields,
         [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
     ));
@@ -254,7 +254,7 @@ switch (@$_GET['option']) {
         if (!isset($themes[$theme])) {
             RenderViews::buildResponse(
                 'Choose an installed theme.',
-                RenderViews::buildURL('index.php?controller=administration_settings&option=theme_settings', 'Theme', 'URL')
+                RenderViews::buildURL('index.php?manage=settings&option=theme_settings', 'Theme', 'URL')
             );
             break;
         }
@@ -263,7 +263,7 @@ switch (@$_GET['option']) {
         if (!is_array($decoded)) {
             RenderViews::buildResponse(
                 'Theme settings could not be read.',
-                RenderViews::buildURL('index.php?controller=administration_settings&option=theme_settings', 'Theme', 'URL')
+                RenderViews::buildURL('index.php?manage=settings&option=theme_settings', 'Theme', 'URL')
             );
             break;
         }
@@ -363,6 +363,6 @@ switch (@$_GET['option']) {
         break;
     default :
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-        RenderViews::buildResponse('Invalid Option', RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_55, 'URL'));
+        RenderViews::buildResponse('Invalid Option', RenderViews::buildURL('index.php?manage=settings&option=adlexone_settings', TXT_55, 'URL'));
         break;
 }

@@ -77,7 +77,7 @@ foreach (\Adlexone\Application\ApplicationStore::menuItems() as $item) {
 $manage = [];
 if (Access::can(Permission::ADMIN_SETTINGS)) {
     $manage[] = launchTile(
-        'index.php?controller=administration_applications',
+        'index.php?manage=applications',
         'Applications',
         'Create and arrange applications',
         'ic-launch'
@@ -85,15 +85,21 @@ if (Access::can(Permission::ADMIN_SETTINGS)) {
 }
 if (Access::can(Permission::ADMIN_ITEMS)) {
     $manage[] = launchTile(
-        'index.php?controller=administration_item_settings&option=manage_fields',
-        'Items and Fields',
-        'Fields and item types',
+        'index.php?manage=fields',
+        'Fields',
+        'Custom fields and menus',
         'ic-manage-fields'
+    );
+    $manage[] = launchTile(
+        'index.php?manage=item-types',
+        'Item types',
+        'Types and their fields',
+        'ic-manage-item-types'
     );
 }
 if (Access::can(Permission::ADMIN_ACTIONS)) {
     $manage[] = launchTile(
-        'index.php?controller=administration_actions&option=show_defined_actions',
+        'index.php?manage=workflow&option=show_defined_actions',
         'Workflow',
         'Actions and packages',
         'ic-manage-actions'
@@ -101,7 +107,7 @@ if (Access::can(Permission::ADMIN_ACTIONS)) {
 }
 if (Access::can(Permission::ADMIN_SECURITY)) {
     $manage[] = launchTile(
-        'index.php?controller=administration_security&option=manage_users',
+        'index.php?manage=security&option=manage_users',
         'Security',
         'Users and groups',
         'ic-manage-users'
@@ -109,14 +115,14 @@ if (Access::can(Permission::ADMIN_SECURITY)) {
 }
 if (Access::can(Permission::ADMIN_SETTINGS)) {
     $manage[] = launchTile(
-        'index.php?controller=administration_settings&option=adlexone_settings',
+        'index.php?manage=settings&option=adlexone_settings',
         'Settings',
         'Application setup',
         'ic-system-settings'
     );
 } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
     $manage[] = launchTile(
-        'index.php?controller=administration_settings&option=sign_in_settings',
+        'index.php?manage=settings&option=sign_in_settings',
         'Settings',
         'Sign-in and system setup',
         'ic-system-settings'

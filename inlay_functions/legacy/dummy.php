@@ -24,5 +24,5 @@ declare(strict_types=1);
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
-header('Location: index.php?controller=quick_launch');
+header('Location: index.php?controller=home');
 exit;

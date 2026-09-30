@@ -35,7 +35,7 @@ RenderNavigation::applySectionNav('Workflow', RenderNavigation::workflowURLs());
 /**
  * Controller specific constants
  */
-define('ACT_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_actions');
+define('ACT_BASE_URL', 'index.php?manage=workflow');
 /**
  * Shows secured action options
  */

@@ -28,7 +28,7 @@ final class AuthSession
         $_SESSION['access_home_controller_name'] = $user['home_controller_name'] ?? '';
         $_SESSION['access_show_header'] = $user['show_header'] ?? 'Yes';
         $_SESSION['access_show_graphics'] = $user['show_graphics'] ?? 'Yes';
-        $_SESSION['access_home_controller'] = !empty($user['home_controller']) ? $user['home_controller'] : 'quick_launch';
+        $_SESSION['access_home_controller'] = !empty($user['home_controller']) ? $user['home_controller'] : 'home';
 
         Access::hydrateSession((int) $user['user_id']);
     }
@@ -60,7 +60,7 @@ final class AuthSession
 
     public static function redirectHome(): never
     {
-        $home = (string) ($_SESSION['access_home_controller'] ?? 'quick_launch');
+        $home = (string) ($_SESSION['access_home_controller'] ?? 'home');
         $url = rtrim((string) BASE_URL, '/') . '/' . \Adlexone\Http\Router::homeTarget($home);
         header('Location: ' . $url);
         exit;

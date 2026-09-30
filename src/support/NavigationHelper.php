@@ -122,19 +122,19 @@ final class NavigationHelper
 
     public static function itemSettingsURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_fields', TXT_53, 'ic-manage-fields'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=manage_item_types', TXT_50, 'ic-manage-item-types'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_custom_field', TXT_88, 'ic-custom-field-add'), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_item_settings&option=new_item_type', TXT_85, 'ic-itemtype-add'), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
+        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?manage=fields', TXT_53, 'ic-manage-fields'), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=item-types', TXT_50, 'ic-manage-item-types'), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=fields&option=new_custom_field', TXT_88, 'ic-custom-field-add'), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=item-types&option=new_item_type', TXT_85, 'ic-itemtype-add'), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=new_user', TXT_33), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=new_group', TXT_34), $_SESSION['access_role_id'], 2);
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_main&subcontroller=administration_security&option=manage_users_groups', TXT_73), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
+        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?manage=security&option=new_user', TXT_33), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=security&option=new_group', TXT_34), $_SESSION['access_role_id'], 2);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=security&option=manage_users_groups', TXT_73), $_SESSION['access_role_id'], $_SESSION['access_role_id'], 2);
 
         return $html;
     }
@@ -142,13 +142,13 @@ final class NavigationHelper
     public static function systemSettingsURLs()
     {
 
-        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?controller=administration_settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), $_SESSION['access_role_id'], 1);
+        $html = RenderViews::outputIfRoleAllowed(RenderViews::buildURL('index.php?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), $_SESSION['access_role_id'], 1);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), $_SESSION['access_role_id'], 0);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=email_settings', TXT_565,'ic-inbound-email'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), $_SESSION['access_role_id'], 0);
 
-        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?controller=administration_settings&option=advanced_settings', TXT_130, 'ic-advanced'), $_SESSION['access_role_id'], 0);
+        $html .= RenderViews::outputIfRoleAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), $_SESSION['access_role_id'], 0);
 
         return $html;
 

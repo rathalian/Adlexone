@@ -10,15 +10,15 @@ use Adlexone\support\RenderViews;
 
 RenderViews::terminateUnlessAllowed(Permission::ADMIN_SETTINGS);
 
-define('APPLICATIONS_ADMIN_URL', 'index.php?controller=administration_applications');
+define('APPLICATIONS_MANAGE_URL', 'index.php?manage=applications');
 $option = (string) ($_GET['option'] ?? '');
 
-$section = RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'ic-launch');
+$section = RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-launch');
 if (in_array($option, ['edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav'], true)) {
     $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
     if ($sectionApp > 0) {
-        $section .= RenderViews::buildURL(APPLICATIONS_ADMIN_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-settings');
-        $section .= RenderViews::buildURL(APPLICATIONS_ADMIN_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-manage-fields');
+        $section .= RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-settings');
+        $section .= RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-manage-fields');
     }
 }
 RenderNavigation::applySectionNav('Applications', $section);
@@ -41,11 +41,11 @@ switch ($option) {
         break;
     case 'delete':
         ApplicationStore::deleteApplication((int) ($_GET['application_id'] ?? 0));
-        header('Location: ' . APPLICATIONS_ADMIN_URL);
+        header('Location: ' . APPLICATIONS_MANAGE_URL);
         exit;
     case 'move':
         ApplicationStore::moveApplication((int) ($_GET['application_id'] ?? 0), (string) ($_GET['direction'] ?? ''));
-        header('Location: ' . APPLICATIONS_ADMIN_URL);
+        header('Location: ' . APPLICATIONS_MANAGE_URL);
         exit;
     case 'nav':
         showNavigation((int) ($_GET['application_id'] ?? 0));
@@ -66,19 +66,19 @@ switch ($option) {
         $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
         if ($nav !== null) {
             ApplicationStore::deleteNav((int) $nav['nav_id']);
-            header('Location: ' . APPLICATIONS_ADMIN_URL . '&option=nav&application_id=' . (int) $nav['application_id']);
+            header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . (int) $nav['application_id']);
             exit;
         }
-        header('Location: ' . APPLICATIONS_ADMIN_URL);
+        header('Location: ' . APPLICATIONS_MANAGE_URL);
         exit;
     case 'move_nav':
         $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
         if ($nav !== null) {
             ApplicationStore::moveNav((int) $nav['nav_id'], (string) ($_GET['direction'] ?? ''));
-            header('Location: ' . APPLICATIONS_ADMIN_URL . '&option=nav&application_id=' . (int) $nav['application_id']);
+            header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . (int) $nav['application_id']);
             exit;
         }
-        header('Location: ' . APPLICATIONS_ADMIN_URL);
+        header('Location: ' . APPLICATIONS_MANAGE_URL);
         exit;
     default:
         showApplications();
@@ -92,7 +92,7 @@ function showApplications(): void
         $id = (int) $app['application_id'];
         $rows[] = [
             'name' => (string) $app['name'],
-            'href' => APPLICATIONS_ADMIN_URL . '&option=edit&application_id=' . $id,
+            'href' => APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id,
             'cells' => [
                 'menu' => $app['enabled'] ? 'Shown' : 'Hidden',
                 'opens' => $app['entry_mode'] === 'legacy' ? 'Existing screens' : 'This application',
@@ -100,19 +100,19 @@ function showApplications(): void
             'search' => (string) $app['slug'],
             'actions' => [
                 [
-                    'href' => APPLICATIONS_ADMIN_URL . '&option=nav&application_id=' . $id,
+                    'href' => APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $id,
                     'label' => 'Navigation',
                 ],
                 [
-                    'href' => APPLICATIONS_ADMIN_URL . '&option=move&application_id=' . $id . '&direction=up',
+                    'href' => APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=up',
                     'label' => 'Up',
                 ],
                 [
-                    'href' => APPLICATIONS_ADMIN_URL . '&option=move&application_id=' . $id . '&direction=down',
+                    'href' => APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=down',
                     'label' => 'Down',
                 ],
                 [
-                    'href' => APPLICATIONS_ADMIN_URL . '&option=delete&application_id=' . $id,
+                    'href' => APPLICATIONS_MANAGE_URL . '&option=delete&application_id=' . $id,
                     'label' => 'Delete',
                     'tone' => 'danger',
                     'confirm' => 'Delete ' . $app['name'] . ' and its navigation?',
@@ -130,7 +130,7 @@ function showApplications(): void
                 ['key' => 'opens', 'label' => 'Opens'],
             ],
             'searchLabel' => 'Search',
-            'primary' => ['href' => APPLICATIONS_ADMIN_URL . '&option=new', 'label' => 'New application'],
+            'primary' => ['href' => APPLICATIONS_MANAGE_URL . '&option=new', 'label' => 'New application'],
             'empty' => 'No applications yet.',
             'groups' => [['rows' => $rows]],
         ]),
@@ -142,7 +142,7 @@ function showApplicationForm(int $id = 0): void
 {
     $app = $id > 0 ? ApplicationStore::find($id) : null;
     if ($id > 0 && $app === null) {
-        RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+        RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
         return;
     }
 
@@ -158,7 +158,7 @@ function showApplicationForm(int $id = 0): void
     if ($app !== null) {
         $fields[''] = RenderViews::buildHiddenInput('application_id', (string) $app['application_id']);
     }
-    $action = $app === null ? APPLICATIONS_ADMIN_URL . '&option=add' : APPLICATIONS_ADMIN_URL . '&option=update';
+    $action = $app === null ? APPLICATIONS_MANAGE_URL . '&option=add' : APPLICATIONS_MANAGE_URL . '&option=update';
     $html = RenderViews::buildForm($app === null ? 'New application' : (string) $app['name'], $action, $fields, [
         RenderViews::buildFormButton('submit', 'submit_button', 'Save'),
     ]);
@@ -176,11 +176,11 @@ function saveApplication(int $id): void
     $permission = (string) ($_POST['permission'] ?? '');
     $icon = (string) ($_POST['icon'] ?? 'ic-launch');
     if ($name === '' || $slug === '' || !isset(Permission::catalog()[$permission]) || !in_array($icon, Capabilities::icons(), true)) {
-        RenderViews::buildResponse('Enter a name and choose who can open the application.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL . '&option=new', 'Back', 'URL'));
+        RenderViews::buildResponse('Enter a name and choose who can open the application.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
         return;
     }
     if (ApplicationStore::slugInUse($slug, $id)) {
-        RenderViews::buildResponse('That slug is already used.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+        RenderViews::buildResponse('That slug is already used.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
         return;
     }
     $fields = [
@@ -193,11 +193,11 @@ function saveApplication(int $id): void
     ];
     if ($id > 0) {
         if (ApplicationStore::find($id) === null) {
-            RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+            RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
         ApplicationStore::updateApplication($id, $fields);
-        header('Location: ' . APPLICATIONS_ADMIN_URL . '&option=edit&application_id=' . $id);
+        header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id);
         exit;
     }
     $max = 0;
@@ -207,7 +207,7 @@ function saveApplication(int $id): void
     $fields['sort_order'] = $max + 10;
     $fields['entry_mode'] = 'shell';
     $newId = ApplicationStore::insertApplication($fields);
-    header('Location: ' . APPLICATIONS_ADMIN_URL . '&option=nav&application_id=' . $newId);
+    header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $newId);
     exit;
 }
 
@@ -215,13 +215,13 @@ function showNavigation(int $applicationId): void
 {
     $app = ApplicationStore::find($applicationId);
     if ($app === null) {
-        RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+        RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
         return;
     }
     if ($app['entry_mode'] === 'legacy') {
         RenderViews::buildResponse(
             'This application opens its existing screens. Navigation for it stays in those screens.',
-            RenderViews::buildURL(APPLICATIONS_ADMIN_URL . '&option=edit&application_id=' . $applicationId, 'Details', 'URL')
+            RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $applicationId, 'Details', 'URL')
         );
         return;
     }
@@ -231,15 +231,15 @@ function showNavigation(int $applicationId): void
         $id = (int) $link['nav_id'];
         $rows[] = [
             'name' => (string) $link['label'],
-            'href' => APPLICATIONS_ADMIN_URL . '&option=edit_nav&nav_id=' . $id,
+            'href' => APPLICATIONS_MANAGE_URL . '&option=edit_nav&nav_id=' . $id,
             'cells' => [
                 'screen' => Capabilities::choiceLabel((string) $link['capability']),
             ],
             'actions' => [
-                ['href' => APPLICATIONS_ADMIN_URL . '&option=move_nav&nav_id=' . $id . '&direction=up', 'label' => 'Up'],
-                ['href' => APPLICATIONS_ADMIN_URL . '&option=move_nav&nav_id=' . $id . '&direction=down', 'label' => 'Down'],
+                ['href' => APPLICATIONS_MANAGE_URL . '&option=move_nav&nav_id=' . $id . '&direction=up', 'label' => 'Up'],
+                ['href' => APPLICATIONS_MANAGE_URL . '&option=move_nav&nav_id=' . $id . '&direction=down', 'label' => 'Down'],
                 [
-                    'href' => APPLICATIONS_ADMIN_URL . '&option=delete_nav&nav_id=' . $id,
+                    'href' => APPLICATIONS_MANAGE_URL . '&option=delete_nav&nav_id=' . $id,
                     'label' => 'Delete',
                     'tone' => 'danger',
                     'confirm' => 'Remove ' . $link['label'] . ' from the navigation?',
@@ -257,7 +257,7 @@ function showNavigation(int $applicationId): void
             ],
             'searchLabel' => 'Search',
             'primary' => [
-                'href' => APPLICATIONS_ADMIN_URL . '&option=new_nav&application_id=' . $applicationId,
+                'href' => APPLICATIONS_MANAGE_URL . '&option=new_nav&application_id=' . $applicationId,
                 'label' => 'Add link',
             ],
             'empty' => 'No links yet. Add create, search, or another screen.',
@@ -271,7 +271,7 @@ function showNavForm(int $applicationId, int $navId = 0): void
 {
     $link = $navId > 0 ? ApplicationStore::findNav($navId) : null;
     if ($navId > 0 && $link === null) {
-        RenderViews::buildResponse('That link does not exist.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+        RenderViews::buildResponse('That link does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
         return;
     }
     if ($link !== null) {
@@ -279,7 +279,7 @@ function showNavForm(int $applicationId, int $navId = 0): void
     }
     $app = ApplicationStore::find($applicationId);
     if ($app === null || $app['entry_mode'] === 'legacy') {
-        RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+        RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
         return;
     }
 
@@ -297,7 +297,7 @@ function showNavForm(int $applicationId, int $navId = 0): void
         '' => RenderViews::buildHiddenInput('application_id', (string) $applicationId)
             . ($link === null ? '' : RenderViews::buildHiddenInput('nav_id', (string) $link['nav_id'])),
     ];
-    $action = $link === null ? APPLICATIONS_ADMIN_URL . '&option=add_nav' : APPLICATIONS_ADMIN_URL . '&option=update_nav';
+    $action = $link === null ? APPLICATIONS_MANAGE_URL . '&option=add_nav' : APPLICATIONS_MANAGE_URL . '&option=update_nav';
     define('BODY_CONTENT', RenderViews::buildForm(
         $link === null ? 'Add link' : 'Edit link',
         $action,
@@ -313,7 +313,7 @@ function saveNav(int $navId): void
     if ($navId > 0) {
         $existing = ApplicationStore::findNav($navId);
         if ($existing === null) {
-            RenderViews::buildResponse('That link does not exist.', RenderViews::buildURL(APPLICATIONS_ADMIN_URL, 'Applications', 'URL'));
+            RenderViews::buildResponse('That link does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
         $applicationId = (int) $existing['application_id'];
@@ -324,7 +324,7 @@ function saveNav(int $navId): void
     $permission = (string) ($_POST['permission'] ?? '');
     $icon = (string) ($_POST['icon'] ?? '');
     $catalog = Capabilities::catalog();
-    $back = APPLICATIONS_ADMIN_URL . '&option=nav&application_id=' . $applicationId;
+    $back = APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $applicationId;
     if ($app === null || $label === '' || !isset($catalog[$capability])) {
         RenderViews::buildResponse('Enter a label and choose a screen.', RenderViews::buildURL($back, 'Navigation', 'URL'));
         return;

@@ -164,28 +164,28 @@ function showHeader() {
 //	unset($dropDown, $securedDropDownArray, $allSecuredDropDownArray);
 //
 //	//ADMINISTRATION
-//	$baseURL = 'index.php?controller=administration_main&subcontroller=';
+//	$baseURL = 'index.php?manage=subcontroller=';
 //	$allSecuredDropDownArray = array();
 //	//Security management and sub menus
-//	$dropDown[TXT_28 ] = $baseURL. 'administration_security';
+//	$dropDown[TXT_28 ] = $baseURL. 'manage_security';
 //	$securedDropDownArray = RenderViews::outputIfRoleAllowed($dropDown, $_SESSION['access_role_id'], 1);
 //	if ($securedDropDownArray != '') {//Merge the drop down array with the other drop down arrays if a secured resource is returned
 //		$allSecuredDropDownArray = array_merge($securedDropDownArray, $allSecuredDropDownArray);
 //	}
 //	//Item settings and sub menus
-//	$dropDown[TXT_49] = $baseURL . 'administration_item_settings';
+//	$dropDown[TXT_49] = $baseURL . 'manage_items';
 //	$securedDropDownArray = RenderViews::outputIfRoleAllowed($dropDown, $_SESSION['access_role_id'], 1);
 //	if ($securedDropDownArray != '') {//Merge the drop down array with the other drop down arrays if a secured resource is returned
 //		$allSecuredDropDownArray = array_merge($securedDropDownArray, $allSecuredDropDownArray);
 //	}
 //	//Action settings and sub menus
-//	$dropDown[TXT_128] = $baseURL . 'administration_actions';
+//	$dropDown[TXT_128] = $baseURL . 'manage_actions';
 //	$securedDropDownArray = RenderViews::outputIfRoleAllowed($dropDown, $_SESSION['access_role_id'], 1);
 //	if ($securedDropDownArray != '') {//Merge the drop down array with the other drop down arrays if a secured resource is returned
 //		$allSecuredDropDownArray = array_merge($securedDropDownArray, $allSecuredDropDownArray);
 //	}
 //	//System administration and sub menus
-//	$dropDown[TXT_55] = $baseURL . 'administration_settings';
+//	$dropDown[TXT_55] = $baseURL . 'manage_settings';
 //	$securedDropDownArray = RenderViews::outputIfRoleAllowed($dropDown, $_SESSION['access_role_id'], 0);
 //	if ($securedDropDownArray != '') {//Merge the drop down array with the other drop down arrays if a secured resource is returned
 //		$allSecuredDropDownArray = array_merge($securedDropDownArray, $allSecuredDropDownArray);
@@ -203,7 +203,7 @@ function showHeader() {
 //		$allSecuredDropDownArray = array_merge($securedDropDownArray, $allSecuredDropDownArray);
 //	}
 //
-//	$navButton = RenderViews::tbNavBarElements('<span class="glyphicon glyphicon-dashboard"></span> '.TXT_5, 'index.php?controller=administration_main', $allSecuredDropDownArray);
+//	$navButton = RenderViews::tbNavBarElements('<span class="glyphicon glyphicon-dashboard"></span> '.TXT_5, 'index.php?manage=', $allSecuredDropDownArray);
 //	unset($dropDown, $securedDropDownArray, $allSecuredDropDownArray);
 //
 //	$html .= RenderViews::outputIfRoleAllowed($navButton, $_SESSION['access_role_id'], 5);

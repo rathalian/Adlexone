@@ -32,7 +32,7 @@ use Adlexone\support\RenderViews;
 /**
  * Controller specific constants
  */
-define('SEC_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=administration_security');
+define('SEC_BASE_URL', 'index.php?manage=security');
 
 if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
     $securityOption = (string)($_GET['option'] ?? '');
@@ -180,7 +180,7 @@ function showUser($userID = '', $values = [], $adminEdit = true)
         }
     }
     array_unshift($nameArray, 'Home');
-    array_unshift($baseURLArray, 'quick_launch}-{Home');
+    array_unshift($baseURLArray, 'home}-{Home');
     ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
     $application = empty($fieldValues['home_controller']) ? SET_DEFAULT_APPLICATION : $fieldValues['home_controller'] . '}-{' . @$fieldValues['home_controller_name'];
     $userPreferences[TXT_297] = RenderViews::buildSelectDropdown('home_controller', $baseURLArray, $nameArray, $application);

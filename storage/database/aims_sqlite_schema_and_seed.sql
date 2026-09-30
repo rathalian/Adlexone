@@ -358,7 +358,7 @@ CREATE TABLE IF NOT EXISTS aims_users (
 );
 
 INSERT INTO aims_users (user_id, first_name, last_name, user_name, email, pager_email, password, office, phone, theme, secret_question, secret_answer, lastactive, language, time_offset, title, address, city, state_province, zip_postal, country, website, other, show_header, show_graphics, home_controller, home_controller_name, role, settings) VALUES
-(1, 'Administrative', 'User', 'Administrator', 'email.test@email.com', '', '5f4dcc3b5aa765d61d8327deb882cf99', 'office', '', 'adlexone', 'my', 'secret', 'active', 'English', '', 'TITLE', '', '', '', '', '', '', '', 'Yes', 'Yes', 'quick_launch', 'Home', 0, '{SHOW-HIDE=TRUE}');
+(1, 'Administrative', 'User', 'Administrator', 'email.test@email.com', '', '5f4dcc3b5aa765d61d8327deb882cf99', 'office', '', 'adlexone', 'my', 'secret', 'active', 'English', '', 'TITLE', '', '', '', '', '', '', '', 'Yes', 'Yes', 'home', 'Home', 0, '{SHOW-HIDE=TRUE}');
 
 -- user_identities (OIDC / SSO links)
 CREATE TABLE IF NOT EXISTS user_identities (

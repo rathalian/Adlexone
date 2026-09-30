@@ -6,7 +6,7 @@ namespace Adlexone\Http;
 use Adlexone\support\RenderViews;
 
 /**
- * One map from a request to a screen file.
+ * One map from a request to an inlay function file.
  *
  * Home is index.php. Manage pages use manage. An application uses
  * application and nav. item and search name the record on that page.
@@ -53,47 +53,59 @@ final class Router
     ];
 
     /**
-     * Public name => file name the existing screens still read from the query.
+     * Public or legacy name => canonical file key.
      *
      * @var array<string, string>
      */
     private const ALIASES = [
-        'home' => 'quick_launch',
+        'quick_launch' => 'home',
         'print' => 'full_page_view',
-        'manage' => 'administration_main',
-        'applications' => 'administration_applications',
-        'items' => 'administration_item_settings',
-        'workflow' => 'administration_actions',
-        'security' => 'administration_security',
-        'settings' => 'administration_settings',
+        'manage' => 'manage_main',
+        'applications' => 'manage_applications',
+        'fields' => 'manage_fields',
+        'item-types' => 'manage_item_types',
+        'items' => 'manage_items',
+        'workflow' => 'manage_actions',
+        'security' => 'manage_security',
+        'settings' => 'manage_settings',
+        'portal' => 'manage_portal',
+        'administration_main' => 'manage_main',
+        'administration_applications' => 'manage_applications',
+        'administration_item_settings' => 'manage_items',
+        'administration_actions' => 'manage_actions',
+        'administration_security' => 'manage_security',
+        'administration_settings' => 'manage_settings',
+        'administration_portal' => 'manage_portal',
     ];
 
     /**
-     * File name => path under the install root.
+     * Canonical name => path under the install root.
      *
      * @var array<string, string>
      */
     private const FILES = [
-        'login' => 'screens/login.php',
-        'quick_launch' => 'screens/quick_launch.php',
-        'full_page_view' => 'screens/full_page_view.php',
-        'application' => 'screens/application.php',
-        'administration_main' => 'screens/administration_main.php',
-        'administration_applications' => 'screens/administration_applications.php',
-        'administration_item_settings' => 'screens/administration_item_settings.php',
-        'administration_actions' => 'screens/administration_actions.php',
-        'administration_security' => 'screens/administration_security.php',
-        'administration_settings' => 'screens/administration_settings.php',
-        self::ITEMS => 'screens/shared/item_management_manage.php',
-        self::SEARCH => 'screens/shared/search_management_manage.php',
-        'administration_portal' => 'screens/legacy/administration_portal.php',
-        'all_actions' => 'screens/legacy/all_actions.php',
-        'crm_management_manage' => 'screens/legacy/crm_management_manage.php',
-        'dummy' => 'screens/legacy/dummy.php',
-        'item_management_main' => 'screens/legacy/item_management_main.php',
-        'search_management_main' => 'screens/legacy/search_management_main.php',
-        'social_management_main' => 'screens/legacy/social_management_main.php',
-        'social_management_manage' => 'screens/legacy/social_management_manage.php',
+        'login' => 'inlay_functions/login.php',
+        'home' => 'inlay_functions/home.php',
+        'full_page_view' => 'inlay_functions/full_page_view.php',
+        'application' => 'inlay_functions/application.php',
+        'manage_main' => 'inlay_functions/manage/main.php',
+        'manage_applications' => 'inlay_functions/manage/applications.php',
+        'manage_fields' => 'inlay_functions/manage/fields.php',
+        'manage_item_types' => 'inlay_functions/manage/item_types.php',
+        'manage_items' => 'inlay_functions/manage/items.php',
+        'manage_actions' => 'inlay_functions/manage/actions.php',
+        'manage_security' => 'inlay_functions/manage/security.php',
+        'manage_settings' => 'inlay_functions/manage/settings.php',
+        self::ITEMS => 'inlay_functions/application_shared/items.php',
+        self::SEARCH => 'inlay_functions/application_shared/search.php',
+        'manage_portal' => 'inlay_functions/legacy/manage_portal.php',
+        'all_actions' => 'inlay_functions/legacy/all_actions.php',
+        'crm_management_manage' => 'inlay_functions/legacy/crm_management_manage.php',
+        'dummy' => 'inlay_functions/legacy/dummy.php',
+        'item_management_main' => 'inlay_functions/legacy/item_management_main.php',
+        'search_management_main' => 'inlay_functions/legacy/search_management_main.php',
+        'social_management_main' => 'inlay_functions/legacy/social_management_main.php',
+        'social_management_manage' => 'inlay_functions/legacy/social_management_manage.php',
     ];
 
     public static function requested(): string
@@ -115,7 +127,7 @@ final class Router
             return 'application';
         }
 
-        return 'quick_launch';
+        return 'home';
     }
 
     public static function matches(string $name): bool
@@ -221,18 +233,19 @@ final class Router
             return 'index.php?controller=' . rawurlencode($stored);
         }
         $name = self::queryName($stored);
-        if ($name === '' || $name === 'quick_launch' || $name === 'home') {
+        $canonical = self::canonical($name);
+        if ($name === '' || $canonical === 'home') {
             return 'index.php';
         }
-        if (isset(self::ALIASES[$name]) && $name !== 'manage') {
+        $manageKey = array_search($canonical, self::ALIASES, true);
+        if (is_string($manageKey) && !str_starts_with($manageKey, 'administration_') && $manageKey !== 'manage' && $manageKey !== 'print' && $manageKey !== 'quick_launch') {
+            return self::manageUrl($manageKey);
+        }
+        if (isset(self::ALIASES[$name]) && $name !== 'manage' && !str_starts_with($name, 'administration_')) {
             return self::manageUrl($name);
         }
-        $manage = array_search($name, self::ALIASES, true);
-        if (is_string($manage) && $manage !== 'manage' && $manage !== 'home') {
-            return self::manageUrl($manage);
-        }
 
-        return 'index.php?controller=' . rawurlencode($name);
+        return 'index.php?controller=' . rawurlencode($canonical);
     }
 
     /**
@@ -246,7 +259,7 @@ final class Router
             return self::applicationUrl((string) APPLICATION_SLUG, $nav);
         }
 
-        $controller = self::canonical(self::queryName((string) ($_GET['controller'] ?? 'quick_launch')));
+        $controller = self::canonical(self::queryName((string) ($_GET['controller'] ?? 'home')));
         $url = 'index.php?controller=' . rawurlencode($controller);
         if ($engine === 'items') {
             $url .= '&subcontroller=' . self::ITEMS;

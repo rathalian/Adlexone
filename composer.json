@@ -15,7 +15,7 @@
       "Adlexone\\App\\": "app/",
       "Adlexone\\": "src/"
     },
-    "classmap": ["screens/", "src/"]
+    "classmap": ["inlay_functions/", "src/"]
   },
   "config": {
     "optimize-autoloader": true

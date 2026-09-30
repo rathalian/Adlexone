@@ -28,7 +28,7 @@ use Adlexone\support\RenderViews;
 /**
  * Controller specific constants
  */
-define('POR_BASE_URL', 'index.php?controller='.$_GET['controller'].'&subcontroller=administration_portal');
+define('POR_BASE_URL', 'index.php?manage=portal');
 /**
  * Shows administrative portal information
  *

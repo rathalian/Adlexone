@@ -150,6 +150,6 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     if (Router::bare(Router::requested())) {
         Router::open(Router::requested());
     } else {
-        include 'screens/main.php';
+        include 'inlay_functions/main.php';
     }
 }

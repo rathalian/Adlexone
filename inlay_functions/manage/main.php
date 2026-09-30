@@ -27,16 +27,18 @@ declare(strict_types=1);
 use Adlexone\support\RenderViews;
 
 /**
- * Old administration hub. Manage opens each screen directly. Forward the four
+ * Legacy manage hub. Manage opens each screen directly. Forward the four
  * screens that action packages and bookmarks still address as subcontrollers.
  * The portal and the missing procedures controller go home.
  */
 $subcontroller = basename((string)($_GET['subcontroller'] ?? ''));
 $forward = [
-    'administration_security',
-    'administration_item_settings',
-    'administration_actions',
-    'administration_settings',
+    'manage_security',
+    'manage_fields',
+    'manage_item_types',
+    'manage_items',
+    'manage_actions',
+    'manage_settings',
 ];
 if (in_array($subcontroller, $forward, true)) {
     RenderViews::includeControllerFile($subcontroller, $subcontroller);
