@@ -4,7 +4,7 @@ Inlay is PHP 8.1+ with SQLite. The cloud environment installs Composer dependenc
 
 Open the forwarded port **8000** to view the site. Routes use query strings such as `/?controller=login`.
 
-`config/*.json` and `storage/database/*.sqlite` are not in git. A new environment gets the example settings and an empty database file created by PHP on first connection. The live database and real settings stay on the machine that already has them; copy those in only when this environment should use that data.
+Tracked live files **`config/adlexone_settings.json`** and **`storage/database/adlexone.sqlite`** belong in git. Always stage and push them with related work so environments stay in sync. `config.example/` remains the template for brand-new installs; SchemaMigrator upgrades the sqlite file on boot.
 
 `Adlexone\Database\SchemaMigrator` runs on bootstrap and keeps the **shared platform schema** current (no application-private tables). Reference DDL: `storage/database/shared_schema.sql`.
 

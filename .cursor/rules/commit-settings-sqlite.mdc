@@ -1,0 +1,13 @@
+---
+description: Always include live settings and SQLite DB in commits and pushes
+alwaysApply: true
+---
+
+# Commit settings and SQLite
+
+When committing or pushing, **always stage and include**:
+
+- `config/adlexone_settings.json` (and other live `config/*.json` that are tracked)
+- `storage/database/adlexone.sqlite`
+
+Do not leave these unstaged as “local only.” Adam wants the live settings and database in git so environments stay in sync.
