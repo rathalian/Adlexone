@@ -24,9 +24,52 @@ declare(strict_types=1);
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
+use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
+use Adlexone\FrameOne\AppAccess;
+use Adlexone\FrameOne\AppSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 
+if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+    AppAccess::requireUse();
+} elseif (!Access::can(Permission::ADMIN_ITEMS)) {
+    Access::deny();
+}
+
+/**
+ * @return list<int>
+ */
+function applicationSearchTypeIds(): array
+{
+    if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+        return [];
+    }
+    return AppSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+}
+
+/**
+ * Force a type filter for the current app when the caller did not supply one.
+ *
+ * @param mixed $filter
+ * @return mixed
+ */
+function constrainSearchTypeFilter($filter)
+{
+    $allowed = applicationSearchTypeIds();
+    if ($allowed === []) {
+        return $filter;
+    }
+    if (is_array($filter)) {
+        $ids = array_values(array_filter(array_map('intval', $filter), static fn (int $id): bool => in_array($id, $allowed, true)));
+        return $ids !== [] ? $ids : $allowed;
+    }
+    $single = trim((string) $filter);
+    if ($single !== '' && $single !== '0' && ctype_digit($single) && in_array((int) $single, $allowed, true)) {
+        return $single;
+    }
+    return count($allowed) === 1 ? (string) $allowed[0] : $allowed;
+}
 
 /**
  *
@@ -725,9 +768,17 @@ if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['
 
     if ($sql == '') {
         $condition = 'WHERE';
+        $allowedTypes = applicationSearchTypeIds();
         // Item types
         if (!empty($_POST['item_type_id'])) {
-            $condition .= " item_type_id = '" . $_POST['item_type_id'] . "' ";
+            $postedType = (int) $_POST['item_type_id'];
+            if ($allowedTypes !== [] && !in_array($postedType, $allowedTypes, true)) {
+                Access::deny();
+            }
+            $condition .= " item_type_id = '" . $postedType . "' ";
+            $andOr = 'AND';
+        } elseif ($allowedTypes !== []) {
+            $condition .= ' item_type_id IN (' . implode(',', array_map('intval', $allowedTypes)) . ') ';
             $andOr = 'AND';
         }
         // Item ID
@@ -1066,9 +1117,11 @@ function deleteSavedSearch($searchID, $userID, $scope)
 
 function showItemTypeMenu($filter = '')
 {
+    $filter = constrainSearchTypeFilter($filter);
     if (is_array($filter)) {
         $i = 0;
         foreach ($filter as $id) {
+            $id = (int) $id;
             // Remove special characters
             if ($i == 0) {
                 $condition = "WHERE item_type_id = '$id'";
@@ -1300,6 +1353,7 @@ function searchApplicationMenu(string $selected): string
  */
 function showAdvancedItemSearch($filter = '')
 {
+    $filter = constrainSearchTypeFilter($filter);
     // Clear previous search SQL if not showing search results
     if ((@$_GET['option'] != 'show_search_results')) {
         unset($_SESSION['item_search_sql']);
@@ -1487,6 +1541,10 @@ switch (@$_GET['option']) {
     case 'show_item_search' :
         RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
         $itemTypes = $_GET['item_types'] ?? '';
+        if ($itemTypes === '' && defined('APPLICATION_SLUG')) {
+            $allowed = applicationSearchTypeIds();
+            $itemTypes = $allowed !== [] ? implode(',', $allowed) : '';
+        }
         $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
         showAdvancedItemSearch($filter);
         break;

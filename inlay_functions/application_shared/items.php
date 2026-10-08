@@ -24,12 +24,33 @@
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
+use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
+use Adlexone\FrameOne\AppAccess;
+use Adlexone\FrameOne\AppSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 use Adlexone\support\Actions;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
+
+if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+    AppAccess::requireUse();
+} elseif (!Access::can(Permission::ADMIN_ITEMS)) {
+    Access::deny();
+}
+
+/**
+ * Whether this item type may be used in the current application shell.
+ */
+function applicationAllowsItemType(int $typeId): bool
+{
+    if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+        return true;
+    }
+    return AppSettings::allowsItemType((string) APPLICATION_SLUG, $typeId);
+}
 
 /**
  * True when the signed-in user may open the item (owner, creator, admin, or shared group).
@@ -325,6 +346,17 @@ function showItemTypes($defaultItemType = '')
     $condition = "WHERE enabled = 'Yes' ORDER BY item_type_name ASC";
     $result = Database::select('item_types', ['item_type_id', 'item_type_name'], $condition);
 
+    if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+        $allowed = AppSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+        $result = array_values(array_filter(
+            $result,
+            static fn (array $row): bool => in_array((int) $row['item_type_id'], $allowed, true)
+        ));
+        if ($defaultItemType === '' || $defaultItemType === null) {
+            $defaultItemType = AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+        }
+    }
+
     $noItemTypes = false;
     if (count($result) > 0) {
         if (SET_SECURE_TYPE != 'yes') {
@@ -417,6 +449,9 @@ function showItemTypes($defaultItemType = '')
  */
 function showItemAdd($itemTypeID, $values)
 {
+    if (!applicationAllowsItemType((int) $itemTypeID)) {
+        Access::deny();
+    }
     // Show values from database only if they have not been set via a form refresh (we use user_security as it is always set)
     if (!isset($values['user_security'])) {
         // Setup item type information for display and later use when the item is first created
@@ -1152,7 +1187,11 @@ function addItem()
         // halt adding the item as we may have shortcutted here
         RenderViews::buildResponse(TXT_535);
         return;
-    } elseif (!isset($_POST['submit_button'])) {
+    }
+    if (!applicationAllowsItemType((int) $_POST['item_type_id'])) {
+        Access::deny();
+    }
+    if (!isset($_POST['submit_button'])) {
         // Reload form setting values based on posted form values, triggered from javascript submits
         showItemAdd($_POST['item_type_id'], $_POST);
     } else {

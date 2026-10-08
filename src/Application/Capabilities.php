@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
+use Adlexone\FrameOne\AppAccess;
 use Adlexone\FrameOne\AppSettings;
 use Adlexone\FrameOne\Library;
 use Adlexone\support\RenderNavigation;
@@ -130,6 +131,7 @@ final class Capabilities
 
         $config = is_array($nav['config'] ?? null) ? $nav['config'] : [];
         self::defineContext($app, (int) $nav['nav_id']);
+        AppAccess::requireUse();
         self::applyDefaults($capability, $config, ApplicationStore::scopeKey($app));
 
         if ($capability === Library::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
@@ -208,6 +210,7 @@ final class Capabilities
     public static function forwardShared(array $app, int $navId, string $subcontroller): void
     {
         self::defineContext($app, $navId);
+        AppAccess::requireUse();
         if (($_GET['application'] ?? '') === '') {
             $_GET['application'] = ApplicationStore::scopeKey($app);
         }
@@ -244,15 +247,36 @@ final class Capabilities
             $itemType = AppSettings::defaultItemTypeId($scope);
         }
 
-        if ($capability === Library::CREATE && (string) ($_GET['default_item_type'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_types') {
-            if ($itemType !== '') {
+        if ($capability === Library::CREATE) {
+            if ($itemType !== '' && (string) ($_GET['default_item_type'] ?? '') === '') {
                 $_GET['default_item_type'] = $itemType;
+            }
+            // Single configured type: skip the picker and open Create directly.
+            if (
+                $itemType !== ''
+                && (string) ($_GET['option'] ?? '') === 'show_item_types'
+                && (string) ($_GET['item_type_id'] ?? '') === ''
+            ) {
+                $_GET['option'] = 'new_item';
+                $_GET['item_type_id'] = $itemType;
             }
         }
         if ($capability === Library::SEARCH_ADVANCED && (string) ($_GET['item_types'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_search') {
             if ($itemType !== '') {
                 $_GET['item_types'] = $itemType;
+            } elseif ($scope !== '') {
+                $allowed = AppSettings::allowedItemTypeIds($scope);
+                if ($allowed !== []) {
+                    $_GET['item_types'] = implode(',', $allowed);
+                }
             }
+        }
+        if (
+            in_array($capability, [Library::SEARCH_QUICK, Library::SEARCH_LIST, Library::SEARCH_SAVED], true)
+            && (string) ($_GET['item_types'] ?? '') === ''
+            && $itemType !== ''
+        ) {
+            $_GET['item_types'] = $itemType;
         }
         if ($capability === Library::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
             $_GET['id'] = trim((string) ($config['search_id'] ?? ''));

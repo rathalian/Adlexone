@@ -218,9 +218,14 @@ function saveApplication(int $id): void
         'enabled' => isset($_POST['enabled']) ? 1 : 0,
     ];
     if ($id > 0) {
-        if (ApplicationStore::find($id) === null) {
+        $existing = ApplicationStore::find($id);
+        if ($existing === null) {
             RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
+        }
+        // Keep shell apps on their app.{slug}.use permission when the slug changes.
+        if ((string) $existing['entry_mode'] === 'shell' && (string) $existing['slug'] !== $slug) {
+            $fields['permission'] = Permission::appUse($slug);
         }
         ApplicationStore::updateApplication($id, $fields);
         header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id);

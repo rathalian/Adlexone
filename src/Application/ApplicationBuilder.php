@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Application;
 
 use Adlexone\Auth\Permission;
+use Adlexone\Data\GroupMembership;
 use Adlexone\FrameOne\Library;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
@@ -146,7 +147,8 @@ final class ApplicationBuilder
                 'default_item_type_id' => (string) $itemTypeId,
             ], JSON_UNESCAPED_SLASHES),
         ]);
-        Permission::grantAppToGroups($slug, $groupIds, $permLevels);
+        $grantedGroups = Permission::grantAppToGroups($slug, $groupIds, $permLevels);
+        GroupMembership::setItemTypeGroups($itemTypeId, $grantedGroups);
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
         if ($userId > 0) {
             \Adlexone\Auth\Access::hydrateSession($userId);

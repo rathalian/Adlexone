@@ -17,6 +17,9 @@ if ($app === null || !$app['enabled']) {
     return;
 }
 if ($app['entry_mode'] === 'legacy' && $app['legacy_controller'] !== '') {
+    if (!Access::can(\Adlexone\Auth\Permission::ADMIN_SYSTEM)) {
+        Access::deny();
+    }
     header('Location: index.php?controller=' . rawurlencode((string) $app['legacy_controller']));
     exit;
 }

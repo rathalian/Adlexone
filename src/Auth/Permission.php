@@ -115,8 +115,9 @@ final class Permission
      *
      * @param list<int> $groupIds
      * @param list<string> $levels subset of use|announce|settings (default all)
+     * @return list<int> group ids that received grants
      */
-    public static function grantAppToGroups(string $slug, array $groupIds = [], array $levels = []): void
+    public static function grantAppToGroups(string $slug, array $groupIds = [], array $levels = []): array
     {
         Access::ensureReady();
         $levelMap = [
@@ -134,7 +135,7 @@ final class Permission
             }
         }
         if ($perms === []) {
-            return;
+            return [];
         }
 
         if ($groupIds === []) {
@@ -162,6 +163,94 @@ final class Permission
             }
             Access::setGroupPermissions($groupId, $have);
         }
+        return $groupIds;
+    }
+
+    public static function revokeApp(string $slug): void
+    {
+        Access::ensureReady();
+        foreach ([self::appUse($slug), self::appAnnounce($slug), self::appSettings($slug)] as $permission) {
+            Database::delete('group_permissions', 'permission = ?', [$permission]);
+        }
+    }
+
+    public static function renameApp(string $oldSlug, string $newSlug): void
+    {
+        $oldSlug = self::safeSlug($oldSlug);
+        $newSlug = self::safeSlug($newSlug);
+        if ($oldSlug === '' || $newSlug === '' || $oldSlug === $newSlug) {
+            return;
+        }
+        Access::ensureReady();
+        $map = [
+            self::appUse($oldSlug) => self::appUse($newSlug),
+            self::appAnnounce($oldSlug) => self::appAnnounce($newSlug),
+            self::appSettings($oldSlug) => self::appSettings($newSlug),
+        ];
+        foreach ($map as $from => $to) {
+            Database::run('UPDATE group_permissions SET permission = ? WHERE permission = ?', [$to, $from]);
+        }
+    }
+
+    /**
+     * @return list<array{group: string, levels: list<string>}>
+     */
+    public static function exportAppGrants(string $slug): array
+    {
+        Access::ensureReady();
+        $levelMap = [
+            self::appUse($slug) => 'use',
+            self::appAnnounce($slug) => 'announce',
+            self::appSettings($slug) => 'settings',
+        ];
+        $byGroup = [];
+        foreach ($levelMap as $permission => $level) {
+            foreach (Database::select('group_permissions', ['group_id'], 'permission = ?', [$permission]) as $row) {
+                $gid = (int) $row['group_id'];
+                $group = Database::first('groups', ['group_name'], 'group_id = ?', [$gid]);
+                if ($group === null) {
+                    continue;
+                }
+                $name = (string) $group['group_name'];
+                $byGroup[$name] ??= [];
+                $byGroup[$name][] = $level;
+            }
+        }
+        $out = [];
+        foreach ($byGroup as $name => $levels) {
+            $out[] = ['group' => $name, 'levels' => array_values(array_unique($levels))];
+        }
+        return $out;
+    }
+
+    /**
+     * @param list<array{group?: string, levels?: list<string>}> $grants
+     * @return list<int>
+     */
+    public static function importAppGrants(string $slug, array $grants): array
+    {
+        $allGroups = [];
+        foreach ($grants as $grant) {
+            if (!is_array($grant)) {
+                continue;
+            }
+            $name = trim((string) ($grant['group'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $group = Database::first('groups', ['group_id'], 'group_name = ?', [$name]);
+            if ($group === null) {
+                continue;
+            }
+            $gid = (int) $group['group_id'];
+            $levels = is_array($grant['levels'] ?? null) ? $grant['levels'] : ['use', 'announce', 'settings'];
+            self::grantAppToGroups($slug, [$gid], array_map('strval', $levels));
+            $allGroups[] = $gid;
+        }
+        if ($allGroups === []) {
+            return self::grantAppToGroups($slug);
+        }
+        return array_values(array_unique($allGroups));
     }
 
     /** @deprecated use grantAppToGroups */

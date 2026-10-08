@@ -170,8 +170,27 @@ final class ApplicationStore
     public static function updateApplication(int $id, array $fields): void
     {
         self::ensureReady();
+        $existing = self::find($id);
+        if ($existing === null) {
+            return;
+        }
+        $oldSlug = (string) $existing['slug'];
+        $newSlug = (string) $fields['slug'];
+        if ($oldSlug !== $newSlug) {
+            Permission::renameApp($oldSlug, $newSlug);
+            if (Database::tableExists('saved_searches')) {
+                Database::update('saved_searches', ['application' => $newSlug], 'application = ?', [$oldSlug]);
+            }
+            if (Database::tableExists('users')) {
+                Database::run(
+                    'UPDATE users SET home_controller = ? WHERE home_controller = ?',
+                    ['application:' . $newSlug, 'application:' . $oldSlug]
+                );
+            }
+            $fields['permission'] = Permission::appUse($newSlug);
+        }
         Database::update('applications', [
-            'slug' => $fields['slug'],
+            'slug' => $newSlug,
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
             'icon' => $fields['icon'] ?? 'ic-launch',
@@ -183,8 +202,74 @@ final class ApplicationStore
     public static function deleteApplication(int $id): void
     {
         self::ensureReady();
+        $app = self::find($id);
+        if ($app === null) {
+            return;
+        }
+        $slug = (string) $app['slug'];
+        $typeIds = [];
+        $default = trim((string) (($app['settings']['default_item_type_id'] ?? '')));
+        if ($default !== '' && ctype_digit($default)) {
+            $typeIds[] = (int) $default;
+        }
+        foreach (self::navigation($id) as $link) {
+            $tid = trim((string) ($link['config']['item_type_id'] ?? ''));
+            if ($tid !== '' && ctype_digit($tid)) {
+                $typeIds[] = (int) $tid;
+            }
+        }
+        $typeIds = array_values(array_unique($typeIds));
+
+        Permission::revokeApp($slug);
+        if (Database::tableExists('saved_searches')) {
+            Database::delete('saved_searches', 'application = ?', [$slug]);
+        }
+        if (Database::tableExists('users')) {
+            Database::run(
+                'UPDATE users SET home_controller = ? WHERE home_controller = ?',
+                ['', 'application:' . $slug]
+            );
+        }
         Database::delete('application_nav', 'application_id = ?', [$id]);
         Database::delete('applications', 'application_id = ?', [$id]);
+
+        foreach ($typeIds as $typeId) {
+            if (!self::itemTypeUsedByOtherApps($typeId, $id)) {
+                self::deleteExclusiveItemType($typeId);
+            }
+        }
+    }
+
+    private static function itemTypeUsedByOtherApps(int $typeId, int $exceptApplicationId): bool
+    {
+        foreach (self::all() as $app) {
+            if ((int) $app['application_id'] === $exceptApplicationId) {
+                continue;
+            }
+            $default = trim((string) (($app['settings']['default_item_type_id'] ?? '')));
+            if ($default === (string) $typeId) {
+                return true;
+            }
+            foreach (self::navigation((int) $app['application_id']) as $link) {
+                if (trim((string) ($link['config']['item_type_id'] ?? '')) === (string) $typeId) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static function deleteExclusiveItemType(int $typeId): void
+    {
+        if ($typeId <= 0 || Database::exists('items', 'item_type_id = ?', [$typeId])) {
+            return;
+        }
+        Database::delete('item_type_custom_fields', 'item_type_id = ?', [$typeId]);
+        Database::delete('item_type_groups', 'item_type_id = ?', [$typeId]);
+        if (Database::tableExists('action_definitions')) {
+            Database::delete('action_definitions', 'item_type_id = ?', [$typeId]);
+        }
+        Database::delete('item_types', 'item_type_id = ?', [$typeId]);
     }
 
     public static function moveApplication(int $id, string $direction): void

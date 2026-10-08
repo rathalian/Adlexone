@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Http;
 
+use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
 use Adlexone\support\RenderViews;
 
 /**
@@ -17,6 +19,22 @@ final class Router
 {
     public const ITEMS = 'item_management_manage';
     public const SEARCH = 'search_management_manage';
+
+    /**
+     * Retired product surfaces — admin-only when opened by direct controller URL.
+     *
+     * @var list<string>
+     */
+    private const LEGACY = [
+        'manage_portal',
+        'all_actions',
+        'crm_management_manage',
+        'dummy',
+        'item_management_main',
+        'search_management_main',
+        'social_management_main',
+        'social_management_manage',
+    ];
 
     /** @var list<string> */
     private const ITEM_OPTIONS = [
@@ -280,6 +298,16 @@ final class Router
         if ($file === null) {
             RenderViews::buildResponse('This screen is not available.');
             return;
+        }
+        if (in_array($canonical, self::LEGACY, true) && !Access::can(Permission::ADMIN_SYSTEM)) {
+            Access::deny();
+        }
+        if (
+            ($canonical === self::ITEMS || $canonical === self::SEARCH)
+            && (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '')
+            && !Access::can(Permission::ADMIN_ITEMS)
+        ) {
+            Access::deny();
         }
         self::absorbRecord($canonical);
         if ((string) ($_GET['controller'] ?? '') === '' || $canonical !== self::queryName($name)) {
