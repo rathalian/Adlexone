@@ -34,7 +34,7 @@ final class ApplicationBuilder
         return [
             self::BLUEPRINT_BLANK => [
                 'label' => 'Blank',
-                'hint' => 'Shell + one record type. Add fields and screens in Manage.',
+                'hint' => 'A shell and one record type. Add fields when you are ready.',
                 'fields' => [],
                 'screens' => $coreScreens,
             ],
@@ -56,8 +56,8 @@ final class ApplicationBuilder
                 'screens' => $coreScreens,
             ],
             self::BLUEPRINT_HELPDESK => [
-                'label' => 'Helpdesk (optional)',
-                'hint' => 'Former Service Centre shape: work, create, searches, announcements, settings.',
+                'label' => 'Helpdesk',
+                'hint' => 'Cases, announcements, and settings for a support team.',
                 'fields' => $caseFields,
                 'screens' => [
                     Library::WORK,
