@@ -6,10 +6,11 @@ namespace Adlexone\Application;
 use Adlexone\support\RenderViews;
 
 /**
- * Extra screens shipped as packs under site/apps/{pack}/.
+ * Optional custom screens under site/apps/{pack}/.
  *
- * Packs are code libraries, not managed application names. Each screen
- * registers itself and appears in Manage Applications with its pack origin.
+ * Prefer FrameOne built-ins (Work, Create, Search, Announcements, Settings)
+ * configured in Manage → Navigation or the Builder. Packs are only for rare
+ * installation-specific screens that cannot be expressed as shared config.
  */
 final class AppFunctions
 {

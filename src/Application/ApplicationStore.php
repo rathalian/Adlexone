@@ -5,6 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\FrameOne\Library;
 use Adlexone\support\Database;
 
 /**
@@ -28,6 +29,7 @@ final class ApplicationStore
         self::renameServiceCentreWork();
         self::renameServiceCentreAnnouncements();
         self::renameContactCentreCapabilities();
+        self::migrateToFrameOneCapabilities();
     }
 
     public static function ensureSchema(): void
@@ -44,9 +46,13 @@ final class ApplicationStore
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 entry_mode TEXT NOT NULL DEFAULT "shell",
                 legacy_controller TEXT NOT NULL DEFAULT "",
-                legacy_key TEXT NOT NULL DEFAULT ""
+                legacy_key TEXT NOT NULL DEFAULT "",
+                settings_json TEXT NOT NULL DEFAULT "{}"
             )'
         );
+        if (self::tableExists('applications') && !Database::columnExists('applications', 'settings_json')) {
+            Database::exec('ALTER TABLE applications ADD COLUMN settings_json TEXT NOT NULL DEFAULT "{}"');
+        }
         Database::exec(
             'CREATE TABLE IF NOT EXISTS application_nav (
                 nav_id INTEGER PRIMARY KEY,
@@ -61,34 +67,14 @@ final class ApplicationStore
         );
     }
 
+    /**
+     * Empty installs start with no applications. Use Manage → Builder
+     * (or the guided Create flow) to compose the first business app.
+     * Existing Service Centre rows are left untouched.
+     */
     public static function seedIfEmpty(): void
     {
-        if (Database::count('applications') > 0) {
-            return;
-        }
-
-        $serviceType = defined('SERVICECENTRE_SET_ITEM_TYPE') ? (string) SERVICECENTRE_SET_ITEM_TYPE : '';
-        $text = static function (string $constant, string $fallback): string {
-            return defined($constant) ? (string) constant($constant) : $fallback;
-        };
-
-        $serviceId = self::insertApplication([
-            'slug' => 'service-centre',
-            'name' => 'Service Centre',
-            'hint' => 'Work and announcements',
-            'icon' => 'ic-servicecentre',
-            'permission' => Permission::SERVICECENTRE_SEARCH,
-            'enabled' => 1,
-            'sort_order' => 10,
-            'entry_mode' => 'shell',
-            'legacy_controller' => '',
-            'legacy_key' => '',
-        ]);
-        self::insertNav($serviceId, $text('APP_SC_TXT_1', 'Work'), 'contact_centre.work', Permission::SERVICECENTRE_SEARCH, 'ic-search', [], 10);
-        self::insertNav($serviceId, $text('APP_SC_TXT_2', 'New'), 'items.create', 'servicecentre.use', 'ic-create-ticket', ['item_type_id' => $serviceType], 20);
-        self::insertNav($serviceId, $text('APP_SC_TXT_60', 'Searches'), 'search.saved_list', 'servicecentre.search', 'ic-my-ticket-searches', [], 30);
-        self::insertNav($serviceId, $text('APP_SC_TXT_38', 'Announcements'), 'contact_centre.announcements', 'servicecentre.use', 'ic-announcements', [], 40);
-        self::insertNav($serviceId, $text('APP_SC_TXT_79', 'Settings'), 'contact_centre.settings', 'servicecentre.settings', 'ic-settings', [], 50);
+        // Intentionally no default vertical (helpdesk) seed.
     }
 
     /**
@@ -160,7 +146,7 @@ final class ApplicationStore
     public static function insertApplication(array $fields): int
     {
         self::ensureReady();
-        return Database::insert('applications', [
+        $row = [
             'slug' => $fields['slug'],
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
@@ -171,7 +157,11 @@ final class ApplicationStore
             'entry_mode' => $fields['entry_mode'] ?? 'shell',
             'legacy_controller' => $fields['legacy_controller'] ?? '',
             'legacy_key' => $fields['legacy_key'] ?? '',
-        ]);
+        ];
+        if (Database::columnExists('applications', 'settings_json')) {
+            $row['settings_json'] = $fields['settings_json'] ?? '{}';
+        }
+        return Database::insert('applications', $row);
     }
 
     /**
@@ -308,7 +298,7 @@ final class ApplicationStore
         Database::update('applications', [
             'legacy_controller' => '',
             'legacy_key' => '',
-            'permission' => Permission::SERVICECENTRE_SEARCH,
+            'permission' => Permission::APP_ACCESS,
         ], 'slug = ? AND legacy_key = ?', [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']);
         if (self::tableExists('saved_searches')) {
             Database::update(
@@ -384,6 +374,19 @@ final class ApplicationStore
             'servicecentre.settings' => 'contact_centre.settings',
         ];
         foreach ($map as $from => $to) {
+            Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
+        }
+    }
+
+    /**
+     * Contact Centre pack screens → FrameOne built-ins (UI-configurable).
+     */
+    private static function migrateToFrameOneCapabilities(): void
+    {
+        if (!self::tableExists('application_nav')) {
+            return;
+        }
+        foreach (Library::ALIASES as $from => $to) {
             Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
         }
     }
@@ -490,6 +493,7 @@ final class ApplicationStore
      */
     private static function application(array $row): array
     {
+        $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
         return [
             'application_id' => (int) $row['application_id'],
             'slug' => (string) $row['slug'],
@@ -502,6 +506,8 @@ final class ApplicationStore
             'entry_mode' => (string) $row['entry_mode'],
             'legacy_controller' => (string) $row['legacy_controller'],
             'legacy_key' => (string) $row['legacy_key'],
+            'settings' => is_array($settings) ? $settings : [],
+            'settings_json' => (string) ($row['settings_json'] ?? '{}'),
         ];
     }
 

@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inlay — Work OS teal/ink demo</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --brand: #0f766e;
+      --brand2: #115e59;
+      --stone: #ccfbf1;
+      --text: #0f172a;
+      --body: #334155;
+      --title: #475569;
+      --placeholder: #94a3b8;
+      --panel: #ffffff;
+      --page-bg: #f1f5f9;
+      --border: #e2e8f0;
+      --hover: rgba(15, 118, 110, 0.07);
+      --ring: rgba(15, 118, 110, 0.35);
+      --brandbar-border: #e2e8f0;
+      --brandmaker: #64748b;
+      --btn-primary-hover: #0d5c56;
+      --danger: #b42318;
+      --radius: 8px;
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 var(--font);
+      color: var(--body);
+      background: var(--page-bg);
+    }
+    a { color: var(--brand2); }
+    .demo-banner {
+      background: var(--ink);
+      color: #e2e8f0;
+      padding: 10px 20px;
+      font-size: 13px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .demo-banner strong { color: #fff; }
+    .demo-banner nav { display: flex; gap: 8px; flex-wrap: wrap; }
+    .demo-banner a {
+      color: #99f6e4;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+    }
+    .demo-banner a:hover { border-color: #334155; background: #1e293b; }
+    .panel-section { display: none; }
+    .panel-section.is-active { display: block; }
+
+    .brandbar {
+      position: sticky; top: 0; z-index: 20;
+      background: #fff;
+      border-bottom: 1px solid var(--brandbar-border);
+      padding: 0 20px;
+    }
+    .brandrow {
+      display: flex; align-items: center; gap: 16px;
+      min-height: 52px;
+    }
+    .brandwrap { display: flex; align-items: center; gap: 10px; }
+    .logoA { width: 28px; height: 28px; }
+    .logoA svg { width: 28px; height: 28px; display: block; }
+    .brandtext {
+      display: flex; flex-direction: column; gap: 2px;
+      font-weight: 700; letter-spacing: -0.03em; font-size: 17px; line-height: 1; color: var(--ink);
+    }
+    .brandmaker {
+      font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--brandmaker);
+    }
+    .topnav { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+    .menu__button {
+      border: 0; background: transparent; min-height: 36px; padding: 0 10px;
+      border-radius: 6px; font: inherit; font-weight: 600; color: var(--body); cursor: pointer;
+    }
+    .menu__button:hover { background: var(--hover); color: var(--ink); }
+    .account__mark {
+      width: 28px; height: 28px; border-radius: 6px; background: var(--stone); color: var(--brand2);
+      display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    }
+
+    .sectionbar {
+      background: #fff; border-bottom: 1px solid var(--border);
+      padding: 0 20px; display: flex; align-items: center; gap: 16px; min-height: 44px;
+    }
+    .sectionbar__name { font-weight: 700; color: var(--ink); font-size: 13px; }
+    .sectionnav { display: flex; gap: 2px; overflow-x: auto; }
+    .sectionnav a {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+      text-decoration: none; color: var(--placeholder); font-weight: 500; font-size: 13px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .sectionnav a:hover { color: var(--ink); }
+    .sectionnav a.is-active { color: var(--brand2); font-weight: 600; border-bottom-color: var(--brand2); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border);
+      background: #fff; color: var(--ink); font: inherit; font-weight: 600; font-size: 13px;
+      text-decoration: none; cursor: pointer;
+    }
+    .btn:hover { background: var(--page-bg); }
+    .btn--primary { background: var(--brand); border-color: transparent; color: #fff; }
+    .btn--primary:hover { background: var(--btn-primary-hover); color: #fff; }
+    .btn--sm { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+    .btn--quiet { border-color: transparent; background: transparent; color: var(--title); }
+    .btn--quiet:hover { background: var(--hover); }
+
+    .login-wrap {
+      min-height: calc(100vh - 48px); display: grid; place-items: center; padding: 24px;
+      background:
+        radial-gradient(900px 400px at 10% -10%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 60%),
+        var(--page-bg);
+    }
+    .login-card {
+      width: min(100%, 380px); background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 28px 24px;
+    }
+    .login-card .brandwrap { justify-content: center; margin-bottom: 22px; }
+    .login-title { margin: 0 0 6px; font-size: 1.25rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+    .login-lead { margin: 0 0 18px; color: var(--title); font-size: 13.5px; }
+    .field { display: grid; gap: 6px; margin-bottom: 12px; }
+    .label { font-size: 12.5px; font-weight: 600; color: var(--title); }
+    .input {
+      width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px;
+      font: inherit; color: var(--ink); background: #fff;
+    }
+    .input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--ring); }
+    .login-submit { width: 100%; margin-top: 8px; min-height: 38px; }
+
+    .launchpad { display: flex; flex-direction: column; gap: 28px; }
+    .launchpad__intro { max-width: 36rem; }
+    .launchpad__intro-title {
+      margin: 0 0 6px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.025em; color: var(--ink);
+    }
+    .launchpad__intro-copy { margin: 0 0 14px; color: var(--body); }
+    .launchpad__heading {
+      margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--title);
+    }
+    .launchpad__grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;
+    }
+    .launch-tile {
+      display: flex; align-items: center; gap: 12px;
+      min-height: 64px; padding: 12px 14px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: #fff; color: inherit; text-decoration: none;
+    }
+    .launch-tile:hover { background: var(--hover); border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); }
+    .launch-tile__icon {
+      width: 36px; height: 36px; border-radius: 7px; display: grid; place-items: center;
+      background: var(--stone); color: var(--brand2); font-size: 14px; font-weight: 700;
+    }
+    .launch-tile__title { font-size: 14px; font-weight: 700; color: var(--ink); display: block; }
+    .launch-tile__hint { font-size: 12.5px; color: var(--placeholder); margin-top: 1px; display: block; }
+
+    .surface {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    }
+    .surface__head {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+    }
+    .surface__title { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
+    .surface__search {
+      flex: 1 1 200px; max-width: 280px; margin-left: auto;
+      border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font: inherit;
+    }
+    table.work { width: 100%; border-collapse: collapse; }
+    table.work th {
+      text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--title);
+      padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid var(--border);
+    }
+    table.work td {
+      padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13.5px; color: var(--body);
+    }
+    table.work tr:last-child td { border-bottom: 0; }
+    table.work tr:hover td { background: #f8fafc; }
+    table.work a { color: var(--ink); font-weight: 600; text-decoration: none; }
+    table.work a:hover { color: var(--brand2); }
+    .pill {
+      display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+      background: var(--stone); color: var(--brand2);
+    }
+    .pill--muted { background: #f1f5f9; color: var(--title); }
+    .row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+    .builder { max-width: 44rem; }
+    .builder__title { margin: 0 0 6px; font-size: 1.35rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+    .builder__lead { margin: 0 0 20px; color: var(--body); }
+    .builder__heading {
+      margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--title);
+    }
+    .builder__section { margin: 0 0 20px; }
+    .builder__blueprints {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px;
+    }
+    .builder__blueprint {
+      padding: 12px; border: 1px solid var(--border); border-radius: var(--radius);
+      background: #fff; cursor: pointer;
+    }
+    .builder__blueprint.is-selected {
+      border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, white);
+      box-shadow: inset 0 0 0 1px var(--brand);
+    }
+    .builder__blueprint-label { font-weight: 700; color: var(--ink); font-size: 14px; }
+    .builder__blueprint-hint { margin-top: 4px; font-size: 12.5px; color: var(--placeholder); }
+    .builder__screens { display: flex; flex-direction: column; gap: 6px; }
+    .builder__screen {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+    }
+    .builder__screen input { accent-color: var(--brand); }
+    .form-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+    .swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .swatch { width: 48px; height: 32px; border-radius: 6px; border: 1px solid var(--border); }
+    .note {
+      margin-top: 28px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 8px;
+      background: #fff; font-size: 13px; color: var(--title); max-width: 44rem;
+    }
+    .pad { padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div class="demo-banner">
+    <div><strong>Work OS demo</strong> — teal/ink preview (static mock)</div>
+    <nav>
+      <a href="#login" data-panel="login">Login</a>
+      <a href="#launchpad" data-panel="launchpad">Launchpad</a>
+      <a href="#work" data-panel="work">Work list</a>
+      <a href="#builder" data-panel="builder">Builder</a>
+    </nav>
+  </div>
+
+  <section id="panel-login" class="panel-section is-active">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="brandwrap">
+          <span class="logoA" aria-hidden="true">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="7" fill="var(--ink)"/>
+              <rect x="6.5" y="6.5" width="19" height="19" rx="1.5" fill="var(--stone)"/>
+              <rect x="6.5" y="13.25" width="19" height="5.5" fill="var(--brand)"/>
+            </svg>
+          </span>
+          <span class="brandtext">
+            <span>Inlay</span>
+            <span class="brandmaker">Adlexone</span>
+          </span>
+        </div>
+        <h1 class="login-title">Sign in</h1>
+        <p class="login-lead">Use your username and password.</p>
+        <form onsubmit="return false;">
+          <div class="field">
+            <label class="label" for="u">Username</label>
+            <input class="input" id="u" value="admin" autocomplete="username">
+          </div>
+          <div class="field">
+            <label class="label" for="p">Password</label>
+            <input class="input" id="p" type="password" value="password" autocomplete="current-password">
+          </div>
+          <button type="button" class="btn btn--primary login-submit" data-panel="launchpad">Sign in</button>
+        </form>
+        <div class="swatches" aria-label="Palette" style="margin-top:20px">
+          <div class="swatch" style="background:#0f172a" title="ink"></div>
+          <div class="swatch" style="background:#0f766e" title="teal"></div>
+          <div class="swatch" style="background:#115e59" title="teal deep"></div>
+          <div class="swatch" style="background:#ccfbf1" title="stone"></div>
+          <div class="swatch" style="background:#f1f5f9" title="page"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-launchpad" class="panel-section">
+    <header class="brandbar">
+      <div class="brandrow">
+        <div class="brandwrap">
+          <span class="logoA" aria-hidden="true">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="7" fill="var(--ink)"/>
+              <rect x="6.5" y="6.5" width="19" height="19" rx="1.5" fill="var(--stone)"/>
+              <rect x="6.5" y="13.25" width="19" height="5.5" fill="var(--brand)"/>
+            </svg>
+          </span>
+          <span class="brandtext"><span>Inlay</span><span class="brandmaker">Adlexone</span></span>
+        </div>
+        <div class="topnav">
+          <button type="button" class="menu__button">Applications</button>
+          <button type="button" class="menu__button">Manage</button>
+          <span class="account__mark">AD</span>
+        </div>
+      </div>
+    </header>
+    <div class="pad">
+      <div class="launchpad">
+        <div class="launchpad__intro">
+          <h1 class="launchpad__intro-title">Build your first business application</h1>
+          <p class="launchpad__intro-copy">Records, fields, workflow, and screens — composed from FrameOne, not a helpdesk skin.</p>
+          <button type="button" class="btn btn--primary" data-panel="builder">Create a business application</button>
+        </div>
+        <section>
+          <h2 class="launchpad__heading">Applications</h2>
+          <div class="launchpad__grid">
+            <a class="launch-tile" href="#work" data-panel="work">
+              <span class="launch-tile__icon">C</span>
+              <span><span class="launch-tile__title">Complaints</span><span class="launch-tile__hint">Track and resolve complaints</span></span>
+            </a>
+            <a class="launch-tile" href="#work" data-panel="work">
+              <span class="launch-tile__icon">K</span>
+              <span><span class="launch-tile__title">Knowledge</span><span class="launch-tile__hint">Articles and summaries</span></span>
+            </a>
+          </div>
+        </section>
+        <section>
+          <h2 class="launchpad__heading">Manage</h2>
+          <div class="launchpad__grid">
+            <a class="launch-tile" href="#builder" data-panel="builder">
+              <span class="launch-tile__icon">+</span>
+              <span><span class="launch-tile__title">Create application</span><span class="launch-tile__hint">Guided builder</span></span>
+            </a>
+            <a class="launch-tile" href="#">
+              <span class="launch-tile__icon">A</span>
+              <span><span class="launch-tile__title">Applications</span><span class="launch-tile__hint">Arrange navigation</span></span>
+            </a>
+            <a class="launch-tile" href="#">
+              <span class="launch-tile__icon">F</span>
+              <span><span class="launch-tile__title">Fields</span><span class="launch-tile__hint">Custom fields and menus</span></span>
+            </a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-work" class="panel-section">
+    <header class="brandbar">
+      <div class="brandrow">
+        <div class="brandwrap">
+          <span class="logoA" aria-hidden="true">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="7" fill="var(--ink)"/>
+              <rect x="6.5" y="6.5" width="19" height="19" rx="1.5" fill="var(--stone)"/>
+              <rect x="6.5" y="13.25" width="19" height="5.5" fill="var(--brand)"/>
+            </svg>
+          </span>
+          <span class="brandtext"><span>Inlay</span><span class="brandmaker">Adlexone</span></span>
+        </div>
+        <div class="topnav">
+          <button type="button" class="menu__button">Applications</button>
+          <button type="button" class="menu__button">Manage</button>
+          <span class="account__mark">AD</span>
+        </div>
+      </div>
+    </header>
+    <div class="sectionbar">
+      <span class="sectionbar__name">Complaints</span>
+      <nav class="sectionnav">
+        <a href="#" class="is-active">Work</a>
+        <a href="#">New</a>
+        <a href="#">Searches</a>
+        <a href="#">Announcements</a>
+        <a href="#">Settings</a>
+      </nav>
+    </div>
+    <div class="pad">
+      <div class="surface">
+        <div class="surface__head">
+          <h1 class="surface__title">Work</h1>
+          <input class="surface__search" type="search" placeholder="Search">
+          <button type="button" class="btn btn--primary btn--sm">New</button>
+        </div>
+        <table class="work">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="#">Billing dispute — order 4412</a></td>
+              <td><span class="pill">In progress</span></td>
+              <td><span class="pill pill--muted">High</span></td>
+              <td>08 Oct 2026</td>
+              <td><div class="row-actions"><button class="btn btn--quiet btn--sm">Log</button><button class="btn btn--quiet btn--sm">Open</button></div></td>
+            </tr>
+            <tr>
+              <td><a href="#">Damaged delivery — depot west</a></td>
+              <td><span class="pill">Waiting</span></td>
+              <td><span class="pill pill--muted">Normal</span></td>
+              <td>07 Oct 2026</td>
+              <td><div class="row-actions"><button class="btn btn--quiet btn--sm">Log</button><button class="btn btn--quiet btn--sm">Open</button></div></td>
+            </tr>
+            <tr>
+              <td><a href="#">Incorrect invoice copy</a></td>
+              <td><span class="pill pill--muted">New</span></td>
+              <td><span class="pill pill--muted">Low</span></td>
+              <td>06 Oct 2026</td>
+              <td><div class="row-actions"><button class="btn btn--quiet btn--sm">Log</button><button class="btn btn--quiet btn--sm">Open</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Dense list chrome: hairline borders, uppercase micro-headers, teal active tab, ink links.</p>
+    </div>
+  </section>
+
+  <section id="panel-builder" class="panel-section">
+    <header class="brandbar">
+      <div class="brandrow">
+        <div class="brandwrap">
+          <span class="logoA" aria-hidden="true">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="7" fill="var(--ink)"/>
+              <rect x="6.5" y="6.5" width="19" height="19" rx="1.5" fill="var(--stone)"/>
+              <rect x="6.5" y="13.25" width="19" height="5.5" fill="var(--brand)"/>
+            </svg>
+          </span>
+          <span class="brandtext"><span>Inlay</span><span class="brandmaker">Adlexone</span></span>
+        </div>
+        <div class="topnav">
+          <button type="button" class="menu__button">Manage</button>
+          <span class="account__mark">AD</span>
+        </div>
+      </div>
+    </header>
+    <div class="sectionbar">
+      <span class="sectionbar__name">Builder</span>
+      <nav class="sectionnav">
+        <a href="#" class="is-active">Builder</a>
+        <a href="#">Applications</a>
+      </nav>
+    </div>
+    <div class="pad">
+      <div class="builder">
+        <h1 class="builder__title">Create a business application</h1>
+        <p class="builder__lead">FrameOne screens are wired in the UI — no pack PHP required.</p>
+        <section class="builder__section">
+          <h2 class="builder__heading">1. Application</h2>
+          <div class="field">
+            <label class="label" for="name">Name</label>
+            <input class="input" id="name" value="Complaints">
+          </div>
+          <div class="field">
+            <label class="label" for="slug">Slug</label>
+            <input class="input" id="slug" value="complaints">
+          </div>
+        </section>
+        <section class="builder__section">
+          <h2 class="builder__heading">2. Blueprint</h2>
+          <div class="builder__blueprints">
+            <div class="builder__blueprint"><div class="builder__blueprint-label">Blank</div><div class="builder__blueprint-hint">Shell + one record type</div></div>
+            <div class="builder__blueprint is-selected"><div class="builder__blueprint-label">Case / request</div><div class="builder__blueprint-hint">Status, priority, category</div></div>
+            <div class="builder__blueprint"><div class="builder__blueprint-label">Simple CRM</div><div class="builder__blueprint-hint">Contacts and stages</div></div>
+            <div class="builder__blueprint"><div class="builder__blueprint-label">Helpdesk</div><div class="builder__blueprint-hint">Optional vertical shape</div></div>
+          </div>
+        </section>
+        <section class="builder__section">
+          <h2 class="builder__heading">3. Screens</h2>
+          <div class="builder__screens">
+            <label class="builder__screen"><input type="checkbox" checked> Work</label>
+            <label class="builder__screen"><input type="checkbox" checked> New</label>
+            <label class="builder__screen"><input type="checkbox" checked> Searches</label>
+            <label class="builder__screen"><input type="checkbox"> Announcements</label>
+            <label class="builder__screen"><input type="checkbox"> Settings</label>
+          </div>
+        </section>
+        <div class="form-actions">
+          <button type="button" class="btn btn--primary">Create application</button>
+          <button type="button" class="btn">Expert setup</button>
+        </div>
+      </div>
+      <p class="note">Approve this look and the same tokens land in the live <code>theme.css</code> + <code>base.css</code>.</p>
+    </div>
+  </section>
+
+  <script>
+    function showPanel(id) {
+      document.querySelectorAll('.panel-section').forEach(function (el) {
+        el.classList.toggle('is-active', el.id === 'panel-' + id);
+      });
+      history.replaceState(null, '', '#' + id);
+    }
+    document.querySelectorAll('[data-panel]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        showPanel(el.getAttribute('data-panel'));
+      });
+    });
+    document.querySelectorAll('.builder__blueprint').forEach(function (el) {
+      el.addEventListener('click', function () {
+        document.querySelectorAll('.builder__blueprint').forEach(function (b) { b.classList.remove('is-selected'); });
+        el.classList.add('is-selected');
+      });
+    });
+    var hash = (location.hash || '#login').replace('#', '');
+    if (document.getElementById('panel-' + hash)) showPanel(hash);
+  </script>
+</body>
+</html>

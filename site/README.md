@@ -9,6 +9,8 @@ Put **only** installation-specific look-and-feel and app packs here.
 
 Core product code lives outside this folder (`layouts/`, `src/`, `inlay_functions/`, …). To change branding or add a pack, work in `site/` — not by copying layout PHP.
 
+New business applications are created with **Manage → Builder** (`/?manage=builder`), which composes an app from the **FrameOne** shared screen library (Work, Create, Search, Announcements, Settings). Configure screens in the Builder or under Applications → Navigation — pack PHP under `site/apps/` is optional and only for rare custom screens.
+
 ## New theme (skin)
 
 1. Copy `site/themes/inlay-stone/` to `site/themes/my-skin/`

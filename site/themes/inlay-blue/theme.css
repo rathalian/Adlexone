@@ -1,30 +1,30 @@
-/* Inlay Blue — cool blue skin (tokens only) */
+/* Inlay Teal — Work OS teal/ink skin (tokens only) */
 :root{
-    --ink:#1e3a8a;
-    --inlay:#2563eb;
-    --stone:#dbeafe;
+    --ink:#0f172a;
+    --inlay:#0f766e;
+    --stone:#ccfbf1;
     --brand:var(--inlay);
-    --brand2:#1d4ed8;
-    --text:#0f2744;
-    --panel:rgba(255,255,255,.94);
-    --border:rgba(30,58,138,.12);
-    --hover:rgba(37,99,235,.08);
-    --ring:rgba(37,99,235,.35);
-    --title:rgba(15,23,42,.78);
-    --label:rgba(15,23,42,.74);
-    --body:rgba(15,23,42,.86);
-    --input:rgba(15,23,42,.84);
-    --placeholder:rgba(15,23,42,.48);
-    --title-strip: color-mix(in srgb, var(--brand) 6%, white);
-    --title-strip-border: color-mix(in srgb, var(--brand2) 8%, rgba(0,0,0,.07));
+    --brand2:#115e59;
+    --text:#0f172a;
+    --panel:#ffffff;
+    --border:#e2e8f0;
+    --hover:rgba(15, 118, 110, 0.07);
+    --ring:rgba(15, 118, 110, 0.35);
+    --title:#475569;
+    --label:#475569;
+    --body:#334155;
+    --input:#0f172a;
+    --placeholder:#94a3b8;
+    --title-strip:#f8fafc;
+    --title-strip-border:#e2e8f0;
     --title-size:11.5px;
     --title-weight:700;
     --title-tracking:.045em;
-    --form-surface: color-mix(in srgb, var(--stone) 42%, white);
-    --form-border: color-mix(in srgb, var(--ink) 12%, rgba(0,0,0,.08));
-    --form-hover-shadow: 0 0 0 3px rgba(37,99,235,.22);
-    --page-bg:#e7f0fc;
-    --brandbar-border:#c5d8f5;
-    --brandmaker:#3b5f99;
-    --btn-primary-hover:#1e3a8a;
+    --form-surface:#ffffff;
+    --form-border:#e2e8f0;
+    --form-hover-shadow:0 0 0 3px rgba(15, 118, 110, 0.14);
+    --page-bg:#f1f5f9;
+    --brandbar-border:#e2e8f0;
+    --brandmaker:#64748b;
+    --btn-primary-hover:#0d5c56;
 }

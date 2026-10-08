@@ -338,7 +338,7 @@ class RenderViews
      */
     public static function buildStartForm(string $action, string $method, string $name = '', string $id = '', string $enctype = 'application/x-www-form-urlencoded'): string
     {
-        return sprintf(
+        $html = sprintf(
             '<form action="%s" method="%s" enctype="%s" name="%s" id="%s">',
             htmlspecialchars($action, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($method, ENT_QUOTES, 'UTF-8'),
@@ -346,6 +346,10 @@ class RenderViews
             htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($id, ENT_QUOTES, 'UTF-8')
         );
+        if (strtolower($method) === 'post' && class_exists(\Adlexone\Auth\Csrf::class)) {
+            $html .= \Adlexone\Auth\Csrf::field();
+        }
+        return $html;
     }
 
     /**
@@ -1272,12 +1276,21 @@ class RenderViews
      */
     public static function outputIfRoleAllowed(mixed $value, int $userRole, int $allowedRole): mixed
     {
+        if (\Adlexone\FrameOne\AppAccess::satisfiesLegacyRole($allowedRole)) {
+            return $value;
+        }
         // Prefer permission-derived legacy role when the session is hydrated.
         $effective = \Adlexone\Auth\Access::legacyRole();
         if ($effective !== $userRole && isset($_SESSION['access_permissions'])) {
             $userRole = $effective;
         }
         return $allowedRole >= $userRole ? $value : null;
+    }
+
+    /** @deprecated alias of outputIfRoleAllowed */
+    public static function secureOutput(mixed $value, int $userRole, int $allowedRole): mixed
+    {
+        return self::outputIfRoleAllowed($value, $userRole, $allowedRole);
     }
 
     /**
@@ -1302,6 +1315,9 @@ class RenderViews
      */
     public static function terminateIfRoleNotAllowed(int $userRole, int $allowedRole): void
     {
+        if (\Adlexone\FrameOne\AppAccess::satisfiesLegacyRole($allowedRole)) {
+            return;
+        }
         $effective = \Adlexone\Auth\Access::legacyRole();
         if (isset($_SESSION['access_permissions'])) {
             $userRole = $effective;
@@ -1362,13 +1378,6 @@ class RenderViews
 
     private static function applicationPrefix(): ?string
     {
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG === 'service-centre') {
-            return 'APP_SC_';
-        }
-        if ((string) ($_GET['app'] ?? '') === 'service-centre') {
-            return 'APP_SC_';
-        }
-
         $controller = (string)($_GET['controller'] ?? '');
         $prefixes = [
             'app_oneorzeroknowledgebase' => 'APP_KB_',

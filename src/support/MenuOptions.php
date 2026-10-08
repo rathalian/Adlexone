@@ -349,6 +349,10 @@ final class MenuOptions
 
     private static function importCommaChildren(): void
     {
+        // SchemaMigrator drops this legacy column after import; skip when gone.
+        if (!Database::columnExists('custom_field_menu_values', 'sub_menu_values')) {
+            return;
+        }
         $rows = Database::rows(
             "SELECT menu_value_id, custom_field_id, sub_menu_values FROM custom_field_menu_values WHERE sub_menu_values IS NOT NULL AND sub_menu_values <> ''"
         );
@@ -377,6 +381,12 @@ final class MenuOptions
 
     private static function importMultiLevelMenus(): void
     {
+        // SchemaMigrator drops these legacy columns after import; skip when gone.
+        if (!Database::columnExists('custom_fields', 'menu_relationship')
+            || !Database::columnExists('custom_fields', 'menu_value_links')
+        ) {
+            return;
+        }
         $menus = Database::rows(
             "SELECT custom_field_id, menu_relationship, menu_value_links FROM custom_fields WHERE field_type = 'multiLevelMenu'"
         );

@@ -109,6 +109,10 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     // Refresh permissions on every authenticated request so group changes apply immediately.
     \Adlexone\Auth\Access::hydrateSession((int) $_SESSION['access_user_id']);
 
+    if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+        \Adlexone\Auth\Csrf::enforceOrDeny();
+    }
+
     // A stored home such as application:service-centre still arrives as controller.
     $requestedController = (string) ($_GET['controller'] ?? '');
     if (str_contains($requestedController, ':')) {

@@ -14,7 +14,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 3;
+    private const VERSION = 5;
 
     private static bool $done = false;
 
@@ -46,6 +46,16 @@ final class SchemaMigrator
         if ($current < 3) {
             self::applyV3();
             self::mark(3);
+            $current = 3;
+        }
+        if ($current < 4) {
+            self::applyV4();
+            self::mark(4);
+            $current = 4;
+        }
+        if ($current < 5) {
+            self::applyV5();
+            self::mark(5);
         }
     }
 
@@ -472,6 +482,58 @@ final class SchemaMigrator
                 ['criteria_json' => json_encode($criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'],
                 'search_id = ?',
                 [(int) $row['search_id']]
+            );
+        }
+    }
+
+    /**
+     * FrameOne: per-app settings JSON, announcements scoped by application slug.
+     */
+    private static function applyV4(): void
+    {
+        if (Database::tableExists('applications') && !Database::columnExists('applications', 'settings_json')) {
+            Database::exec('ALTER TABLE applications ADD COLUMN settings_json TEXT NOT NULL DEFAULT "{}"');
+        }
+        if (Database::tableExists('announcements') && !Database::columnExists('announcements', 'application')) {
+            Database::exec('ALTER TABLE announcements ADD COLUMN application TEXT NOT NULL DEFAULT ""');
+            Database::exec('CREATE INDEX IF NOT EXISTS idx_announcements_app ON announcements (application)');
+            // Legacy Service Centre announcements become scoped to that slug when present.
+            if (Database::first('applications', ['application_id'], 'slug = ?', ['service-centre']) !== null) {
+                Database::update('announcements', ['application' => 'service-centre'], "application = '' OR application IS NULL");
+            }
+        }
+    }
+
+    /**
+     * Retire Service Centre as a product: drop the seeded app, legacy permissions,
+     * and orphan announcements scoped to it. Helpdesk remains a Builder blueprint.
+     */
+    private static function applyV5(): void
+    {
+        if (Database::tableExists('applications')) {
+            $sc = Database::first('applications', ['application_id'], 'slug = ?', ['service-centre']);
+            if ($sc !== null) {
+                $id = (int) $sc['application_id'];
+                Database::delete('application_nav', 'application_id = ?', [$id]);
+                Database::delete('applications', 'application_id = ?', [$id]);
+            }
+        }
+        if (Database::tableExists('announcements') && Database::columnExists('announcements', 'application')) {
+            Database::delete('announcements', 'application = ?', ['service-centre']);
+        }
+        if (Database::tableExists('saved_searches')) {
+            Database::delete('saved_searches', 'application = ?', ['service-centre']);
+            Database::delete('saved_searches', 'application = ?', ['app_servicecentre_main']);
+        }
+        if (Database::tableExists('group_permissions')) {
+            foreach (['servicecentre.use', 'servicecentre.search', 'servicecentre.announce', 'servicecentre.settings'] as $perm) {
+                Database::delete('group_permissions', 'permission = ?', [$perm]);
+            }
+        }
+        if (Database::tableExists('users')) {
+            Database::run(
+                "UPDATE users SET home_controller = 'home', home_controller_name = 'Home'
+                 WHERE home_controller IN ('application:service-centre', 'app_servicecentre_main', 'app_oneorzerohelpdesk_main')"
             );
         }
     }

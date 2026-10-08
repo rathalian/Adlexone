@@ -4,17 +4,20 @@ declare(strict_types=1);
 namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
+use Adlexone\FrameOne\AppSettings;
+use Adlexone\FrameOne\Library;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\RenderViews;
 
 /**
- * Fixed screens an application nav link can open.
+ * Screens an application nav link can open.
+ *
+ * FrameOne built-ins are configured in Manage → Navigation. site/apps packs
+ * remain optional for rare custom screens.
  */
 final class Capabilities
 {
     /**
-     * Built-in shared screens, plus any application function packs.
-     *
      * @return array<string, array{label: string, origin: string, icon: string, config: string}>
      */
     public static function catalog(): array
@@ -27,32 +30,34 @@ final class Capabilities
      */
     private static function builtIn(): array
     {
-        $inlay = static fn (string $label, string $icon, string $config): array => [
+        $frame = static fn (string $label, string $icon, string $config): array => [
             'label' => $label,
-            'origin' => 'Inlay',
+            'origin' => Library::ORIGIN,
             'icon' => $icon,
             'config' => $config,
         ];
 
         return [
-            'items.create' => $inlay('Create item', 'ic-create-ticket', 'item_type'),
-            'search.quick' => $inlay('Quick search', 'ic-quick-search', 'none'),
-            'search.advanced' => $inlay('Advanced search', 'ic-search', 'item_type'),
-            'search.saved' => $inlay('Saved search', 'ic-my-ticket-searches', 'saved_search'),
-            'search.saved_list' => $inlay('Saved search list', 'ic-my-ticket-searches', 'none'),
+            Library::WORK => $frame('Work list (my items)', 'ic-search', 'item_type'),
+            Library::CREATE => $frame('Create item', 'ic-itemtype-add', 'item_type'),
+            Library::SEARCH_QUICK => $frame('Quick search', 'ic-quick-search', 'none'),
+            Library::SEARCH_ADVANCED => $frame('Advanced search', 'ic-search', 'item_type'),
+            Library::SEARCH_SAVED => $frame('Saved search', 'ic-search', 'saved_search'),
+            Library::SEARCH_LIST => $frame('Saved search list', 'ic-search', 'none'),
+            Library::ANNOUNCEMENTS => $frame('Announcements', 'ic-announcements', 'none'),
+            Library::SETTINGS => $frame('Application settings', 'ic-settings', 'none'),
         ];
     }
 
     public static function label(string $capability): string
     {
+        $capability = Library::resolve($capability);
         return self::catalog()[$capability]['label'] ?? $capability;
     }
 
-    /**
-     * Manage Applications screen choice: "Announcements — Contact Centre".
-     */
     public static function choiceLabel(string $capability): string
     {
+        $capability = Library::resolve($capability);
         $meta = self::catalog()[$capability] ?? null;
         if ($meta === null) {
             return $capability;
@@ -61,8 +66,6 @@ final class Capabilities
     }
 
     /**
-     * Capability ids sorted by origin, then label, for Manage dropdowns.
-     *
      * @return list<string>
      */
     public static function choiceKeys(): array
@@ -92,6 +95,7 @@ final class Capabilities
             'ic-time',
             'ic-announcements',
             'ic-create-ticket',
+            'ic-itemtype-add',
             'ic-quick-search',
             'ic-my-ticket-searches',
             'ic-new-article',
@@ -107,6 +111,7 @@ final class Capabilities
         if ($chosen !== '' && in_array($chosen, self::icons(), true)) {
             return $chosen;
         }
+        $capability = Library::resolve($capability);
         $icon = self::catalog()[$capability]['icon'] ?? 'ic-launch';
         return in_array($icon, self::icons(), true) ? $icon : 'ic-launch';
     }
@@ -117,7 +122,7 @@ final class Capabilities
      */
     public static function open(array $app, array $nav): void
     {
-        $capability = (string) $nav['capability'];
+        $capability = Library::resolve((string) $nav['capability']);
         if (!isset(self::catalog()[$capability])) {
             RenderViews::buildResponse('This navigation link uses an unknown screen.');
             return;
@@ -127,7 +132,7 @@ final class Capabilities
         self::defineContext($app, (int) $nav['nav_id']);
         self::applyDefaults($capability, $config, ApplicationStore::scopeKey($app));
 
-        if ($capability === 'search.saved' && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
+        if ($capability === Library::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
             RenderViews::buildResponse('Choose a saved search for this link in Manage.');
             return;
         }
@@ -138,16 +143,63 @@ final class Capabilities
             return;
         }
 
+        if ($capability === Library::WORK) {
+            self::openWork($config);
+            return;
+        }
+        if ($capability === Library::ANNOUNCEMENTS) {
+            self::includeFrameOne('announcements.php', 'openFrameOneAnnouncements');
+            return;
+        }
+        if ($capability === Library::SETTINGS) {
+            self::includeFrameOne('settings.php', 'openFrameOneAppSettings');
+            return;
+        }
+
         if (AppFunctions::has($capability)) {
             AppFunctions::open($capability);
             return;
         }
 
         match ($capability) {
-            'items.create' => self::includeShared('item_management_manage'),
-            'search.quick', 'search.advanced', 'search.saved', 'search.saved_list' => self::includeShared('search_management_manage'),
+            Library::CREATE => self::includeShared('item_management_manage'),
+            Library::SEARCH_QUICK, Library::SEARCH_ADVANCED, Library::SEARCH_SAVED, Library::SEARCH_LIST => self::includeShared('search_management_manage'),
             default => RenderViews::buildResponse('This screen is not available.'),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private static function openWork(array $config): void
+    {
+        $file = SET_INSTALL_PATH . 'inlay_functions/application_shared/work.php';
+        if (!is_file($file)) {
+            RenderViews::buildResponse('The work screen is missing.');
+            return;
+        }
+        include_once $file;
+        $itemType = trim((string) ($config['item_type_id'] ?? ''));
+        if ($itemType === '' && defined('APPLICATION_SLUG')) {
+            $itemType = AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+        }
+        $typeId = $itemType !== '' && ctype_digit($itemType) ? (int) $itemType : null;
+        showApplicationWork($typeId, 'Work');
+    }
+
+    private static function includeFrameOne(string $file, string $opener): void
+    {
+        $path = SET_INSTALL_PATH . 'inlay_functions/frameone/' . $file;
+        if (!is_file($path)) {
+            RenderViews::buildResponse('This FrameOne screen is missing.');
+            return;
+        }
+        include_once $path;
+        if (!function_exists($opener)) {
+            RenderViews::buildResponse('This FrameOne screen is missing.');
+            return;
+        }
+        $opener();
     }
 
     /**
@@ -174,29 +226,35 @@ final class Capabilities
                 $_GET['option'] = $fromPack;
             } else {
                 $_GET['option'] = match ($capability) {
-                    'items.create' => 'show_item_types',
-                    'search.quick' => 'show_quick_search',
-                    'search.advanced' => 'show_item_search',
-                    'search.saved' => 'saved_search',
-                    'search.saved_list' => 'show_saved_searches',
+                    Library::WORK => 'show_work',
+                    Library::CREATE => 'show_item_types',
+                    Library::SEARCH_QUICK => 'show_quick_search',
+                    Library::SEARCH_ADVANCED => 'show_item_search',
+                    Library::SEARCH_SAVED => 'saved_search',
+                    Library::SEARCH_LIST => 'show_saved_searches',
+                    Library::ANNOUNCEMENTS => 'show_announcements',
+                    Library::SETTINGS => 'settings',
                     default => '',
                 };
             }
         }
 
-        if ($capability === 'items.create' && (string) ($_GET['default_item_type'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_types') {
-            $itemType = trim((string) ($config['item_type_id'] ?? ''));
+        $itemType = trim((string) ($config['item_type_id'] ?? ''));
+        if ($itemType === '' && $scope !== '') {
+            $itemType = AppSettings::defaultItemTypeId($scope);
+        }
+
+        if ($capability === Library::CREATE && (string) ($_GET['default_item_type'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_types') {
             if ($itemType !== '') {
                 $_GET['default_item_type'] = $itemType;
             }
         }
-        if ($capability === 'search.advanced' && (string) ($_GET['item_types'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_search') {
-            $itemType = trim((string) ($config['item_type_id'] ?? ''));
+        if ($capability === Library::SEARCH_ADVANCED && (string) ($_GET['item_types'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_search') {
             if ($itemType !== '') {
                 $_GET['item_types'] = $itemType;
             }
         }
-        if ($capability === 'search.saved' && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
+        if ($capability === Library::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
             $_GET['id'] = trim((string) ($config['search_id'] ?? ''));
         }
         if (str_starts_with($capability, 'search.') && (string) ($_GET['application'] ?? '') === '') {
@@ -232,17 +290,6 @@ final class Capabilities
         $file = \Adlexone\Http\Router::path($controller) ?? '';
         if (!is_file($file)) {
             RenderViews::buildResponse('The shared screen is missing.');
-            return;
-        }
-        include $file;
-    }
-
-    private static function includeScreen(string $relative): void
-    {
-        unset($_GET['subcontroller']);
-        $file = SET_INSTALL_PATH . $relative;
-        if (!is_file($file)) {
-            RenderViews::buildResponse('This screen is missing.');
             return;
         }
         include $file;

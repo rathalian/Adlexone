@@ -40,6 +40,9 @@ $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
             $applications = \Adlexone\Application\ApplicationStore::menuItems();
             $quickLaunch = ['label' => 'Home', 'href' => 'index.php', 'icon' => 'ic-launch', 'controller' => 'home'];
             $manageItems = [];
+            if (\Adlexone\Auth\Access::canAll(\Adlexone\Auth\Permission::ADMIN_SETTINGS, \Adlexone\Auth\Permission::ADMIN_ITEMS)) {
+                $manageItems[] = ['label' => 'Builder', 'href' => 'index.php?manage=builder', 'icon' => 'ic-itemtype-add', 'controller' => 'manage_builder'];
+            }
             if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SETTINGS)) {
                 $manageItems[] = ['label' => 'Applications', 'href' => 'index.php?manage=applications', 'icon' => 'ic-launch', 'controller' => 'manage_applications'];
             }

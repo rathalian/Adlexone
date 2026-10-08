@@ -940,11 +940,17 @@ function showSavedSearches($userID, $application = '')
         }
     }
     $toolbar = '';
-    if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG === 'service-centre') {
-        $itemType = defined('SERVICECENTRE_SET_ITEM_TYPE') ? rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE) : '';
+    if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+        $itemType = '';
+        $defaultType = \Adlexone\FrameOne\AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+        if ($defaultType !== '') {
+            $itemType = rawurlencode($defaultType);
+        }
+        $quickLabel = RenderViews::applicationText('TXT_62', 'Quick search');
+        $advancedLabel = RenderViews::applicationText('TXT_61', 'Advanced search');
         $toolbar = '<div class="record-list__tools">'
-            . RenderViews::buildURL($base . '&option=show_quick_search', APP_SC_TXT_62, '', 'btn btn--primary btn--sm')
-            . RenderViews::buildURL($base . '&option=show_item_search&item_types=' . $itemType, APP_SC_TXT_61, '', 'btn btn--sm')
+            . RenderViews::buildURL($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary btn--sm')
+            . RenderViews::buildURL($base . '&option=show_item_search' . ($itemType !== '' ? '&item_types=' . $itemType : ''), $advancedLabel, '', 'btn btn--sm')
             . '</div>';
     }
     $list = RenderViews::buildRecordList([

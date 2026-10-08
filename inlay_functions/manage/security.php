@@ -468,7 +468,7 @@ function securityRoleLabel(mixed $role): string
 
                 if (count($result) == 0) {
                     // Prepare user data
-                    $password = md5($_POST['password_ftype'] ?? ''); // Consider password_hash for better security
+                    $password = password_hash((string) ($_POST['password_ftype'] ?? ''), PASSWORD_DEFAULT);
 
                     // Extract home controller details
                     $controllerArray = explode('}-{', $_POST['home_controller'] ?? '');
@@ -548,7 +548,7 @@ function securityRoleLabel(mixed $role): string
             // Prepare the password for update if provided
             $password = [];
             if (!empty($_POST['password_ftype'])) {
-                $password['password'] = md5($_POST['password_ftype']);
+                $password['password'] = password_hash((string) $_POST['password_ftype'], PASSWORD_DEFAULT);
             }
 
             // Remove unnecessary fields from the POST data

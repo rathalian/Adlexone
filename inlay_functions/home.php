@@ -75,11 +75,19 @@ foreach (\Adlexone\Application\ApplicationStore::menuItems() as $item) {
 }
 
 $manage = [];
+if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
+    $manage[] = launchTile(
+        'index.php?manage=builder',
+        'Create application',
+        'Guided builder for a new business app',
+        'ic-itemtype-add'
+    );
+}
 if (Access::can(Permission::ADMIN_SETTINGS)) {
     $manage[] = launchTile(
         'index.php?manage=applications',
         'Applications',
-        'Create and arrange applications',
+        'Arrange applications and navigation',
         'ic-launch'
     );
 }
@@ -129,12 +137,23 @@ if (Access::can(Permission::ADMIN_SETTINGS)) {
     );
 }
 
+$intro = '';
+if ($applications === [] && Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
+    $intro = '<section class="launchpad__intro">'
+        . '<h1 class="launchpad__intro-title">Build your first business application</h1>'
+        . '<p class="launchpad__intro-copy">Inlay is a foundation for records, fields, workflow, and screens. Start with a blueprint — helpdesk is optional, not the product.</p>'
+        . '<p class="launchpad__intro-actions">'
+        . '<a class="btn btn--primary" href="index.php?manage=builder">Create a business application</a>'
+        . '</p></section>';
+}
+
 $html = '<div class="launchpad">'
+    . $intro
     . launchGroup('Applications', $applications)
     . launchGroup('Manage', $manage)
     . '</div>';
 
-if ($applications === [] && $manage === []) {
+if ($applications === [] && $manage === [] && $intro === '') {
     $html = '<p class="launchpad__empty">Nothing is available for this account.</p>';
 }
 

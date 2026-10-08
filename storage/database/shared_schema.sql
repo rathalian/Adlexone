@@ -184,7 +184,8 @@ CREATE TABLE IF NOT EXISTS applications (
   sort_order INTEGER NOT NULL DEFAULT 0,
   entry_mode TEXT NOT NULL DEFAULT 'shell',
   legacy_controller TEXT NOT NULL DEFAULT '',
-  legacy_key TEXT NOT NULL DEFAULT ''
+  legacy_key TEXT NOT NULL DEFAULT '',
+  settings_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS application_nav (
@@ -203,8 +204,10 @@ CREATE TABLE IF NOT EXISTS announcements (
   "time" INTEGER DEFAULT 0,
   message TEXT,
   type TEXT,
-  subject TEXT
+  subject TEXT,
+  application TEXT NOT NULL DEFAULT ''
 );
+CREATE INDEX IF NOT EXISTS idx_announcements_app ON announcements (application);
 
 CREATE TABLE IF NOT EXISTS saved_searches (
   search_id INTEGER PRIMARY KEY AUTOINCREMENT,

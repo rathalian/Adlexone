@@ -27,6 +27,9 @@ if (!defined('PAGE_TITLE')) {
 }
 
 switch ($option) {
+    case 'export':
+        exportApplicationPackage((int) ($_GET['application_id'] ?? 0));
+        break;
     case 'new':
         showApplicationForm();
         break;
@@ -104,6 +107,10 @@ function showApplications(): void
                     'label' => 'Navigation',
                 ],
                 [
+                    'href' => APPLICATIONS_MANAGE_URL . '&option=export&application_id=' . $id,
+                    'label' => 'Export',
+                ],
+                [
                     'href' => APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=up',
                     'label' => 'Up',
                 ],
@@ -130,12 +137,31 @@ function showApplications(): void
                 ['key' => 'opens', 'label' => 'Opens'],
             ],
             'searchLabel' => 'Search',
-            'primary' => ['href' => APPLICATIONS_MANAGE_URL . '&option=new', 'label' => 'New application'],
-            'empty' => 'No applications yet.',
+            'primary' => ['href' => 'index.php?manage=builder', 'label' => 'Create with builder'],
+            'empty' => 'No applications yet. Use the builder to create one.',
+            'toolbar' => '<div class="record-list__tools">'
+                . RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=new', 'Expert setup', '', 'btn btn--sm')
+                . '</div>',
             'groups' => [['rows' => $rows]],
         ]),
     ]]));
     RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+function exportApplicationPackage(int $id): void
+{
+    try {
+        $package = \Adlexone\Application\ApplicationPackage::export($id);
+    } catch (\InvalidArgumentException $e) {
+        RenderViews::buildResponse($e->getMessage(), RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+        return;
+    }
+    $slug = (string) ($package['application']['slug'] ?? 'application');
+    $json = json_encode($package, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . preg_replace('/[^a-z0-9_-]+/i', '-', $slug) . '-solution.json"');
+    echo $json;
+    exit;
 }
 
 function showApplicationForm(int $id = 0): void

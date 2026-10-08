@@ -1820,8 +1820,12 @@ switch (@$_GET['option']) {
         $itemTypeId = $_POST['item_type_id'] ?? $_GET['item_type_id'] ?? '';
         if ($itemTypeId === '' || $itemTypeId === null) {
             $target = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
-            if (defined('SERVICECENTRE_SET_ITEM_TYPE') && (string)SERVICECENTRE_SET_ITEM_TYPE !== '') {
-                $target .= '&default_item_type=' . rawurlencode((string)SERVICECENTRE_SET_ITEM_TYPE);
+            $defaultType = trim((string) ($_GET['default_item_type'] ?? ''));
+            if ($defaultType === '' && defined('APPLICATION_SLUG')) {
+                $defaultType = \Adlexone\FrameOne\AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+            }
+            if ($defaultType !== '') {
+                $target .= '&default_item_type=' . rawurlencode($defaultType);
             }
             header('Location: ' . $target);
             exit;
