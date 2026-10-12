@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" fill="none" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="55%" stop-color="#115e59"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="640" fill="url(#g)"/>
+  <circle cx="390" cy="90" r="120" fill="#5eead4" opacity=".12"/>
+  <circle cx="60" cy="520" r="160" fill="#ccfbf1" opacity=".1"/>
+  <rect x="64" y="180" width="200" height="140" rx="16" fill="#ffffff" fill-opacity=".08" stroke="#5eead4" stroke-opacity=".35" stroke-width="1.5"/>
+  <rect x="88" y="208" width="120" height="10" rx="3" fill="#5eead4" opacity=".55"/>
+  <rect x="88" y="232" width="152" height="8" rx="3" fill="#ccfbf1" opacity=".35"/>
+  <rect x="88" y="252" width="96" height="8" rx="3" fill="#ccfbf1" opacity=".25"/>
+  <rect x="200" y="340" width="180" height="120" rx="16" fill="#0f172a" fill-opacity=".35" stroke="#5eead4" stroke-opacity=".45" stroke-width="1.2"/>
+  <rect x="224" y="368" width="88" height="10" rx="3" fill="#5eead4" opacity=".5"/>
+  <rect x="224" y="392" width="132" height="8" rx="3" fill="#ccfbf1" opacity=".28"/>
+  <rect x="224" y="412" width="72" height="8" rx="3" fill="#ccfbf1" opacity=".2"/>
+  <path d="M72 470h120M72 490h88" stroke="#5eead4" stroke-width="2" stroke-linecap="round" opacity=".35"/>
+</svg>

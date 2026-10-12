@@ -14,7 +14,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 5;
+    private const VERSION = 6;
 
     private static bool $done = false;
 
@@ -56,6 +56,11 @@ final class SchemaMigrator
         if ($current < 5) {
             self::applyV5();
             self::mark(5);
+            $current = 5;
+        }
+        if ($current < 6) {
+            self::applyV6();
+            self::mark(6);
         }
     }
 
@@ -536,5 +541,33 @@ final class SchemaMigrator
                  WHERE home_controller IN ('application:service-centre', 'app_servicecentre_main', 'app_oneorzerohelpdesk_main')"
             );
         }
+    }
+
+    /**
+     * Application rules: event, field, operator, value, and outcome as columns.
+     */
+    private static function applyV6(): void
+    {
+        Database::exec(
+            'CREATE TABLE IF NOT EXISTS application_rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                application_id INTEGER NOT NULL,
+                item_type_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                event TEXT NOT NULL,
+                field_key TEXT NOT NULL DEFAULT "",
+                operator TEXT NOT NULL DEFAULT "always",
+                match_value TEXT NOT NULL DEFAULT "",
+                outcome TEXT NOT NULL,
+                recipient TEXT NOT NULL DEFAULT "owner",
+                address TEXT NOT NULL DEFAULT "",
+                subject TEXT NOT NULL DEFAULT "",
+                body TEXT NOT NULL DEFAULT "",
+                role_id INTEGER NOT NULL DEFAULT 5
+            )'
+        );
+        Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rules_type ON application_rules (item_type_id, event)');
+        Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rules_app ON application_rules (application_id)');
     }
 }

@@ -24,7 +24,7 @@ define('SET_INSTALL_PATH', $baseDir);
 define('SET_CONFIGURATION_PATH', $baseDir . 'config' . DIRECTORY_SEPARATOR);
 define('SET_ATTACHMENTS_PATH', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
 define('DSN', 'sqlite:' . $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
-define('SET_WRITEABLE_DIRECTORY', $baseDir . 'writeable' . DIRECTORY_SEPARATOR);
+define('SET_WRITEABLE_DIRECTORY', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'writeable' . DIRECTORY_SEPARATOR);
 
 // Shared platform schema (app packs must not own tables).
 \Adlexone\Database\SchemaMigrator::migrate();
@@ -82,6 +82,9 @@ if (!defined('SET_DEFAULT_THEME')) {
 }
 if (!defined('SET_DEFAULT_LANGUAGE')) {
     define('SET_DEFAULT_LANGUAGE', 'English');
+}
+if (!defined('SET_HOME_LEAD')) {
+    define('SET_HOME_LEAD', 'Create the records, rules, and screens your organisation works with every day.');
 }
 
 // Apply addslashesRecursive() to all data and strip scripts

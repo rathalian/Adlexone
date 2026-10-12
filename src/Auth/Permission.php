@@ -63,7 +63,7 @@ final class Permission
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_ACTIONS => [
-                'label' => 'Workflow actions',
+                'label' => 'Rules',
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_ITEMS => [

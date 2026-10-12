@@ -123,8 +123,22 @@ final class ApplicationBuilder
         }
 
         $itemTypeId = self::createItemType($recordTypeName);
-        $fieldIds = self::createBlueprintFields($blueprints[$blueprint]['fields'], $name);
+        $fieldDefs = $blueprints[$blueprint]['fields'];
+        $fieldIds = self::createBlueprintFields($fieldDefs, $name);
         self::attachFields($itemTypeId, $fieldIds);
+        $fieldIdsByName = [];
+        $idIndex = 0;
+        foreach ($fieldDefs as $field) {
+            $fieldName = trim((string) ($field['name'] ?? ''));
+            if ($fieldName === '') {
+                continue;
+            }
+            if (!isset($fieldIds[$idIndex])) {
+                break;
+            }
+            $fieldIdsByName[$fieldName] = $fieldIds[$idIndex];
+            $idIndex++;
+        }
 
         $max = 0;
         foreach (ApplicationStore::all() as $app) {
@@ -179,6 +193,8 @@ final class ApplicationBuilder
             );
             $order += 10;
         }
+
+        Rules::seedBlueprint($applicationId, $itemTypeId, $blueprint, $fieldIdsByName);
 
         return [
             'application_id' => $applicationId,

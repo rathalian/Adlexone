@@ -175,7 +175,7 @@ final class Capabilities
      */
     private static function openWork(array $config): void
     {
-        $file = SET_INSTALL_PATH . 'inlay_functions/application_shared/work.php';
+        $file = SET_INSTALL_PATH . 'legacy/inlay_functions/application_shared/work.php';
         if (!is_file($file)) {
             RenderViews::buildResponse('The work screen is missing.');
             return;
@@ -191,14 +191,14 @@ final class Capabilities
 
     private static function includeFrameOne(string $file, string $opener): void
     {
-        $path = SET_INSTALL_PATH . 'inlay_functions/frameone/' . $file;
+        $path = SET_INSTALL_PATH . 'legacy/inlay_functions/frameone/' . $file;
         if (!is_file($path)) {
-            RenderViews::buildResponse('This FrameOne screen is missing.');
+            RenderViews::buildResponse('This screen is missing.');
             return;
         }
         include_once $path;
         if (!function_exists($opener)) {
-            RenderViews::buildResponse('This FrameOne screen is missing.');
+            RenderViews::buildResponse('This screen is missing.');
             return;
         }
         $opener();

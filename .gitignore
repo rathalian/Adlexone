@@ -3,7 +3,7 @@ storage/database/*.sqlite-wal
 storage/database/*.sqlite-shm
 storage/attachments/*
 !storage/attachments/.gitkeep
-writeable/
+storage/writeable/
 
 # Logs
 error_log

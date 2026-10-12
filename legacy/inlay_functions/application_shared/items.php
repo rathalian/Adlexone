@@ -1522,11 +1522,11 @@ function showCustomFields(): string
         $customFieldAndOr = RenderViews::buildSelectDropdown('custom_field_andor_' . $a, $andOr, $andOrDisplayValues, 'AND');
         $customFieldOperator = RenderViews::buildSelectDropdown('custom_field_operator_' . $a, $operatorValues, $operatorDisplayValues, '=');
 
-        // Compose a three-column row using flex; inner HTML comes from trusted RenderViews helpers
-        $elementHtml = '<div class="cf-row" style="display:flex;gap:0.5rem;align-items:center;">'
-            . '<div style="flex:0 0 30%;">' . $customFieldList . '</div>'
-            . '<div style="flex:0 0 40%;">' . $customFieldOperator . '&nbsp;' . $customFieldTextBox . '</div>'
-            . '<div style="flex:0 0 30%;">' . $customFieldAndOr . '</div>'
+        // Compose a three-column row; inner HTML comes from trusted RenderViews helpers
+        $elementHtml = '<div class="cf-row">'
+            . '<div class="cf-row__field">' . $customFieldList . '</div>'
+            . '<div class="cf-row__op">' . $customFieldOperator . ' ' . $customFieldTextBox . '</div>'
+            . '<div class="cf-row__join">' . $customFieldAndOr . '</div>'
             . '</div>';
 
         // Use an invisible, unique label so the grid prints the element without a visible label

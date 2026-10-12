@@ -12,10 +12,9 @@
   },
   "autoload": {
     "psr-4": {
-      "Adlexone\\App\\": "app/",
       "Adlexone\\": "src/"
     },
-    "classmap": ["inlay_functions/", "src/"]
+    "classmap": ["legacy/inlay_functions/", "legacy/actions/", "src/"]
   },
   "config": {
     "optimize-autoloader": true

@@ -73,12 +73,12 @@ function showHeader() {
 //
 //// 	//Application List
 // 	// Get all application xml files and create a application array
-// 	$directories = opendir( 'app/http/controllers/applications/');
+// 	$directories = opendir( 'legacy/app/http/controllers/applications/');
 // 	$i = 0;
 // 	while ($a = readdir($directories)) {
 // 		$appXMLFile = $a . '.xml';
-// 		if (is_file( 'app/http/controllers/applications/' . $a . '/' . $appXMLFile)) {
-// 			$applicationFileArray[$i++] =  'app/http/controllers/applications/' . $a . '/' . $appXMLFile;
+// 		if (is_file( 'legacy/app/http/controllers/applications/' . $a . '/' . $appXMLFile)) {
+// 			$applicationFileArray[$i++] =  'legacy/app/http/controllers/applications/' . $a . '/' . $appXMLFile;
 // 		}
 // 	}
 // 	// If any applications are found read them and create the applications array to set a home page

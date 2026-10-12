@@ -230,6 +230,7 @@ final class ApplicationStore
                 ['', 'application:' . $slug]
             );
         }
+        Rules::deleteForApplication($id);
         Database::delete('application_nav', 'application_id = ?', [$id]);
         Database::delete('applications', 'application_id = ?', [$id]);
 
@@ -268,6 +269,9 @@ final class ApplicationStore
         Database::delete('item_type_groups', 'item_type_id = ?', [$typeId]);
         if (Database::tableExists('action_definitions')) {
             Database::delete('action_definitions', 'item_type_id = ?', [$typeId]);
+        }
+        if (Database::tableExists('application_rules')) {
+            Database::delete('application_rules', 'item_type_id = ?', [$typeId]);
         }
         Database::delete('item_types', 'item_type_id = ?', [$typeId]);
     }

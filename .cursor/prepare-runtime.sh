@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-mkdir -p config storage/database storage/attachments writeable
+mkdir -p config storage/database storage/attachments storage/writeable
 
 copy_if_missing() {
   local src="$1"

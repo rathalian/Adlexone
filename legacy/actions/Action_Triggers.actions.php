@@ -235,7 +235,7 @@ function executeTriggerActionCustomField($itemID, $dataArray, $preCondition, $tr
 		$condition = "WHERE action_id = '$actionData' AND enabled = 'Yes'";
 		foreach (Database::select('action_definitions', $columnArray, $condition) as $row) {
 			// Execute actions
-			require_once 'actions/' . $row['package_file'];
+			require_once 'legacy/actions/' . $row['package_file'];
 			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
 			$functionName = 'execute' . $row['package_function'];
 			$functionName($itemID, $_POST, $row['action_condition_pre'], $row['action_condition_post'], $row['action_parameters'], $row['action_data']);
@@ -398,7 +398,7 @@ function executeTriggerActionSystemField($itemID, $dataArray, $preCondition, $tr
 		$condition = "WHERE action_id = '$actionData'";
 		foreach (Database::select('action_definitions', $columnArray, $condition) as $row) {
 			// Execute actions
-			require_once 'actions/' . $row['package_file'];
+			require_once 'legacy/actions/' . $row['package_file'];
 			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
 			$functionName = 'execute' . $row['package_function'];
 			$functionName($itemID, $_POST, $row['action_condition_pre'], $row['action_condition_post'], $row['action_parameters'], $row['action_data']);

@@ -1011,6 +1011,9 @@ function showSavedSearches($userID, $application = '')
         ],
         'searchLabel' => TXT_3,
         'empty' => TXT_115,
+        'emptyIllustration' => 'empty-search',
+        'emptyTitle' => 'No saved searches yet',
+        'emptyCopy' => 'Run a quick or advanced search, then save it for next time.',
         'toolbar' => $toolbar,
         'groups' => [['rows' => $rows]],
     ]);
@@ -1300,7 +1303,7 @@ function searchControlRow(string ...$controls): string
 
 function searchApplicationMenu(string $selected): string
 {
-    $root = SET_INSTALL_PATH . 'app/Http/Controllers/Applications/';
+    $root = SET_INSTALL_PATH . 'legacy/app/http/controllers/applications/';
     $names = [];
     $urls = [];
     if (is_dir($root)) {

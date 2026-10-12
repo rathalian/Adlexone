@@ -108,8 +108,8 @@ if (Access::can(Permission::ADMIN_ITEMS)) {
 if (Access::can(Permission::ADMIN_ACTIONS)) {
     $manage[] = launchTile(
         'index.php?manage=workflow&option=show_defined_actions',
-        'Workflow',
-        'Actions and packages',
+        'Rules',
+        'What happens when a record changes',
         'ic-manage-actions'
     );
 }
@@ -139,12 +139,24 @@ if (Access::can(Permission::ADMIN_SETTINGS)) {
 
 $intro = '';
 if ($applications === [] && Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-    $intro = '<section class="launchpad__intro">'
-        . '<h1 class="launchpad__intro-title">Build your first business application</h1>'
-        . '<p class="launchpad__intro-copy">Inlay is a foundation for records, fields, workflow, and screens. Start with a blueprint — helpdesk is optional, not the product.</p>'
-        . '<p class="launchpad__intro-actions">'
-        . '<a class="btn btn--primary" href="index.php?manage=builder">Create a business application</a>'
-        . '</p></section>';
+    $introCopy = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
+        ? (string) SET_HOME_LEAD
+        : 'Create the records, rules, and screens your organisation works with every day.';
+    $art = \Adlexone\Theme\Theme::illustrationHref('empty-apps');
+    $intro = '<section class="launchpad__intro launchpad__intro--illustrated">'
+        . '<div class="empty-state empty-state--brand">'
+        . ($art !== '' ? '<img class="empty-state__art" src="' . htmlspecialchars($art, ENT_QUOTES, 'UTF-8') . '" alt="" width="160" height="120" loading="lazy">' : '')
+        . '<div class="brandwrap launchpad__brand">'
+        . '<span class="logoA"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+        . '<rect width="32" height="32" rx="7" fill="var(--ink)"/>'
+        . '<rect x="6.5" y="6.5" width="19" height="19" rx="1.5" fill="var(--stone)"/>'
+        . '<rect x="6.5" y="13.25" width="19" height="5.5" fill="var(--brand)"/>'
+        . '</svg></span>'
+        . '<span class="brandtext"><span class="title-static">Inlay</span><span class="brandmaker">Adlexone</span></span>'
+        . '</div>'
+        . '<p class="empty-state__copy">' . htmlspecialchars($introCopy, ENT_QUOTES, 'UTF-8') . '</p>'
+        . '<div class="empty-state__actions"><a class="btn btn--primary" href="index.php?manage=builder">Create a business application</a></div>'
+        . '</div></section>';
 }
 
 $html = '<div class="launchpad">'
@@ -154,7 +166,11 @@ $html = '<div class="launchpad">'
     . '</div>';
 
 if ($applications === [] && $manage === [] && $intro === '') {
-    $html = '<p class="launchpad__empty">Nothing is available for this account.</p>';
+    $html = RenderViews::buildEmptyState([
+        'illustration' => 'empty-apps',
+        'title' => 'Nothing is available for this account',
+        'copy' => 'Ask an administrator to grant access to an application.',
+    ]);
 }
 
 define('BODY_CONTENT', $html);

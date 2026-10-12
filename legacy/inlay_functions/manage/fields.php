@@ -74,7 +74,7 @@ function modifyMenuValues($customFieldID)
 {
     $fieldId = (int)$customFieldID;
     $fields = [];
-    $fields[TXT_288] = '<div style="flex:1 1 100%"><p>' . htmlspecialchars(TXT_695, ENT_QUOTES, 'UTF-8') . '</p>'
+    $fields[TXT_288] = '<div class="menu-editor-wrap"><p class="field-note">' . htmlspecialchars(TXT_695, ENT_QUOTES, 'UTF-8') . '</p>'
         . MenuOptions::editorRows($fieldId) . '</div>';
     $fields[TXT_292] = RenderViews::buildTextInput('menu_value', '');
     $fields[TXT_693] = MenuOptions::parentSelect('parent_menu_value_id', $fieldId, 0);

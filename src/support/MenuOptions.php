@@ -106,10 +106,10 @@ final class MenuOptions
                 }
             }
             if ($level === 1 && $childId > 0 && isset(self::$names[$childId])) {
-                $html .= '<div class="label" style="margin-top:0.75rem">'
+                $html .= '<div class="label menu-cascade-label">'
                     . htmlspecialchars(self::$names[$childId], ENT_QUOTES, 'UTF-8') . '</div>';
             } elseif ($level > 0) {
-                $html .= '<div style="height:0.5rem"></div>';
+                $html .= '<div class="menu-cascade-gap" aria-hidden="true"></div>';
             }
             $values = [];
             $labels = [];
@@ -211,8 +211,8 @@ final class MenuOptions
         $rows = '';
         foreach (self::flattened($fieldId) as $node) {
             $id = (int)$node['menu_value_id'];
-            $rows .= '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(8rem,14rem) auto;gap:0.75rem;align-items:center;margin:0 0 0.5rem '
-                . ((int)$node['depth'] * 1.25) . 'rem">'
+            $indent = (int)$node['depth'] * 20;
+            $rows .= '<div class="menu-editor-row" style="margin-left:' . $indent . 'px">'
                 . RenderViews::buildTextInput((string)$id, (string)$node['menu_value'])
                 . RenderViews::buildHiddenInput('menu_value_old_id_' . $id, (string)$node['menu_value'])
                 . self::parentSelect('parent_' . $id, $fieldId, (int)$node['parent_menu_value_id'], $id)

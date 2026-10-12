@@ -25,6 +25,7 @@
 
 namespace Adlexone\support;
 
+use Adlexone\Application\Rules;
 use Adlexone\support\Database;
 
 class Actions {
@@ -35,6 +36,7 @@ class Actions {
 	 * @return Return visual response if set
 	 */
 	public static function executeAction($itemID, $requestingAction, $showResponse = true){
+		Rules::run((int) $itemID, (string) $requestingAction);
 		// Get the action(s) associated with the items
 		$sql = "SELECT item_type_id FROM items WHERE item_id = '" . $itemID . "'";
 				$result = Database::rows($sql);
@@ -47,7 +49,7 @@ class Actions {
 		$sql = "SELECT * FROM action_definitions WHERE (item_type_id = '" . $rowaction['item_type_id'] . "' OR item_type_id = '0') AND (action_type LIKE '" . $requestingAction . "%' OR action_type = 'main_page_content') AND enabled = 'Yes'";
 				$resultactionPackage = Database::rows($sql);
 		foreach ($resultactionPackage as $rowActionPackage) {
-			require_once 'actions/' . $rowActionPackage['package_file'];
+			require_once 'legacy/actions/' . $rowActionPackage['package_file'];
 			// This functions name is set from the package_function column value and returns a boolean value if the condition is met
 			$functionName = 'execute' . $rowActionPackage['package_function'];
 			$actionExecuted = $functionName($itemID, $_POST, $rowActionPackage['action_condition_pre'], $rowActionPackage['action_condition_post'], $rowActionPackage['action_parameters'], $rowActionPackage['action_data'],$rowActionPackage['action_type'], $requestingAction);

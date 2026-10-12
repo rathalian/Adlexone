@@ -238,4 +238,25 @@ CREATE INDEX IF NOT EXISTS idx_user_identities_user ON user_identities (user_id)
 CREATE INDEX IF NOT EXISTS idx_item_field_values_field ON item_field_values (custom_field_id);
 CREATE INDEX IF NOT EXISTS idx_item_field_values_field_value ON item_field_values (custom_field_id, value);
 
+CREATE TABLE IF NOT EXISTS application_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  application_id INTEGER NOT NULL,
+  item_type_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  event TEXT NOT NULL,
+  field_key TEXT NOT NULL DEFAULT '',
+  operator TEXT NOT NULL DEFAULT 'always',
+  match_value TEXT NOT NULL DEFAULT '',
+  outcome TEXT NOT NULL,
+  recipient TEXT NOT NULL DEFAULT 'owner',
+  address TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  role_id INTEGER NOT NULL DEFAULT 5
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_rules_type ON application_rules (item_type_id, event);
+CREATE INDEX IF NOT EXISTS idx_application_rules_app ON application_rules (application_id);
+
 COMMIT;

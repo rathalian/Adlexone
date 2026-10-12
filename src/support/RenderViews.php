@@ -150,7 +150,7 @@ class RenderViews
         return
             ($navBarDivider ? '<div class="side-divider"></div>' : '') .
             '<div class="side-group">' .
-            (!empty($navBarTitle) ? '<div class="side-title" style="margin-top:10px">' . $navBarTitle . '</div>' : '') .
+            (!empty($navBarTitle) ? '<div class="side-title side-title--spaced">' . $navBarTitle . '</div>' : '') .
             '<a class="navbtn" href="' . $queryString . '">' . $buttonText . '</a>' .
             '</div>';
     }
@@ -317,10 +317,10 @@ class RenderViews
         $labelEsc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
 
         return
-            '<div class="rv-separator-block' . $classAttr . '"' . $styleAttr . ' role="separator" aria-label="' . $labelEsc . '" style="display:flex;align-items:center;gap:0.75rem;">'
-            . '<span style="flex:1;border-bottom:1px solid #e0e0e0;" aria-hidden="true"></span>'
-            . '<span class="rv-separator-label" style="white-space:nowrap;padding:0 0.5rem;color:inherit;">' . $labelEsc . '</span>'
-            . '<span style="flex:1;border-bottom:1px solid #e0e0e0;" aria-hidden="true"></span>'
+            '<div class="rv-separator-block' . $classAttr . '"' . $styleAttr . ' role="separator" aria-label="' . $labelEsc . '">'
+            . '<span class="rv-separator-line" aria-hidden="true"></span>'
+            . '<span class="rv-separator-label">' . $labelEsc . '</span>'
+            . '<span class="rv-separator-line" aria-hidden="true"></span>'
             . '</div>';
     }
 
@@ -575,6 +575,37 @@ class RenderViews
         ];
     }
 
+    /**
+     * Illustrated empty state for lists and landing prompts.
+     *
+     * @param array{illustration?: string, title?: string, copy?: string, action?: string} $opts
+     */
+    public static function buildEmptyState(array $opts): string
+    {
+        $illustration = trim((string) ($opts['illustration'] ?? ''));
+        $title = trim((string) ($opts['title'] ?? ''));
+        $copy = trim((string) ($opts['copy'] ?? ''));
+        $action = (string) ($opts['action'] ?? '');
+        $src = $illustration !== '' ? \Adlexone\Theme\Theme::illustrationHref($illustration) : '';
+
+        $html = '<div class="empty-state">';
+        if ($src !== '') {
+            $html .= '<img class="empty-state__art" src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '" alt="" width="160" height="120" loading="lazy">';
+        }
+        if ($title !== '') {
+            $html .= '<p class="empty-state__title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</p>';
+        }
+        if ($copy !== '') {
+            $html .= '<p class="empty-state__copy">' . htmlspecialchars($copy, ENT_QUOTES, 'UTF-8') . '</p>';
+        }
+        if ($action !== '') {
+            $html .= '<div class="empty-state__actions">' . $action . '</div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
     public static function buildRecordList(array $list): string
     {
         static $sequence = 0;
@@ -602,21 +633,42 @@ class RenderViews
 
         $rows = [];
         $hasActions = false;
-        foreach ($groups as $group) {
+        $asMenu = false;
+        foreach ($groups as $groupIndex => $group) {
+            $groupRows = [];
             foreach ($group['rows'] ?? [] as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $row['actions'] = self::recordListExtraActions($row);
+                $groupRows[] = $row;
                 $rows[] = $row;
-                if (!empty($row['actions'])) {
+                if ($row['actions'] !== []) {
                     $hasActions = true;
                 }
+                if (count($row['actions']) >= 2) {
+                    $asMenu = true;
+                }
             }
+            $groups[$groupIndex]['rows'] = $groupRows;
         }
 
         $toolbar = (string) ($list['toolbar'] ?? '');
         if ($rows === []) {
             $bar = $primary . $toolbar;
+            $emptyIllustration = trim((string) ($list['emptyIllustration'] ?? ''));
+            $emptyTitle = trim((string) ($list['emptyTitle'] ?? ''));
+            $emptyBody = $emptyIllustration !== ''
+                ? self::buildEmptyState([
+                    'illustration' => $emptyIllustration,
+                    'title' => $emptyTitle !== '' ? $emptyTitle : $emptyText,
+                    'copy' => (string) ($list['emptyCopy'] ?? ''),
+                    'action' => (string) ($list['emptyAction'] ?? ''),
+                ])
+                : '<p class="record-list__empty">' . htmlspecialchars($emptyText, ENT_QUOTES, 'UTF-8') . '</p>';
             return '<div class="record-list">'
                 . ($bar !== '' ? '<div class="record-list__bar">' . $bar . '</div>' : '')
-                . '<p class="record-list__empty">' . htmlspecialchars($emptyText, ENT_QUOTES, 'UTF-8') . '</p>'
+                . $emptyBody
                 . '</div>';
         }
 
@@ -635,7 +687,7 @@ class RenderViews
                     . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
             }
             foreach ($groupRows as $row) {
-                $body .= self::recordListRow($row, $label, $hasActions, $columns);
+                $body .= self::recordListRow($row, $label, $hasActions, $asMenu, $columns);
             }
             $body .= '</tbody>';
         }
@@ -679,10 +731,34 @@ class RenderViews
     }
 
     /**
+     * The name opens the row. An action with the same address is dropped so Edit is not listed twice.
+     *
+     * @param array{name?: string, href?: string, actions?: array<int, array<string, mixed>>} $row
+     * @return list<array<string, mixed>>
+     */
+    private static function recordListExtraActions(array $row): array
+    {
+        $actions = is_array($row['actions'] ?? null) ? $row['actions'] : [];
+        $open = (string) ($row['href'] ?? '');
+        $extra = [];
+        foreach ($actions as $action) {
+            if (!is_array($action)) {
+                continue;
+            }
+            if ($open !== '' && (string) ($action['href'] ?? '') === $open) {
+                continue;
+            }
+            $extra[] = $action;
+        }
+
+        return $extra;
+    }
+
+    /**
      * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, cells?: array<string, string>, actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string, target?: string}>} $row
      * @param list<array{key: string, label: string}> $columns
      */
-    private static function recordListRow(array $row, string $groupLabel, bool $hasActions, array $columns = []): string
+    private static function recordListRow(array $row, string $groupLabel, bool $hasActions, bool $asMenu, array $columns = []): string
     {
         $name = (string)($row['name'] ?? '');
         $meta = (string)($row['meta'] ?? '');
@@ -713,7 +789,7 @@ class RenderViews
             foreach ($actions as $action) {
                 $search .= ' ' . strtolower((string)($action['label'] ?? ''));
             }
-            $actionsHtml = '<td class="record-list__manage">' . self::recordListActions($actions, $name) . '</td>';
+            $actionsHtml = '<td class="record-list__manage">' . self::recordListActions($actions, $name, $asMenu) . '</td>';
         }
 
         return '<tr data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '"><td>' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
@@ -722,12 +798,11 @@ class RenderViews
     /**
      * @param array<int, array{href?: string, label?: string, tone?: string, confirm?: string, target?: string}> $actions
      */
-    private static function recordListActions(array $actions, string $name): string
+    private static function recordListActions(array $actions, string $name, bool $asMenu): string
     {
         if ($actions === []) {
             return '';
         }
-        $asMenu = count($actions) >= 2;
         $buttons = '';
         foreach ($actions as $action) {
             $label = (string)($action['label'] ?? '');

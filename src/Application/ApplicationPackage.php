@@ -126,6 +126,7 @@ final class ApplicationPackage
             'fields' => $fieldsById,
             'saved_searches' => self::exportSavedSearches((string) $app['slug']),
             'actions' => self::exportActions($typeIds),
+            'rules' => self::exportRules((int) $app['application_id']),
         ];
     }
 
@@ -379,6 +380,12 @@ final class ApplicationPackage
 
         self::importSavedSearches($slug, is_array($package['saved_searches'] ?? null) ? $package['saved_searches'] : []);
         self::importActions($typeNameToId, $oldToNewType, is_array($package['actions'] ?? null) ? $package['actions'] : []);
+        self::importRules(
+            $applicationId,
+            $oldToNewType,
+            $oldToNewField,
+            is_array($package['rules'] ?? null) ? $package['rules'] : []
+        );
 
         return ['application_id' => $applicationId, 'slug' => $slug];
     }
@@ -436,7 +443,7 @@ final class ApplicationPackage
                 continue;
             }
             Database::insert('action_definitions', [
-                'action_name' => (string) ($action['action_name'] ?? 'Action'),
+                'action_name' => (string) ($action['action_name'] ?? 'Rule'),
                 'action_condition_pre' => (string) ($action['action_condition_pre'] ?? ''),
                 'action_condition_post' => (string) ($action['action_condition_post'] ?? ''),
                 'action_data' => (string) ($action['action_data'] ?? ''),
@@ -446,6 +453,76 @@ final class ApplicationPackage
                 'package_file' => (string) ($action['package_file'] ?? ''),
                 'package_function' => (string) ($action['package_function'] ?? ''),
                 'enabled' => (string) ($action['enabled'] ?? 'Yes'),
+            ]);
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function exportRules(int $applicationId): array
+    {
+        if ($applicationId <= 0 || !Database::tableExists('application_rules')) {
+            return [];
+        }
+        $out = [];
+        foreach (Rules::forApplication($applicationId) as $rule) {
+            $out[] = [
+                'name' => (string) $rule['name'],
+                'enabled' => (int) $rule['enabled'],
+                'event' => (string) $rule['event'],
+                'field_key' => (string) $rule['field_key'],
+                'operator' => (string) $rule['operator'],
+                'match_value' => (string) $rule['match_value'],
+                'outcome' => (string) $rule['outcome'],
+                'recipient' => (string) $rule['recipient'],
+                'address' => (string) $rule['address'],
+                'subject' => (string) $rule['subject'],
+                'body' => (string) $rule['body'],
+                'role_id' => (int) $rule['role_id'],
+                'source_item_type_id' => (int) $rule['item_type_id'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<int, int> $oldToNewType
+     * @param array<int, int> $oldToNewField
+     * @param list<array<string, mixed>> $rules
+     */
+    private static function importRules(int $applicationId, array $oldToNewType, array $oldToNewField, array $rules): void
+    {
+        if ($rules === [] || !Database::tableExists('application_rules')) {
+            return;
+        }
+        foreach ($rules as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+            $sourceType = (int) ($rule['source_item_type_id'] ?? 0);
+            $typeId = $oldToNewType[$sourceType] ?? 0;
+            if ($typeId <= 0) {
+                continue;
+            }
+            $fieldKey = (string) ($rule['field_key'] ?? '');
+            if (preg_match('/^custom_field_(\d+)$/', $fieldKey, $match) === 1) {
+                $newField = $oldToNewField[(int) $match[1]] ?? 0;
+                $fieldKey = $newField > 0 ? 'custom_field_' . $newField : '';
+            }
+            Rules::add($applicationId, [
+                'item_type_id' => $typeId,
+                'name' => (string) ($rule['name'] ?? ''),
+                'event' => (string) ($rule['event'] ?? ''),
+                'field_key' => $fieldKey,
+                'operator' => (string) ($rule['operator'] ?? ''),
+                'match_value' => (string) ($rule['match_value'] ?? ''),
+                'outcome' => (string) ($rule['outcome'] ?? ''),
+                'recipient' => (string) ($rule['recipient'] ?? ''),
+                'address' => (string) ($rule['address'] ?? ''),
+                'subject' => (string) ($rule['subject'] ?? ''),
+                'body' => (string) ($rule['body'] ?? ''),
+                'role_id' => (int) ($rule['role_id'] ?? 5),
             ]);
         }
     }

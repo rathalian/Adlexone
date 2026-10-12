@@ -143,10 +143,16 @@ function showFrameOneAnnouncements(string $slug): void
             . '</article>';
     }
     if ($html === '') {
-        $html = '<p class="record-list__empty">No announcements yet.</p>';
+        $html = RenderViews::buildEmptyState([
+            'illustration' => 'empty-work',
+            'title' => 'No announcements yet',
+            'copy' => $canManage
+                ? 'Post the first update for people using this application.'
+                : 'When announcements are posted, they will show up here.',
+        ]);
     }
     if ($canManage) {
-        $html = '<div class="form-actions" style="margin-top:0">'
+        $html = '<div class="form-actions form-actions--flush">'
             . RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'New announcement', '', 'btn btn--primary btn--sm')
             . '</div>' . $html;
     }

@@ -83,7 +83,7 @@ final class RenderNavigation
     {
         if (!class_exists(RenderViews::class)) {
             throw new RuntimeException(
-                'RenderViews class not found. Require RenderViews.php before calling LaunchpadHelper::render().'
+                'RenderViews class not found. Require RenderViews.php before calling RenderNavigation::render().'
             );
         }
 

@@ -15,4 +15,4 @@ Installation-specific work belongs under **`site/`** (not the product core):
 - `site/themes/{name}/` — skins (`theme.css` tokens, `theme.json`, `brand/`)
 - `site/apps/{pack}/` — extra screen packs
 
-Shared page chrome lives in `layouts/`. See `site/README.md`.
+Shared page chrome lives in `layouts/`. Procedural screens and action packages live under `legacy/` until they move into `src/`. See `site/README.md`.

@@ -65,6 +65,7 @@ function showApplicationWork(?int $itemTypeId = null, string $title = 'Work'): v
         }
     }
 
+    $createHref = $base . '&option=show_item_types';
     define('BODY_CONTENT', RenderViews::buildVerticalCards([
         [
             'title' => $title,
@@ -73,6 +74,10 @@ function showApplicationWork(?int $itemTypeId = null, string $title = 'Work'): v
                 'columns' => RenderViews::itemListColumns(),
                 'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
                 'empty' => defined('TXT_115') ? TXT_115 : 'No items found.',
+                'emptyIllustration' => 'empty-work',
+                'emptyTitle' => 'No work yet',
+                'emptyCopy' => 'Create the first record for this application.',
+                'emptyAction' => '<a class="btn btn--primary btn--sm" href="' . htmlspecialchars($createHref, ENT_QUOTES, 'UTF-8') . '">New</a>',
                 'groups' => [['rows' => $rows]],
             ]),
         ],

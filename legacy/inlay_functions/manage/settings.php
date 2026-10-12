@@ -47,14 +47,18 @@ function showAdlexoneSettings(): void
     $fields[TXT_593] = RenderViews::buildSelectDropdown('ADD_ATTACHMENTS', array('yes', 'no'), array(TXT_93, TXT_94), ADD_ATTACHMENTS);
     $fields[TXT_391] = RenderViews::buildTextInput('SET_MAX_ATTACHMENT', SET_MAX_ATTACHMENT);
     $fields[TXT_329] = RenderViews::buildSelectDropdown('SET_DATE_FORMAT', array('d-m-Y, h:i A', 'm-d-Y, h:i A', 'd.m.Y H:i'), array(TXT_330, TXT_481, TXT_654), SET_DATE_FORMAT);
-    $directories = opendir('app/Http/Controllers/Applications/');
     $applicationFileArray = [];
-    $i = 0;
-    while ($a = readdir($directories)) {
-        $appXMLFile = $a . '.xml';
-        if (is_file('app/Http/Controllers/Applications/' . $a . '/' . $appXMLFile)) {
-            $applicationFileArray[$i++] = 'app/Http/Controllers/Applications/' . $a . '/' . $appXMLFile;
+    $applicationsRoot = 'legacy/app/http/controllers/applications/';
+    if (is_dir($applicationsRoot)) {
+        $directories = opendir($applicationsRoot);
+        $i = 0;
+        while ($a = readdir($directories)) {
+            $appXMLFile = $a . '.xml';
+            if (is_file($applicationsRoot . $a . '/' . $appXMLFile)) {
+                $applicationFileArray[$i++] = $applicationsRoot . $a . '/' . $appXMLFile;
+            }
         }
+        closedir($directories);
     }
     // If any applications are found read them and create the applications array to set a home page
     if (is_array($applicationFileArray)) {
@@ -108,6 +112,8 @@ function showAdlexoneSettings(): void
         $listDisplayValuesArray[] = $row['group_name'];
     }
     $fields[TXT_604] = RenderViews::buildSelectDropdown('USER_REG_ACTION', $listValuesArray, $listDisplayValuesArray, USER_REG_ACTION);
+    $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'Create the records, rules, and screens your organisation works with every day.';
+    $fields['Home page blurb'] = RenderViews::buildTextArea('SET_HOME_LEAD', $homeLead, '3');
     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
     $bodyContent = RenderViews::buildForm(TXT_42,'index.php?manage=settings&option=update_adlexone_settings',$fields,$buttons);
     define('BODY_CONTENT', $bodyContent);
@@ -267,11 +273,19 @@ switch (@$_GET['option']) {
         break;
     case 'update_adlexone_settings' :
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
-        $settings = $_POST;
-        unset($settings['submit_button']);
+        $path = SET_CONFIGURATION_PATH . 'adlexone_settings.json';
+        $existing = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+        if (!is_array($existing)) {
+            $existing = [];
+        }
+        $posted = $_POST;
+        unset($posted['submit_button']);
+        $settings = array_merge($existing, $posted);
         $settings['SET_DEFAULT_THEME'] = defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'inlay-stone';
         $settings['SET_DEFAULT_LANGUAGE'] = defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English';
-        SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'adlexone_settings.json', $settings);
+        unset($settings['SET_HOME_TITLE']);
+        $settings['SET_HOME_LEAD'] = trim((string) ($posted['SET_HOME_LEAD'] ?? $existing['SET_HOME_LEAD'] ?? 'Create the records, rules, and screens your organisation works with every day.'));
+        SharedMethods::saveSettingsToJson($path, $settings);
         break;
     case 'advanced_settings' :
         RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);

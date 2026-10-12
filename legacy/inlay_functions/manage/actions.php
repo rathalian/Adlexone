@@ -30,7 +30,7 @@ use Adlexone\support\RenderNavigation;
 /**
  * Workflow links sit in the top navigation card. There is no left sidebar.
  */
-RenderNavigation::applySectionNav('Workflow', RenderNavigation::workflowURLs());
+RenderNavigation::applySectionNav('Rules', RenderNavigation::workflowURLs());
 
 /**
  * Controller specific constants
@@ -60,7 +60,7 @@ function showSettingsOptions (): void
 function showactionPackages(): void
 {
     // Collect action package files
-    $files = glob('actions/*.actions.php') ?: [];
+    $files = glob('legacy/actions/*.actions.php') ?: [];
 
     // Extract package names and sort naturally (case-insensitive)
     $packages = array_map(fn(string $f): string => basename($f, '.actions.php'), $files);
@@ -70,7 +70,7 @@ function showactionPackages(): void
 
     // Build aligned value/display arrays
     $actionPackageArray = $packages;
-    $displayNameArray = array_map(fn(string $p): string => str_replace('_', ' ', $p), $packages);
+    $displayNameArray = array_map(fn(string $p): string => rulePackageLabel($p), $packages);
 
     // If no packages found, provide a single empty option with a friendly label
     if (empty($actionPackageArray)) {
@@ -96,7 +96,7 @@ function showactionPackages(): void
 
 function showPackageactionList($actionPackage): void
 {
-	require_once 'actions/' . $actionPackage . '.actions.php';
+	require_once 'legacy/actions/' . $actionPackage . '.actions.php';
 	$names = (isset($actionName) && is_array($actionName)) ? $actionName : [];
 	$descriptions = (isset($actionDescription) && is_array($actionDescription)) ? $actionDescription : [];
 	$rows = [];
@@ -119,7 +119,7 @@ function showPackageactionList($actionPackage): void
 		'noMatch' => TXT_688,
 		'groups' => [['rows' => $rows]],
 	]);
-	$title = TXT_253 . ' - ' . str_replace('_', ' ', (string)$actionPackage);
+	$title = TXT_253 . ' - ' . rulePackageLabel((string)$actionPackage);
 	define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => $title, 'html' => $html]]));
 	RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
@@ -134,7 +134,7 @@ function definedActionDescriptor(string $packageFile, string $function): array
 	if (!isset($cache[$packageFile])) {
 		$actionName = [];
 		$actionDescription = [];
-		$path = 'actions/' . basename($packageFile);
+		$path = 'legacy/actions/' . basename($packageFile);
 		if (is_file($path)) {
 			require_once $path;
 		}
@@ -151,6 +151,12 @@ function definedActionDescriptor(string $packageFile, string $function): array
 	}
 
 	return ['name' => $name, 'description' => $description];
+}
+
+function rulePackageLabel(string $package): string
+{
+	$label = str_replace('_', ' ', str_replace('.actions.php', '', $package));
+	return (string) preg_replace('/^Action\s+/i', '', $label);
 }
 
 function showDefinedactions ()
@@ -182,7 +188,7 @@ function renderDefinedActionsList(array $groups, bool $canDelete): string
 	$listGroups = [];
 	foreach ($groups as $packageFile => $rows) {
 		usort($rows, static fn(array $a, array $b): int => strcasecmp((string)$a['action_name'], (string)$b['action_name']));
-		$packageLabel = str_replace('_', ' ', str_replace('.actions.php', '', $packageFile));
+		$packageLabel = rulePackageLabel($packageFile);
 		$listRows = [];
 		foreach ($rows as $row) {
 			$descriptor = definedActionDescriptor($packageFile, (string)$row['package_function']);
@@ -232,7 +238,7 @@ function showDefinedaction ($actionID)
 	$condition = "WHERE action_id = '$actionID'";
 	$row = Database::first('action_definitions', $columnArray, $condition);
 	$functionName = 'showSetup' . $row['package_function'];
-	require_once  'actions/' . $row['package_file'];
+	require_once  'legacy/actions/' . $row['package_file'];
 	// Run the function to show the update page for actions
 	$functionName($actionID);
 }
@@ -257,13 +263,13 @@ switch (@$_GET['option']) {
 		break;
 	case 'new_action' :
 		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
-		require_once  'actions/' . $_GET['action_package'] . '.actions.php';
+		require_once  'legacy/actions/' . $_GET['action_package'] . '.actions.php';
 		$functionName = 'showSetup' . $_GET['descriptor_name'];
 		$functionName(@$_GET['action_id']);
 		break;
 	case 'add_action' :
 		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
-		require_once  'actions/' . $_GET['action_package'] . '.actions.php';
+		require_once  'legacy/actions/' . $_GET['action_package'] . '.actions.php';
 		$functionName = 'addUpdate' . $_GET['descriptor_name'];
 		$functionName('', true);
 		break;
@@ -277,7 +283,7 @@ switch (@$_GET['option']) {
 		break;
 	case 'update_action' :
 		RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ACTIONS);
-		require_once  'actions/' . $_GET['action_package'] . '.actions.php';
+		require_once  'legacy/actions/' . $_GET['action_package'] . '.actions.php';
 		$functionName = 'addUpdate' . $_GET['descriptor_name'];
 		$functionName($_GET['action_id'], false);
 		break;

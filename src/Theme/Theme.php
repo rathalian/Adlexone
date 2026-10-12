@@ -117,6 +117,26 @@ final class Theme
         return self::layoutUrl('assets/adlexone.sprite.svg');
     }
 
+    /**
+     * Cache-busted URL for a shared illustration under layouts/assets/illustrations/.
+     */
+    public static function illustrationHref(string $name): string
+    {
+        $name = basename(str_replace('\\', '/', $name));
+        $name = preg_replace('/[^A-Za-z0-9_-]+/', '', $name) ?? '';
+        if ($name === '') {
+            return '';
+        }
+        $file = $name . '.svg';
+        $fs = self::layoutFs() . 'assets' . DIRECTORY_SEPARATOR . 'illustrations' . DIRECTORY_SEPARATOR . $file;
+        if (!is_file($fs)) {
+            return '';
+        }
+        $v = (int) @filemtime($fs);
+
+        return self::layoutUrl('assets/illustrations/' . $file) . ($v > 0 ? '?v=' . $v : '');
+    }
+
     public static function faviconHref(string $theme = ''): string
     {
         return self::url('brand/favicon.svg', $theme);

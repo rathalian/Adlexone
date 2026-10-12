@@ -14,7 +14,9 @@
     "SET_DEFAULT_ITEM_TYPE": "1",
     "SET_DEFAULT_LANGUAGE": "English",
     "USER_REG_ACTION": "2",
+    "SET_HOME_LEAD": "Create the records, rules, and screens your organisation works with every day (customise this text in the settings for your organisations logon page)",
     "SET_PUBLIC_BASE_URL": "",
     "SET_ALLOWED_HOSTS": "",
-    "SET_TRUSTED_PROXIES": ""
+    "SET_TRUSTED_PROXIES": "",
+    "_csrf": "b595cc659c4069be605134b55034e7f1e48e60c38563a51b74dfc52d979d072b"
 }

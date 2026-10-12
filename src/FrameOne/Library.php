@@ -10,12 +10,12 @@ namespace Adlexone\FrameOne;
  * instead of adding site/apps/{pack} PHP files. Packs remain only for rare
  * installation-specific screens that cannot be expressed as config.
  *
- * Built-in capability ids (origin "FrameOne"):
+ * Built-in capability ids (UI origin label "Built-in"):
  *   items.work, items.create, search.*, announcements.board, app.settings
  */
 final class Library
 {
-    public const ORIGIN = 'FrameOne';
+    public const ORIGIN = 'Built-in';
 
     public const WORK = 'items.work';
     public const CREATE = 'items.create';
