@@ -1,6 +1,9 @@
 <?php
 use Adlexone\Theme\Theme;
 
+if (!defined('ADLEXONE_PAGE_SHELL')) {
+    define('ADLEXONE_PAGE_SHELL', true);
+}
 ob_start();
 controller();
 $pageBody = ob_get_clean();

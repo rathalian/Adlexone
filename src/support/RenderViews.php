@@ -1061,16 +1061,27 @@ class RenderViews
 
         $detail = trim((string)$url);
         $follow = $detail !== '' ? self::formatResponseDetail($detail) : self::responseBackLink();
-        $body = '';
-        if (defined('APP_SECTION_NAV')) {
-            $body .= '<p class="response__message">' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
-        }
+        $body = '<p class="response__message">' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
         if ($follow !== '') {
             $body .= '<div class="response" role="status">' . $follow . '</div>';
         }
 
-        define('BODY_CONTENT', $body);
-        self::renderThemePage('main_page_content', SET_THEME);
+        if (!defined('BODY_CONTENT')) {
+            define('BODY_CONTENT', $body);
+        }
+        if (defined('ADLEXONE_PAGE_SHELL')) {
+            self::renderThemePage('main_page_content', SET_THEME);
+            return;
+        }
+
+        $title = htmlspecialchars($message !== '' ? $message : 'Inlay', ENT_QUOTES, 'UTF-8');
+        $css = htmlspecialchars(\Adlexone\Theme\Theme::baseCssHref(), ENT_QUOTES, 'UTF-8');
+        $theme = htmlspecialchars(\Adlexone\Theme\Theme::cssHref(), ENT_QUOTES, 'UTF-8');
+        echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'
+            . $title
+            . '</title><link rel="stylesheet" href="' . $css . '"><link rel="stylesheet" href="' . $theme . '"></head><body><main class="main" id="content" tabindex="-1">'
+            . $body
+            . '</main></body></html>';
     }
 
     /**

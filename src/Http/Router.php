@@ -103,29 +103,29 @@ final class Router
      * @var array<string, string>
      */
     private const FILES = [
-        'login' => 'inlay_functions/login.php',
-        'home' => 'inlay_functions/home.php',
-        'full_page_view' => 'inlay_functions/full_page_view.php',
-        'application' => 'inlay_functions/application.php',
-        'manage_main' => 'inlay_functions/manage/main.php',
-        'manage_applications' => 'inlay_functions/manage/applications.php',
-        'manage_builder' => 'inlay_functions/manage/builder.php',
-        'manage_fields' => 'inlay_functions/manage/fields.php',
-        'manage_item_types' => 'inlay_functions/manage/item_types.php',
-        'manage_items' => 'inlay_functions/manage/items.php',
-        'manage_actions' => 'inlay_functions/manage/actions.php',
-        'manage_security' => 'inlay_functions/manage/security.php',
-        'manage_settings' => 'inlay_functions/manage/settings.php',
-        self::ITEMS => 'inlay_functions/application_shared/items.php',
-        self::SEARCH => 'inlay_functions/application_shared/search.php',
-        'manage_portal' => 'inlay_functions/legacy/manage_portal.php',
-        'all_actions' => 'inlay_functions/legacy/all_actions.php',
-        'crm_management_manage' => 'inlay_functions/legacy/crm_management_manage.php',
-        'dummy' => 'inlay_functions/legacy/dummy.php',
-        'item_management_main' => 'inlay_functions/legacy/item_management_main.php',
-        'search_management_main' => 'inlay_functions/legacy/search_management_main.php',
-        'social_management_main' => 'inlay_functions/legacy/social_management_main.php',
-        'social_management_manage' => 'inlay_functions/legacy/social_management_manage.php',
+        'login' => 'legacy/inlay_functions/login.php',
+        'home' => 'legacy/inlay_functions/home.php',
+        'full_page_view' => 'legacy/inlay_functions/full_page_view.php',
+        'application' => 'legacy/inlay_functions/application.php',
+        'manage_main' => 'legacy/inlay_functions/manage/main.php',
+        'manage_applications' => 'legacy/inlay_functions/manage/applications.php',
+        'manage_builder' => 'legacy/inlay_functions/manage/builder.php',
+        'manage_fields' => 'legacy/inlay_functions/manage/fields.php',
+        'manage_item_types' => 'legacy/inlay_functions/manage/item_types.php',
+        'manage_items' => 'legacy/inlay_functions/manage/items.php',
+        'manage_actions' => 'legacy/inlay_functions/manage/actions.php',
+        'manage_security' => 'legacy/inlay_functions/manage/security.php',
+        'manage_settings' => 'legacy/inlay_functions/manage/settings.php',
+        self::ITEMS => 'legacy/inlay_functions/application_shared/items.php',
+        self::SEARCH => 'legacy/inlay_functions/application_shared/search.php',
+        'manage_portal' => 'legacy/retired/manage_portal.php',
+        'all_actions' => 'legacy/retired/all_actions.php',
+        'crm_management_manage' => 'legacy/retired/crm_management_manage.php',
+        'dummy' => 'legacy/retired/dummy.php',
+        'item_management_main' => 'legacy/retired/item_management_main.php',
+        'search_management_main' => 'legacy/retired/search_management_main.php',
+        'social_management_main' => 'legacy/retired/social_management_main.php',
+        'social_management_manage' => 'legacy/retired/social_management_manage.php',
     ];
 
     public static function requested(): string
@@ -323,15 +323,36 @@ final class Router
             return null;
         }
         if (isset(self::FILES[$canonical])) {
-            $file = SET_INSTALL_PATH . self::FILES[$canonical];
-
-            return is_file($file) ? $file : null;
+            return self::resolveRelative(self::FILES[$canonical]);
         }
         if (str_starts_with($canonical, 'app_')) {
             $app = explode('_', $canonical)[1] ?? '';
-            $file = SET_INSTALL_PATH . 'app/Http/Controllers/Applications/' . $app . '/controllers/' . $canonical . '.php';
+            $relative = 'legacy/app/http/controllers/applications/' . $app . '/controllers/' . $canonical . '.php';
 
-            return is_file($file) ? $file : null;
+            return self::resolveRelative($relative);
+        }
+
+        return null;
+    }
+
+    /**
+     * Screen files moved under legacy/. Accept either location so a partial upload still opens.
+     */
+    private static function resolveRelative(string $relative): ?string
+    {
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        $candidates = [$relative];
+        if (str_starts_with($relative, 'legacy/')) {
+            $candidates[] = substr($relative, strlen('legacy/'));
+        } else {
+            $candidates[] = 'legacy/' . $relative;
+        }
+        $root = rtrim((string) SET_INSTALL_PATH, '/\\');
+        foreach ($candidates as $candidate) {
+            $file = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $candidate);
+            if (is_file($file)) {
+                return $file;
+            }
         }
 
         return null;
