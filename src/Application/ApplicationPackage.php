@@ -480,6 +480,8 @@ final class ApplicationPackage
                 'subject' => (string) $rule['subject'],
                 'body' => (string) $rule['body'],
                 'role_id' => (int) $rule['role_id'],
+                'action_field' => (string) ($rule['action_field'] ?? ''),
+                'action_value' => (string) ($rule['action_value'] ?? ''),
                 'source_item_type_id' => (int) $rule['item_type_id'],
             ];
         }
@@ -510,6 +512,11 @@ final class ApplicationPackage
                 $newField = $oldToNewField[(int) $match[1]] ?? 0;
                 $fieldKey = $newField > 0 ? 'custom_field_' . $newField : '';
             }
+            $actionField = (string) ($rule['action_field'] ?? '');
+            if (preg_match('/^custom_field_(\d+)$/', $actionField, $actionMatch) === 1) {
+                $newActionField = $oldToNewField[(int) $actionMatch[1]] ?? 0;
+                $actionField = $newActionField > 0 ? 'custom_field_' . $newActionField : '';
+            }
             Rules::add($applicationId, [
                 'item_type_id' => $typeId,
                 'name' => (string) ($rule['name'] ?? ''),
@@ -523,6 +530,8 @@ final class ApplicationPackage
                 'subject' => (string) ($rule['subject'] ?? ''),
                 'body' => (string) ($rule['body'] ?? ''),
                 'role_id' => (int) ($rule['role_id'] ?? 5),
+                'action_field' => $actionField,
+                'action_value' => (string) ($rule['action_value'] ?? ''),
             ]);
         }
     }

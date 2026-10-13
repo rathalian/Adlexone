@@ -253,7 +253,9 @@ CREATE TABLE IF NOT EXISTS application_rules (
   address TEXT NOT NULL DEFAULT '',
   subject TEXT NOT NULL DEFAULT '',
   body TEXT NOT NULL DEFAULT '',
-  role_id INTEGER NOT NULL DEFAULT 5
+  role_id INTEGER NOT NULL DEFAULT 5,
+  action_field TEXT NOT NULL DEFAULT '',
+  action_value TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_application_rules_type ON application_rules (item_type_id, event);

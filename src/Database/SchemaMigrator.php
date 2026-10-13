@@ -14,7 +14,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 6;
+    private const VERSION = 7;
 
     private static bool $done = false;
 
@@ -61,6 +61,11 @@ final class SchemaMigrator
         if ($current < 6) {
             self::applyV6();
             self::mark(6);
+            $current = 6;
+        }
+        if ($current < 7) {
+            self::applyV7();
+            self::mark(7);
         }
     }
 
@@ -564,10 +569,28 @@ final class SchemaMigrator
                 address TEXT NOT NULL DEFAULT "",
                 subject TEXT NOT NULL DEFAULT "",
                 body TEXT NOT NULL DEFAULT "",
-                role_id INTEGER NOT NULL DEFAULT 5
+                role_id INTEGER NOT NULL DEFAULT 5,
+                action_field TEXT NOT NULL DEFAULT "",
+                action_value TEXT NOT NULL DEFAULT ""
             )'
         );
         Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rules_type ON application_rules (item_type_id, event)');
         Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rules_app ON application_rules (application_id)');
+    }
+
+    /**
+     * A rule can set a field or the owner, as well as email or write a log line.
+     */
+    private static function applyV7(): void
+    {
+        if (!Database::tableExists('application_rules')) {
+            return;
+        }
+        if (!Database::columnExists('application_rules', 'action_field')) {
+            Database::exec('ALTER TABLE application_rules ADD COLUMN action_field TEXT NOT NULL DEFAULT ""');
+        }
+        if (!Database::columnExists('application_rules', 'action_value')) {
+            Database::exec('ALTER TABLE application_rules ADD COLUMN action_value TEXT NOT NULL DEFAULT ""');
+        }
     }
 }

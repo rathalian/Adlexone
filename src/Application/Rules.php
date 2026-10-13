@@ -10,7 +10,8 @@ use Adlexone\support\Database;
 /**
  * Per-application workflow rules.
  *
- * A rule is columns: when (event), if (field, operator, value), then (email or log).
+ * A rule is columns: when (event), if (field, operator, value), then
+ * (email, log, set a field, or set the owner).
  * Older action_definitions rows keep their package files and }-{ strings.
  */
 final class Rules
@@ -27,6 +28,10 @@ final class Rules
 
     public const OUTCOME_EMAIL = 'email';
     public const OUTCOME_LOG = 'log';
+    public const OUTCOME_SET_FIELD = 'set_field';
+    public const OUTCOME_SET_OWNER = 'set_owner';
+
+    public const OWNER_CREATOR = 'creator';
 
     public const TO_OWNER = 'owner';
     public const TO_CREATOR = 'creator';
@@ -74,7 +79,62 @@ final class Rules
         return [
             self::OUTCOME_EMAIL => 'Send an email',
             self::OUTCOME_LOG => 'Write a log line',
+            self::OUTCOME_SET_FIELD => 'Set a field',
+            self::OUTCOME_SET_OWNER => 'Set the owner',
         ];
+    }
+
+    /**
+     * Who a "set the owner" rule can assign.
+     *
+     * @return array<string, string> stored value => label
+     */
+    public static function ownerChoices(): array
+    {
+        $choices = [
+            self::OWNER_CREATOR => 'The creator',
+        ];
+        foreach (Database::select('users', ['user_id', 'user_name', 'first_name', 'last_name'], '', [], 'user_name ASC') as $user) {
+            $id = (int) ($user['user_id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $name = trim((string) ($user['user_name'] ?? ''));
+            if ($name === '') {
+                $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
+            }
+            $choices[(string) $id] = $name !== '' ? $name : ('User ' . $id);
+        }
+        return $choices;
+    }
+
+    /**
+     * One line a person can read: when, if, then.
+     *
+     * @param array<string, mixed> $rule
+     * @param array<string, string> $fieldLabels
+     */
+    public static function summary(array $rule, array $fieldLabels): string
+    {
+        $events = self::events();
+        $operators = self::operators();
+        $when = $events[(string) ($rule['event'] ?? '')] ?? (string) ($rule['event'] ?? '');
+        if ((string) ($rule['operator'] ?? '') === self::OP_ALWAYS) {
+            $condition = 'Always';
+        } else {
+            $field = $fieldLabels[(string) ($rule['field_key'] ?? '')] ?? (string) ($rule['field_key'] ?? '');
+            $op = strtolower($operators[(string) ($rule['operator'] ?? '')] ?? (string) ($rule['operator'] ?? ''));
+            $condition = trim($field . ' ' . $op . ' ' . (string) ($rule['match_value'] ?? ''));
+        }
+        $then = match ((string) ($rule['outcome'] ?? '')) {
+            self::OUTCOME_EMAIL => 'Email ' . strtolower(self::recipients()[(string) ($rule['recipient'] ?? '')] ?? 'the owner'),
+            self::OUTCOME_SET_FIELD => 'Set ' . ($fieldLabels[(string) ($rule['action_field'] ?? '')] ?? 'a field')
+                . ' to ' . (string) ($rule['action_value'] ?? ''),
+            self::OUTCOME_SET_OWNER => 'Set the owner to ' . (self::ownerChoices()[(string) ($rule['action_value'] ?? '')] ?? 'a person'),
+            default => 'Write a log line',
+        };
+
+        return $when . '. ' . $condition . '. ' . $then . '.';
     }
 
     /**
@@ -256,14 +316,37 @@ final class Rules
             [$typeId, $event],
             'id ASC'
         );
-        foreach ($rules as $rule) {
-            if (!self::matches($rule, $current, $previous)) {
-                continue;
+        $fired = [];
+        for ($pass = 0; $pass < 4; $pass++) {
+            $moved = false;
+            foreach ($rules as $rule) {
+                $ruleId = (int) ($rule['id'] ?? 0);
+                if ($ruleId > 0 && isset($fired[$ruleId])) {
+                    continue;
+                }
+                if (!self::matches($rule, $current, $previous)) {
+                    continue;
+                }
+                if ($ruleId > 0) {
+                    $fired[$ruleId] = true;
+                }
+                $outcome = (string) ($rule['outcome'] ?? '');
+                if ($outcome === self::OUTCOME_EMAIL) {
+                    self::sendEmail($itemId, $rule, $current);
+                } elseif ($outcome === self::OUTCOME_SET_FIELD) {
+                    if (self::setField($itemId, $rule, $current)) {
+                        $moved = true;
+                    }
+                } elseif ($outcome === self::OUTCOME_SET_OWNER) {
+                    if (self::setOwner($itemId, $rule, $current)) {
+                        $moved = true;
+                    }
+                } else {
+                    self::writeLog($itemId, $rule, $current);
+                }
             }
-            if ((string) $rule['outcome'] === self::OUTCOME_EMAIL) {
-                self::sendEmail($itemId, $rule, $current);
-            } else {
-                self::writeLog($itemId, $rule, $current);
+            if (!$moved) {
+                break;
             }
         }
     }
@@ -287,6 +370,30 @@ final class Rules
         if ($name === '') {
             $name = ($outcomes[$outcome] ?? 'Rule') . ' when ' . strtolower($events[$event] ?? 'updated');
         }
+        if (!isset($outcomes[$outcome])) {
+            $outcome = self::OUTCOME_LOG;
+        }
+
+        $address = '';
+        $subject = '';
+        $body = '';
+        $actionField = '';
+        $actionValue = '';
+        if ($outcome === self::OUTCOME_EMAIL) {
+            $address = trim((string) ($input['address'] ?? ''));
+            $subject = trim((string) ($input['subject'] ?? ''));
+            $body = trim((string) ($input['body'] ?? ''));
+        } elseif ($outcome === self::OUTCOME_LOG) {
+            $body = trim((string) ($input['body'] ?? ''));
+            $recipient = self::TO_OWNER;
+        } elseif ($outcome === self::OUTCOME_SET_FIELD) {
+            $actionField = trim((string) ($input['action_field'] ?? ''));
+            $actionValue = trim((string) ($input['action_value'] ?? ''));
+            $recipient = self::TO_OWNER;
+        } elseif ($outcome === self::OUTCOME_SET_OWNER) {
+            $actionValue = trim((string) ($input['owner_id'] ?? $input['action_value'] ?? ''));
+            $recipient = self::TO_OWNER;
+        }
 
         return [
             'application_id' => $applicationId,
@@ -297,12 +404,14 @@ final class Rules
             'field_key' => trim((string) ($input['field_key'] ?? '')),
             'operator' => isset($operators[$operator]) ? $operator : self::OP_ALWAYS,
             'match_value' => trim((string) ($input['match_value'] ?? '')),
-            'outcome' => isset($outcomes[$outcome]) ? $outcome : self::OUTCOME_LOG,
+            'outcome' => $outcome,
             'recipient' => isset($recipients[$recipient]) ? $recipient : self::TO_OWNER,
-            'address' => trim((string) ($input['address'] ?? '')),
-            'subject' => trim((string) ($input['subject'] ?? '')),
-            'body' => trim((string) ($input['body'] ?? '')),
+            'address' => $address,
+            'subject' => $subject,
+            'body' => $body,
             'role_id' => (int) ($input['role_id'] ?? 5),
+            'action_field' => $actionField,
+            'action_value' => $actionValue,
         ];
     }
 
@@ -342,6 +451,82 @@ final class Rules
             self::OP_BECOMES => $now === $want && $then !== $want,
             default => false,
         };
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $current
+     */
+    private static function setField(int $itemId, array $rule, array &$current): bool
+    {
+        $key = (string) ($rule['action_field'] ?? '');
+        $value = (string) ($rule['action_value'] ?? '');
+        $typeId = (int) ($current['item_type_id'] ?? 0);
+        if ($key === '' || $typeId <= 0) {
+            return false;
+        }
+
+        if ($key === 'item_title') {
+            if ($value === '' || (string) ($current['item_title'] ?? '') === $value) {
+                return false;
+            }
+            Database::update('items', ['item_title' => $value], 'item_id = ?', [$itemId]);
+            $current['item_title'] = $value;
+            self::note($itemId, $rule, 'Title set to ' . $value . '.');
+            return true;
+        }
+
+        $fieldId = ItemFields::fieldIdFromKey($key);
+        if ($fieldId === null) {
+            return false;
+        }
+        $onType = Database::first(
+            'item_type_custom_fields',
+            ['id'],
+            'item_type_id = ? AND custom_field_id = ?',
+            [$typeId, $fieldId]
+        );
+        if ($onType === null || (string) ($current[$key] ?? '') === $value) {
+            return false;
+        }
+        ItemFields::saveFromArray($itemId, [$key => $value]);
+        $current[$key] = $value;
+        $field = Database::first('custom_fields', ['custom_field_name'], 'custom_field_id = ?', [$fieldId]);
+        $label = trim((string) ($field['custom_field_name'] ?? 'Field'));
+        self::note($itemId, $rule, $label . ' set to ' . $value . '.');
+        return true;
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $current
+     */
+    private static function setOwner(int $itemId, array $rule, array &$current): bool
+    {
+        $target = (string) ($rule['action_value'] ?? '');
+        $userId = $target === self::OWNER_CREATOR
+            ? (int) ($current['creator_security'] ?? 0)
+            : (ctype_digit($target) ? (int) $target : 0);
+        if ($userId <= 0 || (int) ($current['user_security'] ?? 0) === $userId) {
+            return false;
+        }
+        if (Database::first('users', ['user_id'], 'user_id = ?', [$userId]) === null) {
+            return false;
+        }
+        Database::update('items', ['user_security' => $userId], 'item_id = ?', [$itemId]);
+        $current['user_security'] = $userId;
+        $name = self::userName($userId);
+        self::note($itemId, $rule, 'Owner set to ' . ($name !== '' ? $name : ('user ' . $userId)) . '.');
+        return true;
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     */
+    private static function note(int $itemId, array $rule, string $text): void
+    {
+        $rule['body'] = $text;
+        self::writeLog($itemId, $rule, ['item_title' => '', 'creator_security' => 0, 'user_security' => 0]);
     }
 
     /**

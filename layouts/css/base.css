@@ -352,7 +352,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .input,.textarea,.select,.login-panel .input,.text{
     box-sizing:border-box;
     width:100%; max-width:100%; min-width:0; background:#fff;
-    border:1.5px solid var(--border); border-radius:6px; padding:9px 12px; color:var(--input);
+    border:1px solid var(--form-border); border-radius:6px; padding:9px 12px; color:var(--input);
     transition: box-shadow .15s, border-color .15s, background .15s;
 }
 .input::placeholder,.textarea::placeholder{ color:var(--placeholder); }
@@ -541,13 +541,14 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 }
 .launchpad__grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns:repeat(auto-fill, minmax(min(100%, 240px), 320px));
     gap:12px;
+    justify-content:start;
 }
 .launch-tile{
     display:flex; align-items:center; gap:14px;
     min-height:72px; padding:14px 16px;
-    border:1.5px solid var(--border); border-radius:10px;
+    border:1px solid var(--border); border-radius:10px;
     background:#fff; color:inherit; text-decoration:none;
     transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
@@ -583,7 +584,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .launchpad__intro--illustrated .empty-state{
     align-items:flex-start; text-align:left;
     padding:22px 24px;
-    border:1.5px solid var(--border);
+    border:1px solid var(--border);
     border-radius:12px;
     background:#fff;
 }
@@ -668,7 +669,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .builder__form{ min-width:0; }
 .builder__panel{
     background:#fff;
-    border:1.5px solid var(--border);
+    border:1px solid var(--border);
     border-radius:12px;
     padding:20px;
 }
@@ -690,7 +691,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .builder__name{ font-size:16px; font-weight:600; }
 .builder__link{
     display:flex; align-items:center; min-width:0;
-    border:1.5px solid var(--border); border-radius:6px; background:#fff;
+    border:1px solid var(--border); border-radius:6px; background:#fff;
 }
 .builder__link:focus-within{ border-color:var(--brand); box-shadow:0 0 0 3px var(--ring); }
 .builder__link-prefix{
@@ -710,7 +711,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .builder__blueprint{
     display:flex; flex-direction:column; gap:4px;
     position:relative; margin:0; padding:14px;
-    border:1.5px solid var(--border); border-radius:10px;
+    border:1px solid var(--border); border-radius:10px;
     background:#fff; cursor:pointer;
 }
 .builder__blueprint input{
@@ -735,7 +736,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .builder__choice{
     display:flex; align-items:flex-start; gap:10px;
     margin:0; padding:12px;
-    border:1.5px solid var(--border); border-radius:10px;
+    border:1px solid var(--border); border-radius:10px;
     background:#fff; cursor:pointer;
 }
 .builder__choice input{
@@ -777,7 +778,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .builder__icon{
     display:flex; flex-direction:column; align-items:center; gap:6px;
     position:relative; margin:0; padding:10px 6px;
-    border:1.5px solid var(--border); border-radius:10px;
+    border:1px solid var(--border); border-radius:10px;
     background:#fff; cursor:pointer; text-align:center;
 }
 .builder__icon input{
@@ -972,7 +973,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     gap: 12px;
     width: 100%;
     padding: 28px 24px;
-    border: 1.5px solid var(--border);
+    border: 1px solid var(--border);
     border-radius: 12px;
     background:#fff;
     box-shadow:0 12px 32px rgba(15,23,42,.1);
@@ -1193,6 +1194,116 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     .record-list__bar .btn--primary{ margin-left:0; }
     .record-list__tools{ margin-left:0; }
     .record-list__search{ max-width:none; flex-basis:100%; }
+}
+
+.work-stand{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:0 0 16px;
+}
+a.work-stand__bucket{
+    display:block;
+    min-width:5.5rem;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--page-bg);
+    text-decoration:none;
+    color:inherit;
+}
+a.work-stand__bucket:hover{ background:var(--hover); }
+a.work-stand__bucket.is-selected{
+    border-color:var(--brand);
+    background:var(--hover);
+}
+.work-stand__num{
+    display:block;
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:-0.03em;
+    line-height:1.1;
+}
+.work-stand__label{
+    display:block;
+    margin-top:2px;
+    font-size:12px;
+    color:var(--placeholder);
+}
+
+.work-board{
+    display:flex;
+    gap:12px;
+    overflow-x:auto;
+    align-items:stretch;
+    margin:0 0 20px;
+    padding-bottom:4px;
+}
+.work-board__col{
+    display:flex;
+    flex-direction:column;
+    flex:1 0 200px;
+    min-width:200px;
+    max-width:280px;
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--page-bg);
+}
+.work-board__col.is-over{
+    border-color:var(--brand);
+    background:var(--hover);
+}
+.work-board__head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:8px;
+    font-size:12px;
+    font-weight:700;
+}
+.work-board__count{
+    color:var(--placeholder);
+    font-variant-numeric:tabular-nums;
+}
+.work-board__cards{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    flex:1;
+    min-height:4.5rem;
+}
+.work-card{
+    padding:10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--panel);
+    cursor:grab;
+}
+.work-card.is-dragging{ opacity:.55; }
+.work-card__title{
+    display:block;
+    font-weight:700;
+    text-decoration:none;
+    color:inherit;
+}
+.work-card__owner,
+.work-card__log{
+    margin:4px 0 0;
+    font-size:12px;
+    line-height:1.35;
+    color:var(--placeholder);
+}
+.work-card__move{
+    display:block;
+    margin-top:8px;
+    font-size:12px;
+    color:var(--placeholder);
+}
+.work-card__move select{
+    margin-left:4px;
+    max-width:100%;
 }
 
 .form-grid{

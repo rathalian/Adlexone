@@ -7,7 +7,7 @@
     --brand2:#115e59;
     --text:#0f172a;
     --panel:#ffffff;
-    --border:#78716c;
+    --border:#e4ddd4;
     --hover:rgba(15, 118, 110, 0.12);
     --ring:rgba(15, 118, 110, 0.40);
     --title:#292524;
@@ -15,16 +15,16 @@
     --body:#1c1917;
     --input:#0f172a;
     --placeholder:#57534e;
-    --title-strip:#d6d3d1;
-    --title-strip-border:#78716c;
+    --title-strip:#f3efe8;
+    --title-strip-border:#e4ddd4;
     --title-size:11.5px;
     --title-weight:700;
     --title-tracking:.045em;
     --form-surface:#ffffff;
-    --form-border:#78716c;
+    --form-border:#d4cdc3;
     --form-hover-shadow:0 0 0 3px rgba(15, 118, 110, 0.18);
-    --page-bg:#d6d0c4;
-    --brandbar-border:#57534e;
+    --page-bg:#f7f5f1;
+    --brandbar-border:#e8e2da;
     --brandmaker:#44403c;
     --btn-primary-hover:#0d5c56;
 }

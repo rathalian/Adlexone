@@ -126,11 +126,14 @@ final class ItemFields
     public static function withoutFieldColumns(array $data): array
     {
         foreach (array_keys($data) as $key) {
-            if (is_string($key) && preg_match('/^custom_field_\d+$/', $key)) {
+            if (!is_string($key)) {
+                continue;
+            }
+            if (preg_match('/^custom_field_\d+$/', $key) === 1 || str_starts_with($key, 'group_')) {
                 unset($data[$key]);
             }
         }
-        unset($data['group_security']);
+        unset($data['group_security'], $data['_csrf']);
         return $data;
     }
 

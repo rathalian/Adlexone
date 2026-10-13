@@ -83,8 +83,6 @@ function frameOneRulesHtml(string $slug): string
     $applicationId = (int) $app['application_id'];
     $typeIds = AppSettings::allowedItemTypeIds($slug);
     $fields = Rules::fieldChoices($typeIds);
-    $events = Rules::events();
-    $operators = Rules::operators();
     $outcomes = Rules::outcomes();
 
     $grouped = [];
@@ -100,13 +98,7 @@ function frameOneRulesHtml(string $slug): string
         foreach ($rows as $rule) {
             $name = (string) $rule['name'];
             $id = (int) $rule['id'];
-            $when = $events[(string) $rule['event']] ?? (string) $rule['event'];
-            $condition = (string) $rule['operator'] === Rules::OP_ALWAYS
-                ? 'Always'
-                : ($fields[(string) $rule['field_key']] ?? (string) $rule['field_key'])
-                    . ' ' . strtolower($operators[(string) $rule['operator']] ?? (string) $rule['operator'])
-                    . ' ' . (string) $rule['match_value'];
-            $description = $when . '. ' . $condition . '.';
+            $description = Rules::summary($rule, $fields);
             if ((int) $rule['enabled'] !== 1) {
                 $description = 'Off. ' . $description;
             }
@@ -178,12 +170,16 @@ function showFrameOneRuleForm(string $slug, ?int $ruleId): void
     }
 
     $fields = Rules::fieldChoices($typeIds);
+    $setFields = $fields;
+    unset($setFields['']);
     $events = Rules::events();
     $operators = Rules::operators();
     $outcomes = Rules::outcomes();
+    $owners = Rules::ownerChoices();
     $editing = $rule !== null;
     $selectedType = (string) ($rule['item_type_id'] ?? ($typeValues[0] ?? ''));
     $enabled = $editing && (int) $rule['enabled'] !== 1 ? 'No' : 'Yes';
+    $outcome = (string) ($rule['outcome'] ?? Rules::OUTCOME_EMAIL);
 
     $formFields = [
         'Name' => RenderViews::buildTextInput('name', (string) ($rule['name'] ?? ''), 'Email the owner when priority is high'),
@@ -193,7 +189,10 @@ function showFrameOneRuleForm(string $slug, ?int $ruleId): void
         'If' => RenderViews::buildSelectDropdown('operator', array_keys($operators), array_values($operators), (string) ($rule['operator'] ?? Rules::OP_BECOMES))
             . ' ' . RenderViews::buildSelectDropdown('field_key', array_keys($fields), array_values($fields), (string) ($rule['field_key'] ?? ''))
             . ' ' . RenderViews::buildTextInput('match_value', (string) ($rule['match_value'] ?? ''), 'High'),
-        'Then' => RenderViews::buildSelectDropdown('outcome', array_keys($outcomes), array_values($outcomes), (string) ($rule['outcome'] ?? Rules::OUTCOME_EMAIL)),
+        'Then' => RenderViews::buildSelectDropdown('outcome', array_keys($outcomes), array_values($outcomes), $outcome),
+        'Set field' => RenderViews::buildSelectDropdown('action_field', array_keys($setFields), array_values($setFields), (string) ($rule['action_field'] ?? '')),
+        'Set to' => RenderViews::buildTextInput('action_value', $outcome === Rules::OUTCOME_SET_FIELD ? (string) ($rule['action_value'] ?? '') : '', 'Closed'),
+        'Owner' => RenderViews::buildSelectDropdown('owner_id', array_keys($owners), array_values($owners), (string) ($rule['action_value'] ?? Rules::OWNER_CREATOR)),
         'Email to' => RenderViews::buildSelectDropdown('recipient', array_keys(Rules::recipients()), array_values(Rules::recipients()), (string) ($rule['recipient'] ?? Rules::TO_OWNER))
             . ' ' . RenderViews::buildTextInput('address', (string) ($rule['address'] ?? ''), 'name@example.com'),
         'Subject' => RenderViews::buildTextInput('subject', (string) ($rule['subject'] ?? ''), 'ITEM_TITLE'),
@@ -211,7 +210,31 @@ function showFrameOneRuleForm(string $slug, ?int $ruleId): void
             RenderViews::buildFormButton('submit', 'submit_button', $editing ? 'Save' : 'Add rule'),
             RenderViews::buildFormButton('button', '', 'Back', 'onclick="location.href=\'' . MAN_BASE_URL . '&option=settings\'"', 'secondary'),
         ]
-    ));
+    ) . '<script>
+(function () {
+    var outcome = document.querySelector("select[name=outcome]");
+    if (!outcome) return;
+    var rows = {
+        email: ["Email to", "Subject", "Message"],
+        log: ["Message"],
+        set_field: ["Set field", "Set to"],
+        set_owner: ["Owner"]
+    };
+    var gated = ["Email to", "Subject", "Message", "Set field", "Set to", "Owner"];
+    function sync() {
+        var show = rows[outcome.value] || [];
+        document.querySelectorAll(".form-grid .field").forEach(function (field) {
+            var label = field.querySelector(".label");
+            if (!label) return;
+            var name = label.textContent.trim();
+            if (gated.indexOf(name) === -1) return;
+            field.hidden = show.indexOf(name) === -1;
+        });
+    }
+    outcome.addEventListener("change", sync);
+    sync();
+})();
+</script>');
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 

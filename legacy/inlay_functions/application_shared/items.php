@@ -34,6 +34,7 @@ use Adlexone\support\Actions;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
+use Adlexone\Data\ItemFields;
 
 if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
     AppAccess::requireUse();
@@ -77,6 +78,35 @@ function userCanAccessItem(int $itemId): bool
 function syncItemGroupsFromSecurity(int $itemId, ?string $encoded): void
 {
     GroupMembership::setItemGroups($itemId, GroupMembership::parseDelimited($encoded));
+}
+
+/**
+ * Checkbox list of groups. Checked ids are the item type's groups, or the boxes the person already ticked.
+ *
+ * @param list<int> $selectedIds
+ */
+function itemGroupPicker(array $selectedIds): string
+{
+    $selected = array_map('strval', $selectedIds);
+    $rows = Database::select('groups', ['group_id', 'group_name', 'description'], '', [], 'group_name ASC');
+    $list = '<div class="group-security-list">';
+    foreach ($rows as $row) {
+        $groupId = (string) $row['group_id'];
+        $checked = in_array($groupId, $selected, true) ? $groupId : '';
+        $list .= '<div class="group-security-item">'
+            . RenderViews::buildCheckBox('group_' . $groupId, $groupId, $checked, 'checkbox', (string) $row['group_name']);
+        $description = trim((string) ($row['description'] ?? ''));
+        if ($description !== '') {
+            $list .= '<div class="record-list__meta">' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+        $list .= '</div>';
+    }
+    if ($rows === []) {
+        $list .= '<p class="record-list__empty">No groups yet.</p>';
+    }
+    $list .= '</div>';
+
+    return $list;
 }
 
 /**
@@ -541,42 +571,11 @@ function showItemAdd($itemTypeID, $values)
             $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = RenderViews::buildHiddenInput('user_security', $itemTypeFields['user_security']) . $row['user_name'];
         }
     }
-    // Create group membership list
-    $groupMembership = '';
-    $groupSecurity = \Adlexone\Data\GroupMembership::toDelimited(
-        \Adlexone\Data\GroupMembership::itemTypeGroupIds((int) ($itemTypeFields['item_type_id'] ?? 0))
-    );
-    if ($groupSecurity !== '') {
-        $groupArray = explode('}-{', $groupSecurity);
-        $i = 0;
-        $condition = '';
-        foreach ($groupArray as $a) {
-            if ($a === '') {
-                continue;
-            }
-            if ($i == 0) {
-                $condition = "WHERE group_id='" . $a . "'";
-            } else {
-                $condition .= " OR group_id='" . $a . "'";
-            }
-            $i++;
-        }
-        if ($condition !== '') {
-            $columnArray = array('group_id', 'group_name');
-            $result = Database::select('groups', $columnArray, $condition);
-            $i = 0;
-            foreach ($result as $row) {
-                if ($i == 0) {
-                    $groupMembership = $row['group_name'];
-                } else {
-                    $groupMembership .= ', ' . $row['group_name'];
-                }
-                $i++;
-            }
-        }
-    }
-    $fields[TXT_270] = '<div class="readonly-value">' . htmlspecialchars($groupMembership, ENT_QUOTES, 'UTF-8') . '</div>'
-        . RenderViews::buildHiddenInput('group_security', $groupSecurity);
+    // Groups the record belongs to. The item type's groups start checked.
+    $selectedGroups = isset($values['user_security'])
+        ? GroupMembership::idsFromPost($values)
+        : GroupMembership::itemTypeGroupIds((int) $itemTypeID);
+    $fields[TXT_270] = itemGroupPicker($selectedGroups);
     $fields[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildTextInput('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
     $columnArray = array('custom_field_id');
     $condition = "WHERE item_type_id = '" . $itemTypeID . "' ORDER BY custom_field_order ASC";
@@ -866,28 +865,20 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
             }
             if ($itemRole < 4) {
                 // Create group membership list
-                $groupArray = $itemGroupIds;
-                $i = 0;
-                foreach ($groupArray as $a) {
-                    if ($i == 0) {
-                        $condition = "WHERE group_id='" . $a . "'";
-                    } else {
-                        $condition .= "OR group_id='" . $a . "'";
-                    }
-                    $i++;
-                }
-                $columnArray = array('group_id', 'group_name');
-                $result = Database::select('groups', $columnArray, $condition);
-                $i = 0;
+                $groupArray = array_values(array_filter(array_map('intval', $itemGroupIds)));
                 $groupMembership = '';
-                foreach ($result as $row) {
-                    if ($i == 0) {
-                        $groupMembership = $row['group_name'];
-                    } else {
-                        $groupMembership .= ', ' . $row['group_name'];
+                if ($groupArray !== []) {
+                    $result = Database::select(
+                        'groups',
+                        ['group_id', 'group_name'],
+                        'group_id IN (' . implode(',', $groupArray) . ')'
+                    );
+                    $names = [];
+                    foreach ($result as $row) {
+                        $names[] = (string) $row['group_name'];
                     }
-                    $i++;
-                }// while
+                    $groupMembership = implode(', ', $names);
+                }
                 $changeSecurityURL = RenderViews::buildURL(
                     'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $itemID,
                     TXT_268,
@@ -1201,7 +1192,13 @@ function addItem()
         $array = [];
         $array['create_date'] = time();
         $array['core_log_updated'] = time();
-        unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id']);
+        $groupIds = GroupMembership::idsFromPost($_POST);
+        unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id'], $_POST['_csrf']);
+        foreach (array_keys($_POST) as $postKey) {
+            if (str_starts_with((string) $postKey, 'group_')) {
+                unset($_POST[$postKey]);
+            }
+        }
         MenuOptions::collapseRequest($_POST);
         $dbArray = [];
         foreach ($_POST as $key => $value) {
@@ -1214,10 +1211,7 @@ function addItem()
         $insertArray = ItemFields::withoutFieldColumns($insertArray);
         $itemId = Database::insert('items', $insertArray);
         ItemFields::saveFromArray($itemId, $fieldPayload);
-        GroupMembership::setItemGroups(
-            $itemId,
-            GroupMembership::parseDelimited((string) ($fieldPayload['group_security'] ?? ''))
-        );
+        GroupMembership::setItemGroups($itemId, $groupIds);
         if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') != '') {
             addAttachment($itemId, false, false);
             Actions::executeAction($itemId, 'item_attachment', false);
@@ -1320,7 +1314,7 @@ function updateItem($itemID)
         showItem($_POST['item_id'], $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
     } else {
         // Remove unwanted posted information
-        unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id']);
+        unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id'], $_POST['_csrf']);
         MenuOptions::collapseRequest($_POST);
         // Handle the log update
         if (isset($_POST['log_entry']) and $_POST['log_entry'] != '') {
