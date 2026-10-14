@@ -24,7 +24,6 @@ define('SET_INSTALL_PATH', $baseDir);
 define('SET_CONFIGURATION_PATH', $baseDir . 'config' . DIRECTORY_SEPARATOR);
 define('SET_ATTACHMENTS_PATH', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
 define('DSN', 'sqlite:' . $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
-define('SET_WRITEABLE_DIRECTORY', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'writeable' . DIRECTORY_SEPARATOR);
 
 // Shared platform schema (app packs must not own tables).
 \Adlexone\Database\SchemaMigrator::migrate();
@@ -132,16 +131,7 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     } else {
         define('SET_THEME', \Adlexone\Theme\Theme::canonicalize((string) SET_DEFAULT_THEME));
     }
-    // Set other user defined constants
-    define('SET_DEFAULT_PAGE', $_SESSION['access_home_controller']); //Softwares Default Page
-    define('SET_HOME_PAGE', $_SESSION['access_home_controller']); //Users home page
-    define('SET_LANGUAGE', $_SESSION['access_language']); //Users language
     define('SET_IMAGE_PATH', \Adlexone\Theme\Theme::imagePath());
-    if ($_SESSION['access_show_graphics'] === 'Yes') {
-        define('SET_SHOW_IMAGES', 'Yes');
-    } else {
-        define('SET_SHOW_IMAGES', 'No');
-    }
 // Load all language files from translations directory and subdirectories
     $translationsDir = SET_INSTALL_PATH . 'translations/';
     $iterator = new RecursiveIteratorIterator(

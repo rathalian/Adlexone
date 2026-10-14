@@ -26,9 +26,7 @@
 (phpversion() >= "8.0") or exit ('ERROR: You must have PHP Verson 8.0 or higher installed');
 //***** Initialize Adlexone - source / full version build
 define('VERSION','3.0');
-define('TYPE','');
 define('LAYOUT_PATH', 'layouts/');
-define('SITE_PATH', 'site/');
 define('THEME_PATH', 'site/themes/');
 define('SITE_APPS_PATH', 'site/apps/');
 include 'bootstrap/bootstrap.php'; #Allows viewing of source

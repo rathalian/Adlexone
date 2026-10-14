@@ -75,7 +75,7 @@ namespace Adlexone\support {
    */
   public static function saveSettingsToJson(string $jsonPath, array $settingsArray): bool
   {
-      unset($_POST['submit_button']);
+      unset($settingsArray['submit_button'], $settingsArray['reset'], $settingsArray['_csrf'], $settingsArray['SET_HOME_TITLE']);
       // Iterate through the settings array and trim double quotes from string values
       foreach ($settingsArray as &$value) {
           if (is_string($value)) {

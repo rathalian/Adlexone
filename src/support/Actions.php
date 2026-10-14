@@ -40,7 +40,6 @@ class Actions
 	{
 		Rules::run((int) $itemID, (string) $requestingAction);
 		if ($showResponse === true) {
-			define('HEADING', 'Rules');
 			define('BODY_CONTENT', 'Rules for this record have run.');
 			RenderViews::renderPage('main_page_content', SET_THEME);
 		}

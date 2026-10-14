@@ -283,7 +283,6 @@ switch (@$_GET['option']) {
         $settings = array_merge($existing, $posted);
         $settings['SET_DEFAULT_THEME'] = defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'inlay-stone';
         $settings['SET_DEFAULT_LANGUAGE'] = defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English';
-        unset($settings['SET_HOME_TITLE']);
         $settings['SET_HOME_LEAD'] = trim((string) ($posted['SET_HOME_LEAD'] ?? $existing['SET_HOME_LEAD'] ?? 'Create the records, rules, and screens your organisation works with every day.'));
         SharedMethods::saveSettingsToJson($path, $settings);
         break;

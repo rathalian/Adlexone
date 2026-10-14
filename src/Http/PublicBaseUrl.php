@@ -17,7 +17,7 @@ final class PublicBaseUrl
 {
     /**
      * @param array<string, mixed> $server
-     * @return array{base: string, script: string}
+     * @return array{base: string}
      */
     public static function resolve(array $server): array
     {
@@ -25,12 +25,8 @@ final class PublicBaseUrl
         $pathPrefix = self::pathPrefix($scriptName);
         $origin = self::configuredOrigin() ?? self::detectedOrigin($server);
 
-        $base = $origin . $pathPrefix;
-        $script = $origin . $scriptName;
-
         return [
-            'base' => $base,
-            'script' => $script,
+            'base' => $origin . $pathPrefix,
         ];
     }
 
@@ -42,9 +38,6 @@ final class PublicBaseUrl
         $resolved = self::resolve($server ?? $_SERVER);
         if (!defined('BASE_URL')) {
             define('BASE_URL', $resolved['base']);
-        }
-        if (!defined('FULL_SCRIPT_PATH')) {
-            define('FULL_SCRIPT_PATH', $resolved['script']);
         }
     }
 

@@ -303,9 +303,6 @@ final class Capabilities
         if (!defined('MAN_BASE_URL')) {
             define('MAN_BASE_URL', $base);
         }
-        if (!defined('CONTROLLER_BASEURL')) {
-            define('CONTROLLER_BASEURL', $base);
-        }
         $_SESSION['application_slug'] = $slug;
     }
 

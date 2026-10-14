@@ -107,7 +107,6 @@ function addUpdateMenuValue($customFieldID)
             $html = TXT_294;
             $html .= '<br><br><a href ="' . FIELDS_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
             define('BODY_CONTENT', $html);
-            define('HEADING', TXT_139);
             RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
