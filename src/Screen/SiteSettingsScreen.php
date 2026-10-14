@@ -10,7 +10,7 @@ use Adlexone\support\SharedMethods;
 /**
  * Screen formerly loaded from legacy/.
  */
-final class SettingsScreen
+final class SiteSettingsScreen
 {
     public static function open(): void
     {
@@ -47,7 +47,7 @@ final class SettingsScreen
                 if (!isset($themes[$theme])) {
                     RenderViews::buildResponse(
                         'Choose an installed theme.',
-                        RenderViews::buildURL('index.php?manage=settings&option=theme_settings', 'Theme', 'URL')
+                        RenderViews::buildURL('?manage=settings&option=theme_settings', 'Theme', 'URL')
                     );
                     break;
                 }
@@ -56,7 +56,7 @@ final class SettingsScreen
                 if (!is_array($decoded)) {
                     RenderViews::buildResponse(
                         'Theme settings could not be read.',
-                        RenderViews::buildURL('index.php?manage=settings&option=theme_settings', 'Theme', 'URL')
+                        RenderViews::buildURL('?manage=settings&option=theme_settings', 'Theme', 'URL')
                     );
                     break;
                 }
@@ -164,7 +164,7 @@ final class SettingsScreen
                 break;
             default :
                 RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-                RenderViews::buildResponse('Invalid Option', RenderViews::buildURL('index.php?manage=settings&option=adlexone_settings', TXT_55, 'URL'));
+                RenderViews::buildResponse('Invalid Option', RenderViews::buildURL('?manage=settings&option=adlexone_settings', TXT_55, 'URL'));
                 break;
         }
     }
@@ -204,7 +204,7 @@ final class SettingsScreen
         $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'Create the records, rules, and screens your organisation works with every day.';
         $fields['Home page blurb'] = RenderViews::buildTextArea('SET_HOME_LEAD', $homeLead, '3');
         $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-        $bodyContent = RenderViews::buildForm(TXT_42,'index.php?manage=settings&option=update_adlexone_settings',$fields,$buttons);
+        $bodyContent = RenderViews::buildForm(TXT_42,'?manage=settings&option=update_adlexone_settings',$fields,$buttons);
         define('BODY_CONTENT', $bodyContent);
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
@@ -216,7 +216,7 @@ final class SettingsScreen
         $fields[TXT_351] = RenderViews::buildSelectDropdown('SET_SHOW_SQL', array('Yes', 'No'), array(TXT_93, TXT_94), SET_SHOW_SQL);
         $fields[TXT_205] = RenderViews::buildSelectDropdown('SET_ERROR_REPORTING_LEVEL', array('6135', '6143'), array(TXT_504, TXT_207), SET_ERROR_REPORTING_LEVEL);
         $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
-        $bodyContent = RenderViews::buildForm(TXT_130,'index.php?manage=settings&option=update_advanced_settings',$fields,$buttons);
+        $bodyContent = RenderViews::buildForm(TXT_130,'?manage=settings&option=update_advanced_settings',$fields,$buttons);
         define('BODY_CONTENT', $bodyContent);
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
@@ -261,7 +261,7 @@ final class SettingsScreen
 
         define('BODY_CONTENT', RenderViews::buildForm(
             'Sign-in',
-            'index.php?manage=settings&option=update_sign_in_settings',
+            '?manage=settings&option=update_sign_in_settings',
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
         ));
@@ -292,7 +292,7 @@ final class SettingsScreen
         ];
         define('BODY_CONTENT', RenderViews::buildForm(
             'Theme',
-            'index.php?manage=settings&option=update_theme_settings',
+            '?manage=settings&option=update_theme_settings',
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
         ));
@@ -312,7 +312,7 @@ final class SettingsScreen
         ];
         define('BODY_CONTENT', RenderViews::buildForm(
             TXT_565,
-            'index.php?manage=settings&option=update_email_settings',
+            '?manage=settings&option=update_email_settings',
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
         ));

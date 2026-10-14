@@ -5,72 +5,72 @@ namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Rules;
-use Adlexone\FrameOne\AppAccess;
-use Adlexone\FrameOne\AppSettings;
+use Adlexone\Application\ApplicationAccess;
+use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 
 /**
  * Screen formerly loaded from legacy/.
  */
-final class AppSettingsScreen
+final class ApplicationSettingsScreen
 {
     /**
-     * FrameOne per-app settings (default item type for Create / Advanced search shortcuts).
+     * Settings for the application that is open: default record type and rules.
      */
-    public static function openFrameOneAppSettings(): void
+    public static function open(): void
     {
-        $slug = AppAccess::slug();
+        $slug = ApplicationAccess::slug();
         if ($slug === '') {
             RenderViews::buildResponse('Open settings from inside an application.');
             return;
         }
-        if (!AppAccess::canSettings()) {
+        if (!ApplicationAccess::canSettings()) {
             \Adlexone\Auth\Access::deny();
         }
 
         switch ((string) ($_GET['option'] ?? 'settings')) {
             case 'update_settings':
-                self::updateFrameOneAppSettings($slug);
+                self::save($slug);
                 break;
             case 'new_rule':
-                self::showFrameOneRuleForm($slug, null);
+                self::showRuleForm($slug, null);
                 break;
             case 'edit_rule':
-                self::showFrameOneRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
+                self::showRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
                 break;
             case 'add_rule':
-                self::saveFrameOneRule($slug, 0);
+                self::saveRule($slug, 0);
                 break;
             case 'update_rule':
-                self::saveFrameOneRule($slug, (int) ($_POST['rule_id'] ?? 0));
+                self::saveRule($slug, (int) ($_POST['rule_id'] ?? 0));
                 break;
             case 'delete_rule':
-                self::deleteFrameOneRule($slug);
+                self::deleteRule($slug);
                 break;
             case 'toggle_rule':
-                self::toggleFrameOneRule($slug);
+                self::toggleRule($slug);
                 break;
             case 'duplicate_rule':
-                self::duplicateFrameOneRule($slug);
+                self::duplicateRule($slug);
                 break;
             case 'move_rule':
-                self::moveFrameOneRule($slug);
+                self::moveRule($slug);
                 break;
             case 'try_rule':
-                self::showFrameOneRuleTry($slug, false);
+                self::tryRule($slug, false);
                 break;
             case 'run_rule':
-                self::showFrameOneRuleTry($slug, true);
+                self::tryRule($slug, true);
                 break;
             case 'settings':
             default:
-                self::showFrameOneAppSettings($slug);
+                self::show($slug);
                 break;
         }
     }
 
-    public static function showFrameOneAppSettings(string $slug): void
+    public static function show(string $slug): void
     {
         $valueArray = [''];
         $displayArray = ['— none —'];
@@ -78,7 +78,7 @@ final class AppSettingsScreen
             $valueArray[] = (string) $row['item_type_id'];
             $displayArray[] = (string) $row['item_type_name'];
         }
-        $current = AppSettings::defaultItemTypeId($slug);
+        $current = ApplicationSettings::defaultItemTypeId($slug);
 
         $html = RenderViews::buildForm(
             'Application settings',
@@ -91,14 +91,14 @@ final class AppSettingsScreen
                 RenderViews::buildFormButton('reset', 'reset', 'Reset'),
             ]
         );
-        $html .= self::frameOneRulesHtml($slug);
+        $html .= self::rulesHtml($slug);
         define('BODY_CONTENT', $html);
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function rulesFormAction(string $slug, string $option): string
     {
-        $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('index.php?application=' . rawurlencode($slug));
+        $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('?application=' . rawurlencode($slug));
         return $base . '&option=' . $option . '&app=' . rawurlencode($slug);
     }
 
@@ -107,18 +107,18 @@ final class AppSettingsScreen
         if (defined('RULES_HOME_URL')) {
             return RULES_HOME_URL;
         }
-        $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('index.php?application=' . rawurlencode($slug));
+        $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('?application=' . rawurlencode($slug));
         return $base . '&option=settings';
     }
 
-    public static function frameOneRulesHtml(string $slug): string
+    public static function rulesHtml(string $slug): string
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
             return '';
         }
         $applicationId = (int) $app['application_id'];
-        $typeIds = AppSettings::allowedItemTypeIds($slug);
+        $typeIds = ApplicationSettings::allowedItemTypeIds($slug);
         $fields = Rules::fieldChoices($typeIds);
         $typeNames = self::ruleTypeNames($typeIds);
 
@@ -219,7 +219,7 @@ final class AppSettingsScreen
         return $names;
     }
 
-    public static function showFrameOneRuleForm(string $slug, ?int $ruleId): void
+    public static function showRuleForm(string $slug, ?int $ruleId): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -236,7 +236,7 @@ final class AppSettingsScreen
             }
         }
 
-        $typeIds = AppSettings::allowedItemTypeIds($slug);
+        $typeIds = ApplicationSettings::allowedItemTypeIds($slug);
         $typeNames = self::ruleTypeNames($typeIds);
         if ($rule !== null && !isset($typeNames[(int) $rule['item_type_id']])) {
             $typeId = (int) $rule['item_type_id'];
@@ -606,7 +606,7 @@ final class AppSettingsScreen
         return RenderViews::buildVerticalCards([['title' => 'Recent runs', 'html' => $html]]);
     }
 
-    public static function showFrameOneRuleTry(string $slug, bool $execute): void
+    public static function tryRule(string $slug, bool $execute): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -677,7 +677,7 @@ final class AppSettingsScreen
 
     public static function ruleTypeAllowed(string $slug, int $typeId, int $ruleId): bool
     {
-        if (AppSettings::allowsItemType($slug, $typeId)) {
+        if (ApplicationSettings::allowsItemType($slug, $typeId)) {
             return true;
         }
         if ($typeId <= 0 || Database::first('item_types', ['item_type_id'], 'item_type_id = ?', [$typeId]) === null) {
@@ -693,7 +693,7 @@ final class AppSettingsScreen
         return defined('RULES_HOME_URL');
     }
 
-    public static function saveFrameOneRule(string $slug, int $ruleId): void
+    public static function saveRule(string $slug, int $ruleId): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -714,7 +714,7 @@ final class AppSettingsScreen
         exit;
     }
 
-    public static function deleteFrameOneRule(string $slug): void
+    public static function deleteRule(string $slug): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -726,7 +726,7 @@ final class AppSettingsScreen
         exit;
     }
 
-    public static function toggleFrameOneRule(string $slug): void
+    public static function toggleRule(string $slug): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -741,7 +741,7 @@ final class AppSettingsScreen
         exit;
     }
 
-    public static function duplicateFrameOneRule(string $slug): void
+    public static function duplicateRule(string $slug): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -756,7 +756,7 @@ final class AppSettingsScreen
         exit;
     }
 
-    public static function moveFrameOneRule(string $slug): void
+    public static function moveRule(string $slug): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
@@ -768,11 +768,11 @@ final class AppSettingsScreen
         exit;
     }
 
-    public static function updateFrameOneAppSettings(string $slug): void
+    public static function save(string $slug): void
     {
-        $settings = AppSettings::get($slug);
+        $settings = ApplicationSettings::get($slug);
         $settings['default_item_type_id'] = trim((string) ($_POST['default_item_type_id'] ?? ''));
-        AppSettings::put($slug, $settings);
+        ApplicationSettings::put($slug, $settings);
         header('Location: ' . MAN_BASE_URL . '&option=settings');
         exit;
     }

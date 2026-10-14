@@ -1,15 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\FrameOne;
+namespace Adlexone\Application;
 
-use Adlexone\Application\ApplicationStore;
 use Adlexone\support\Database;
 
 /**
- * Per-application settings stored on applications.settings_json.
+ * Settings stored on applications.settings_json for one application.
  */
-final class AppSettings
+final class ApplicationSettings
 {
     /**
      * @return array<string, mixed>
@@ -49,8 +48,8 @@ final class AppSettings
     }
 
     /**
-     * Record types this application is allowed to create/search/list.
-     * Drawn from settings default + nav link configs.
+     * Record types this application may create, search, and list.
+     * Taken from the default item type and from navigation link config.
      *
      * @return list<int>
      */

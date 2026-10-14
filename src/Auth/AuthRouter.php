@@ -32,7 +32,7 @@ final class AuthRouter
     private static function logoff(): never
     {
         AuthSession::clear();
-        header('Location: ' . rtrim((string) BASE_URL, '/') . '/index.php');
+        header('Location: ' . rtrim((string) BASE_URL, '/') . '/');
         exit;
     }
 

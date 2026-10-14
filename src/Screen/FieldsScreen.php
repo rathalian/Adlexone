@@ -18,7 +18,7 @@ final class FieldsScreen
     {
         MenuOptions::prepare();
         RenderNavigation::applySectionNav('Fields', RenderNavigation::itemSettingsURLs());
-        define('FIELDS_BASE_URL', 'index.php?manage=fields');
+        define('FIELDS_BASE_URL', '?manage=fields');
 
 
 
@@ -140,14 +140,14 @@ final class FieldsScreen
     public static function showCustomField($customFieldID = '', $values = '')
     {
         if ($customFieldID == '') {
-            $formAction = 'index.php?manage=fields&option=add_custom_field';
+            $formAction = '?manage=fields&option=add_custom_field';
             $fieldValues = $values;
             $title = TXT_62;
         } else {
             $columnArray = array('*');
             $condition = "WHERE custom_field_id = '$customFieldID'";
             $fieldValues = Database::first('custom_fields', $columnArray, $condition);
-            $formAction = 'index.php?manage=fields&option=update_custom_field';
+            $formAction = '?manage=fields&option=update_custom_field';
             $title = TXT_285;
         }
 
@@ -206,7 +206,7 @@ final class FieldsScreen
 
         define('BODY_CONTENT', RenderViews::buildForm(
             TXT_287,
-            'index.php?manage=fields&option=add_update_menu_value',
+            '?manage=fields&option=add_update_menu_value',
             $fields,
             $buttons
         ));
@@ -314,7 +314,7 @@ final class FieldsScreen
         // First parameter is the form title (replaces the deprecated HEADING constant).
         $html = RenderViews::buildForm(
             TXT_52,
-            'index.php?manage=fields&option=field_type_search',
+            '?manage=fields&option=field_type_search',
             $formFields,
             $buttons
         );
@@ -431,7 +431,7 @@ final class FieldsScreen
         }
         $result = Database::select($table, $columnArray, $condition);
         if ($table !== 'custom_fields') {
-            header('Location: index.php?manage=item-types');
+            header('Location: ?manage=item-types');
             exit;
         }
 

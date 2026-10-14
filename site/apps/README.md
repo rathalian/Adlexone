@@ -1,6 +1,6 @@
 # Application function packs (optional)
 
-**Prefer FrameOne built-ins** configured in Manage → Applications → Navigation (or the Builder):
+**Prefer the built-in screens** configured in Manage → Applications → Navigation (or the Builder):
 
 | Screen | Capability |
 |--------|------------|
@@ -12,6 +12,6 @@
 
 Those live in `src/Screen/` — no pack folder required.
 
-Add a pack under `site/apps/{pack}/` only for installation-specific screens that cannot be expressed as FrameOne config. Each `*.php` file (except `info.php`) may call `AppFunctions::register(...)`.
+Add a pack under `site/apps/{pack}/` only for installation-specific screens that cannot be expressed as built-in screen config. Each `*.php` file (except `info.php`) may call `AppFunctions::register(...)`.
 
-The former Contact Centre / Service Centre pack was retired into FrameOne.
+The former Contact Centre / Service Centre pack was retired into those built-in screens.

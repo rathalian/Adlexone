@@ -6,6 +6,28 @@
  */
 
 
+/**
+ * Browser addresses stay on the site root. A request that names the front
+ * script is sent to the same query without it. POST is left alone so a form
+ * aimed at the old address still submits.
+ */
+$requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+$requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+if (
+    ($requestMethod === 'GET' || $requestMethod === 'HEAD')
+    && preg_match('#^(.*?)/index\.php/?(?:\?.*)?$#', $requestUri) === 1
+) {
+    $parts = parse_url($requestUri);
+    $path = (string) ($parts['path'] ?? '');
+    $path = preg_replace('#/index\.php/?$#', '/', $path) ?? '/';
+    if ($path === '') {
+        $path = '/';
+    }
+    $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+    header('Location: ' . $path . $query, true, 302);
+    exit;
+}
+
 /** * Autoload required classes using Composer
  */
 require_once __DIR__ . '/../vendor/autoload.php';

@@ -1,19 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\FrameOne;
+namespace Adlexone\Application;
 
 /**
- * FrameOne — shared screen library for every Inlay application.
+ * Ids of the built-in screens an application can open.
  *
- * Prefer wiring these from Manage → Applications → Navigation (or the Builder)
- * instead of adding site/apps/{pack} PHP files. Packs remain only for rare
- * installation-specific screens that cannot be expressed as config.
- *
- * Built-in capability ids (UI origin label "Built-in"):
- *   items.work, items.create, search.*, announcements.board, app.settings
+ * Work, create, search, announcements, and application settings.
+ * Wire them from Manage → Applications → Navigation or the Builder.
+ * site/apps packs are only for a screen that cannot be expressed as config.
  */
-final class Library
+final class ScreenCatalog
 {
     public const ORIGIN = 'Built-in';
 
@@ -27,7 +24,7 @@ final class Library
     public const SETTINGS = 'app.settings';
 
     /**
-     * Legacy pack / Service Centre capability ids → FrameOne ids.
+     * Older pack ids → current screen ids.
      *
      * @var array<string, string>
      */

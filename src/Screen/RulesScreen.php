@@ -4,18 +4,18 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Rules;
 use Adlexone\Auth\Permission;
-use Adlexone\FrameOne\AppSettings;
+use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\RenderViews;
 
 /**
  * Screen formerly loaded from legacy/.
  */
-final class WorkflowScreen
+final class RulesScreen
 {
     public static function open(): void
     {
-        define('MAN_BASE_URL', 'index.php?manage=workflow');
-        define('RULES_HOME_URL', 'index.php?manage=workflow');
+        define('MAN_BASE_URL', '?manage=rules');
+        define('RULES_HOME_URL', '?manage=rules');
 
 
 
@@ -27,44 +27,44 @@ final class WorkflowScreen
         switch ($option) {
         	case 'new_rule':
         		if ($slug === '') {
-        			self::showWorkflowAppPicker('new_rule');
+        			self::showAppPicker('new_rule');
         			break;
         		}
-        		\Adlexone\Screen\AppSettingsScreen::showFrameOneRuleForm($slug, null);
+        		ApplicationSettingsScreen::showRuleForm($slug, null);
         		break;
         	case 'edit_rule':
-        		\Adlexone\Screen\AppSettingsScreen::showFrameOneRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
+        		ApplicationSettingsScreen::showRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
         		break;
         	case 'add_rule':
-        		\Adlexone\Screen\AppSettingsScreen::saveFrameOneRule($slug, 0);
+        		ApplicationSettingsScreen::saveRule($slug, 0);
         		break;
         	case 'update_rule':
-        		\Adlexone\Screen\AppSettingsScreen::saveFrameOneRule($slug, (int) ($_POST['rule_id'] ?? 0));
+        		ApplicationSettingsScreen::saveRule($slug, (int) ($_POST['rule_id'] ?? 0));
         		break;
         	case 'delete_rule':
-        		\Adlexone\Screen\AppSettingsScreen::deleteFrameOneRule($slug);
+        		ApplicationSettingsScreen::deleteRule($slug);
         		break;
         	case 'toggle_rule':
-        		\Adlexone\Screen\AppSettingsScreen::toggleFrameOneRule($slug);
+        		ApplicationSettingsScreen::toggleRule($slug);
         		break;
         	case 'duplicate_rule':
-        		\Adlexone\Screen\AppSettingsScreen::duplicateFrameOneRule($slug);
+        		ApplicationSettingsScreen::duplicateRule($slug);
         		break;
         	case 'move_rule':
-        		\Adlexone\Screen\AppSettingsScreen::moveFrameOneRule($slug);
+        		ApplicationSettingsScreen::moveRule($slug);
         		break;
         	case 'try_rule':
-        		\Adlexone\Screen\AppSettingsScreen::showFrameOneRuleTry($slug, false);
+        		ApplicationSettingsScreen::tryRule($slug, false);
         		break;
         	case 'run_rule':
-        		\Adlexone\Screen\AppSettingsScreen::showFrameOneRuleTry($slug, true);
+        		ApplicationSettingsScreen::tryRule($slug, true);
         		break;
         	default:
-        		self::showWorkflowRules();
+        		self::showList();
         		break;
         }
     }
-    public static function showWorkflowAppPicker(string $option): void
+    public static function showAppPicker(string $option): void
     {
     	$values = [];
     	$labels = [];
@@ -88,13 +88,13 @@ final class WorkflowScreen
     	RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
-    public static function showWorkflowRules(): void
+    public static function showList(): void
     {
     	$groups = [];
     	foreach (ApplicationStore::all() as $app) {
     		$slug = (string) $app['slug'];
     		$applicationId = (int) $app['application_id'];
-    		$typeIds = AppSettings::allowedItemTypeIds($slug);
+    		$typeIds = ApplicationSettings::allowedItemTypeIds($slug);
     		$fields = Rules::fieldChoices($typeIds);
     		$rows = [];
     		foreach (Rules::forApplication($applicationId) as $rule) {

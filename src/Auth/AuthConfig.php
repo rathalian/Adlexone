@@ -106,7 +106,7 @@ final class AuthConfig
 
     public static function callbackUrl(): string
     {
-        return rtrim((string) BASE_URL, '/') . '/index.php?action=oauth_callback';
+        return rtrim((string) BASE_URL, '/') . '/?action=oauth_callback';
     }
 
     private static function flag(string $name, bool $default): bool

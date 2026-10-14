@@ -18,7 +18,7 @@ final class ItemTypesScreen
     {
         MenuOptions::prepare();
         RenderNavigation::applySectionNav('Item types', RenderNavigation::itemSettingsURLs());
-        define('ITEM_TYPES_BASE_URL', 'index.php?manage=item-types');
+        define('ITEM_TYPES_BASE_URL', '?manage=item-types');
 
 
 
@@ -104,7 +104,7 @@ final class ItemTypesScreen
     public static function showItemType($itemTypeID, $values = [])
     {
         $isNew = ($itemTypeID == '');
-        $action = $isNew ? 'index.php?manage=item-types&option=add_item_type' : 'index.php?manage=item-types&option=update_item_type';
+        $action = $isNew ? '?manage=item-types&option=add_item_type' : '?manage=item-types&option=update_item_type';
         // Load field values
         if ($isNew) {
             $fieldValues = $values;
@@ -345,7 +345,7 @@ final class ItemTypesScreen
                 ['key' => 'enabled', 'label' => TXT_451],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => 'index.php?manage=item-types&option=new_item_type', 'label' => TXT_692],
+            'primary' => ['href' => '?manage=item-types&option=new_item_type', 'label' => TXT_692],
             'empty' => TXT_115,
             'noMatch' => TXT_689,
             'groups' => [['rows' => $rows]],

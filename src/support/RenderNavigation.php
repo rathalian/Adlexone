@@ -15,38 +15,38 @@ final class RenderNavigation
 
     public static function itemSettingsURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
 
         return $html;
     }
 
-    public static function workflowURLs()
+    public static function rulesURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?manage=workflow', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=rules', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }
 
     public static function systemSettingsURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
+        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }

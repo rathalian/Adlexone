@@ -5,7 +5,6 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Permission;
 use Adlexone\Data\GroupMembership;
-use Adlexone\FrameOne\Library;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 
@@ -29,7 +28,7 @@ final class ApplicationBuilder
             ['name' => 'Priority', 'type' => FieldTypes::MENU, 'values' => ['Low', 'Normal', 'High']],
             ['name' => 'Category', 'type' => FieldTypes::MENU, 'values' => ['General', 'Support', 'Other']],
         ];
-        $coreScreens = [Library::WORK, Library::CREATE, Library::SEARCH_LIST];
+        $coreScreens = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
 
         return [
             self::BLUEPRINT_BLANK => [
@@ -60,18 +59,18 @@ final class ApplicationBuilder
                 'hint' => 'Cases, announcements, and settings for a support team.',
                 'fields' => $caseFields,
                 'screens' => [
-                    Library::WORK,
-                    Library::CREATE,
-                    Library::SEARCH_LIST,
-                    Library::ANNOUNCEMENTS,
-                    Library::SETTINGS,
+                    ScreenCatalog::WORK,
+                    ScreenCatalog::CREATE,
+                    ScreenCatalog::SEARCH_LIST,
+                    ScreenCatalog::ANNOUNCEMENTS,
+                    ScreenCatalog::SETTINGS,
                 ],
             ],
         ];
     }
 
     /**
-     * @param list<string>|null $screens FrameOne capability ids; null = blueprint default
+     * @param list<string>|null $screens Built-in screen ids; null = blueprint default
      * @param list<int> $groupIds groups to receive app permissions (empty = admins + creator)
      * @param list<string> $permLevels use|announce|settings
      * @return array{application_id: int, slug: string, item_type_id: int}
@@ -112,14 +111,14 @@ final class ApplicationBuilder
             throw new \InvalidArgumentException('That record type name is already used.');
         }
 
-        $allowedScreens = array_keys(Library::builderScreens());
+        $allowedScreens = array_keys(ScreenCatalog::builderScreens());
         $chosen = $screens ?? $blueprints[$blueprint]['screens'];
         $chosen = array_values(array_filter(
             $chosen,
             static fn (string $id): bool => in_array($id, $allowedScreens, true)
         ));
         if ($chosen === []) {
-            $chosen = [Library::WORK, Library::CREATE, Library::SEARCH_LIST];
+            $chosen = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
         }
 
         $itemTypeId = self::createItemType($recordTypeName);
@@ -169,17 +168,17 @@ final class ApplicationBuilder
         }
 
         $typeConfig = ['item_type_id' => (string) $itemTypeId];
-        $labels = Library::builderScreens();
+        $labels = ScreenCatalog::builderScreens();
         $icons = [
-            Library::WORK => 'ic-search',
-            Library::CREATE => 'ic-itemtype-add',
-            Library::SEARCH_LIST => 'ic-search',
-            Library::ANNOUNCEMENTS => 'ic-announcements',
-            Library::SETTINGS => 'ic-settings',
+            ScreenCatalog::WORK => 'ic-search',
+            ScreenCatalog::CREATE => 'ic-itemtype-add',
+            ScreenCatalog::SEARCH_LIST => 'ic-search',
+            ScreenCatalog::ANNOUNCEMENTS => 'ic-announcements',
+            ScreenCatalog::SETTINGS => 'ic-settings',
         ];
         $order = 10;
         foreach ($chosen as $capability) {
-            $config = in_array($capability, [Library::WORK, Library::CREATE, Library::SEARCH_ADVANCED], true)
+            $config = in_array($capability, [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED], true)
                 ? $typeConfig
                 : [];
             ApplicationStore::insertNav(

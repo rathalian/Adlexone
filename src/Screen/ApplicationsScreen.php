@@ -19,7 +19,7 @@ final class ApplicationsScreen
     {
         RenderViews::terminateUnlessAllowed(Permission::ADMIN_SETTINGS);
 
-        define('APPLICATIONS_MANAGE_URL', 'index.php?manage=applications');
+        define('APPLICATIONS_MANAGE_URL', '?manage=applications');
         $option = (string) ($_GET['option'] ?? '');
 
         $section = RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-launch');
@@ -146,7 +146,7 @@ final class ApplicationsScreen
                     ['key' => 'opens', 'label' => 'Opens'],
                 ],
                 'searchLabel' => 'Search',
-                'primary' => ['href' => 'index.php?manage=builder', 'label' => 'Create with builder'],
+                'primary' => ['href' => '?manage=builder', 'label' => 'Create with builder'],
                 'empty' => 'No applications yet. Use the builder to create one.',
                 'toolbar' => '<div class="record-list__tools">'
                     . RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=new', 'Expert setup', '', 'btn btn--sm')

@@ -508,7 +508,7 @@ final class SchemaMigrator
     }
 
     /**
-     * FrameOne: per-app settings JSON, announcements scoped by application slug.
+     * Per-application settings JSON, and announcements scoped by application slug.
      */
     private static function applyV4(): void
     {

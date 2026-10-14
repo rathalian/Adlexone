@@ -18,7 +18,7 @@ final class SecurityScreen
         /**
          * Controller specific constants
          */
-        define('SEC_BASE_URL', 'index.php?manage=security');
+        define('SEC_BASE_URL', '?manage=security');
 
         if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
             $securityOption = (string)($_GET['option'] ?? '');

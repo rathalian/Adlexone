@@ -5,7 +5,6 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
-use Adlexone\FrameOne\Library;
 use Adlexone\support\Database;
 
 /**
@@ -29,7 +28,7 @@ final class ApplicationStore
         self::renameServiceCentreWork();
         self::renameServiceCentreAnnouncements();
         self::renameContactCentreCapabilities();
-        self::migrateToFrameOneCapabilities();
+        self::migrateBuiltInScreenIds();
     }
 
     public static function ensureSchema(): void
@@ -465,14 +464,14 @@ final class ApplicationStore
     }
 
     /**
-     * Contact Centre pack screens → FrameOne built-ins (UI-configurable).
+     * Older pack screen ids → the current built-in screen ids.
      */
-    private static function migrateToFrameOneCapabilities(): void
+    private static function migrateBuiltInScreenIds(): void
     {
         if (!self::tableExists('application_nav')) {
             return;
         }
-        foreach (Library::ALIASES as $from => $to) {
+        foreach (ScreenCatalog::ALIASES as $from => $to) {
             Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
         }
     }

@@ -61,8 +61,7 @@ final class AuthSession
     public static function redirectHome(): never
     {
         $home = (string) ($_SESSION['access_home_controller'] ?? 'home');
-        $url = rtrim((string) BASE_URL, '/') . '/' . \Adlexone\Http\Router::homeTarget($home);
-        header('Location: ' . $url);
+        header('Location: ' . \Adlexone\Http\Router::absolute(\Adlexone\Http\Router::homeTarget($home)));
         exit;
     }
 
@@ -71,7 +70,7 @@ final class AuthSession
         if ($error !== null) {
             $_SESSION['auth_error'] = $error;
         }
-        header('Location: ' . rtrim((string) BASE_URL, '/') . '/index.php');
+        header('Location: ' . rtrim((string) BASE_URL, '/') . '/');
         exit;
     }
 }

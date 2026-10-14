@@ -3,11 +3,12 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
-use Adlexone\FrameOne\AppAccess;
-use Adlexone\FrameOne\AppSettings;
+use Adlexone\Application\ApplicationAccess;
+use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 use Adlexone\support\Actions;
+use Adlexone\support\AttachmentUpload;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
@@ -21,7 +22,7 @@ final class ItemScreen
     public static function open(): void
     {
         if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            AppAccess::requireUse();
+            ApplicationAccess::requireUse();
         } elseif (!Access::can(Permission::ADMIN_ITEMS)) {
             Access::deny();
         }
@@ -38,7 +39,7 @@ final class ItemScreen
          * Controller Constants
          */
         if (!defined('MAN_BASE_URL')) {
-            define('MAN_BASE_URL', 'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage');
+            define('MAN_BASE_URL', '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage');
         }
 
 
@@ -110,7 +111,7 @@ final class ItemScreen
                     $target = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
                     $defaultType = trim((string) ($_GET['default_item_type'] ?? ''));
                     if ($defaultType === '' && defined('APPLICATION_SLUG')) {
-                        $defaultType = \Adlexone\FrameOne\AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+                        $defaultType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
                     }
                     if ($defaultType !== '') {
                         $target .= '&default_item_type=' . rawurlencode($defaultType);
@@ -189,7 +190,7 @@ final class ItemScreen
         if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
             return true;
         }
-        return AppSettings::allowsItemType((string) APPLICATION_SLUG, $typeId);
+        return ApplicationSettings::allowsItemType((string) APPLICATION_SLUG, $typeId);
     }
 
     /**
@@ -412,7 +413,7 @@ final class ItemScreen
                 $action = RenderViews::outputIfRoleAllowed('<a href="' . MAN_BASE_URL . '&option=show_attachments&item_id=' . $row['item_id'] . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
                 $action .= RenderViews::outputIfRoleAllowed(' - <a href="' . MAN_BASE_URL . '&option=change_security&item_id=' . $row['item_id'] . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
                 $action .= RenderViews::outputIfRoleAllowed(' - <a href ="' . MAN_BASE_URL . '&option=log_entry&item_id=' . $row['item_id'] . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= RenderViews::outputIfRoleAllowed(' - ' . RenderViews::buildURL('index.php?controller=full_page_view&option=print_item&item_id=' . $row['item_id'], TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
+                $action .= RenderViews::outputIfRoleAllowed(' - ' . RenderViews::buildURL('?controller=full_page_view&option=print_item&item_id=' . $row['item_id'], TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
                 $action .= RenderViews::outputIfRoleAllowed(
                     ' - ' . RenderViews::buildURL(
                         MAN_BASE_URL . '&option=delete_item&item_id=' . $row['item_id'],
@@ -480,7 +481,7 @@ final class ItemScreen
 
         $html = RenderViews::buildForm(
             RenderViews::getLanguageConstant('LA_44', 'TXT_44'),
-            'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=my_items',
+            '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=my_items',
             ['' => $sortLinks . $listHtml . ($paginationHTML ?? '') . ($hidden ?? '')],
             [],
             ['name' => 'repform', 'id' => 'repform']
@@ -509,13 +510,13 @@ final class ItemScreen
         $result = Database::select('item_types', ['item_type_id', 'item_type_name'], $condition);
 
         if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            $allowed = AppSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+            $allowed = ApplicationSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
             $result = array_values(array_filter(
                 $result,
                 static fn (array $row): bool => in_array((int) $row['item_type_id'], $allowed, true)
             ));
             if ($defaultItemType === '' || $defaultItemType === null) {
-                $defaultItemType = AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+                $defaultItemType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
             }
         }
 
@@ -1011,7 +1012,7 @@ final class ItemScreen
                         $groupMembership = implode(', ', $names);
                     }
                     $changeSecurityURL = RenderViews::buildURL(
-                        'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $itemID,
+                        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $itemID,
                         TXT_268,
                         '',
                         'btn btn--sm'
@@ -1835,7 +1836,7 @@ final class ItemScreen
     public static function addAttachment($itemID, $showAttachments = true, $executeAction = true)
     {
         // Upload the attachment
-        $fileArray = File::uploadItemAttachment(SET_MAX_ATTACHMENT, 'attachment', time(), SET_ATTACHMENTS_PATH);
+        $fileArray = AttachmentUpload::uploadItemAttachment(SET_MAX_ATTACHMENT, 'attachment', time(), SET_ATTACHMENTS_PATH);
         // Add attachment
         $columnArray['item_id'] = $itemID;
         $columnArray['create_date'] = time();

@@ -62,7 +62,7 @@ final class WorkScreen
         }
 
         $ids = self::applicationAccessibleItemIds($itemTypeId);
-        $base = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : 'index.php';
+        $base = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './';
         $stand = self::workStand($ids, $itemTypeId, $base);
         $shown = self::workFocusIds($ids, $stand['field_id'], $stand['values']);
         $rows = [];

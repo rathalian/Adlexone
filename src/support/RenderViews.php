@@ -1187,10 +1187,14 @@ class RenderViews
             return '';
         }
         $path = (string)($parts['path'] ?? '');
-        if (!str_ends_with($path, 'index.php')) {
+        $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+        $dir = str_replace('\\', '/', dirname($script));
+        $prefix = ($dir === '/' || $dir === '.') ? '' : rtrim($dir, '/');
+        $appPaths = [$prefix . '/', $prefix . '/index.php'];
+        if (!in_array($path, $appPaths, true)) {
             return '';
         }
-        $href = 'index.php' . (isset($parts['query']) ? '?' . $parts['query'] : '');
+        $href = isset($parts['query']) ? '?' . $parts['query'] : './';
         $label = defined('TXT_31') ? TXT_31 : 'Back';
 
         return self::buildURL($href, $label, '', 'btn btn--primary btn--sm');
@@ -1362,7 +1366,7 @@ class RenderViews
      */
     public static function outputIfRoleAllowed(mixed $value, int $userRole, int $allowedRole): mixed
     {
-        if (\Adlexone\FrameOne\AppAccess::satisfiesLegacyRole($allowedRole)) {
+        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($allowedRole)) {
             return $value;
         }
         // Prefer permission-derived legacy role when the session is hydrated.
@@ -1401,7 +1405,7 @@ class RenderViews
      */
     public static function terminateIfRoleNotAllowed(int $userRole, int $allowedRole): void
     {
-        if (\Adlexone\FrameOne\AppAccess::satisfiesLegacyRole($allowedRole)) {
+        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($allowedRole)) {
             return;
         }
         $effective = \Adlexone\Auth\Access::legacyRole();

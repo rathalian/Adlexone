@@ -16,14 +16,14 @@ use Adlexone\Screen\LoginScreen;
 use Adlexone\Screen\PrintScreen;
 use Adlexone\Screen\SearchScreen;
 use Adlexone\Screen\SecurityScreen;
-use Adlexone\Screen\SettingsScreen;
-use Adlexone\Screen\WorkflowScreen;
+use Adlexone\Screen\RulesScreen;
+use Adlexone\Screen\SiteSettingsScreen;
 use Adlexone\support\RenderViews;
 
 /**
  * One map from a request to a screen class.
  *
- * Home is index.php. Manage pages use manage. An application uses
+ * Home is the site root. Manage pages use manage. An application uses
  * application and nav. item and search name the record on that page.
  * Older controller and subcontroller names open the same screens.
  * A name that is not in the map is not opened.
@@ -81,6 +81,7 @@ final class Router
         'fields' => 'manage_fields',
         'item-types' => 'manage_item_types',
         'items' => 'manage_items',
+        'rules' => 'manage_actions',
         'workflow' => 'manage_actions',
         'security' => 'manage_security',
         'settings' => 'manage_settings',
@@ -179,9 +180,38 @@ final class Router
         return null;
     }
 
+    /**
+     * Relative address for the browser. Home is ./ so the script name stays out of the bar.
+     */
+    public static function page(string $query = ''): string
+    {
+        $query = ltrim($query, '?');
+
+        return $query === '' ? './' : '?' . $query;
+    }
+
+    public static function absolute(string $page): string
+    {
+        $base = rtrim((string) BASE_URL, '/');
+        if ($page === '' || $page === './' || $page === 'index.php') {
+            return $base . '/';
+        }
+        if (str_starts_with($page, 'index.php?')) {
+            $page = '?' . substr($page, strlen('index.php?'));
+        }
+        if (str_starts_with($page, '?')) {
+            return $base . '/' . $page;
+        }
+        if (str_starts_with($page, 'http://') || str_starts_with($page, 'https://')) {
+            return $page;
+        }
+
+        return $base . '/' . ltrim($page, '/');
+    }
+
     public static function applicationUrl(string $slug, int $navId = 0, string $query = ''): string
     {
-        $url = 'index.php?application=' . rawurlencode($slug);
+        $url = '?application=' . rawurlencode($slug);
         if ($navId > 0) {
             $url .= '&nav=' . $navId;
         }
@@ -195,9 +225,9 @@ final class Router
     public static function manageUrl(string $name, string $query = ''): string
     {
         if ($name === '' || $name === 'home') {
-            return $query === '' ? 'index.php' : 'index.php?' . ltrim($query, '&');
+            return $query === '' ? self::page() : self::page(ltrim($query, '&'));
         }
-        $url = 'index.php?manage=' . rawurlencode($name);
+        $url = '?manage=' . rawurlencode($name);
         if ($query !== '') {
             $url .= '&' . ltrim($query, '&');
         }
@@ -216,12 +246,12 @@ final class Router
                 return self::applicationUrl($app);
             }
 
-            return 'index.php?controller=' . rawurlencode($stored);
+            return '?controller=' . rawurlencode($stored);
         }
         $name = self::queryName($stored);
         $canonical = self::canonical($name);
         if ($name === '' || $canonical === 'home') {
-            return 'index.php';
+            return self::page();
         }
         $manageKey = array_search($canonical, self::ALIASES, true);
         if (is_string($manageKey) && !str_starts_with($manageKey, 'administration_') && $manageKey !== 'manage' && $manageKey !== 'print' && $manageKey !== 'quick_launch') {
@@ -231,7 +261,7 @@ final class Router
             return self::manageUrl($name);
         }
 
-        return 'index.php?controller=' . rawurlencode($canonical);
+        return '?controller=' . rawurlencode($canonical);
     }
 
     /**
@@ -246,7 +276,7 @@ final class Router
         }
 
         $controller = self::canonical(self::queryName((string) ($_GET['controller'] ?? 'home')));
-        $url = 'index.php?controller=' . rawurlencode($controller);
+        $url = '?controller=' . rawurlencode($controller);
         if ($engine === 'items') {
             $url .= '&subcontroller=' . self::ITEMS;
         } elseif ($engine === 'search') {
@@ -274,7 +304,7 @@ final class Router
                 self::open($sub);
                 return;
             }
-            header('Location: index.php');
+            header('Location: ./');
             exit;
         }
         if ($canonical === 'manage_items') {
@@ -329,9 +359,9 @@ final class Router
             'manage_builder' => [BuilderScreen::class, 'open'],
             'manage_fields' => [FieldsScreen::class, 'open'],
             'manage_item_types' => [ItemTypesScreen::class, 'open'],
-            'manage_actions' => [WorkflowScreen::class, 'open'],
+            'manage_actions' => [RulesScreen::class, 'open'],
             'manage_security' => [SecurityScreen::class, 'open'],
-            'manage_settings' => [SettingsScreen::class, 'open'],
+            'manage_settings' => [SiteSettingsScreen::class, 'open'],
             self::ITEMS => [ItemScreen::class, 'open'],
             self::SEARCH => [SearchScreen::class, 'open'],
             default => null,

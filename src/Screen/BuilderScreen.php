@@ -9,7 +9,7 @@ use Adlexone\Application\Capabilities;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Csrf;
 use Adlexone\Auth\Permission;
-use Adlexone\FrameOne\Library;
+use Adlexone\Application\ScreenCatalog;
 use Adlexone\Http\Router;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
@@ -26,11 +26,11 @@ final class BuilderScreen
             Access::deny();
         }
 
-        define('BUILDER_URL', 'index.php?manage=builder');
+        define('BUILDER_URL', '?manage=builder');
         $option = (string) ($_GET['option'] ?? '');
 
         $section = RenderViews::buildURL(BUILDER_URL, 'Builder', 'ic-itemtype-add');
-        $section .= RenderViews::buildURL('index.php?manage=applications', 'Applications', 'ic-launch');
+        $section .= RenderViews::buildURL('?manage=applications', 'Applications', 'ic-launch');
         RenderNavigation::applySectionNav('Builder', $section);
         if (!defined('PAGE_TITLE')) {
             define('PAGE_TITLE', 'Create a business application');
@@ -91,11 +91,11 @@ final class BuilderScreen
         ];
 
         $screenMeta = [
-            Library::WORK => ['hint' => 'Records in progress', 'icon' => 'ic-search'],
-            Library::CREATE => ['hint' => 'Add a record', 'icon' => 'ic-itemtype-add'],
-            Library::SEARCH_LIST => ['hint' => 'Find records', 'icon' => 'ic-my-ticket-searches'],
-            Library::ANNOUNCEMENTS => ['hint' => 'Notes for the team', 'icon' => 'ic-announcements'],
-            Library::SETTINGS => ['hint' => 'How the app is set up', 'icon' => 'ic-settings'],
+            ScreenCatalog::WORK => ['hint' => 'Records in progress', 'icon' => 'ic-search'],
+            ScreenCatalog::CREATE => ['hint' => 'Add a record', 'icon' => 'ic-itemtype-add'],
+            ScreenCatalog::SEARCH_LIST => ['hint' => 'Find records', 'icon' => 'ic-my-ticket-searches'],
+            ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'Notes for the team', 'icon' => 'ic-announcements'],
+            ScreenCatalog::SETTINGS => ['hint' => 'How the app is set up', 'icon' => 'ic-settings'],
         ];
         $levelMeta = [
             'use' => ['label' => 'Use application', 'hint' => 'Work with its records'],
@@ -147,7 +147,7 @@ final class BuilderScreen
         $blueprintHtml .= '</div>';
 
         $screensHtml = '<div class="builder__choices">';
-        foreach (Library::builderScreens() as $cap => $label) {
+        foreach (ScreenCatalog::builderScreens() as $cap => $label) {
             $meta = $screenMeta[$cap] ?? ['hint' => '', 'icon' => 'ic-launch'];
             $checked = in_array($cap, $selectedScreens, true) ? ' checked' : '';
             $active = $checked !== '' ? ' is-selected' : '';
@@ -224,7 +224,7 @@ final class BuilderScreen
             $previewFields = '<li>You will add fields after the application exists.</li>';
         }
         $previewTabs = '';
-        foreach (Library::builderScreens() as $cap => $label) {
+        foreach (ScreenCatalog::builderScreens() as $cap => $label) {
             if (in_array($cap, $selectedScreens, true)) {
                 $previewTabs .= '<span class="builder__tab">' . $h($label) . '</span>';
             }
@@ -299,7 +299,7 @@ final class BuilderScreen
             . '</section>'
             . '<div class="form-actions">'
             . RenderViews::buildFormButton('submit', 'submit_button', 'Create application')
-            . '<a class="btn" href="index.php?manage=applications">Open Applications</a>'
+            . '<a class="btn" href="?manage=applications">Open Applications</a>'
             . '</div></form>'
             . '<aside class="builder__preview builder__panel" aria-live="polite">'
             . '<p class="builder__kicker">This application</p>'
@@ -307,7 +307,7 @@ final class BuilderScreen
             . '<span class="builder__app-icon" id="builder-preview-icon"><svg class="icon" aria-hidden="true"><use href="' . $sprite . '#' . $h($icon) . '"></use></svg></span>'
             . '<div class="builder__app-copy"><p class="builder__app-name" id="builder-preview-name">' . $h($previewName) . '</p>'
             . '<p class="builder__app-hint" id="builder-preview-hint">' . $h($previewHint) . '</p></div></div>'
-            . '<p class="builder__app-url" id="builder-preview-url">index.php?application=' . $h($previewSlug) . '</p>'
+            . '<p class="builder__app-url" id="builder-preview-url">?application=' . $h($previewSlug) . '</p>'
             . '<div class="builder__tabs" id="builder-preview-tabs">' . $previewTabs . '</div>'
             . '<dl class="builder__facts">'
             . '<div><dt>Record</dt><dd id="builder-preview-type">' . $h($previewType) . '</dd></div>'
@@ -358,7 +358,7 @@ final class BuilderScreen
             . 'var address=slugify(slug||name)||"your-app";'
             . 'text("builder-preview-name",name||"Your application");'
             . 'text("builder-preview-hint",hint);'
-            . 'text("builder-preview-url","index.php?application="+address);'
+            . 'text("builder-preview-url","?application="+address);'
             . 'text("builder-preview-type",type);'
             . 'var icon=form.querySelector("input[name=icon]:checked");'
             . 'var use=document.querySelector("#builder-preview-icon use");'

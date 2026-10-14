@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\FrameOne;
+namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 
 /**
- * Permission checks for the current application shell (APPLICATION_SLUG).
+ * Whether the signed-in person may use the application that is open.
  */
-final class AppAccess
+final class ApplicationAccess
 {
     public static function slug(): string
     {
@@ -51,8 +51,8 @@ final class AppAccess
     }
 
     /**
-     * Whether named permissions satisfy a legacy role threshold
-     * (lower allowedRole = more privilege required).
+     * Whether named permissions satisfy an older role threshold.
+     * A lower allowed role number requires more privilege.
      */
     public static function satisfiesLegacyRole(int $allowedRole): bool
     {

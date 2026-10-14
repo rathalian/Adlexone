@@ -5,10 +5,11 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
-use Adlexone\FrameOne\AppAccess;
-use Adlexone\FrameOne\AppSettings;
+use Adlexone\Application\ApplicationAccess;
+use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
+use Adlexone\support\RssFeed;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -18,7 +19,7 @@ final class SearchScreen
     public static function open(): void
     {
         if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            AppAccess::requireUse();
+            ApplicationAccess::requireUse();
         } elseif (!Access::can(Permission::ADMIN_ITEMS)) {
             Access::deny();
         }
@@ -133,7 +134,7 @@ final class SearchScreen
         if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
             return [];
         }
-        return AppSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+        return ApplicationSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
     }
 
     /**
@@ -615,7 +616,7 @@ final class SearchScreen
     							}
     							$logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     							$attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-    							$cellData[] = '<a href ="index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&item_id=' . $row['item_id'] . $logEntry . $attachments. $countUpdate . '" class="URL">' . $title . '</a>';
+    							$cellData[] = '<a href ="?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&item_id=' . $row['item_id'] . $logEntry . $attachments. $countUpdate . '" class="URL">' . $title . '</a>';
     							break;
     						case 'create_date':
     							$cellData[] = date(SET_DATE_FORMAT, $row['create_date']);
@@ -680,7 +681,7 @@ final class SearchScreen
     				}
     				$actions = (string) RenderViews::outputIfRoleAllowed(
     				    RenderViews::buildURL(
-    				        'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=log_entry&item_id=' . $row['item_id'],
+    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=log_entry&item_id=' . $row['item_id'],
     				        TXT_246
     				    ),
     				    $_SESSION['access_role_id'],
@@ -689,7 +690,7 @@ final class SearchScreen
 
     				$actions .= (string) RenderViews::outputIfRoleAllowed(
     				    ' - ' . RenderViews::buildURL(
-    				        'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . $row['item_id'],
+    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . $row['item_id'],
     				        TXT_389
     				    ),
     				    $_SESSION['access_role_id'],
@@ -698,7 +699,7 @@ final class SearchScreen
 
     				$actions .= (string) RenderViews::outputIfRoleAllowed(
     				    ' - ' . RenderViews::buildURL(
-    				        'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $row['item_id'],
+    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $row['item_id'],
     				        TXT_28
     				    ),
     				    $_SESSION['access_role_id'],
@@ -707,7 +708,7 @@ final class SearchScreen
 
     				$actions .= (string) RenderViews::outputIfRoleAllowed(
     				    ' - ' . RenderViews::buildURL(
-    				        'index.php?controller=full_page_view&option=print_item&item_id=' . $row['item_id'],
+    				        '?controller=full_page_view&option=print_item&item_id=' . $row['item_id'],
     				        TXT_625,
     				        '',      // spriteName
     				        'URL',   // class
@@ -720,7 +721,7 @@ final class SearchScreen
 
     				$actions .= (string) RenderViews::outputIfRoleAllowed(
     				    ' - ' . RenderViews::buildURL(
-    				        'index.php?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=delete_item&item_id=' . $row['item_id'],
+    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=delete_item&item_id=' . $row['item_id'],
     				        TXT_315,
     				        '', // spriteName
     				        'URL',
@@ -1079,7 +1080,7 @@ final class SearchScreen
         $toolbar = '';
         if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
             $itemType = '';
-            $defaultType = \Adlexone\FrameOne\AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+            $defaultType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
             if ($defaultType !== '') {
                 $itemType = rawurlencode($defaultType);
             }
@@ -1185,10 +1186,10 @@ final class SearchScreen
                 $sql = "SELECT item_id, item_title FROM items WHERE item_id = '$id'";
                             $result = Database::rows($sql);
                 $row = $result[0] ?? null;
-                $linkArray[] = RenderViews::buildURL('index.php?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['item_id'], '', 'URL');
+                $linkArray[] = RenderViews::buildURL('?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['item_id'], '', 'URL');
                 $titleArray[] = $row['item_title'];
             }
-            XML::rssFeed(SET_DATE_FORMAT, $row['search_name'], $row['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
+            RssFeed::send(SET_DATE_FORMAT, $row['search_name'], $row['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
         }
     }
 

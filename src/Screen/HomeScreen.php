@@ -28,7 +28,7 @@ final class HomeScreen
         $manage = [];
         if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
             $manage[] = self::launchTile(
-                'index.php?manage=builder',
+                '?manage=builder',
                 'Create application',
                 'Guided builder for a new business app',
                 'ic-itemtype-add'
@@ -36,7 +36,7 @@ final class HomeScreen
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
             $manage[] = self::launchTile(
-                'index.php?manage=applications',
+                '?manage=applications',
                 'Applications',
                 'Arrange applications and navigation',
                 'ic-launch'
@@ -44,13 +44,13 @@ final class HomeScreen
         }
         if (Access::can(Permission::ADMIN_ITEMS)) {
             $manage[] = self::launchTile(
-                'index.php?manage=fields',
+                '?manage=fields',
                 'Fields',
                 'Custom fields and menus',
                 'ic-manage-fields'
             );
             $manage[] = self::launchTile(
-                'index.php?manage=item-types',
+                '?manage=item-types',
                 'Item types',
                 'Types and their fields',
                 'ic-manage-item-types'
@@ -58,7 +58,7 @@ final class HomeScreen
         }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
             $manage[] = self::launchTile(
-                'index.php?manage=workflow',
+                '?manage=rules',
                 'Rules',
                 'What happens when a record changes',
                 'ic-manage-actions'
@@ -66,7 +66,7 @@ final class HomeScreen
         }
         if (Access::can(Permission::ADMIN_SECURITY)) {
             $manage[] = self::launchTile(
-                'index.php?manage=security&option=manage_users',
+                '?manage=security&option=manage_users',
                 'Security',
                 'Users and groups',
                 'ic-manage-users'
@@ -74,14 +74,14 @@ final class HomeScreen
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
             $manage[] = self::launchTile(
-                'index.php?manage=settings&option=adlexone_settings',
+                '?manage=settings&option=adlexone_settings',
                 'Settings',
                 'Application setup',
                 'ic-system-settings'
             );
         } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
             $manage[] = self::launchTile(
-                'index.php?manage=settings&option=sign_in_settings',
+                '?manage=settings&option=sign_in_settings',
                 'Settings',
                 'Sign-in and system setup',
                 'ic-system-settings'
@@ -106,7 +106,7 @@ final class HomeScreen
                 . '<span class="brandtext"><span class="title-static">Inlay</span><span class="brandmaker">Adlexone</span></span>'
                 . '</div>'
                 . '<p class="empty-state__copy">' . htmlspecialchars($introCopy, ENT_QUOTES, 'UTF-8') . '</p>'
-                . '<div class="empty-state__actions"><a class="btn btn--primary" href="index.php?manage=builder">Create a business application</a></div>'
+                . '<div class="empty-state__actions"><a class="btn btn--primary" href="?manage=builder">Create a business application</a></div>'
                 . '</div></section>';
         }
 

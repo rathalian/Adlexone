@@ -46,7 +46,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                     <section class="login-panel">
                         <h1 class="login-title">Sign in</h1>
                         <p class="login-lead">Use your username and password.</p>
-                    <form method="post" action="index.php?action=local" class="login-form">
+                    <form method="post" action="?action=local" class="login-form">
                         <div class="field">
                             <label class="login-label label" for="access_user_name">Username</label>
                             <input class="input" type="text" id="access_user_name" name="access_user_name" autocomplete="username" required autofocus>
@@ -58,7 +58,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                         <button type="submit" class="btn btn--primary login-submit">Sign in</button>
                     </form>
                         <?php if (AUTH_PAGE_SHOW_OAUTH): ?>
-                            <p class="login-alt"><a href="index.php?stay=1">Other sign-in options</a></p>
+                            <p class="login-alt"><a href="?stay=1">Other sign-in options</a></p>
                         <?php endif; ?>
                     </section>
                 <?php else: ?>
@@ -78,7 +78,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                             <div class="login-sso">
                                 <?php foreach (AUTH_PAGE_CONNECTIONS as $connection): ?>
                                     <a class="btn btn--primary login-sso-btn"
-                                       href="index.php?action=oauth_start&amp;connection=<?php echo rawurlencode($connection->id); ?>">
+                                       href="?action=oauth_start&amp;connection=<?php echo rawurlencode($connection->id); ?>">
                                         <?php echo htmlspecialchars($connection->label, ENT_QUOTES, 'UTF-8'); ?>
                                     </a>
                                 <?php endforeach; ?>
@@ -90,7 +90,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                         <?php endif; ?>
 
                         <?php if (AUTH_PAGE_SHOW_LOCAL): ?>
-                            <a class="btn login-local-btn" href="index.php?action=local">Sign in with username</a>
+                            <a class="btn login-local-btn" href="?action=local">Sign in with username</a>
                         <?php endif; ?>
 
                         <?php if (!AUTH_PAGE_SHOW_OAUTH && !AUTH_PAGE_SHOW_LOCAL): ?>

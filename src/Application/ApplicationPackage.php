@@ -6,7 +6,6 @@ namespace Adlexone\Application;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Data\GroupMembership;
-use Adlexone\FrameOne\AppSettings;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 
@@ -113,7 +112,7 @@ final class ApplicationPackage
                 'name' => (string) $app['name'],
                 'hint' => (string) $app['hint'],
                 'icon' => (string) $app['icon'],
-                'settings' => AppSettings::get((string) $app['slug']),
+                'settings' => ApplicationSettings::get((string) $app['slug']),
             ],
             'access' => Permission::exportAppGrants((string) $app['slug']),
             'navigation' => array_map(static fn (array $link): array => [
@@ -331,7 +330,7 @@ final class ApplicationPackage
             if (!is_array($link)) {
                 continue;
             }
-            $capability = \Adlexone\FrameOne\Library::resolve((string) ($link['capability'] ?? ''));
+            $capability = ScreenCatalog::resolve((string) ($link['capability'] ?? ''));
             if ($capability === '' || !isset(Capabilities::catalog()[$capability])) {
                 continue;
             }

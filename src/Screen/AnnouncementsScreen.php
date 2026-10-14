@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
-use Adlexone\FrameOne\AppAccess;
+use Adlexone\Application\ApplicationAccess;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 
@@ -13,51 +13,51 @@ use Adlexone\support\RenderViews;
 final class AnnouncementsScreen
 {
     /**
-     * FrameOne announcements board — scoped by APPLICATION_SLUG when set.
+     * Announcements for the application that is open.
      */
-    public static function openFrameOneAnnouncements(): void
+    public static function open(): void
     {
-        $slug = AppAccess::slug();
+        $slug = ApplicationAccess::slug();
 
         switch ((string) ($_GET['option'] ?? 'show_announcements')) {
             case 'show_announcement_item':
-                AppAccess::requireUse();
-                self::showFrameOneAnnouncementItem((string) ($_GET['id'] ?? ''), $slug);
+                ApplicationAccess::requireUse();
+                self::showOne((string) ($_GET['id'] ?? ''), $slug);
                 break;
             case 'new_announcement':
-                if (!AppAccess::canAnnounce()) {
+                if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::newFrameOneAnnouncement();
+                self::showCreate();
                 break;
             case 'add_announcement':
-                if (!AppAccess::canAnnounce()) {
+                if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::addFrameOneAnnouncement($slug);
+                self::create($slug);
                 break;
             case 'edit_announcement':
-                if (!AppAccess::canAnnounce()) {
+                if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::editFrameOneAnnouncement((string) ($_GET['id'] ?? ''), $slug);
+                self::showEdit((string) ($_GET['id'] ?? ''), $slug);
                 break;
             case 'update_announcement':
-                if (!AppAccess::canAnnounce()) {
+                if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::updateFrameOneAnnouncement($slug);
+                self::update($slug);
                 break;
             case 'delete_announcement':
-                if (!AppAccess::canAnnounce()) {
+                if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::deleteFrameOneAnnouncement((string) ($_GET['id'] ?? ''), $slug);
+                self::delete((string) ($_GET['id'] ?? ''), $slug);
                 break;
             case 'show_announcements':
             default:
-                AppAccess::requireUse();
-                self::showFrameOneAnnouncements($slug);
+                ApplicationAccess::requireUse();
+                self::showList($slug);
                 break;
         }
     }
@@ -65,7 +65,7 @@ final class AnnouncementsScreen
     /**
      * @return array<string, mixed>|null
      */
-    public static function frameOneAnnouncement(int $id, string $slug): ?array
+    public static function find(int $id, string $slug): ?array
     {
         if ($slug !== '' && Database::columnExists('announcements', 'application')) {
             return Database::first('announcements', '*', 'id = ? AND application = ?', [$id, $slug]);
@@ -73,9 +73,9 @@ final class AnnouncementsScreen
         return Database::first('announcements', '*', 'id = ?', [$id]);
     }
 
-    public static function showFrameOneAnnouncementItem(string $id, string $slug): void
+    public static function showOne(string $id, string $slug): void
     {
-        $row = self::frameOneAnnouncement((int) $id, $slug);
+        $row = self::find((int) $id, $slug);
         if ($row === null) {
             RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
@@ -93,7 +93,7 @@ final class AnnouncementsScreen
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
-    public static function newFrameOneAnnouncement(): void
+    public static function showCreate(): void
     {
         define('BODY_CONTENT', RenderViews::buildForm(
             'New announcement',
@@ -110,7 +110,7 @@ final class AnnouncementsScreen
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
-    public static function addFrameOneAnnouncement(string $slug): void
+    public static function create(string $slug): void
     {
         $data = [
             'time' => time(),
@@ -122,10 +122,10 @@ final class AnnouncementsScreen
             $data['application'] = $slug;
         }
         Database::insert('announcements', $data);
-        self::showFrameOneAnnouncements($slug);
+        self::showList($slug);
     }
 
-    public static function showFrameOneAnnouncements(string $slug): void
+    public static function showList(string $slug): void
     {
         if ($slug !== '' && Database::columnExists('announcements', 'application')) {
             $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], 'application = ?', [$slug], 'time DESC');
@@ -133,7 +133,7 @@ final class AnnouncementsScreen
             $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], '', [], 'time DESC');
         }
 
-        $canManage = AppAccess::canAnnounce();
+        $canManage = ApplicationAccess::canAnnounce();
         $html = '';
         foreach ($result as $row) {
             $actions = '';
@@ -170,9 +170,9 @@ final class AnnouncementsScreen
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
-    public static function editFrameOneAnnouncement(string $id, string $slug): void
+    public static function showEdit(string $id, string $slug): void
     {
-        $row = self::frameOneAnnouncement((int) $id, $slug);
+        $row = self::find((int) $id, $slug);
         if ($row === null) {
             RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
@@ -193,10 +193,10 @@ final class AnnouncementsScreen
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
-    public static function updateFrameOneAnnouncement(string $slug): void
+    public static function update(string $slug): void
     {
         $id = (int) ($_POST['id'] ?? 0);
-        if (self::frameOneAnnouncement($id, $slug) === null) {
+        if (self::find($id, $slug) === null) {
             RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
         }
@@ -204,15 +204,15 @@ final class AnnouncementsScreen
             'message' => (string) ($_POST['message'] ?? ''),
             'subject' => (string) ($_POST['subject'] ?? ''),
         ], 'id = ?', [$id]);
-        self::showFrameOneAnnouncements($slug);
+        self::showList($slug);
     }
 
-    public static function deleteFrameOneAnnouncement(string $id, string $slug): void
+    public static function delete(string $id, string $slug): void
     {
-        $row = self::frameOneAnnouncement((int) $id, $slug);
+        $row = self::find((int) $id, $slug);
         if ($row !== null) {
             Database::delete('announcements', 'id = ?', [(int) $id]);
         }
-        self::showFrameOneAnnouncements($slug);
+        self::showList($slug);
     }
 }

@@ -9,7 +9,7 @@ use Adlexone\support\Communications;
 use Adlexone\support\Database;
 
 /**
- * Per-application workflow rules.
+ * Per-application rules.
  *
  * A rule is when (event), if (field, operator, value), then one or more
  * actions in order: email, write a log line, set a field, or set the owner.

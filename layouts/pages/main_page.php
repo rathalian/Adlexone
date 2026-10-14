@@ -24,7 +24,7 @@ $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
 <body>
     <div class="brandbar appbar">
     <div class="brandrow">
-        <a class="brandhome" href="index.php" aria-label="Inlay home">
+        <a class="brandhome" href="./" aria-label="Inlay home">
         <div class="brandwrap">
             <?php include Theme::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . 'brand_lockup.php'; ?>
         </div>
@@ -41,20 +41,20 @@ $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
                 return is_string($prefix) && $prefix !== $controller && str_starts_with($currentController, $prefix);
             };
             $applications = \Adlexone\Application\ApplicationStore::menuItems();
-            $quickLaunch = ['label' => 'Home', 'href' => 'index.php', 'icon' => 'ic-launch', 'controller' => 'home'];
+            $quickLaunch = ['label' => 'Home', 'href' => './', 'icon' => 'ic-launch', 'controller' => 'home'];
             $manageItems = [];
             if (\Adlexone\Auth\Access::canAll(\Adlexone\Auth\Permission::ADMIN_SETTINGS, \Adlexone\Auth\Permission::ADMIN_ITEMS)) {
-                $manageItems[] = ['label' => 'Builder', 'href' => 'index.php?manage=builder', 'icon' => 'ic-itemtype-add', 'controller' => 'manage_builder'];
+                $manageItems[] = ['label' => 'Builder', 'href' => '?manage=builder', 'icon' => 'ic-itemtype-add', 'controller' => 'manage_builder'];
             }
             if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SETTINGS)) {
-                $manageItems[] = ['label' => 'Applications', 'href' => 'index.php?manage=applications', 'icon' => 'ic-launch', 'controller' => 'manage_applications'];
+                $manageItems[] = ['label' => 'Applications', 'href' => '?manage=applications', 'icon' => 'ic-launch', 'controller' => 'manage_applications'];
             }
             $manageItems = array_merge($manageItems, [
-                ['label' => 'Fields', 'href' => 'index.php?manage=fields', 'icon' => 'ic-manage-fields', 'controller' => 'manage_fields'],
-                ['label' => 'Item types', 'href' => 'index.php?manage=item-types', 'icon' => 'ic-manage-item-types', 'controller' => 'manage_item_types'],
-                ['label' => 'Rules', 'href' => 'index.php?manage=workflow', 'icon' => 'ic-manage-actions', 'controller' => 'manage_actions'],
-                ['label' => 'Security', 'href' => 'index.php?manage=security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'manage_security'],
-                ['label' => 'Settings', 'href' => 'index.php?manage=settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'manage_settings'],
+                ['label' => 'Fields', 'href' => '?manage=fields', 'icon' => 'ic-manage-fields', 'controller' => 'manage_fields'],
+                ['label' => 'Item types', 'href' => '?manage=item-types', 'icon' => 'ic-manage-item-types', 'controller' => 'manage_item_types'],
+                ['label' => 'Rules', 'href' => '?manage=rules', 'icon' => 'ic-manage-actions', 'controller' => 'manage_actions'],
+                ['label' => 'Security', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'manage_security'],
+                ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'manage_settings'],
             ]);
             $renderMenuItem = static function (array $item) use ($matchesController, $sprite): string {
                 $onApplication = ((string) ($_GET['controller'] ?? '') === 'application') && (string) ($item['app'] ?? '') !== '';
