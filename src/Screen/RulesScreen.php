@@ -124,7 +124,7 @@ final class RulesScreen
     			'href' => MAN_BASE_URL . '&option=new_rule',
     			'label' => 'Add a rule',
     		],
-    		'empty' => 'No rules yet. Add one, or create an application from a helpdesk blueprint.',
+    		'empty' => 'No rules yet. Add one, or start an app from Studio, Matters, or House.',
     		'noMatch' => 'No rules match.',
     		'groups' => $groups,
     	]);

@@ -570,17 +570,27 @@ final class ItemScreen
         }
 
         if (!$noItemTypes) {
-            $fields[RenderViews::getLanguageConstant('LA_66', 'TXT_66')] = RenderViews::buildSelectDropdown('item_type_id', $valueArray, $displayArray, $defaultItemType);
+            $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+            $fields[$inApplication ? 'What is this' : RenderViews::getLanguageConstant('LA_66', 'TXT_66')] = RenderViews::buildSelectDropdown('item_type_id', $valueArray, $displayArray, $defaultItemType);
             define('BODY_CONTENT', RenderViews::buildForm(
-                RenderViews::getLanguageConstant('LA_46', 'TXT_46'),
+                $inApplication ? 'New' : RenderViews::getLanguageConstant('LA_46', 'TXT_46'),
                 MAN_BASE_URL . '&option=new_item',
                 $fields,
-                [RenderViews::buildFormButton('submit', 'submit_button', TXT_69)]
+                [RenderViews::buildFormButton('submit', 'submit_button', $inApplication ? 'Continue' : TXT_69)]
             ));
             RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
 
+        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+            define('BODY_CONTENT', RenderViews::buildEmptyState([
+                'illustration' => 'empty-work',
+                'title' => 'Nothing to add yet',
+                'copy' => 'This application does not have anything new to open.',
+            ]));
+            RenderViews::renderThemePage('main_page_content', SET_THEME);
+            return;
+        }
         RenderViews::buildResponse(TXT_341);
     }
 
@@ -650,6 +660,7 @@ final class ItemScreen
             return;
         }
         $itemTypeName = $row['item_type_name'];
+        $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
         if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin have write access
             $itemRole = 2;
         } else {
@@ -708,7 +719,7 @@ final class ItemScreen
             ? GroupMembership::idsFromPost($values)
             : GroupMembership::itemTypeGroupIds((int) $itemTypeID);
         $fields[TXT_270] = self::itemGroupPicker($selectedGroups);
-        $fields[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildTextInput('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
+        $fields[$inApplication ? 'Name' : RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildTextInput('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
         $columnArray = array('custom_field_id');
         $condition = "WHERE item_type_id = '" . $itemTypeID . "' ORDER BY custom_field_order ASC";
         $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
@@ -905,7 +916,10 @@ final class ItemScreen
 
         $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
         $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_57, $javascript);
-        $bodyContent = RenderViews::buildForm(RenderViews::getLanguageConstant('LA_46', 'TXT_67') . ' — ' . $itemTypeName,MAN_BASE_URL. '&option=add_item',$fields,$buttons,$formOptions);
+        $createHeading = $inApplication
+            ? 'New ' . $itemTypeName
+            : RenderViews::getLanguageConstant('LA_46', 'TXT_67') . ' — ' . $itemTypeName;
+        $bodyContent = RenderViews::buildForm($createHeading,MAN_BASE_URL. '&option=add_item',$fields,$buttons,$formOptions);
         define('BODY_CONTENT', $bodyContent);
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }

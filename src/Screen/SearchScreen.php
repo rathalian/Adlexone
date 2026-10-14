@@ -285,13 +285,17 @@ final class SearchScreen
             : (string)RenderViews::applicationText('TXT_1', (string)RenderViews::getLanguageConstant('LA_44', 'TXT_44'));
 
         if (empty($ids)) {
+            $again = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL . '&option=show_quick_search' : '';
             define('BODY_CONTENT', RenderViews::buildVerticalCards([
                 [
                     'title' => $heading,
-                    'html' => RenderViews::buildRecordList([
-                        'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
-                        'empty' => TXT_115,
-                        'groups' => [['rows' => []]],
+                    'html' => RenderViews::buildEmptyState([
+                        'illustration' => 'empty-search',
+                        'title' => 'Nothing matched',
+                        'copy' => 'Try another search.',
+                        'action' => $again !== ''
+                            ? '<a class="btn btn--primary" href="' . htmlspecialchars($again, ENT_QUOTES, 'UTF-8') . '">Search again</a>'
+                            : '',
                     ]),
                 ],
             ]));
@@ -1078,6 +1082,7 @@ final class SearchScreen
             }
         }
         $toolbar = '';
+        $emptyAction = '';
         if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
             $itemType = '';
             $defaultType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
@@ -1086,10 +1091,15 @@ final class SearchScreen
             }
             $quickLabel = RenderViews::applicationText('TXT_62', 'Quick search');
             $advancedLabel = RenderViews::applicationText('TXT_61', 'Advanced search');
-            $toolbar = '<div class="record-list__tools">'
-                . RenderViews::buildURL($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary btn--sm')
-                . RenderViews::buildURL($base . '&option=show_item_search' . ($itemType !== '' ? '&item_types=' . $itemType : ''), $advancedLabel, '', 'btn btn--sm')
-                . '</div>';
+            $searchButton = RenderViews::buildURL($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary');
+            if ($rows === []) {
+                $emptyAction = $searchButton;
+            } else {
+                $toolbar = '<div class="record-list__tools">'
+                    . RenderViews::buildURL($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary btn--sm')
+                    . RenderViews::buildURL($base . '&option=show_item_search' . ($itemType !== '' ? '&item_types=' . $itemType : ''), $advancedLabel, '', 'btn btn--sm')
+                    . '</div>';
+            }
         }
         $list = RenderViews::buildRecordList([
             'column' => TXT_151,
@@ -1097,10 +1107,11 @@ final class SearchScreen
                 ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
             ],
             'searchLabel' => TXT_3,
-            'empty' => TXT_115,
+            'empty' => 'No saved searches yet',
             'emptyIllustration' => 'empty-search',
             'emptyTitle' => 'No saved searches yet',
-            'emptyCopy' => 'Run a quick or advanced search, then save it for next time.',
+            'emptyCopy' => 'Search once, then keep it here.',
+            'emptyAction' => $emptyAction,
             'toolbar' => $toolbar,
             'groups' => [['rows' => $rows]],
         ]);
@@ -1427,13 +1438,17 @@ final class SearchScreen
         $eventId = (isset($_GET['event_id'])) ? '&event_id=' . $_GET['event_id'] : '';
 
         $fields = [];
-        $fields[TXT_99] = self::showItemTypeMenu($filter);
+        $allowedTypes = self::applicationSearchTypeIds();
+        $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+        if (!$inApplication || count($allowedTypes) > 1) {
+            $fields[$inApplication ? 'Kind' : TXT_99] = self::showItemTypeMenu($filter);
+        }
         $fields[RenderViews::getLanguageConstant('LA_102', 'TXT_102')] = self::searchControlRow(
             RenderViews::buildSelectDropdown('id_operator', $operatorValues, $operatorDisplayValues, ''),
             RenderViews::buildTextInput('item_id', ''),
             RenderViews::buildSelectDropdown('id_andor', $andOrValues, $andOrDisplayValues, '')
         );
-        $fields[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = self::searchControlRow(
+        $fields[$inApplication ? 'Name' : RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = self::searchControlRow(
             RenderViews::buildSelectDropdown('item_title_operator', $operatorValues, $operatorDisplayValues, ''),
             RenderViews::buildTextInput('item_title', ''),
             RenderViews::buildSelectDropdown('title_andor', $andOrValues, $andOrDisplayValues, '')

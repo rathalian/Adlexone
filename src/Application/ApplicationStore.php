@@ -24,6 +24,7 @@ final class ApplicationStore
         self::ensureSchema();
         self::$ready = true;
         self::seedIfEmpty();
+        ApplicationBuilder::installShowcase();
         self::retireServiceCentreLegacy();
         self::renameServiceCentreWork();
         self::renameServiceCentreAnnouncements();

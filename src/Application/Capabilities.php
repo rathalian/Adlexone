@@ -36,14 +36,14 @@ final class Capabilities
         ];
 
         return [
-            ScreenCatalog::WORK => $frame('Work list (my items)', 'ic-search', 'item_type'),
-            ScreenCatalog::CREATE => $frame('Create item', 'ic-itemtype-add', 'item_type'),
+            ScreenCatalog::WORK => $frame('Work', 'ic-search', 'item_type'),
+            ScreenCatalog::CREATE => $frame('New', 'ic-itemtype-add', 'item_type'),
             ScreenCatalog::SEARCH_QUICK => $frame('Quick search', 'ic-quick-search', 'none'),
-            ScreenCatalog::SEARCH_ADVANCED => $frame('Advanced search', 'ic-search', 'item_type'),
+            ScreenCatalog::SEARCH_ADVANCED => $frame('Search', 'ic-search', 'item_type'),
             ScreenCatalog::SEARCH_SAVED => $frame('Saved search', 'ic-search', 'saved_search'),
-            ScreenCatalog::SEARCH_LIST => $frame('Saved search list', 'ic-search', 'none'),
+            ScreenCatalog::SEARCH_LIST => $frame('Searches', 'ic-search', 'none'),
             ScreenCatalog::ANNOUNCEMENTS => $frame('Announcements', 'ic-announcements', 'none'),
-            ScreenCatalog::SETTINGS => $frame('Application settings', 'ic-settings', 'none'),
+            ScreenCatalog::SETTINGS => $frame('Settings', 'ic-settings', 'none'),
         ];
     }
 

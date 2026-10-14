@@ -33,7 +33,7 @@ final class BuilderScreen
         $section .= RenderViews::buildURL('?manage=applications', 'Applications', 'ic-launch');
         RenderNavigation::applySectionNav('Builder', $section);
         if (!defined('PAGE_TITLE')) {
-            define('PAGE_TITLE', 'Create a business application');
+            define('PAGE_TITLE', 'Design an app');
         }
 
         switch ($option) {
@@ -57,10 +57,13 @@ final class BuilderScreen
         $hintRaw = (string) ($_POST['hint'] ?? '');
         $recordRaw = (string) ($_POST['record_type_name'] ?? '');
         $icon = (string) ($_POST['icon'] ?? 'ic-launch');
-        $blueprint = (string) ($_POST['blueprint'] ?? ApplicationBuilder::BLUEPRINT_CASE);
+        $blueprint = (string) ($_POST['blueprint'] ?? ApplicationBuilder::BLUEPRINT_STUDIO);
         $blueprints = ApplicationBuilder::blueprints();
         if (!isset($blueprints[$blueprint])) {
-            $blueprint = ApplicationBuilder::BLUEPRINT_CASE;
+            $blueprint = ApplicationBuilder::BLUEPRINT_STUDIO;
+        }
+        if (($_POST['icon'] ?? '') === '') {
+            $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-launch');
         }
         if (!in_array($icon, Capabilities::icons(), true)) {
             $icon = 'ic-launch';
@@ -91,21 +94,16 @@ final class BuilderScreen
         ];
 
         $screenMeta = [
-            ScreenCatalog::WORK => ['hint' => 'Records in progress', 'icon' => 'ic-search'],
-            ScreenCatalog::CREATE => ['hint' => 'Add a record', 'icon' => 'ic-itemtype-add'],
-            ScreenCatalog::SEARCH_LIST => ['hint' => 'Find records', 'icon' => 'ic-my-ticket-searches'],
-            ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'Notes for the team', 'icon' => 'ic-announcements'],
-            ScreenCatalog::SETTINGS => ['hint' => 'How the app is set up', 'icon' => 'ic-settings'],
+            ScreenCatalog::WORK => ['hint' => 'The board', 'icon' => 'ic-search'],
+            ScreenCatalog::CREATE => ['hint' => 'Add one', 'icon' => 'ic-itemtype-add'],
+            ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-my-ticket-searches'],
+            ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announcements'],
+            ScreenCatalog::SETTINGS => ['hint' => 'How this app is set up', 'icon' => 'ic-settings'],
         ];
         $levelMeta = [
-            'use' => ['label' => 'Use application', 'hint' => 'Work with its records'],
-            'announce' => ['label' => 'Announcements', 'hint' => 'Post notes for the team'],
+            'use' => ['label' => 'Use application', 'hint' => 'Open the board and add work'],
+            'announce' => ['label' => 'Announcements', 'hint' => 'Post a notice'],
             'settings' => ['label' => 'Settings', 'hint' => 'Change how the app works'],
-        ];
-        $ruleCopy = [
-            ApplicationBuilder::BLUEPRINT_CASE => 'Emails the owner when priority becomes High.',
-            ApplicationBuilder::BLUEPRINT_HELPDESK => 'Emails the owner when priority becomes High.',
-            ApplicationBuilder::BLUEPRINT_CRM => 'Adds a note when stage becomes Customer.',
         ];
 
         $clientBlueprints = [];
@@ -132,9 +130,11 @@ final class BuilderScreen
             }
             $clientBlueprints[$key] = [
                 'hint' => (string) $meta['hint'],
+                'record' => (string) ($meta['record'] ?? ''),
+                'icon' => (string) ($meta['icon'] ?? 'ic-launch'),
                 'screens' => array_values($meta['screens']),
                 'fields' => $clientFields,
-                'rule' => $ruleCopy[$key] ?? '',
+                'rule' => (string) ($meta['rule'] ?? ''),
             ];
             $fieldsLine = $fieldNames === [] ? 'Add your own fields afterwards' : implode(' · ', $fieldNames);
             $blueprintHtml .= '<label class="builder__blueprint' . $active . '">'
@@ -214,7 +214,11 @@ final class BuilderScreen
             $previewSlug = 'your-app';
         }
         $previewHint = trim($hintRaw) !== '' ? trim($hintRaw) : (string) $blueprints[$blueprint]['hint'];
-        $previewType = trim($recordRaw) !== '' ? trim($recordRaw) : (trim($nameRaw) !== '' ? trim($nameRaw) . ' record' : 'Record');
+        $previewType = trim($recordRaw) !== ''
+            ? trim($recordRaw)
+            : ((string) ($blueprints[$blueprint]['record'] ?? '') !== ''
+                ? (string) $blueprints[$blueprint]['record']
+                : (trim($nameRaw) !== '' ? trim($nameRaw) . ' record' : 'Record'));
         $previewFields = '';
         foreach ($clientBlueprints[$blueprint]['fields'] as $field) {
             $values = $field['values'] === [] ? '' : '<span class="builder__field-values">' . $h(implode(', ', $field['values'])) . '</span>';
@@ -255,8 +259,8 @@ final class BuilderScreen
         $html = '<div class="builder" data-builder="' . $payload . '">'
             . '<header class="builder__intro">'
             . $artHtml
-            . '<div><p class="builder__title">Create a business application</p>'
-            . '<p class="builder__lead">Name it, choose a starting shape, and decide who can open it. Screens, fields, and access can be changed later.</p></div>'
+            . '<div><p class="builder__title">Design an app</p>'
+            . '<p class="builder__lead">Pick a starting shape. Screens and fields can change later.</p></div>'
             . '</header>'
             . $errorHtml
             . '<form id="builder-form" class="builder__form builder__panel" method="post" action="' . $h(BUILDER_URL . '&option=create') . '">'
@@ -265,10 +269,10 @@ final class BuilderScreen
             . '<h2 class="builder__heading">Application</h2>'
             . '<div class="builder__identity">'
             . '<div class="field"><label class="label" for="builder-name">Name</label>'
-            . '<input class="text builder__name" id="builder-name" name="name" value="' . $h($nameRaw) . '" required autocomplete="off" placeholder="Complaints"></div>'
+            . '<input class="text builder__name" id="builder-name" name="name" value="' . $h($nameRaw) . '" required autocomplete="off" placeholder="Studio"></div>'
             . '<div class="field"><label class="label" for="builder-slug">Link</label>'
             . '<div class="builder__link"><span class="builder__link-prefix">application/</span>'
-            . '<input class="text" id="builder-slug" name="slug" value="' . $h($slugRaw) . '" autocomplete="off" placeholder="complaints" spellcheck="false"></div>'
+            . '<input class="text" id="builder-slug" name="slug" value="' . $h($slugRaw) . '" autocomplete="off" placeholder="studio" spellcheck="false"></div>'
             . '<p class="form-help">Follows the name until you change it.</p></div>'
             . '<div class="field field--wide"><label class="label" for="builder-hint">Description</label>'
             . '<input class="text" id="builder-hint" name="hint" value="' . $h($hintRaw) . '" autocomplete="off" placeholder="What this application is for"></div>'
@@ -276,7 +280,7 @@ final class BuilderScreen
             . '</div></section>'
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Blueprint</h2>'
-            . '<p class="form-help">A starting shape. Choosing one sets the screens and fields. You can still adjust the screens.</p>'
+            . '<p class="form-help">Choosing one sets the board, the fields, and one rule. You can still adjust the screens.</p>'
             . $blueprintHtml
             . '</section>'
             . '<section class="builder__section">'
@@ -286,9 +290,9 @@ final class BuilderScreen
             . '</section>'
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Record</h2>'
-            . '<div class="field"><label class="label" for="builder-type">Record type name</label>'
-            . '<input class="text" id="builder-type" name="record_type_name" value="' . $h($recordRaw) . '" autocomplete="off" placeholder="Complaint">'
-            . '<p class="form-help">Leave this blank and it becomes the application name plus “record”.</p></div>'
+            . '<div class="field"><label class="label" for="builder-type">What each card is called</label>'
+            . '<input class="text" id="builder-type" name="record_type_name" value="' . $h($recordRaw) . '" autocomplete="off" placeholder="' . $h((string) ($blueprints[$blueprint]['record'] ?? 'Job')) . '">'
+            . '<p class="form-help">Leave this blank to use the starting shape’s name.</p></div>'
             . '</section>'
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Who can open it</h2>'
@@ -298,7 +302,7 @@ final class BuilderScreen
             . $levelsHtml
             . '</section>'
             . '<div class="form-actions">'
-            . RenderViews::buildFormButton('submit', 'submit_button', 'Create application')
+            . RenderViews::buildFormButton('submit', 'submit_button', 'Create this app')
             . '<a class="btn" href="?manage=applications">Open Applications</a>'
             . '</div></form>'
             . '<aside class="builder__preview builder__panel" aria-live="polite">'
@@ -315,7 +319,7 @@ final class BuilderScreen
             . $ruleRow
             . '<div><dt>Who can open it</dt><dd id="builder-preview-access">' . $h($accessLine) . '</dd></div>'
             . '</dl>'
-            . '<button type="submit" form="builder-form" class="btn btn--primary builder__create">Create application</button>'
+            . '<button type="submit" form="builder-form" class="btn btn--primary builder__create">Create this app</button>'
             . '</aside>'
             . '<details class="builder__import builder__panel">'
             . '<summary>Import a JSON package</summary>'
@@ -345,16 +349,16 @@ final class BuilderScreen
             . 'var typeDirty=typeEl&&typeEl.value.trim()!=="";'
             . 'function slugify(v){return String(v||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}'
             . 'function paint(sel){root.querySelectorAll(sel).forEach(function(el){var input=el.querySelector("input");el.classList.toggle("is-selected",!!(input&&input.checked));});}'
-            . 'function chosenBlueprint(){var input=form.querySelector("input[name=blueprint]:checked");return input?input.value:"case";}'
+            . 'function chosenBlueprint(){var input=form.querySelector("input[name=blueprint]:checked");return input?input.value:"studio";}'
             . 'function text(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}'
             . 'function render(){'
             . 'paint(".builder__blueprint");paint(".builder__icon");paint(".builder__choice");'
             . 'var bp=data.blueprints&&data.blueprints[chosenBlueprint()]||{hint:"",screens:[],fields:[],rule:""};'
             . 'var name=(nameEl&&nameEl.value.trim())||"";'
-            . 'if(typeEl&&typeEl.value.trim()===""){typeEl.placeholder=name?name+" record":"Complaint";}'
+            . 'if(typeEl){typeEl.placeholder=bp.record||"Job";}'
             . 'var slug=(slugEl&&slugEl.value.trim())||"";'
             . 'var hint=(hintEl&&hintEl.value.trim())||bp.hint||"";'
-            . 'var type=(typeEl&&typeEl.value.trim())||(name?name+" record":"Record");'
+            . 'var type=(typeEl&&typeEl.value.trim())||bp.record||(name?name+" record":"Record");'
             . 'var address=slugify(slug||name)||"your-app";'
             . 'text("builder-preview-name",name||"Your application");'
             . 'text("builder-preview-hint",hint);'
@@ -387,7 +391,8 @@ final class BuilderScreen
             . 'if(hintEl)hintEl.addEventListener("input",render);'
             . 'if(typeEl)typeEl.addEventListener("input",function(){typeDirty=typeEl.value.trim()!=="";render();});'
             . 'form.addEventListener("change",function(e){if(e.target&&e.target.name==="blueprint"){var bp=data.blueprints&&data.blueprints[e.target.value];'
-            . 'if(bp){form.querySelectorAll("input[name=\\"screens[]\\"]").forEach(function(input){input.checked=bp.screens.indexOf(input.value)!==-1;});}}render();});'
+            . 'if(bp){form.querySelectorAll("input[name=\\"screens[]\\"]").forEach(function(input){input.checked=bp.screens.indexOf(input.value)!==-1;});'
+            . 'if(bp.icon){var iconInput=form.querySelector("input[name=icon][value=\\""+bp.icon+"\\"]");if(iconInput)iconInput.checked=true;}}}render();});'
             . 'render();'
             . '})();</script>';
 

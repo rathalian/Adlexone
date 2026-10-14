@@ -488,99 +488,32 @@ final class Rules
      */
     public static function seedBlueprint(int $applicationId, int $itemTypeId, string $blueprint, array $fieldIdsByName): void
     {
-        if ($blueprint === ApplicationBuilder::BLUEPRINT_HELPDESK) {
-            $statusId = (int) ($fieldIdsByName['Status'] ?? 0);
-            self::add($applicationId, [
-                'item_type_id' => $itemTypeId,
-                'name' => 'Email the team when a ticket is created',
-                'event' => self::EVENT_CREATE,
-                'operator' => self::OP_ALWAYS,
-                'sort_order' => 10,
-                'steps' => [[
-                    'outcome' => self::OUTCOME_EMAIL,
-                    'recipient' => self::TO_OWNER_AND_GROUPS,
-                    'subject' => 'New ticket: ITEM_TITLE',
-                    'body' => "ITEM_TITLE (ITEM_ID) was created by ITEM_CREATOR.",
-                ]],
-            ]);
-            self::add($applicationId, [
-                'item_type_id' => $itemTypeId,
-                'name' => 'Email the team when a log line is added',
-                'event' => self::EVENT_LOG,
-                'operator' => self::OP_ALWAYS,
-                'sort_order' => 20,
-                'steps' => [[
-                    'outcome' => self::OUTCOME_EMAIL,
-                    'recipient' => self::TO_OWNER_AND_GROUPS,
-                    'subject' => 'Update on ITEM_TITLE',
-                    'body' => "ITEM_TITLE (ITEM_ID) has a new log line.",
-                ]],
-            ]);
-            if ($statusId > 0) {
-                self::add($applicationId, [
-                    'item_type_id' => $itemTypeId,
-                    'name' => 'Email the team when a ticket is closed',
-                    'event' => self::EVENT_UPDATE,
-                    'field_key' => 'custom_field_' . $statusId,
-                    'operator' => self::OP_BECOMES,
-                    'match_value' => 'Closed',
-                    'sort_order' => 30,
-                    'steps' => [[
-                        'outcome' => self::OUTCOME_EMAIL,
-                        'recipient' => self::TO_OWNER_AND_GROUPS,
-                        'subject' => 'Closed: ITEM_TITLE',
-                        'body' => "ITEM_TITLE (ITEM_ID) is now closed.",
-                    ]],
-                ]);
-            }
-            self::add($applicationId, [
-                'item_type_id' => $itemTypeId,
-                'name' => 'Email the new owner when ownership changes',
-                'event' => self::EVENT_UPDATE,
-                'field_key' => 'owner',
-                'operator' => self::OP_CHANGED,
-                'sort_order' => 40,
-                'steps' => [[
-                    'outcome' => self::OUTCOME_EMAIL,
-                    'recipient' => self::TO_OWNER,
-                    'subject' => 'You own ITEM_TITLE',
-                    'body' => "ITEM_TITLE (ITEM_ID) is now owned by ITEM_OWNER.",
-                ]],
-            ]);
+        $stage = match ($blueprint) {
+            ApplicationBuilder::BLUEPRINT_STUDIO => ['Stage', 'Review', 'Tell the owner a job is ready for review', 'Review: ITEM_TITLE', 'ITEM_TITLE is ready for review.'],
+            ApplicationBuilder::BLUEPRINT_MATTERS => ['Waiting', 'Waiting on us', 'Tell the owner a matter is waiting on us', 'Waiting on us: ITEM_TITLE', 'ITEM_TITLE is waiting on us.'],
+            ApplicationBuilder::BLUEPRINT_HOUSE => ['When', 'Tonight', 'Tell the owner something is on tonight', 'Tonight: ITEM_TITLE', 'ITEM_TITLE is on tonight.'],
+            default => null,
+        };
+        if ($stage === null) {
             return;
         }
-        if ($blueprint === ApplicationBuilder::BLUEPRINT_CASE) {
-            $priorityId = (int) ($fieldIdsByName['Priority'] ?? 0);
-            if ($priorityId > 0) {
-                self::add($applicationId, [
-                    'item_type_id' => $itemTypeId,
-                    'name' => 'Email the owner when priority is high',
-                    'event' => self::EVENT_UPDATE,
-                    'field_key' => 'custom_field_' . $priorityId,
-                    'operator' => self::OP_BECOMES,
-                    'match_value' => 'High',
-                    'outcome' => self::OUTCOME_EMAIL,
-                    'recipient' => self::TO_OWNER,
-                    'subject' => 'High priority: ITEM_TITLE',
-                    'body' => 'ITEM_TITLE (ITEM_ID) is now high priority.',
-                ]);
-            }
+        [$fieldName, $match, $name, $subject, $body] = $stage;
+        $fieldId = (int) ($fieldIdsByName[$fieldName] ?? 0);
+        if ($fieldId <= 0) {
+            return;
         }
-        if ($blueprint === ApplicationBuilder::BLUEPRINT_CRM) {
-            $stageId = (int) ($fieldIdsByName['Stage'] ?? 0);
-            if ($stageId > 0) {
-                self::add($applicationId, [
-                    'item_type_id' => $itemTypeId,
-                    'name' => 'Log when a contact becomes a customer',
-                    'event' => self::EVENT_UPDATE,
-                    'field_key' => 'custom_field_' . $stageId,
-                    'operator' => self::OP_BECOMES,
-                    'match_value' => 'Customer',
-                    'outcome' => self::OUTCOME_LOG,
-                    'body' => 'ITEM_TITLE is now a customer.',
-                ]);
-            }
-        }
+        self::add($applicationId, [
+            'item_type_id' => $itemTypeId,
+            'name' => $name,
+            'event' => self::EVENT_UPDATE,
+            'field_key' => 'custom_field_' . $fieldId,
+            'operator' => self::OP_BECOMES,
+            'match_value' => $match,
+            'outcome' => self::OUTCOME_EMAIL,
+            'recipient' => self::TO_OWNER,
+            'subject' => $subject,
+            'body' => $body,
+        ]);
     }
 
     /**

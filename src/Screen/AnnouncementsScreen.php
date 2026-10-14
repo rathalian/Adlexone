@@ -152,15 +152,17 @@ final class AnnouncementsScreen
         if ($html === '') {
             $html = RenderViews::buildEmptyState([
                 'illustration' => 'empty-work',
-                'title' => 'No announcements yet',
+                'title' => 'Nothing on the wall',
                 'copy' => $canManage
-                    ? 'Post the first update for people using this application.'
-                    : 'When announcements are posted, they will show up here.',
+                    ? 'Post a notice for the people who use this.'
+                    : 'When a notice is posted, it will show up here.',
+                'action' => $canManage
+                    ? RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary')
+                    : '',
             ]);
-        }
-        if ($canManage) {
+        } elseif ($canManage) {
             $html = '<div class="form-actions form-actions--flush">'
-                . RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'New announcement', '', 'btn btn--primary btn--sm')
+                . RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary btn--sm')
                 . '</div>' . $html;
         }
 

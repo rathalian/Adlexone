@@ -84,7 +84,7 @@ final class ApplicationSettingsScreen
             'Application settings',
             MAN_BASE_URL . '&option=update_settings',
             [
-                'Default item type' => RenderViews::buildSelectDropdown('default_item_type_id', $valueArray, $displayArray, $current),
+                'New work' => RenderViews::buildSelectDropdown('default_item_type_id', $valueArray, $displayArray, $current),
             ],
             [
                 RenderViews::buildFormButton('submit', 'submit_button', 'Save'),

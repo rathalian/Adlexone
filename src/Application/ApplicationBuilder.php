@@ -5,6 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Permission;
 use Adlexone\Data\GroupMembership;
+use Adlexone\Data\ItemFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 
@@ -13,58 +14,72 @@ use Adlexone\support\FieldTypes;
  */
 final class ApplicationBuilder
 {
+    private static bool $installingShowcase = false;
+
     public const BLUEPRINT_BLANK = 'blank';
-    public const BLUEPRINT_CASE = 'case';
-    public const BLUEPRINT_CRM = 'crm';
-    public const BLUEPRINT_HELPDESK = 'helpdesk';
+    public const BLUEPRINT_STUDIO = 'studio';
+    public const BLUEPRINT_MATTERS = 'matters';
+    public const BLUEPRINT_HOUSE = 'house';
 
     /**
-     * @return array<string, array{label: string, hint: string, fields: list<array<string, mixed>>, screens: list<string>}>
+     * @return array<string, array{label: string, hint: string, record: string, icon: string, rule: string, fields: list<array<string, mixed>>, screens: list<string>}>
      */
     public static function blueprints(): array
     {
-        $caseFields = [
-            ['name' => 'Status', 'type' => FieldTypes::MENU, 'values' => ['New', 'In progress', 'Waiting', 'Closed']],
-            ['name' => 'Priority', 'type' => FieldTypes::MENU, 'values' => ['Low', 'Normal', 'High']],
-            ['name' => 'Category', 'type' => FieldTypes::MENU, 'values' => ['General', 'Support', 'Other']],
-        ];
         $coreScreens = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
 
         return [
-            self::BLUEPRINT_BLANK => [
-                'label' => 'Blank',
-                'hint' => 'A shell and one record type. Add fields when you are ready.',
-                'fields' => [],
-                'screens' => $coreScreens,
-            ],
-            self::BLUEPRINT_CASE => [
-                'label' => 'Case / request',
-                'hint' => 'Track work with status, priority, and category.',
-                'fields' => $caseFields,
-                'screens' => $coreScreens,
-            ],
-            self::BLUEPRINT_CRM => [
-                'label' => 'Simple CRM',
-                'hint' => 'Contacts with organisation, email, stage, and notes.',
+            self::BLUEPRINT_STUDIO => [
+                'label' => 'Studio',
+                'hint' => 'Live jobs, from enquiry to delivered.',
+                'record' => 'Job',
+                'icon' => 'ic-item-mgmt',
+                'rule' => 'Emails the owner when a job reaches Review.',
                 'fields' => [
-                    ['name' => 'Organisation', 'type' => FieldTypes::TEXT_BOX],
-                    ['name' => 'Email', 'type' => FieldTypes::TEXT_BOX],
-                    ['name' => 'Stage', 'type' => FieldTypes::MENU, 'values' => ['Lead', 'Qualified', 'Customer', 'Inactive']],
-                    ['name' => 'Notes', 'type' => FieldTypes::TEXT_AREA],
+                    ['name' => 'Stage', 'type' => FieldTypes::MENU, 'values' => ['Enquiry', 'Sketch', 'Making', 'Review', 'Delivered']],
+                    ['name' => 'Client', 'type' => FieldTypes::TEXT_BOX],
+                    ['name' => 'Next step', 'type' => FieldTypes::TEXT_BOX],
                 ],
                 'screens' => $coreScreens,
             ],
-            self::BLUEPRINT_HELPDESK => [
-                'label' => 'Helpdesk',
-                'hint' => 'Cases, announcements, and settings for a support team.',
-                'fields' => $caseFields,
+            self::BLUEPRINT_MATTERS => [
+                'label' => 'Matters',
+                'hint' => 'Waiting on us, or waiting on them.',
+                'record' => 'Matter',
+                'icon' => 'ic-knowledgebase',
+                'rule' => 'Emails the owner when a matter is waiting on us.',
+                'fields' => [
+                    ['name' => 'Waiting', 'type' => FieldTypes::MENU, 'values' => ['Waiting on us', 'Waiting on them', 'Done']],
+                    ['name' => 'Client', 'type' => FieldTypes::TEXT_BOX],
+                    ['name' => 'Next step', 'type' => FieldTypes::TEXT_BOX],
+                ],
+                'screens' => $coreScreens,
+            ],
+            self::BLUEPRINT_HOUSE => [
+                'label' => 'House',
+                'hint' => 'The week on the board, and a notice on the wall.',
+                'record' => 'Evening',
+                'icon' => 'ic-announcements',
+                'rule' => 'Emails the owner when something is on tonight.',
+                'fields' => [
+                    ['name' => 'When', 'type' => FieldTypes::MENU, 'values' => ['This week', 'Tonight', 'Done']],
+                    ['name' => 'Place', 'type' => FieldTypes::TEXT_BOX],
+                ],
                 'screens' => [
                     ScreenCatalog::WORK,
                     ScreenCatalog::CREATE,
-                    ScreenCatalog::SEARCH_LIST,
                     ScreenCatalog::ANNOUNCEMENTS,
-                    ScreenCatalog::SETTINGS,
+                    ScreenCatalog::SEARCH_LIST,
                 ],
+            ],
+            self::BLUEPRINT_BLANK => [
+                'label' => 'Blank',
+                'hint' => 'A shell and one record. Add fields when you are ready.',
+                'record' => '',
+                'icon' => 'ic-launch',
+                'rule' => '',
+                'fields' => [],
+                'screens' => $coreScreens,
             ],
         ];
     }
@@ -97,6 +112,9 @@ final class ApplicationBuilder
         }
         if (!isset($blueprints[$blueprint])) {
             throw new \InvalidArgumentException('Choose a blueprint.');
+        }
+        if ($recordTypeName === '') {
+            $recordTypeName = trim((string) ($blueprints[$blueprint]['record'] ?? ''));
         }
         if ($recordTypeName === '') {
             $recordTypeName = $name . ' record';
@@ -300,5 +318,151 @@ final class ApplicationBuilder
             ]);
             $order += 10;
         }
+    }
+
+    /**
+     * Studio, Matters, and House as applications you can open, with work already on the board.
+     * Skips any slug that already exists.
+     */
+    public static function installShowcase(): void
+    {
+        if (self::$installingShowcase) {
+            return;
+        }
+        self::$installingShowcase = true;
+        try {
+            self::installShowcaseOnce();
+        } finally {
+            self::$installingShowcase = false;
+        }
+    }
+
+    private static function installShowcaseOnce(): void
+    {
+        foreach (self::showcase() as $slug => $spec) {
+            if (ApplicationStore::slugInUse($slug, 0)) {
+                continue;
+            }
+            $meta = self::blueprints()[$spec['blueprint']];
+            $record = (string) $meta['record'];
+            if (self::itemTypeNameInUse($record)) {
+                $record .= ' (' . $meta['label'] . ')';
+            }
+            $created = self::create(
+                (string) $meta['label'],
+                $slug,
+                (string) $meta['hint'],
+                (string) $meta['icon'],
+                $spec['blueprint'],
+                $record
+            );
+            Database::update('applications', ['sort_order' => $spec['sort']], 'application_id = ?', [(int) $created['application_id']]);
+            self::seedShowcaseCards((int) $created['item_type_id'], $meta['fields'], $spec['cards']);
+            $notice = $spec['notice'] ?? null;
+            if (is_array($notice) && Database::tableExists('announcements')) {
+                Database::insert('announcements', [
+                    'time' => time(),
+                    'subject' => (string) $notice['subject'],
+                    'message' => (string) $notice['message'],
+                    'type' => '',
+                    'application' => $slug,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return array<string, array{blueprint: string, sort: int, cards: list<array{title: string, fields: array<string, string>}>, notice?: array{subject: string, message: string}}>
+     */
+    private static function showcase(): array
+    {
+        return [
+            'studio' => [
+                'blueprint' => self::BLUEPRINT_STUDIO,
+                'sort' => 1,
+                'cards' => [
+                    ['title' => 'Harbour chair', 'fields' => ['Stage' => 'Making', 'Client' => 'Northwind', 'Next step' => 'Oil the arms']],
+                    ['title' => 'Lane house mark', 'fields' => ['Stage' => 'Sketch', 'Client' => 'Lane', 'Next step' => 'Send two directions']],
+                    ['title' => 'Winter menu', 'fields' => ['Stage' => 'Review', 'Client' => 'Osteria', 'Next step' => 'Wait for their note']],
+                    ['title' => 'Gate latch', 'fields' => ['Stage' => 'Enquiry', 'Client' => 'Holm', 'Next step' => 'Visit the site']],
+                ],
+            ],
+            'matters' => [
+                'blueprint' => self::BLUEPRINT_MATTERS,
+                'sort' => 2,
+                'cards' => [
+                    ['title' => 'Roof brief', 'fields' => ['Waiting' => 'Waiting on us', 'Client' => 'Holm', 'Next step' => 'Revise the section']],
+                    ['title' => 'Lease note', 'fields' => ['Waiting' => 'Waiting on them', 'Client' => 'Lane', 'Next step' => 'Their solicitor']],
+                    ['title' => 'Sign-off', 'fields' => ['Waiting' => 'Done', 'Client' => 'Northwind', 'Next step' => 'File the drawings']],
+                ],
+            ],
+            'house' => [
+                'blueprint' => self::BLUEPRINT_HOUSE,
+                'sort' => 3,
+                'cards' => [
+                    ['title' => 'Thursday sitting', 'fields' => ['When' => 'Tonight', 'Place' => 'Dining room']],
+                    ['title' => 'Late gallery', 'fields' => ['When' => 'This week', 'Place' => 'West room']],
+                    ['title' => 'Sunday lunch', 'fields' => ['When' => 'This week', 'Place' => 'Terrace']],
+                ],
+                'notice' => [
+                    'subject' => 'Tonight',
+                    'message' => 'Thursday sitting is in the dining room. Doors at six.',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $fieldDefs
+     * @param list<array{title: string, fields: array<string, string>}> $cards
+     */
+    private static function seedShowcaseCards(int $itemTypeId, array $fieldDefs, array $cards): void
+    {
+        $links = Database::select(
+            'item_type_custom_fields',
+            ['custom_field_id'],
+            'item_type_id = ?',
+            [$itemTypeId],
+            'custom_field_order ASC'
+        );
+        $fieldIds = [];
+        foreach ($fieldDefs as $index => $field) {
+            $name = trim((string) ($field['name'] ?? ''));
+            if ($name === '' || !isset($links[$index])) {
+                continue;
+            }
+            $fieldIds[$name] = (int) $links[$index]['custom_field_id'];
+        }
+        $owner = self::showcaseOwnerId();
+        $groups = GroupMembership::itemTypeGroupIds($itemTypeId);
+        foreach ($cards as $card) {
+            $itemId = Database::insert('items', [
+                'create_date' => time(),
+                'item_type_id' => $itemTypeId,
+                'creator_security' => $owner,
+                'user_security' => $owner,
+                'item_title' => $card['title'],
+            ]);
+            $values = [];
+            foreach ($card['fields'] as $name => $value) {
+                $fieldId = $fieldIds[$name] ?? 0;
+                if ($fieldId > 0) {
+                    $values['custom_field_' . $fieldId] = $value;
+                }
+            }
+            ItemFields::saveFromArray($itemId, $values);
+            GroupMembership::setItemGroups($itemId, $groups);
+        }
+    }
+
+    private static function showcaseOwnerId(): int
+    {
+        $row = Database::first('users', ['user_id'], 'user_name = ?', ['Administrator']);
+        if ($row !== null) {
+            return (int) $row['user_id'];
+        }
+        $row = Database::first('users', ['user_id'], '', [], 'user_id ASC');
+
+        return (int) ($row['user_id'] ?? 0);
     }
 }

@@ -14,6 +14,12 @@ final class HomeScreen
 {
     public static function open(): void
     {
+        $landing = self::landingHref();
+        if ($landing !== '') {
+            header('Location: ' . \Adlexone\Http\Router::absolute($landing));
+            exit;
+        }
+
         $applications = [];
         foreach (\Adlexone\Application\ApplicationStore::menuItems() as $item) {
             $hint = trim((string) $item['hint']);
@@ -92,7 +98,7 @@ final class HomeScreen
         if ($applications === [] && Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
             $introCopy = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                 ? (string) SET_HOME_LEAD
-                : 'Create the records, rules, and screens your organisation works with every day.';
+                : 'The work, arranged the way your team actually does it.';
             $art = \Adlexone\Theme\Theme::illustrationHref('empty-apps');
             $intro = '<section class="launchpad__intro launchpad__intro--illustrated">'
                 . '<div class="empty-state empty-state--brand">'
@@ -106,14 +112,14 @@ final class HomeScreen
                 . '<span class="brandtext"><span class="title-static">Inlay</span><span class="brandmaker">Adlexone</span></span>'
                 . '</div>'
                 . '<p class="empty-state__copy">' . htmlspecialchars($introCopy, ENT_QUOTES, 'UTF-8') . '</p>'
-                . '<div class="empty-state__actions"><a class="btn btn--primary" href="?manage=builder">Create a business application</a></div>'
+                . '<div class="empty-state__actions"><a class="btn btn--primary" href="?manage=builder">Design an app</a></div>'
                 . '</div></section>';
         }
 
         $html = '<div class="launchpad">'
             . $intro
             . self::launchGroup('Applications', $applications)
-            . self::launchGroup('Manage', $manage)
+            . self::launchGroup('Design', $manage)
             . '</div>';
 
         if ($applications === [] && $manage === [] && $intro === '') {
@@ -127,6 +133,40 @@ final class HomeScreen
         define('BODY_CONTENT', $html);
         RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
+    /**
+     * Once an application exists, home opens it. The launchpad is only for a new install.
+     */
+    private static function landingHref(): string
+    {
+        $items = \Adlexone\Application\ApplicationStore::menuItems();
+        if ($items === []) {
+            return '';
+        }
+        $bySlug = [];
+        foreach ($items as $item) {
+            $bySlug[(string) ($item['app'] ?? '')] = (string) ($item['href'] ?? '');
+        }
+        $stored = (string) ($_SESSION['access_home_controller'] ?? '');
+        if (str_starts_with($stored, 'application:')) {
+            $slug = substr($stored, strlen('application:'));
+            if (($bySlug[$slug] ?? '') !== '') {
+                return $bySlug[$slug];
+            }
+        }
+        $default = defined('SET_DEFAULT_APPLICATION') ? (string) SET_DEFAULT_APPLICATION : '';
+        if (str_contains($default, '}-{')) {
+            [$controller] = explode('}-{', $default, 2);
+            if (str_starts_with((string) $controller, 'application:')) {
+                $slug = substr((string) $controller, strlen('application:'));
+                if (($bySlug[$slug] ?? '') !== '') {
+                    return $bySlug[$slug];
+                }
+            }
+        }
+
+        return (string) ($items[0]['href'] ?? '');
+    }
+
     /**
      * Homepage. One tile per destination. Section menus stay inside each app.
      */

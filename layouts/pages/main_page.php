@@ -41,21 +41,29 @@ $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
                 return is_string($prefix) && $prefix !== $controller && str_starts_with($currentController, $prefix);
             };
             $applications = \Adlexone\Application\ApplicationStore::menuItems();
-            $quickLaunch = ['label' => 'Home', 'href' => './', 'icon' => 'ic-launch', 'controller' => 'home'];
-            $manageItems = [];
+            $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+            $designItems = [];
             if (\Adlexone\Auth\Access::canAll(\Adlexone\Auth\Permission::ADMIN_SETTINGS, \Adlexone\Auth\Permission::ADMIN_ITEMS)) {
-                $manageItems[] = ['label' => 'Builder', 'href' => '?manage=builder', 'icon' => 'ic-itemtype-add', 'controller' => 'manage_builder'];
+                $designItems[] = ['label' => 'Builder', 'href' => '?manage=builder', 'icon' => 'ic-itemtype-add', 'controller' => 'manage_builder'];
             }
             if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SETTINGS)) {
-                $manageItems[] = ['label' => 'Applications', 'href' => '?manage=applications', 'icon' => 'ic-launch', 'controller' => 'manage_applications'];
+                $designItems[] = ['label' => 'Applications', 'href' => '?manage=applications', 'icon' => 'ic-launch', 'controller' => 'manage_applications'];
             }
-            $manageItems = array_merge($manageItems, [
-                ['label' => 'Fields', 'href' => '?manage=fields', 'icon' => 'ic-manage-fields', 'controller' => 'manage_fields'],
-                ['label' => 'Item types', 'href' => '?manage=item-types', 'icon' => 'ic-manage-item-types', 'controller' => 'manage_item_types'],
-                ['label' => 'Rules', 'href' => '?manage=rules', 'icon' => 'ic-manage-actions', 'controller' => 'manage_actions'],
-                ['label' => 'Security', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'manage_security'],
-                ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'manage_settings'],
-            ]);
+            if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_ITEMS)) {
+                $designItems[] = ['label' => 'Fields', 'href' => '?manage=fields', 'icon' => 'ic-manage-fields', 'controller' => 'manage_fields'];
+                $designItems[] = ['label' => 'Item types', 'href' => '?manage=item-types', 'icon' => 'ic-manage-item-types', 'controller' => 'manage_item_types'];
+            }
+            if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_ACTIONS)) {
+                $designItems[] = ['label' => 'Rules', 'href' => '?manage=rules', 'icon' => 'ic-manage-actions', 'controller' => 'manage_actions'];
+            }
+            if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
+                $designItems[] = ['label' => 'Security', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'manage_security'];
+            }
+            if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SETTINGS)) {
+                $designItems[] = ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'manage_settings'];
+            } elseif (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SYSTEM)) {
+                $designItems[] = ['label' => 'Settings', 'href' => '?manage=settings&option=sign_in_settings', 'icon' => 'ic-system-settings', 'controller' => 'manage_settings'];
+            }
             $renderMenuItem = static function (array $item) use ($matchesController, $sprite): string {
                 $onApplication = ((string) ($_GET['controller'] ?? '') === 'application') && (string) ($item['app'] ?? '') !== '';
                 $current = $onApplication
@@ -65,28 +73,33 @@ $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
                     . '<svg class="icon" aria-hidden="true"><use href="' . $sprite . '#' . htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') . '"></use></svg>'
                     . '<span>' . htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') . '</span></a>';
             };
-            $appLabel = 'Applications';
-            $manageLabel = 'Manage';
             $chevron = '<svg class="chev" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6"/></svg>';
+            $showAppMenu = count($applications) > 1 || (!$inApplication && $applications !== []);
             ?>
+            <?php if ($showAppMenu && count($applications) === 1): ?>
+            <a class="topnav__link" href="<?php echo htmlspecialchars((string) $applications[0]['href'], ENT_QUOTES, 'UTF-8'); ?>">
+                <span><?php echo htmlspecialchars((string) $applications[0]['label'], ENT_QUOTES, 'UTF-8'); ?></span>
+            </a>
+            <?php elseif ($showAppMenu): ?>
             <div class="menu" data-menu>
-                <button class="menu__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-applications"><span class="menu__label"><?php echo htmlspecialchars($appLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php echo $chevron; ?></button>
+                <button class="menu__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-applications"><span class="menu__label">Apps</span><?php echo $chevron; ?></button>
                 <div class="menu__panel" id="menu-applications" role="menu" hidden>
                     <?php foreach ($applications as $item) {
                         echo $renderMenuItem($item);
                     } ?>
-                    <div class="menu__divider" role="separator"></div>
-                    <?php echo $renderMenuItem($quickLaunch); ?>
                 </div>
             </div>
+            <?php endif; ?>
+            <?php if ($designItems !== []): ?>
             <div class="menu" data-menu>
-                <button class="menu__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-manage"><span class="menu__label"><?php echo htmlspecialchars($manageLabel, ENT_QUOTES, 'UTF-8'); ?></span><?php echo $chevron; ?></button>
-                <div class="menu__panel" id="menu-manage" role="menu" hidden>
-                    <?php foreach ($manageItems as $item) {
+                <button class="menu__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-design"><span class="menu__label">Design</span><?php echo $chevron; ?></button>
+                <div class="menu__panel" id="menu-design" role="menu" hidden>
+                    <?php foreach ($designItems as $item) {
                         echo $renderMenuItem($item);
                     } ?>
                 </div>
             </div>
+            <?php endif; ?>
             <?php
             $signedInName = trim((string) ($_SESSION['access_user_name'] ?? ''));
             $initials = '';

@@ -3,7 +3,7 @@ use Adlexone\Theme\Theme;
 $panelArt = Theme::illustrationHref('login-panel');
 $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
     ? (string) SET_HOME_LEAD
-    : 'Create the records, rules, and screens your organisation works with every day.';
+    : 'The work, arranged the way your team actually does it.';
 ?>
 <!doctype html>
 <html lang="en">

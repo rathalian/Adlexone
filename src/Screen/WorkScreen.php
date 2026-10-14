@@ -83,20 +83,32 @@ final class WorkScreen
         }
 
         $createHref = $base . '&option=show_item_types';
+        $new = '<a class="btn btn--primary" href="' . htmlspecialchars($createHref, ENT_QUOTES, 'UTF-8') . '">New</a>';
+        $board = self::workBoard($ids, $itemTypeId, $base, $stand);
+        if ($ids === []) {
+            $body = RenderViews::buildEmptyState([
+                'illustration' => 'empty-work',
+                'title' => 'Nothing here yet',
+                'copy' => 'Add the first one. It will sit on the board.',
+                'action' => $new,
+            ]);
+        } elseif ($board !== '') {
+            $body = '<div class="work-toolbar">' . $new . '</div>' . $stand['html'] . $board;
+        } else {
+            $body = '<div class="work-toolbar">' . $new . '</div>' . RenderViews::buildRecordList([
+                'column' => 'Work',
+                'columns' => [
+                    ['key' => 'opened', 'label' => 'Opened'],
+                ],
+                'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
+                'empty' => 'Nothing here yet',
+                'groups' => [['rows' => $rows]],
+            ]);
+        }
         define('BODY_CONTENT', RenderViews::buildVerticalCards([
             [
                 'title' => $title,
-                'html' => $stand['html'] . self::workBoard($ids, $itemTypeId, $base, $stand) . RenderViews::buildRecordList([
-                    'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
-                    'columns' => RenderViews::itemListColumns(),
-                    'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
-                    'empty' => defined('TXT_115') ? TXT_115 : 'No items found.',
-                    'emptyIllustration' => 'empty-work',
-                    'emptyTitle' => 'No work yet',
-                    'emptyCopy' => 'Create the first record for this application.',
-                    'emptyAction' => '<a class="btn btn--primary btn--sm" href="' . htmlspecialchars($createHref, ENT_QUOTES, 'UTF-8') . '">New</a>',
-                    'groups' => [['rows' => $rows]],
-                ]),
+                'html' => $body,
             ],
         ]));
         RenderViews::renderThemePage('main_page_content', SET_THEME);
@@ -154,7 +166,7 @@ final class WorkScreen
         $selected = (string) ($_GET['status'] ?? '');
 
         $buckets = [
-            self::workStandBucket($base, '', '', 'Records', count($ids), $focus === '', 'records'),
+            self::workStandBucket($base, '', '', 'All', count($ids), $focus === '', 'records'),
             self::workStandBucket($base, 'mine', '', 'Mine', $mine, $focus === 'mine', 'mine'),
         ];
         if ($fieldId > 0) {
@@ -332,7 +344,15 @@ final class WorkScreen
         $facts = self::workCardFacts($ids);
         foreach ($ids as $id) {
             $value = $values[$id] ?? '';
-            $card = self::workCard($id, $facts[$id] ?? ['title' => '', 'owner' => '', 'log' => ''], $base, $value, $status['values']);
+            $toneIndex = array_search($value, $status['values'], true);
+            $card = self::workCard(
+                $id,
+                $facts[$id] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''],
+                $base,
+                $value,
+                $status['values'],
+                $toneIndex === false ? -1 : (int) $toneIndex
+            );
             if (isset($columns[$value])) {
                 $columns[$value][] = $card;
             } else {
@@ -341,8 +361,10 @@ final class WorkScreen
         }
 
         $html = '';
+        $tone = 0;
         foreach ($columns as $value => $cards) {
-            $html .= self::workColumn((string) $value, $cards, true);
+            $html .= self::workColumn((string) $value, $cards, true, $tone);
+            $tone++;
         }
         if ($unset !== []) {
             $html .= self::workColumn('Not set', $unset, false);
@@ -360,11 +382,14 @@ final class WorkScreen
     /**
      * @param list<string> $cards
      */
-    public static function workColumn(string $label, array $cards, bool $drop): string
+    public static function workColumn(string $label, array $cards, bool $drop, int $tone = -1): string
     {
         $dropAttr = $drop
             ? ' data-status="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '"'
             : '';
+        if ($tone >= 0) {
+            $dropAttr .= ' data-tone="' . $tone . '"';
+        }
         $countKey = $drop
             ? ' data-count="' . htmlspecialchars('status:' . $label, ENT_QUOTES, 'UTF-8') . '"'
             : '';
@@ -377,33 +402,61 @@ final class WorkScreen
     }
 
     /**
-     * @param array{title: string, owner: string, log: string} $fact
+     * @param array{title: string, owner: string, log: string, detail?: string, next?: string} $fact
      * @param list<string> $statuses
      */
-    public static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses): string
+    public static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses, int $tone = -1): string
     {
         $title = $fact['title'] !== '' ? $fact['title'] : ('Record ' . $itemId);
         $href = htmlspecialchars($base . '&item=' . $itemId, ENT_QUOTES, 'UTF-8');
         $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-        $owner = $fact['owner'] !== '' ? '<p class="work-card__owner">' . htmlspecialchars($fact['owner'], ENT_QUOTES, 'UTF-8') . '</p>' : '<p class="work-card__owner" hidden></p>';
-        $log = $fact['log'] !== '' ? '<p class="work-card__log">' . htmlspecialchars($fact['log'], ENT_QUOTES, 'UTF-8') . '</p>' : '<p class="work-card__log" hidden></p>';
+        $detail = trim((string) ($fact['detail'] ?? ''));
+        $next = trim((string) ($fact['next'] ?? ''));
+        if ($next === '') {
+            $next = $fact['log'];
+        }
+        $ownerName = $fact['owner'];
+        $personHidden = $ownerName === '' ? ' hidden' : '';
+        $detailHtml = $detail !== ''
+            ? '<p class="work-card__detail">' . htmlspecialchars($detail, ENT_QUOTES, 'UTF-8') . '</p>'
+            : '';
+        $person = '<p class="work-card__person"' . $personHidden . '>'
+            . '<span class="work-card__avatar" aria-hidden="true">' . htmlspecialchars(self::initials($ownerName), ENT_QUOTES, 'UTF-8') . '</span>'
+            . '<span class="work-card__owner">' . htmlspecialchars($ownerName, ENT_QUOTES, 'UTF-8') . '</span></p>';
+        $log = $next !== ''
+            ? '<p class="work-card__log">' . htmlspecialchars($next, ENT_QUOTES, 'UTF-8') . '</p>'
+            : '<p class="work-card__log" hidden></p>';
         $options = '<option value="">Move to</option>';
         foreach ($statuses as $value) {
             $hidden = $value === $status ? ' hidden' : '';
             $options .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"' . $hidden . '>' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</option>';
         }
+        $toneAttr = $tone >= 0 ? ' data-tone="' . $tone . '"' : '';
 
-        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '">'
+        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '"' . $toneAttr . '>'
             . '<a class="work-card__title" draggable="false" href="' . $href . '">' . $titleEsc . '</a>'
-            . $owner
+            . $detailHtml
+            . $person
             . $log
             . '<label class="work-card__move">Move <select aria-label="Move ' . $titleEsc . '">' . $options . '</select></label>'
             . '</article>';
     }
 
+    private static function initials(string $name): string
+    {
+        $initials = '';
+        foreach (array_slice(preg_split('/\s+/', trim($name)) ?: [], 0, 2) as $part) {
+            if ($part !== '') {
+                $initials .= strtoupper(substr($part, 0, 1));
+            }
+        }
+
+        return $initials;
+    }
+
     /**
      * @param list<int> $ids
-     * @return array<int, array{title: string, owner: string, log: string}>
+     * @return array<int, array{title: string, owner: string, log: string, detail: string, next: string}>
      */
     public static function workCardFacts(array $ids): array
     {
@@ -413,12 +466,15 @@ final class WorkScreen
         }
         $in = implode(',', $ids);
         $owners = [];
-        foreach (Database::select('items', ['item_id', 'item_title', 'user_security'], 'item_id IN (' . $in . ')') as $row) {
+        foreach (Database::select('items', ['item_id', 'item_title', 'user_security', 'item_type_id'], 'item_id IN (' . $in . ')') as $row) {
             $facts[(int) $row['item_id']] = [
                 'title' => trim((string) ($row['item_title'] ?? '')),
                 'owner' => '',
                 'log' => '',
+                'detail' => '',
+                'next' => '',
                 'user_id' => (int) ($row['user_security'] ?? 0),
+                'item_type_id' => (int) ($row['item_type_id'] ?? 0),
             ];
             $owners[(int) ($row['user_security'] ?? 0)] = true;
         }
@@ -448,11 +504,86 @@ final class WorkScreen
                 $facts[$id]['log'] = trim((string) ($row['log_text'] ?? ''));
             }
         }
+        self::attachCardText($facts);
         foreach ($facts as $id => $fact) {
-            unset($facts[$id]['user_id']);
+            unset($facts[$id]['user_id'], $facts[$id]['item_type_id']);
         }
 
         return $facts;
+    }
+
+    /**
+     * Client, place, or the first short text field, plus a Next step when the record has one.
+     *
+     * @param array<int, array<string, mixed>> $facts
+     */
+    private static function attachCardText(array &$facts): void
+    {
+        $typeIds = [];
+        foreach ($facts as $fact) {
+            $typeId = (int) ($fact['item_type_id'] ?? 0);
+            if ($typeId > 0) {
+                $typeIds[$typeId] = true;
+            }
+        }
+        $detailField = [];
+        $nextField = [];
+        foreach (array_keys($typeIds) as $typeId) {
+            $firstText = 0;
+            $links = Database::select(
+                'item_type_custom_fields',
+                ['custom_field_id'],
+                'item_type_id = ?',
+                [$typeId],
+                'custom_field_order ASC'
+            );
+            foreach ($links as $link) {
+                $field = Database::first(
+                    'custom_fields',
+                    ['custom_field_id', 'custom_field_name', 'field_type'],
+                    'custom_field_id = ?',
+                    [(int) $link['custom_field_id']]
+                );
+                if ($field === null || FieldTypes::normalise((string) ($field['field_type'] ?? '')) !== FieldTypes::TEXT_BOX) {
+                    continue;
+                }
+                $name = strtolower(trim((string) $field['custom_field_name']));
+                $name = trim((string) preg_replace('/\s*\([^)]*\)$/', '', $name));
+                $fieldId = (int) $field['custom_field_id'];
+                if ($name === 'next step') {
+                    $nextField[$typeId] = $fieldId;
+                    continue;
+                }
+                if ($firstText === 0) {
+                    $firstText = $fieldId;
+                }
+                if ($name === 'client' || $name === 'place') {
+                    $detailField[$typeId] = $fieldId;
+                }
+            }
+            if (!isset($detailField[$typeId]) && $firstText > 0) {
+                $detailField[$typeId] = $firstText;
+            }
+        }
+        $wanted = array_values(array_unique(array_filter(array_merge(array_values($detailField), array_values($nextField)))));
+        $stored = [];
+        if ($wanted !== [] && $facts !== []) {
+            $rows = Database::rows(
+                'SELECT item_id, custom_field_id, value FROM item_field_values WHERE item_id IN ('
+                . implode(',', array_map('intval', array_keys($facts)))
+                . ') AND custom_field_id IN (' . implode(',', array_map('intval', $wanted)) . ')'
+            );
+            foreach ($rows as $row) {
+                $stored[(int) $row['item_id']][(int) $row['custom_field_id']] = trim((string) ($row['value'] ?? ''));
+            }
+        }
+        foreach ($facts as $id => $fact) {
+            $typeId = (int) ($fact['item_type_id'] ?? 0);
+            $detailId = $detailField[$typeId] ?? 0;
+            $nextId = $nextField[$typeId] ?? 0;
+            $facts[$id]['detail'] = $detailId > 0 ? ($stored[$id][$detailId] ?? '') : '';
+            $facts[$id]['next'] = $nextId > 0 ? ($stored[$id][$nextId] ?? '') : '';
+        }
     }
 
     /**
@@ -503,7 +634,11 @@ final class WorkScreen
             }
         }
         $facts = self::workCardFacts([$itemId]);
-        $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => ''];
+        $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
+        $line = trim((string) ($fact['next'] ?? ''));
+        if ($line === '') {
+            $line = (string) ($fact['log'] ?? '');
+        }
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
         $mine = 0;
         if ($userId > 0) {
@@ -518,7 +653,7 @@ final class WorkScreen
             'item_id' => $itemId,
             'status' => $status,
             'owner' => $fact['owner'],
-            'log' => $fact['log'],
+            'log' => $line,
             'counts' => $counts,
             'records' => count($ids),
             'mine' => $mine,
@@ -559,10 +694,17 @@ final class WorkScreen
             var column = board.querySelector(".work-board__col[data-status=\"" + cssAttr(data.status) + "\"] .work-board__cards");
             if (column) column.appendChild(card);
             card.setAttribute("data-status", data.status);
+            var host = column ? column.closest(".work-board__col") : null;
+            if (host && host.hasAttribute("data-tone")) card.setAttribute("data-tone", host.getAttribute("data-tone"));
+            var person = card.querySelector(".work-card__person");
             var owner = card.querySelector(".work-card__owner");
-            if (owner) {
-                owner.textContent = data.owner || "";
-                owner.hidden = !data.owner;
+            var avatar = card.querySelector(".work-card__avatar");
+            if (person) person.hidden = !data.owner;
+            if (owner) owner.textContent = data.owner || "";
+            if (avatar) {
+                avatar.textContent = String(data.owner || "").trim().split(/\s+/).slice(0, 2).map(function (part) {
+                    return part ? part.charAt(0).toUpperCase() : "";
+                }).join("");
             }
             var log = card.querySelector(".work-card__log");
             if (log) {

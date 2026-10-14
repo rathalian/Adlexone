@@ -105,7 +105,7 @@ if (!defined('SET_DEFAULT_LANGUAGE')) {
     define('SET_DEFAULT_LANGUAGE', 'English');
 }
 if (!defined('SET_HOME_LEAD')) {
-    define('SET_HOME_LEAD', 'Create the records, rules, and screens your organisation works with every day.');
+    define('SET_HOME_LEAD', 'The work, arranged the way your team actually does it.');
 }
 
 // Apply addslashesRecursive() to all data and strip scripts
