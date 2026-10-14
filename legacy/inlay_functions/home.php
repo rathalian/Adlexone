@@ -107,7 +107,7 @@ if (Access::can(Permission::ADMIN_ITEMS)) {
 }
 if (Access::can(Permission::ADMIN_ACTIONS)) {
     $manage[] = launchTile(
-        'index.php?manage=workflow&option=show_defined_actions',
+        'index.php?manage=workflow',
         'Rules',
         'What happens when a record changes',
         'ic-manage-actions'

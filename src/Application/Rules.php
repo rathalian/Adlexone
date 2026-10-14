@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
+use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Communications;
 use Adlexone\support\Database;
@@ -10,9 +11,8 @@ use Adlexone\support\Database;
 /**
  * Per-application workflow rules.
  *
- * A rule is columns: when (event), if (field, operator, value), then
- * (email, log, set a field, or set the owner).
- * Older action_definitions rows keep their package files and }-{ strings.
+ * A rule is when (event), if (field, operator, value), then one or more
+ * actions in order: email, write a log line, set a field, or set the owner.
  */
 final class Rules
 {
@@ -25,6 +25,11 @@ final class Rules
     public const OP_EQ = 'eq';
     public const OP_NEQ = 'neq';
     public const OP_BECOMES = 'becomes';
+    public const OP_EMPTY = 'empty';
+    public const OP_NOT_EMPTY = 'not_empty';
+    public const OP_CONTAINS = 'contains';
+    public const OP_CHANGED = 'changed';
+    public const OP_FROM_TO = 'from_to';
 
     public const OUTCOME_EMAIL = 'email';
     public const OUTCOME_LOG = 'log';
@@ -35,6 +40,14 @@ final class Rules
 
     public const TO_OWNER = 'owner';
     public const TO_CREATOR = 'creator';
+    public const TO_BOTH = 'both';
+    public const TO_OWNER_GROUPS = 'owner_groups';
+    public const TO_OWNER_AND_GROUPS = 'owner_and_groups';
+    public const TO_CREATOR_GROUPS = 'creator_groups';
+    public const TO_BOTH_GROUPS = 'both_groups';
+    public const TO_ITEM_GROUPS = 'item_groups';
+    public const TO_USER = 'user';
+    public const TO_GROUP = 'group';
     public const TO_ADDRESS = 'address';
 
     /** @var array<string, string> */
@@ -65,9 +78,14 @@ final class Rules
     {
         return [
             self::OP_ALWAYS => 'Always',
-            self::OP_EQ => 'Field equals',
-            self::OP_NEQ => 'Field does not equal',
-            self::OP_BECOMES => 'Field becomes',
+            self::OP_EQ => 'Equals',
+            self::OP_NEQ => 'Does not equal',
+            self::OP_BECOMES => 'Becomes',
+            self::OP_EMPTY => 'Is empty',
+            self::OP_NOT_EMPTY => 'Is not empty',
+            self::OP_CONTAINS => 'Contains',
+            self::OP_CHANGED => 'Changes',
+            self::OP_FROM_TO => 'Changes from / to',
         ];
     }
 
@@ -85,7 +103,43 @@ final class Rules
     }
 
     /**
-     * Who a "set the owner" rule can assign.
+     * @return array<string, string>
+     */
+    public static function recipients(): array
+    {
+        return [
+            self::TO_OWNER => 'The owner',
+            self::TO_CREATOR => 'The creator',
+            self::TO_BOTH => 'The owner and the creator',
+            self::TO_OWNER_AND_GROUPS => 'The owner and their groups',
+            self::TO_OWNER_GROUPS => 'People in the owner\'s groups',
+            self::TO_CREATOR_GROUPS => 'People in the creator\'s groups',
+            self::TO_BOTH_GROUPS => 'People in the owner and creator\'s groups',
+            self::TO_ITEM_GROUPS => 'People in the record\'s groups',
+            self::TO_USER => 'A person',
+            self::TO_GROUP => 'A group',
+            self::TO_ADDRESS => 'This address',
+        ];
+    }
+
+    /**
+     * Minimum log-line role. Higher numbers are a wider audience.
+     *
+     * @return array<int, string>
+     */
+    public static function logRoles(): array
+    {
+        return [
+            0 => 'Any log line',
+            2 => 'Role number 2 or more public',
+            3 => 'Role number 3 or more public',
+            4 => 'Role number 4 or more public',
+            5 => 'Visible to everyone',
+        ];
+    }
+
+    /**
+     * Who a "set the owner" step can assign.
      *
      * @return array<string, string> stored value => label
      */
@@ -94,6 +148,21 @@ final class Rules
         $choices = [
             self::OWNER_CREATOR => 'The creator',
         ];
+        foreach (self::people() as $id => $name) {
+            $choices[(string) $id] = $name;
+        }
+        return $choices;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function people(): array
+    {
+        $people = [];
+        if (!Database::tableExists('users')) {
+            return $people;
+        }
         foreach (Database::select('users', ['user_id', 'user_name', 'first_name', 'last_name'], '', [], 'user_name ASC') as $user) {
             $id = (int) ($user['user_id'] ?? 0);
             if ($id <= 0) {
@@ -103,7 +172,118 @@ final class Rules
             if ($name === '') {
                 $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
             }
-            $choices[(string) $id] = $name !== '' ? $name : ('User ' . $id);
+            $people[$id] = $name !== '' ? $name : ('User ' . $id);
+        }
+        return $people;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function groups(): array
+    {
+        $groups = [];
+        if (!Database::tableExists('groups')) {
+            return $groups;
+        }
+        foreach (Database::select('groups', ['group_id', 'group_name'], '', [], 'group_name ASC') as $group) {
+            $id = (int) ($group['group_id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $name = trim((string) ($group['group_name'] ?? ''));
+            $groups[$id] = $name !== '' ? $name : ('Group ' . $id);
+        }
+        return $groups;
+    }
+
+    /**
+     * Fields a condition or "set field" step can use for one record type.
+     *
+     * @return list<array{key: string, label: string, kind: string, options: list<array{value: string, label: string}>}>
+     */
+    public static function fieldCatalog(int $itemTypeId): array
+    {
+        $people = [];
+        foreach (self::people() as $id => $name) {
+            $people[] = ['value' => (string) $id, 'label' => $name];
+        }
+        $groups = [];
+        foreach (self::groups() as $id => $name) {
+            $groups[] = ['value' => (string) $id, 'label' => $name];
+        }
+        $fields = [
+            ['key' => 'item_title', 'label' => 'Title', 'kind' => 'text', 'options' => []],
+            ['key' => 'owner', 'label' => 'Owner', 'kind' => 'user', 'options' => $people],
+            ['key' => 'creator', 'label' => 'Creator', 'kind' => 'user', 'options' => $people],
+            ['key' => 'groups', 'label' => 'Groups', 'kind' => 'group', 'options' => $groups],
+        ];
+        if ($itemTypeId <= 0) {
+            return $fields;
+        }
+        $links = Database::select(
+            'item_type_custom_fields',
+            ['custom_field_id'],
+            'item_type_id = ?',
+            [$itemTypeId],
+            'custom_field_order ASC'
+        );
+        foreach ($links as $link) {
+            $fieldId = (int) $link['custom_field_id'];
+            $field = Database::first('custom_fields', ['custom_field_name', 'field_type'], 'custom_field_id = ?', [$fieldId]);
+            if ($field === null) {
+                continue;
+            }
+            $options = [];
+            $kind = 'text';
+            if (Database::tableExists('custom_field_menu_values')) {
+                $menus = Database::select(
+                    'custom_field_menu_values',
+                    ['menu_value'],
+                    'custom_field_id = ? AND parent_menu_value_id = 0',
+                    [$fieldId],
+                    'menu_value_id ASC'
+                );
+                foreach ($menus as $menu) {
+                    $value = (string) ($menu['menu_value'] ?? '');
+                    if ($value === '') {
+                        continue;
+                    }
+                    $options[] = ['value' => $value, 'label' => $value];
+                }
+                if ($options !== []) {
+                    $kind = 'menu';
+                }
+            }
+            $fields[] = [
+                'key' => 'custom_field_' . $fieldId,
+                'label' => (string) $field['custom_field_name'],
+                'kind' => $kind,
+                'options' => $options,
+            ];
+        }
+        return $fields;
+    }
+
+    /**
+     * @param list<int> $itemTypeIds
+     * @return array<string, string> field key => label
+     */
+    public static function fieldChoices(array $itemTypeIds): array
+    {
+        $choices = [
+            '' => 'Any record',
+            'item_title' => 'Title',
+            'owner' => 'Owner',
+            'creator' => 'Creator',
+            'groups' => 'Groups',
+        ];
+        foreach ($itemTypeIds as $typeId) {
+            foreach (self::fieldCatalog((int) $typeId) as $field) {
+                if (!isset($choices[$field['key']])) {
+                    $choices[$field['key']] = $field['label'];
+                }
+            }
         }
         return $choices;
     }
@@ -119,34 +299,34 @@ final class Rules
         $events = self::events();
         $operators = self::operators();
         $when = $events[(string) ($rule['event'] ?? '')] ?? (string) ($rule['event'] ?? '');
-        if ((string) ($rule['operator'] ?? '') === self::OP_ALWAYS) {
+        $operator = (string) ($rule['operator'] ?? '');
+        if ($operator === self::OP_ALWAYS) {
             $condition = 'Always';
+        } elseif ($operator === self::OP_EMPTY || $operator === self::OP_NOT_EMPTY || $operator === self::OP_CHANGED) {
+            $field = $fieldLabels[(string) ($rule['field_key'] ?? '')] ?? (string) ($rule['field_key'] ?? '');
+            $condition = trim($field . ' ' . strtolower($operators[$operator] ?? $operator));
+        } elseif ($operator === self::OP_FROM_TO) {
+            $field = $fieldLabels[(string) ($rule['field_key'] ?? '')] ?? (string) ($rule['field_key'] ?? '');
+            $condition = trim($field . ' changes from ' . self::displayValue($rule, (string) ($rule['match_from'] ?? ''), $fieldLabels)
+                . ' to ' . self::displayValue($rule, (string) ($rule['match_value'] ?? ''), $fieldLabels));
         } else {
             $field = $fieldLabels[(string) ($rule['field_key'] ?? '')] ?? (string) ($rule['field_key'] ?? '');
-            $op = strtolower($operators[(string) ($rule['operator'] ?? '')] ?? (string) ($rule['operator'] ?? ''));
-            $condition = trim($field . ' ' . $op . ' ' . (string) ($rule['match_value'] ?? ''));
+            $op = strtolower($operators[$operator] ?? $operator);
+            $condition = trim($field . ' ' . $op . ' ' . self::displayValue($rule, (string) ($rule['match_value'] ?? ''), $fieldLabels));
         }
-        $then = match ((string) ($rule['outcome'] ?? '')) {
-            self::OUTCOME_EMAIL => 'Email ' . strtolower(self::recipients()[(string) ($rule['recipient'] ?? '')] ?? 'the owner'),
-            self::OUTCOME_SET_FIELD => 'Set ' . ($fieldLabels[(string) ($rule['action_field'] ?? '')] ?? 'a field')
-                . ' to ' . (string) ($rule['action_value'] ?? ''),
-            self::OUTCOME_SET_OWNER => 'Set the owner to ' . (self::ownerChoices()[(string) ($rule['action_value'] ?? '')] ?? 'a person'),
-            default => 'Write a log line',
-        };
+        if ((string) ($rule['event'] ?? '') === self::EVENT_LOG && (int) ($rule['min_log_role'] ?? 0) > 0) {
+            $roles = self::logRoles();
+            $condition .= ' (' . ($roles[(int) $rule['min_log_role']] ?? 'log role') . ')';
+        }
+        $thens = [];
+        foreach (self::stepsOf($rule) as $step) {
+            $thens[] = self::stepSummary($step, $fieldLabels);
+        }
+        if ($thens === []) {
+            $thens[] = 'Do nothing';
+        }
 
-        return $when . '. ' . $condition . '. ' . $then . '.';
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public static function recipients(): array
-    {
-        return [
-            self::TO_OWNER => 'The owner',
-            self::TO_CREATOR => 'The creator',
-            self::TO_ADDRESS => 'This address',
-        ];
+        return $when . '. ' . $condition . '. ' . implode(', then ', $thens) . '.';
     }
 
     /**
@@ -157,47 +337,16 @@ final class Rules
         if ($applicationId <= 0 || !Database::tableExists('application_rules')) {
             return [];
         }
-        return Database::select(
+        $rules = Database::select(
             'application_rules',
             '*',
             'application_id = ?',
             [$applicationId],
-            'id ASC'
+            'sort_order ASC, id ASC'
         );
+        return self::withSteps($rules);
     }
 
-    /**
-     * @return array<string, string> field key => label
-     */
-    public static function fieldChoices(array $itemTypeIds): array
-    {
-        $choices = [
-            '' => 'Any record',
-            'item_title' => 'Title',
-        ];
-        foreach ($itemTypeIds as $typeId) {
-            $links = Database::select(
-                'item_type_custom_fields',
-                ['custom_field_id'],
-                'item_type_id = ?',
-                [(int) $typeId],
-                'custom_field_order ASC'
-            );
-            foreach ($links as $link) {
-                $fieldId = (int) $link['custom_field_id'];
-                $field = Database::first('custom_fields', ['custom_field_name'], 'custom_field_id = ?', [$fieldId]);
-                if ($field === null) {
-                    continue;
-                }
-                $choices['custom_field_' . $fieldId] = (string) $field['custom_field_name'];
-            }
-        }
-        return $choices;
-    }
-
-    /**
-     * @param array<string, mixed> $input
-     */
     /**
      * @return array<string, mixed>|null
      */
@@ -206,20 +355,33 @@ final class Rules
         if ($ruleId <= 0 || $applicationId <= 0 || !Database::tableExists('application_rules')) {
             return null;
         }
-        return Database::first(
+        $rule = Database::first(
             'application_rules',
             '*',
             'id = ? AND application_id = ?',
             [$ruleId, $applicationId]
         );
+        if ($rule === null) {
+            return null;
+        }
+        $loaded = self::withSteps([$rule]);
+        return $loaded[0] ?? null;
     }
 
     /**
      * @param array<string, mixed> $input
      */
-    public static function add(int $applicationId, array $input): void
+    public static function add(int $applicationId, array $input): int
     {
-        Database::insert('application_rules', self::normalise($applicationId, $input));
+        $row = self::normalise($applicationId, $input);
+        $steps = $row['steps'];
+        unset($row['steps']);
+        if ((int) ($row['sort_order'] ?? 0) <= 0) {
+            $row['sort_order'] = self::nextSort($applicationId);
+        }
+        $id = Database::insert('application_rules', $row);
+        self::replaceSteps($id, $steps);
+        return $id;
     }
 
     /**
@@ -227,18 +389,27 @@ final class Rules
      */
     public static function update(int $ruleId, int $applicationId, array $input): void
     {
-        if (self::find($ruleId, $applicationId) === null) {
+        $existing = self::find($ruleId, $applicationId);
+        if ($existing === null) {
             return;
         }
         $row = self::normalise($applicationId, $input);
-        unset($row['application_id']);
+        $steps = $row['steps'];
+        unset($row['steps'], $row['application_id'], $row['sort_order']);
         Database::update('application_rules', $row, 'id = ? AND application_id = ?', [$ruleId, $applicationId]);
+        self::replaceSteps($ruleId, $steps);
     }
 
     public static function delete(int $ruleId, int $applicationId): void
     {
         if ($ruleId <= 0 || $applicationId <= 0 || !Database::tableExists('application_rules')) {
             return;
+        }
+        if (Database::tableExists('application_rule_steps')) {
+            Database::delete('application_rule_steps', 'rule_id = ?', [$ruleId]);
+        }
+        if (Database::tableExists('application_rule_runs')) {
+            Database::delete('application_rule_runs', 'rule_id = ?', [$ruleId]);
         }
         Database::delete('application_rules', 'id = ? AND application_id = ?', [$ruleId, $applicationId]);
     }
@@ -248,7 +419,68 @@ final class Rules
         if ($applicationId <= 0 || !Database::tableExists('application_rules')) {
             return;
         }
-        Database::delete('application_rules', 'application_id = ?', [$applicationId]);
+        foreach (self::forApplication($applicationId) as $rule) {
+            self::delete((int) $rule['id'], $applicationId);
+        }
+    }
+
+    public static function setEnabled(int $ruleId, int $applicationId, bool $enabled): void
+    {
+        if (self::find($ruleId, $applicationId) === null) {
+            return;
+        }
+        Database::update(
+            'application_rules',
+            ['enabled' => $enabled ? 1 : 0],
+            'id = ? AND application_id = ?',
+            [$ruleId, $applicationId]
+        );
+    }
+
+    public static function duplicate(int $ruleId, int $applicationId): int
+    {
+        $rule = self::find($ruleId, $applicationId);
+        if ($rule === null) {
+            return 0;
+        }
+        $rule['name'] = 'Copy of ' . (string) $rule['name'];
+        $rule['sort_order'] = 0;
+        return self::add($applicationId, $rule);
+    }
+
+    public static function move(int $ruleId, int $applicationId, string $direction): void
+    {
+        $rule = self::find($ruleId, $applicationId);
+        if ($rule === null) {
+            return;
+        }
+        $siblings = [];
+        foreach (self::forApplication($applicationId) as $row) {
+            if ((int) $row['item_type_id'] === (int) $rule['item_type_id']) {
+                $siblings[] = $row;
+            }
+        }
+        $index = null;
+        foreach ($siblings as $i => $row) {
+            if ((int) $row['id'] === $ruleId) {
+                $index = $i;
+                break;
+            }
+        }
+        if ($index === null) {
+            return;
+        }
+        $swap = $direction === 'up' ? $index - 1 : $index + 1;
+        if (!isset($siblings[$swap])) {
+            return;
+        }
+        $leftOrder = (int) $siblings[$index]['sort_order'];
+        $rightOrder = (int) $siblings[$swap]['sort_order'];
+        if ($leftOrder === $rightOrder) {
+            $rightOrder = $leftOrder + ($direction === 'up' ? -1 : 1);
+        }
+        Database::update('application_rules', ['sort_order' => $rightOrder], 'id = ?', [(int) $siblings[$index]['id']]);
+        Database::update('application_rules', ['sort_order' => $leftOrder], 'id = ?', [(int) $siblings[$swap]['id']]);
     }
 
     /**
@@ -256,7 +488,68 @@ final class Rules
      */
     public static function seedBlueprint(int $applicationId, int $itemTypeId, string $blueprint, array $fieldIdsByName): void
     {
-        if ($blueprint === ApplicationBuilder::BLUEPRINT_CASE || $blueprint === ApplicationBuilder::BLUEPRINT_HELPDESK) {
+        if ($blueprint === ApplicationBuilder::BLUEPRINT_HELPDESK) {
+            $statusId = (int) ($fieldIdsByName['Status'] ?? 0);
+            self::add($applicationId, [
+                'item_type_id' => $itemTypeId,
+                'name' => 'Email the team when a ticket is created',
+                'event' => self::EVENT_CREATE,
+                'operator' => self::OP_ALWAYS,
+                'sort_order' => 10,
+                'steps' => [[
+                    'outcome' => self::OUTCOME_EMAIL,
+                    'recipient' => self::TO_OWNER_AND_GROUPS,
+                    'subject' => 'New ticket: ITEM_TITLE',
+                    'body' => "ITEM_TITLE (ITEM_ID) was created by ITEM_CREATOR.",
+                ]],
+            ]);
+            self::add($applicationId, [
+                'item_type_id' => $itemTypeId,
+                'name' => 'Email the team when a log line is added',
+                'event' => self::EVENT_LOG,
+                'operator' => self::OP_ALWAYS,
+                'sort_order' => 20,
+                'steps' => [[
+                    'outcome' => self::OUTCOME_EMAIL,
+                    'recipient' => self::TO_OWNER_AND_GROUPS,
+                    'subject' => 'Update on ITEM_TITLE',
+                    'body' => "ITEM_TITLE (ITEM_ID) has a new log line.",
+                ]],
+            ]);
+            if ($statusId > 0) {
+                self::add($applicationId, [
+                    'item_type_id' => $itemTypeId,
+                    'name' => 'Email the team when a ticket is closed',
+                    'event' => self::EVENT_UPDATE,
+                    'field_key' => 'custom_field_' . $statusId,
+                    'operator' => self::OP_BECOMES,
+                    'match_value' => 'Closed',
+                    'sort_order' => 30,
+                    'steps' => [[
+                        'outcome' => self::OUTCOME_EMAIL,
+                        'recipient' => self::TO_OWNER_AND_GROUPS,
+                        'subject' => 'Closed: ITEM_TITLE',
+                        'body' => "ITEM_TITLE (ITEM_ID) is now closed.",
+                    ]],
+                ]);
+            }
+            self::add($applicationId, [
+                'item_type_id' => $itemTypeId,
+                'name' => 'Email the new owner when ownership changes',
+                'event' => self::EVENT_UPDATE,
+                'field_key' => 'owner',
+                'operator' => self::OP_CHANGED,
+                'sort_order' => 40,
+                'steps' => [[
+                    'outcome' => self::OUTCOME_EMAIL,
+                    'recipient' => self::TO_OWNER,
+                    'subject' => 'You own ITEM_TITLE',
+                    'body' => "ITEM_TITLE (ITEM_ID) is now owned by ITEM_OWNER.",
+                ]],
+            ]);
+            return;
+        }
+        if ($blueprint === ApplicationBuilder::BLUEPRINT_CASE) {
             $priorityId = (int) ($fieldIdsByName['Priority'] ?? 0);
             if ($priorityId > 0) {
                 self::add($applicationId, [
@@ -291,31 +584,27 @@ final class Rules
     }
 
     /**
-     * Run rules for an item event. Called beside the older package runner.
+     * Run rules for an item event.
+     *
+     * A log line posted with an update also runs log rules, because the item
+     * form saves the log and then reports an update.
      */
     public static function run(int $itemId, string $requestingAction): void
     {
         $event = self::REQUESTS[$requestingAction] ?? '';
-        if ($itemId <= 0 || $event === '' || !Database::tableExists('application_rules')) {
+        if ($itemId <= 0 || $event === '' || !self::ready()) {
             return;
         }
-        $stored = Database::first('items', '*', 'item_id = ?', [$itemId]);
-        if ($stored === null) {
-            return;
-        }
-        $stored = ItemFields::hydrate($stored);
-        $typeId = (int) ($stored['item_type_id'] ?? 0);
+        $events = [$event];
         $posted = is_array($_POST ?? null) ? $_POST : [];
-        $current = array_merge($stored, $posted);
-        $previous = $event === self::EVENT_CREATE ? [] : $stored;
-
-        $rules = Database::select(
-            'application_rules',
-            '*',
-            'item_type_id = ? AND event = ? AND enabled = 1',
-            [$typeId, $event],
-            'id ASC'
-        );
+        if ($event === self::EVENT_UPDATE && trim((string) ($posted['log_entry'] ?? '')) !== '') {
+            $events[] = self::EVENT_LOG;
+        }
+        $context = self::context($itemId, $event);
+        if ($context === null) {
+            return;
+        }
+        $rules = self::rulesFor((int) $context['type_id'], $events);
         $fired = [];
         for ($pass = 0; $pass < 4; $pass++) {
             $moved = false;
@@ -324,31 +613,181 @@ final class Rules
                 if ($ruleId > 0 && isset($fired[$ruleId])) {
                     continue;
                 }
-                if (!self::matches($rule, $current, $previous)) {
+                if (!self::matchesState($rule, $context['current'], $context['previous'], $itemId)) {
                     continue;
                 }
                 if ($ruleId > 0) {
                     $fired[$ruleId] = true;
                 }
-                $outcome = (string) ($rule['outcome'] ?? '');
-                if ($outcome === self::OUTCOME_EMAIL) {
-                    self::sendEmail($itemId, $rule, $current);
-                } elseif ($outcome === self::OUTCOME_SET_FIELD) {
-                    if (self::setField($itemId, $rule, $current)) {
-                        $moved = true;
-                    }
-                } elseif ($outcome === self::OUTCOME_SET_OWNER) {
-                    if (self::setOwner($itemId, $rule, $current)) {
-                        $moved = true;
-                    }
-                } else {
-                    self::writeLog($itemId, $rule, $current);
-                }
+                $moved = self::perform($itemId, $rule, $context['current'], true) || $moved;
             }
             if (!$moved) {
                 break;
             }
         }
+    }
+
+    /**
+     * Explain a rule against the record as it is stored now.
+     *
+     * @return array<string, mixed>
+     */
+    public static function preview(int $ruleId, int $applicationId, int $itemId): array
+    {
+        $rule = self::find($ruleId, $applicationId);
+        if ($rule === null) {
+            return ['ok' => false, 'matches' => false, 'reason' => 'That rule is not on this application.', 'steps' => []];
+        }
+        $stored = self::loadItem($itemId);
+        if ($stored === null || (int) ($stored['item_type_id'] ?? 0) !== (int) $rule['item_type_id']) {
+            return ['ok' => false, 'matches' => false, 'reason' => 'Choose a record of this rule\'s type.', 'steps' => []];
+        }
+        $matches = self::matchesState($rule, $stored, $stored, $itemId);
+        $reason = $matches
+            ? 'This record matches the rule as it stands now.'
+            : self::mismatch($rule, $stored, $stored, $itemId);
+        $steps = [];
+        $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+        foreach (self::stepsOf($rule) as $step) {
+            $steps[] = [
+                'outcome' => (string) ($step['outcome'] ?? ''),
+                'detail' => self::describeStep($itemId, $step, $stored, false, $skip),
+            ];
+        }
+        return [
+            'ok' => true,
+            'matches' => $matches,
+            'reason' => $reason,
+            'title' => (string) ($stored['item_title'] ?? ''),
+            'steps' => $steps,
+        ];
+    }
+
+    /**
+     * Run one rule against the stored record when it matches.
+     *
+     * @return array<string, mixed>
+     */
+    public static function executeOne(int $ruleId, int $applicationId, int $itemId): array
+    {
+        $preview = self::preview($ruleId, $applicationId, $itemId);
+        if (($preview['ok'] ?? false) !== true || ($preview['matches'] ?? false) !== true) {
+            $preview['ran'] = false;
+            return $preview;
+        }
+        $rule = self::find($ruleId, $applicationId);
+        $stored = self::loadItem($itemId);
+        if ($rule === null || $stored === null) {
+            $preview['ran'] = false;
+            return $preview;
+        }
+        self::perform($itemId, $rule, $stored, true);
+        $preview['ran'] = true;
+        $preview['reason'] = 'Ran against ' . (string) ($stored['item_title'] ?? ('record ' . $itemId)) . '.';
+        return $preview;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function recentRuns(int $ruleId, int $limit = 15): array
+    {
+        if ($ruleId <= 0 || !Database::tableExists('application_rule_runs')) {
+            return [];
+        }
+        return Database::select(
+            'application_rule_runs',
+            '*',
+            'rule_id = ?',
+            [$ruleId],
+            'id DESC',
+            $limit
+        );
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function runsForItem(int $itemId, int $limit = 10): array
+    {
+        if ($itemId <= 0 || !Database::tableExists('application_rule_runs')) {
+            return [];
+        }
+        $runs = Database::select(
+            'application_rule_runs',
+            '*',
+            'item_id = ?',
+            [$itemId],
+            'id DESC',
+            $limit
+        );
+        foreach ($runs as $i => $run) {
+            $rule = Database::first('application_rules', ['name'], 'id = ?', [(int) ($run['rule_id'] ?? 0)]);
+            $runs[$i]['rule_name'] = (string) ($rule['name'] ?? 'Rule');
+        }
+        return $runs;
+    }
+
+    public static function recordCard(int $itemId): string
+    {
+        $runs = self::runsForItem($itemId, 8);
+        if ($runs === []) {
+            return '';
+        }
+        $html = '';
+        foreach ($runs as $run) {
+            $when = date('j M Y, g:i a', (int) ($run['ran_at'] ?? time()));
+            $html .= '<div class="log-item"><div class="log-heading"><strong>'
+                . htmlspecialchars($when, ENT_QUOTES, 'UTF-8')
+                . ' — ' . htmlspecialchars((string) $run['rule_name'], ENT_QUOTES, 'UTF-8')
+                . '</strong></div><div class="log-text">'
+                . nl2br(htmlspecialchars((string) ($run['detail'] ?? ''), ENT_QUOTES, 'UTF-8'))
+                . '</div></div>';
+        }
+        return \Adlexone\support\RenderViews::buildVerticalCards([['title' => 'Rules that ran', 'html' => $html]]);
+    }
+
+    /**
+     * Pure condition check. Group tests can pass group_security on either side.
+     *
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $current
+     * @param array<string, mixed> $previous
+     */
+    public static function matchesState(array $rule, array $current, array $previous, int $itemId = 0): bool
+    {
+        if ((string) ($rule['event'] ?? '') === self::EVENT_LOG) {
+            if (trim((string) ($current['log_entry'] ?? '')) === '') {
+                return false;
+            }
+            $min = (int) ($rule['min_log_role'] ?? 0);
+            if ($min > 0 && (int) ($current['role_id'] ?? 0) < $min) {
+                return false;
+            }
+        }
+        $operator = (string) ($rule['operator'] ?? self::OP_ALWAYS);
+        if ($operator === self::OP_ALWAYS) {
+            return true;
+        }
+        $key = (string) ($rule['field_key'] ?? '');
+        if ($key === '') {
+            return false;
+        }
+        $now = self::readValue($key, $current, $itemId);
+        $then = self::readValue($key, $previous, $itemId);
+        $want = trim((string) ($rule['match_value'] ?? ''));
+        $from = trim((string) ($rule['match_from'] ?? ''));
+        return match ($operator) {
+            self::OP_EQ => self::equalsValue($key, $now, $want),
+            self::OP_NEQ => !self::equalsValue($key, $now, $want),
+            self::OP_BECOMES => self::equalsValue($key, $now, $want) && !self::equalsValue($key, $then, $want),
+            self::OP_EMPTY => self::isEmpty($key, $now),
+            self::OP_NOT_EMPTY => !self::isEmpty($key, $now),
+            self::OP_CONTAINS => self::containsValue($key, $now, $want),
+            self::OP_CHANGED => !$now['same']($then),
+            self::OP_FROM_TO => self::equalsValue($key, $then, $from) && self::equalsValue($key, $now, $want) && !$now['same']($then),
+            default => false,
+        };
     }
 
     /**
@@ -359,41 +798,15 @@ final class Rules
     {
         $events = self::events();
         $operators = self::operators();
-        $outcomes = self::outcomes();
-        $recipients = self::recipients();
-
         $event = (string) ($input['event'] ?? self::EVENT_UPDATE);
         $operator = (string) ($input['operator'] ?? self::OP_ALWAYS);
-        $outcome = (string) ($input['outcome'] ?? self::OUTCOME_LOG);
-        $recipient = (string) ($input['recipient'] ?? self::TO_OWNER);
         $name = trim((string) ($input['name'] ?? ''));
+        $steps = self::stepsFromInput($input);
+        $first = $steps[0];
         if ($name === '') {
-            $name = ($outcomes[$outcome] ?? 'Rule') . ' when ' . strtolower($events[$event] ?? 'updated');
+            $name = self::stepSummary($first, []) . ' when ' . strtolower($events[$event] ?? 'updated');
         }
-        if (!isset($outcomes[$outcome])) {
-            $outcome = self::OUTCOME_LOG;
-        }
-
-        $address = '';
-        $subject = '';
-        $body = '';
-        $actionField = '';
-        $actionValue = '';
-        if ($outcome === self::OUTCOME_EMAIL) {
-            $address = trim((string) ($input['address'] ?? ''));
-            $subject = trim((string) ($input['subject'] ?? ''));
-            $body = trim((string) ($input['body'] ?? ''));
-        } elseif ($outcome === self::OUTCOME_LOG) {
-            $body = trim((string) ($input['body'] ?? ''));
-            $recipient = self::TO_OWNER;
-        } elseif ($outcome === self::OUTCOME_SET_FIELD) {
-            $actionField = trim((string) ($input['action_field'] ?? ''));
-            $actionValue = trim((string) ($input['action_value'] ?? ''));
-            $recipient = self::TO_OWNER;
-        } elseif ($outcome === self::OUTCOME_SET_OWNER) {
-            $actionValue = trim((string) ($input['owner_id'] ?? $input['action_value'] ?? ''));
-            $recipient = self::TO_OWNER;
-        }
+        $needsValue = !in_array($operator, [self::OP_ALWAYS, self::OP_EMPTY, self::OP_NOT_EMPTY, self::OP_CHANGED], true);
 
         return [
             'application_id' => $applicationId,
@@ -401,30 +814,381 @@ final class Rules
             'name' => $name,
             'enabled' => self::enabledFlag($input),
             'event' => isset($events[$event]) ? $event : self::EVENT_UPDATE,
-            'field_key' => trim((string) ($input['field_key'] ?? '')),
+            'field_key' => $operator === self::OP_ALWAYS ? '' : trim((string) ($input['field_key'] ?? '')),
             'operator' => isset($operators[$operator]) ? $operator : self::OP_ALWAYS,
-            'match_value' => trim((string) ($input['match_value'] ?? '')),
-            'outcome' => $outcome,
-            'recipient' => isset($recipients[$recipient]) ? $recipient : self::TO_OWNER,
-            'address' => $address,
-            'subject' => $subject,
-            'body' => $body,
-            'role_id' => (int) ($input['role_id'] ?? 5),
-            'action_field' => $actionField,
-            'action_value' => $actionValue,
+            'match_value' => $needsValue ? trim((string) ($input['match_value'] ?? '')) : '',
+            'match_from' => $operator === self::OP_FROM_TO ? trim((string) ($input['match_from'] ?? '')) : '',
+            'outcome' => (string) $first['outcome'],
+            'recipient' => (string) $first['recipient'],
+            'address' => (string) $first['address'],
+            'subject' => (string) $first['subject'],
+            'body' => (string) $first['body'],
+            'role_id' => (int) $first['role_id'],
+            'action_field' => (string) $first['action_field'],
+            'action_value' => (string) $first['action_value'],
+            'skip_actor' => self::skipFlag($input),
+            'min_log_role' => $event === self::EVENT_LOG ? (int) ($input['min_log_role'] ?? 0) : 0,
+            'sort_order' => (int) ($input['sort_order'] ?? 0),
+            'steps' => $steps,
         ];
     }
 
     /**
      * @param array<string, mixed> $input
+     * @return list<array<string, mixed>>
      */
-    private static function enabledFlag(array $input): int
+    private static function stepsFromInput(array $input): array
     {
-        if (!array_key_exists('enabled', $input)) {
-            return 1;
+        $raw = $input['steps'] ?? null;
+        if (!is_array($raw) || $raw === []) {
+            $raw = [[
+                'outcome' => $input['outcome'] ?? self::OUTCOME_LOG,
+                'recipient' => $input['recipient'] ?? self::TO_OWNER,
+                'address' => $input['address'] ?? '',
+                'subject' => $input['subject'] ?? '',
+                'body' => $input['body'] ?? '',
+                'role_id' => $input['role_id'] ?? 5,
+                'action_field' => $input['action_field'] ?? '',
+                'action_value' => $input['action_value'] ?? ($input['owner_id'] ?? ''),
+                'user_id' => $input['user_id'] ?? 0,
+                'group_id' => $input['group_id'] ?? 0,
+            ]];
         }
-        $value = strtolower(trim((string) $input['enabled']));
-        return in_array($value, ['0', 'no', 'off'], true) ? 0 : 1;
+        $steps = [];
+        $order = 0;
+        foreach ($raw as $step) {
+            if (!is_array($step)) {
+                continue;
+            }
+            $normal = self::normaliseStep($step);
+            if ($normal === null) {
+                continue;
+            }
+            $normal['sort_order'] = $order;
+            $order += 10;
+            $steps[] = $normal;
+        }
+        if ($steps === []) {
+            $steps[] = self::normaliseStep(['outcome' => self::OUTCOME_LOG, 'body' => '']) ?? [];
+            $steps[0]['sort_order'] = 0;
+        }
+        return $steps;
+    }
+
+    /**
+     * @param array<string, mixed> $step
+     * @return array<string, mixed>|null
+     */
+    private static function normaliseStep(array $step): ?array
+    {
+        $outcomes = self::outcomes();
+        $recipients = self::recipients();
+        $outcome = (string) ($step['outcome'] ?? '');
+        if ($outcome === '') {
+            return null;
+        }
+        if (!isset($outcomes[$outcome])) {
+            $outcome = self::OUTCOME_LOG;
+        }
+        $recipient = (string) ($step['recipient'] ?? self::TO_OWNER);
+        if (!isset($recipients[$recipient])) {
+            $recipient = self::TO_OWNER;
+        }
+        $address = '';
+        $subject = '';
+        $body = '';
+        $actionField = '';
+        $actionValue = '';
+        $userId = 0;
+        $groupId = 0;
+        $roleId = (int) ($step['role_id'] ?? 5);
+        if ($outcome === self::OUTCOME_EMAIL) {
+            $address = trim((string) ($step['address'] ?? ''));
+            $subject = trim((string) ($step['subject'] ?? ''));
+            $body = trim((string) ($step['body'] ?? ''));
+            $userId = (int) ($step['user_id'] ?? 0);
+            $groupId = (int) ($step['group_id'] ?? 0);
+        } elseif ($outcome === self::OUTCOME_LOG) {
+            $body = trim((string) ($step['body'] ?? ''));
+            $recipient = self::TO_OWNER;
+        } elseif ($outcome === self::OUTCOME_SET_FIELD) {
+            $actionField = trim((string) ($step['action_field'] ?? ''));
+            $actionValue = trim((string) ($step['action_value'] ?? ''));
+            $recipient = self::TO_OWNER;
+        } elseif ($outcome === self::OUTCOME_SET_OWNER) {
+            $actionValue = trim((string) ($step['owner_id'] ?? $step['action_value'] ?? ''));
+            $recipient = self::TO_OWNER;
+        }
+        return [
+            'outcome' => $outcome,
+            'recipient' => $recipient,
+            'address' => $address,
+            'subject' => $subject,
+            'body' => $body,
+            'role_id' => $roleId > 0 ? $roleId : 5,
+            'action_field' => $actionField,
+            'action_value' => $actionValue,
+            'user_id' => $userId,
+            'group_id' => $groupId,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rules
+     * @return list<array<string, mixed>>
+     */
+    private static function withSteps(array $rules): array
+    {
+        if ($rules === [] || !Database::tableExists('application_rule_steps')) {
+            foreach ($rules as $i => $rule) {
+                $rules[$i]['steps'] = self::stepsOf($rule);
+            }
+            return $rules;
+        }
+        $ids = [];
+        foreach ($rules as $rule) {
+            $id = (int) ($rule['id'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        $byRule = [];
+        if ($ids !== []) {
+            $rows = Database::select(
+                'application_rule_steps',
+                '*',
+                'rule_id IN (' . implode(',', $ids) . ')',
+                [],
+                'sort_order ASC, id ASC'
+            );
+            foreach ($rows as $row) {
+                $byRule[(int) $row['rule_id']][] = $row;
+            }
+        }
+        foreach ($rules as $i => $rule) {
+            $id = (int) ($rule['id'] ?? 0);
+            $rules[$i]['steps'] = $byRule[$id] ?? self::legacySteps($rule);
+        }
+        return $rules;
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @return list<array<string, mixed>>
+     */
+    private static function stepsOf(array $rule): array
+    {
+        $steps = $rule['steps'] ?? null;
+        if (is_array($steps) && $steps !== []) {
+            return array_values(array_filter($steps, 'is_array'));
+        }
+        return self::legacySteps($rule);
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @return list<array<string, mixed>>
+     */
+    private static function legacySteps(array $rule): array
+    {
+        if ((string) ($rule['outcome'] ?? '') === '') {
+            return [];
+        }
+        return [[
+            'outcome' => (string) $rule['outcome'],
+            'recipient' => (string) ($rule['recipient'] ?? self::TO_OWNER),
+            'address' => (string) ($rule['address'] ?? ''),
+            'subject' => (string) ($rule['subject'] ?? ''),
+            'body' => (string) ($rule['body'] ?? ''),
+            'role_id' => (int) ($rule['role_id'] ?? 5),
+            'action_field' => (string) ($rule['action_field'] ?? ''),
+            'action_value' => (string) ($rule['action_value'] ?? ''),
+            'user_id' => 0,
+            'group_id' => 0,
+        ]];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $steps
+     */
+    private static function replaceSteps(int $ruleId, array $steps): void
+    {
+        if ($ruleId <= 0 || !Database::tableExists('application_rule_steps')) {
+            return;
+        }
+        Database::delete('application_rule_steps', 'rule_id = ?', [$ruleId]);
+        foreach ($steps as $step) {
+            $step['rule_id'] = $ruleId;
+            unset($step['id']);
+            Database::insert('application_rule_steps', $step);
+        }
+    }
+
+    /**
+     * @param list<string> $events
+     * @return list<array<string, mixed>>
+     */
+    private static function rulesFor(int $typeId, array $events): array
+    {
+        $events = array_values(array_unique($events));
+        if ($typeId <= 0 || $events === []) {
+            return [];
+        }
+        $marks = implode(',', array_fill(0, count($events), '?'));
+        $rules = Database::select(
+            'application_rules',
+            '*',
+            'item_type_id = ? AND enabled = 1 AND event IN (' . $marks . ')',
+            array_merge([$typeId], $events),
+            'sort_order ASC, id ASC'
+        );
+        return self::withSteps($rules);
+    }
+
+    /**
+     * @return array{type_id: int, current: array<string, mixed>, previous: array<string, mixed>}|null
+     */
+    private static function context(int $itemId, string $event): ?array
+    {
+        $stored = self::loadItem($itemId);
+        if ($stored === null) {
+            return null;
+        }
+        $posted = is_array($_POST ?? null) ? $_POST : [];
+        $current = array_merge($stored, $posted);
+        $previous = $event === self::EVENT_CREATE ? [] : $stored;
+        return [
+            'type_id' => (int) ($stored['item_type_id'] ?? 0),
+            'current' => $current,
+            'previous' => $previous,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function loadItem(int $itemId): ?array
+    {
+        if ($itemId <= 0) {
+            return null;
+        }
+        $stored = Database::first('items', '*', 'item_id = ?', [$itemId]);
+        if ($stored === null) {
+            return null;
+        }
+        return ItemFields::hydrate($stored);
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $current
+     */
+    private static function perform(int $itemId, array $rule, array &$current, bool $write): bool
+    {
+        $lines = [];
+        $moved = false;
+        $ok = 0;
+        $failed = 0;
+        foreach (self::stepsOf($rule) as $step) {
+            $result = self::runStep($itemId, $rule, $step, $current, $write);
+            $lines[] = $result['detail'];
+            if ($result['moved']) {
+                $moved = true;
+            }
+            if ($result['status'] === 'failed') {
+                $failed++;
+            } elseif ($result['status'] !== 'skipped') {
+                $ok++;
+            }
+        }
+        if ($write) {
+            $status = $ok > 0 ? 'done' : ($failed > 0 ? 'failed' : 'skipped');
+            self::recordRun((int) ($rule['id'] ?? 0), $itemId, $status, implode("\n", $lines));
+        }
+        return $moved;
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $step
+     * @param array<string, mixed> $current
+     * @return array{status: string, detail: string, moved: bool}
+     */
+    private static function runStep(int $itemId, array $rule, array $step, array &$current, bool $write): array
+    {
+        $outcome = (string) ($step['outcome'] ?? '');
+        if ($outcome === self::OUTCOME_EMAIL) {
+            $detail = self::sendEmail($itemId, $rule, $step, $current, $write);
+            $status = str_starts_with($detail, 'failed') ? 'failed' : (str_starts_with($detail, 'skipped') ? 'skipped' : 'done');
+            return ['status' => $status, 'detail' => $detail, 'moved' => false];
+        }
+        if ($outcome === self::OUTCOME_SET_FIELD) {
+            $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+            if (!$write) {
+                return ['status' => 'done', 'detail' => self::describeStep($itemId, $step, $current, false, $skip), 'moved' => false];
+            }
+            $moved = self::setField($itemId, $rule, $step, $current);
+            return [
+                'status' => $moved ? 'done' : 'skipped',
+                'detail' => $moved
+                    ? self::describeStep($itemId, $step, $current, true, $skip)
+                    : 'Skipped setting a field. The value is already set, or the field is not on this record.',
+                'moved' => $moved,
+            ];
+        }
+        if ($outcome === self::OUTCOME_SET_OWNER) {
+            $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+            if (!$write) {
+                return ['status' => 'done', 'detail' => self::describeStep($itemId, $step, $current, false, $skip), 'moved' => false];
+            }
+            $moved = self::setOwner($itemId, $rule, $step, $current);
+            return [
+                'status' => $moved ? 'done' : 'skipped',
+                'detail' => $moved
+                    ? self::describeStep($itemId, $step, $current, true, $skip)
+                    : 'Skipped setting the owner. They are already the owner, or that person is missing.',
+                'moved' => $moved,
+            ];
+        }
+        $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+        if (!$write) {
+            return ['status' => 'done', 'detail' => self::describeStep($itemId, $step, $current, false, $skip), 'moved' => false];
+        }
+        $wrote = self::writeLog($itemId, $rule, $step, $current);
+        return [
+            'status' => $wrote ? 'done' : 'skipped',
+            'detail' => $wrote ? self::describeStep($itemId, $step, $current, true, $skip) : 'Skipped the log line. The message was empty.',
+            'moved' => false,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $step
+     * @param array<string, mixed> $current
+     */
+    private static function describeStep(int $itemId, array $step, array $current, bool $past, bool $skipActor = true): string
+    {
+        $outcome = (string) ($step['outcome'] ?? '');
+        if ($outcome === self::OUTCOME_EMAIL) {
+            $to = self::recipientAddresses($step, $current, $itemId, $skipActor);
+            $who = $to === [] ? 'nobody' : implode(', ', $to);
+            $subject = self::fill((string) ($step['subject'] ?? ''), $itemId, $current);
+            $verb = $past ? 'Emailed' : 'Would email';
+            return $verb . ' ' . $who . ($subject !== '' ? '. Subject: ' . $subject : '.');
+        }
+        if ($outcome === self::OUTCOME_SET_FIELD) {
+            $label = self::fieldLabel((string) ($step['action_field'] ?? ''));
+            $verb = $past ? 'Set' : 'Would set';
+            return $verb . ' ' . $label . ' to ' . (string) ($step['action_value'] ?? '') . '.';
+        }
+        if ($outcome === self::OUTCOME_SET_OWNER) {
+            $name = self::ownerLabel((string) ($step['action_value'] ?? ''), $current);
+            $verb = $past ? 'Set the owner to ' : 'Would set the owner to ';
+            return $verb . $name . '.';
+        }
+        $text = self::fill((string) ($step['body'] ?? ''), $itemId, $current);
+        $verb = $past ? 'Wrote a log line: ' : 'Would write a log line: ';
+        return $verb . ($text !== '' ? $text : '(empty)');
     }
 
     /**
@@ -432,50 +1196,309 @@ final class Rules
      * @param array<string, mixed> $current
      * @param array<string, mixed> $previous
      */
-    private static function matches(array $rule, array $current, array $previous): bool
+    private static function mismatch(array $rule, array $current, array $previous, int $itemId): string
     {
-        $operator = (string) ($rule['operator'] ?? self::OP_ALWAYS);
-        if ($operator === self::OP_ALWAYS) {
-            return true;
+        if ((string) ($rule['event'] ?? '') === self::EVENT_LOG && trim((string) ($current['log_entry'] ?? '')) === '') {
+            return 'A log rule matches when a log line is being added. This record is only being read.';
+        }
+        $operator = (string) ($rule['operator'] ?? '');
+        if ($operator === self::OP_BECOMES || $operator === self::OP_CHANGED || $operator === self::OP_FROM_TO) {
+            return 'This record already has its current values, so a change has not just happened. Save the record to see the rule fire, or pick a condition such as Equals to try the stored value.';
         }
         $key = (string) ($rule['field_key'] ?? '');
-        if ($key === '') {
+        $now = $key === '' ? '' : self::readValue($key, $current, $itemId)['text'];
+        return 'Does not match. Current value is "' . $now . '".';
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array{text: string, ids: list<int>, same: callable}
+     */
+    private static function readValue(string $key, array $row, int $itemId): array
+    {
+        if ($key === 'owner') {
+            $id = (int) ($row['user_security'] ?? 0);
+            return self::scalarValue((string) $id);
+        }
+        if ($key === 'creator') {
+            $id = (int) ($row['creator_security'] ?? 0);
+            return self::scalarValue((string) $id);
+        }
+        if ($key === 'groups') {
+            $ids = self::groupIdsFrom($row, $itemId);
+            $copy = $ids;
+            sort($copy);
+            return [
+                'text' => implode(',', $copy),
+                'ids' => $copy,
+                'same' => static function (array $other) use ($copy): bool {
+                    return $copy === ($other['ids'] ?? []);
+                },
+            ];
+        }
+        $text = trim((string) ($row[$key] ?? ''));
+        return self::scalarValue($text);
+    }
+
+    /**
+     * @return array{text: string, ids: list<int>, same: callable}
+     */
+    private static function scalarValue(string $text): array
+    {
+        return [
+            'text' => $text,
+            'ids' => [],
+            'same' => static function (array $other) use ($text): bool {
+                return $text === (string) ($other['text'] ?? '');
+            },
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return list<int>
+     */
+    private static function groupIdsFrom(array $row, int $itemId): array
+    {
+        if (array_key_exists('group_security', $row)) {
+            return GroupMembership::parseDelimited((string) $row['group_security']);
+        }
+        if (isset($row['groups']) && is_array($row['groups'])) {
+            return array_values(array_unique(array_filter(array_map('intval', $row['groups']))));
+        }
+        if ($itemId > 0 && Database::tableExists('item_groups')) {
+            return GroupMembership::itemGroupIds($itemId);
+        }
+        return [];
+    }
+
+    /**
+     * @param array{text: string, ids: list<int>} $value
+     */
+    private static function equalsValue(string $key, array $value, string $want): bool
+    {
+        if ($key === 'groups') {
+            return in_array((int) $want, $value['ids'], true);
+        }
+        return $value['text'] === $want;
+    }
+
+    /**
+     * @param array{text: string, ids: list<int>} $value
+     */
+    private static function isEmpty(string $key, array $value): bool
+    {
+        if ($key === 'groups') {
+            return $value['ids'] === [];
+        }
+        if ($key === 'owner' || $key === 'creator') {
+            return (int) $value['text'] <= 0;
+        }
+        return $value['text'] === '';
+    }
+
+    /**
+     * @param array{text: string, ids: list<int>} $value
+     */
+    private static function containsValue(string $key, array $value, string $want): bool
+    {
+        if ($want === '') {
             return false;
         }
-        $now = trim((string) ($current[$key] ?? ''));
-        $then = trim((string) ($previous[$key] ?? ''));
-        $want = trim((string) ($rule['match_value'] ?? ''));
-        return match ($operator) {
-            self::OP_EQ => $now === $want,
-            self::OP_NEQ => $now !== $want,
-            self::OP_BECOMES => $now === $want && $then !== $want,
-            default => false,
-        };
+        if ($key === 'groups') {
+            $names = [];
+            foreach ($value['ids'] as $id) {
+                $names[] = self::groups()[$id] ?? '';
+            }
+            return stripos(implode(', ', $names), $want) !== false;
+        }
+        if ($key === 'owner' || $key === 'creator') {
+            $name = self::userName((int) $value['text']);
+            return stripos($name, $want) !== false || $value['text'] === $want;
+        }
+        return stripos($value['text'], $want) !== false;
     }
 
     /**
      * @param array<string, mixed> $rule
+     * @param array<string, mixed> $step
      * @param array<string, mixed> $current
      */
-    private static function setField(int $itemId, array $rule, array &$current): bool
+    private static function sendEmail(int $itemId, array $rule, array $step, array $current, bool $write): string
     {
-        $key = (string) ($rule['action_field'] ?? '');
-        $value = (string) ($rule['action_value'] ?? '');
+        $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+        $to = self::recipientAddresses($step, $current, $itemId, $skip);
+        $subject = self::fill((string) ($step['subject'] ?? ''), $itemId, $current);
+        if ($subject === '') {
+            $subject = 'ITEM_ID ' . $itemId;
+        }
+        $body = self::fill((string) ($step['body'] ?? ''), $itemId, $current);
+        if ($to === []) {
+            return 'skipped: nobody to email.';
+        }
+        $host = defined('SET_SMTP_HOST') ? trim((string) SET_SMTP_HOST) : '';
+        $from = defined('SET_SMTP_USER') ? trim((string) SET_SMTP_USER) : '';
+        if (!$write || $host === '' || str_starts_with(strtolower($host), 'enter ') || !str_contains($from, '@')) {
+            $verb = $write ? 'skipped: mail is not configured.' : 'Would email';
+            return $verb . ' ' . implode(', ', $to) . '. Subject: ' . $subject;
+        }
+        $sent = [];
+        $failed = [];
+        foreach ($to as $address) {
+            $ok = Communications::sendSMTPMail(
+                $host,
+                (int) (defined('SET_SMTP_PORT') ? SET_SMTP_PORT : 25),
+                $from,
+                defined('SET_SMTP_PASSWORD') ? (string) SET_SMTP_PASSWORD : '',
+                $address,
+                $subject,
+                $body,
+                $from,
+                true
+            );
+            if ($ok) {
+                $sent[] = $address;
+            } else {
+                $failed[] = $address;
+            }
+        }
+        if ($sent === []) {
+            return 'failed: mail server refused ' . implode(', ', $failed) . '.';
+        }
+        $detail = 'Emailed ' . implode(', ', $sent) . '. Subject: ' . $subject;
+        if ($failed !== []) {
+            $detail .= ' Failed: ' . implode(', ', $failed) . '.';
+        }
+        return $detail;
+    }
+
+    /**
+     * @param array<string, mixed> $step
+     * @param array<string, mixed> $current
+     * @return list<string>
+     */
+    private static function recipientAddresses(array $step, array $current, int $itemId, bool $skipActor): array
+    {
+        $kind = (string) ($step['recipient'] ?? self::TO_OWNER);
+        $emails = [];
+        $addUser = static function (int $userId) use (&$emails): void {
+            foreach (self::emailsForUsers([$userId]) as $email) {
+                $emails[$email] = $email;
+            }
+        };
+        $addGroups = static function (array $groupIds) use (&$emails): void {
+            foreach (self::emailsForGroups($groupIds) as $email) {
+                $emails[$email] = $email;
+            }
+        };
+        $ownerId = (int) ($current['user_security'] ?? 0);
+        $creatorId = (int) ($current['creator_security'] ?? 0);
+        if ($kind === self::TO_ADDRESS) {
+            foreach (preg_split('/[,;]+/', (string) ($step['address'] ?? '')) ?: [] as $part) {
+                $part = trim($part);
+                if (str_contains($part, '@')) {
+                    $emails[$part] = $part;
+                }
+            }
+        } elseif ($kind === self::TO_USER) {
+            $addUser((int) ($step['user_id'] ?? 0));
+        } elseif ($kind === self::TO_GROUP) {
+            $addGroups([(int) ($step['group_id'] ?? 0)]);
+        } elseif ($kind === self::TO_CREATOR) {
+            $addUser($creatorId);
+        } elseif ($kind === self::TO_BOTH) {
+            $addUser($ownerId);
+            $addUser($creatorId);
+        } elseif ($kind === self::TO_OWNER_GROUPS) {
+            $addGroups(GroupMembership::userGroupIds($ownerId));
+        } elseif ($kind === self::TO_OWNER_AND_GROUPS) {
+            $addUser($ownerId);
+            $addGroups(GroupMembership::userGroupIds($ownerId));
+        } elseif ($kind === self::TO_CREATOR_GROUPS) {
+            $addGroups(GroupMembership::userGroupIds($creatorId));
+        } elseif ($kind === self::TO_BOTH_GROUPS) {
+            $addGroups(GroupMembership::userGroupIds($ownerId));
+            $addGroups(GroupMembership::userGroupIds($creatorId));
+        } elseif ($kind === self::TO_ITEM_GROUPS) {
+            $addGroups(self::groupIdsFrom($current, $itemId));
+        } else {
+            $addUser($ownerId);
+        }
+        if ($skipActor) {
+            $actor = (int) ($_SESSION['access_user_id'] ?? 0);
+            foreach (self::emailsForUsers([$actor]) as $email) {
+                unset($emails[$email]);
+            }
+        }
+        return array_values($emails);
+    }
+
+    /**
+     * @param list<int> $userIds
+     * @return list<string>
+     */
+    private static function emailsForUsers(array $userIds): array
+    {
+        $emails = [];
+        foreach ($userIds as $userId) {
+            if ($userId <= 0 || !Database::tableExists('users')) {
+                continue;
+            }
+            $user = Database::first('users', ['email'], 'user_id = ?', [$userId]);
+            $email = trim((string) ($user['email'] ?? ''));
+            if (str_contains($email, '@')) {
+                $emails[$email] = $email;
+            }
+        }
+        return array_values($emails);
+    }
+
+    /**
+     * @param list<int> $groupIds
+     * @return list<string>
+     */
+    private static function emailsForGroups(array $groupIds): array
+    {
+        $emails = [];
+        foreach ($groupIds as $groupId) {
+            if ($groupId <= 0 || !Database::tableExists('user_groups')) {
+                continue;
+            }
+            $rows = Database::rows(
+                'SELECT u.email FROM users u INNER JOIN user_groups ug ON ug.user_id = u.user_id WHERE ug.group_id = ?',
+                [(int) $groupId]
+            );
+            foreach ($rows as $row) {
+                $email = trim((string) ($row['email'] ?? ''));
+                if (str_contains($email, '@')) {
+                    $emails[$email] = $email;
+                }
+            }
+        }
+        return array_values($emails);
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $step
+     * @param array<string, mixed> $current
+     */
+    private static function setField(int $itemId, array $rule, array $step, array &$current): bool
+    {
+        $key = (string) ($step['action_field'] ?? '');
+        $value = (string) ($step['action_value'] ?? '');
         $typeId = (int) ($current['item_type_id'] ?? 0);
         if ($key === '' || $typeId <= 0) {
             return false;
         }
-
         if ($key === 'item_title') {
             if ($value === '' || (string) ($current['item_title'] ?? '') === $value) {
                 return false;
             }
             Database::update('items', ['item_title' => $value], 'item_id = ?', [$itemId]);
             $current['item_title'] = $value;
-            self::note($itemId, $rule, 'Title set to ' . $value . '.');
             return true;
         }
-
         $fieldId = ItemFields::fieldIdFromKey($key);
         if ($fieldId === null) {
             return false;
@@ -491,19 +1514,17 @@ final class Rules
         }
         ItemFields::saveFromArray($itemId, [$key => $value]);
         $current[$key] = $value;
-        $field = Database::first('custom_fields', ['custom_field_name'], 'custom_field_id = ?', [$fieldId]);
-        $label = trim((string) ($field['custom_field_name'] ?? 'Field'));
-        self::note($itemId, $rule, $label . ' set to ' . $value . '.');
         return true;
     }
 
     /**
      * @param array<string, mixed> $rule
+     * @param array<string, mixed> $step
      * @param array<string, mixed> $current
      */
-    private static function setOwner(int $itemId, array $rule, array &$current): bool
+    private static function setOwner(int $itemId, array $rule, array $step, array &$current): bool
     {
-        $target = (string) ($rule['action_value'] ?? '');
+        $target = (string) ($step['action_value'] ?? '');
         $userId = $target === self::OWNER_CREATOR
             ? (int) ($current['creator_security'] ?? 0)
             : (ctype_digit($target) ? (int) $target : 0);
@@ -515,81 +1536,19 @@ final class Rules
         }
         Database::update('items', ['user_security' => $userId], 'item_id = ?', [$itemId]);
         $current['user_security'] = $userId;
-        $name = self::userName($userId);
-        self::note($itemId, $rule, 'Owner set to ' . ($name !== '' ? $name : ('user ' . $userId)) . '.');
         return true;
     }
 
     /**
      * @param array<string, mixed> $rule
-     */
-    private static function note(int $itemId, array $rule, string $text): void
-    {
-        $rule['body'] = $text;
-        self::writeLog($itemId, $rule, ['item_title' => '', 'creator_security' => 0, 'user_security' => 0]);
-    }
-
-    /**
-     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $step
      * @param array<string, mixed> $current
      */
-    private static function sendEmail(int $itemId, array $rule, array $current): void
+    private static function writeLog(int $itemId, array $rule, array $step, array $current): bool
     {
-        $host = defined('SET_SMTP_HOST') ? trim((string) SET_SMTP_HOST) : '';
-        $from = defined('SET_SMTP_USER') ? trim((string) SET_SMTP_USER) : '';
-        if ($host === '' || str_starts_with(strtolower($host), 'enter ') || !str_contains($from, '@')) {
-            return;
-        }
-        $to = self::recipientAddress($rule, $current);
-        if ($to === '' || !str_contains($to, '@')) {
-            return;
-        }
-        $subject = self::fill((string) ($rule['subject'] ?? ''), $itemId, $current);
-        $body = self::fill((string) ($rule['body'] ?? ''), $itemId, $current);
-        if ($subject === '') {
-            $subject = 'ITEM_ID ' . $itemId;
-        }
-        Communications::sendSMTPMail(
-            $host,
-            (int) (defined('SET_SMTP_PORT') ? SET_SMTP_PORT : 25),
-            $from,
-            defined('SET_SMTP_PASSWORD') ? (string) SET_SMTP_PASSWORD : '',
-            $to,
-            $subject,
-            $body,
-            $from
-        );
-    }
-
-    /**
-     * @param array<string, mixed> $rule
-     * @param array<string, mixed> $current
-     */
-    private static function recipientAddress(array $rule, array $current): string
-    {
-        $kind = (string) ($rule['recipient'] ?? self::TO_OWNER);
-        if ($kind === self::TO_ADDRESS) {
-            return trim((string) ($rule['address'] ?? ''));
-        }
-        $userId = (int) ($kind === self::TO_CREATOR
-            ? ($current['creator_security'] ?? 0)
-            : ($current['user_security'] ?? 0));
-        if ($userId <= 0) {
-            return '';
-        }
-        $user = Database::first('users', ['email'], 'user_id = ?', [$userId]);
-        return trim((string) ($user['email'] ?? ''));
-    }
-
-    /**
-     * @param array<string, mixed> $rule
-     * @param array<string, mixed> $current
-     */
-    private static function writeLog(int $itemId, array $rule, array $current): void
-    {
-        $text = self::fill((string) ($rule['body'] ?? ''), $itemId, $current);
-        if ($text === '') {
-            return;
+        $text = self::fill((string) ($step['body'] ?? ''), $itemId, $current);
+        if ($text === '' || !Database::tableExists('core_log')) {
+            return false;
         }
         $sequence = Database::newID('core_log', 'log_item_sequence', 'item_id = ' . $itemId);
         $now = time();
@@ -600,9 +1559,10 @@ final class Rules
             'log_item_sequence' => $sequence,
             'log_text' => $text,
             'security_id' => (int) ($_SESSION['access_user_id'] ?? 0),
-            'role_id' => (int) ($rule['role_id'] ?? 5),
+            'role_id' => (int) ($step['role_id'] ?? 5),
         ]);
         Database::update('items', ['core_log_updated' => $now], 'item_id = ?', [$itemId]);
+        return true;
     }
 
     /**
@@ -610,13 +1570,11 @@ final class Rules
      */
     private static function fill(string $text, int $itemId, array $current): string
     {
-        $creator = self::userName((int) ($current['creator_security'] ?? 0));
-        $owner = self::userName((int) ($current['user_security'] ?? 0));
         $replace = [
             'ITEM_ID' => (string) $itemId,
             'ITEM_TITLE' => (string) ($current['item_title'] ?? ''),
-            'ITEM_CREATOR' => $creator,
-            'ITEM_OWNER' => $owner,
+            'ITEM_CREATOR' => self::userName((int) ($current['creator_security'] ?? 0)),
+            'ITEM_OWNER' => self::userName((int) ($current['user_security'] ?? 0)),
         ];
         foreach ($current as $key => $value) {
             if (!is_string($key) || is_array($value)) {
@@ -629,12 +1587,150 @@ final class Rules
         return strtr($text, $replace);
     }
 
+    private static function recordRun(int $ruleId, int $itemId, string $status, string $detail): void
+    {
+        if ($ruleId <= 0 || $itemId <= 0 || !Database::tableExists('application_rule_runs')) {
+            return;
+        }
+        Database::insert('application_rule_runs', [
+            'rule_id' => $ruleId,
+            'item_id' => $itemId,
+            'ran_at' => time(),
+            'status' => $status,
+            'detail' => $detail,
+        ]);
+        Database::run(
+            'DELETE FROM application_rule_runs WHERE rule_id = ? AND id NOT IN (
+                SELECT id FROM application_rule_runs WHERE rule_id = ? ORDER BY id DESC LIMIT 100
+            )',
+            [$ruleId, $ruleId]
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $step
+     * @param array<string, string> $fieldLabels
+     */
+    private static function stepSummary(array $step, array $fieldLabels): string
+    {
+        return match ((string) ($step['outcome'] ?? '')) {
+            self::OUTCOME_EMAIL => 'Email ' . strtolower(self::recipients()[(string) ($step['recipient'] ?? '')] ?? 'the owner'),
+            self::OUTCOME_SET_FIELD => 'Set ' . ($fieldLabels[(string) ($step['action_field'] ?? '')] ?? self::fieldLabel((string) ($step['action_field'] ?? '')))
+                . ' to ' . (string) ($step['action_value'] ?? ''),
+            self::OUTCOME_SET_OWNER => 'Set the owner to ' . self::ownerLabel((string) ($step['action_value'] ?? ''), []),
+            default => 'Write a log line',
+        };
+    }
+
+    private static function fieldLabel(string $key): string
+    {
+        if ($key === 'item_title') {
+            return 'Title';
+        }
+        $id = ItemFields::fieldIdFromKey($key);
+        if ($id === null || !Database::tableExists('custom_fields')) {
+            return 'a field';
+        }
+        $field = Database::first('custom_fields', ['custom_field_name'], 'custom_field_id = ?', [$id]);
+        $label = trim((string) ($field['custom_field_name'] ?? ''));
+        return $label !== '' ? $label : 'a field';
+    }
+
+    /**
+     * @param array<string, mixed> $current
+     */
+    private static function ownerLabel(string $value, array $current): string
+    {
+        if ($value === self::OWNER_CREATOR) {
+            return 'the creator';
+        }
+        if (ctype_digit($value)) {
+            $name = self::userName((int) $value);
+            return $name !== '' ? $name : ('user ' . $value);
+        }
+        return 'a person';
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, string> $fieldLabels
+     */
+    private static function displayValue(array $rule, string $value, array $fieldLabels): string
+    {
+        $key = (string) ($rule['field_key'] ?? '');
+        if (($key === 'owner' || $key === 'creator') && ctype_digit($value)) {
+            $name = self::userName((int) $value);
+            return $name !== '' ? $name : $value;
+        }
+        if ($key === 'groups' && ctype_digit($value)) {
+            return self::groups()[(int) $value] ?? $value;
+        }
+        return $value;
+    }
+
     private static function userName(int $userId): string
     {
-        if ($userId <= 0) {
+        if ($userId <= 0 || !Database::tableExists('users')) {
             return '';
         }
-        $user = Database::first('users', ['user_name'], 'user_id = ?', [$userId]);
-        return trim((string) ($user['user_name'] ?? ''));
+        $user = Database::first('users', ['user_name', 'first_name', 'last_name'], 'user_id = ?', [$userId]);
+        if ($user === null) {
+            return '';
+        }
+        $name = trim((string) ($user['user_name'] ?? ''));
+        if ($name === '') {
+            $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
+        }
+        return $name;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     */
+    private static function enabledFlag(array $input): int
+    {
+        if (!array_key_exists('enabled', $input)) {
+            return 1;
+        }
+        $value = $input['enabled'];
+        if (is_int($value)) {
+            return $value === 1 ? 1 : 0;
+        }
+        $text = strtolower(trim((string) $value));
+        return in_array($text, ['0', 'no', 'off'], true) ? 0 : 1;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     */
+    private static function skipFlag(array $input): int
+    {
+        if (!array_key_exists('skip_actor', $input) && !array_key_exists('email_actor', $input)) {
+            return 1;
+        }
+        if (array_key_exists('email_actor', $input)) {
+            $value = strtolower(trim((string) $input['email_actor']));
+            return in_array($value, ['1', 'yes', 'on'], true) ? 0 : 1;
+        }
+        $value = $input['skip_actor'];
+        if (is_int($value)) {
+            return $value === 0 ? 0 : 1;
+        }
+        $text = strtolower(trim((string) $value));
+        return in_array($text, ['0', 'no', 'off'], true) ? 0 : 1;
+    }
+
+    private static function nextSort(int $applicationId): int
+    {
+        $row = Database::row(
+            'SELECT COALESCE(MAX(sort_order), 0) AS n FROM application_rules WHERE application_id = ?',
+            [$applicationId]
+        );
+        return ((int) ($row['n'] ?? 0)) + 10;
+    }
+
+    private static function ready(): bool
+    {
+        return Database::tableExists('application_rules');
     }
 }

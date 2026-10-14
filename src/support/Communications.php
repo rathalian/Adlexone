@@ -70,15 +70,17 @@ class Communications
          * @param string $subject The subject of the email.
          * @param string $message The body of the email.
          * @param string $from The sender's email address.
+         * @param bool $quiet When true, a connection failure is returned instead of printed.
          * @return bool Returns true if the email was sent successfully, false otherwise.
          */
-        public static function sendSMTPMail($host, $port, $username, $password, $to, $subject, $message, $from): bool
+        public static function sendSMTPMail($host, $port, $username, $password, $to, $subject, $message, $from, bool $quiet = false): bool
         {
             // Open a socket connection to the SMTP server
             $socket = fsockopen($host, $port, $errno, $errstr, 30);
             if (!$socket) {
-                // Output error message if the connection fails
-                echo "Error: $errstr ($errno)";
+                if (!$quiet) {
+                    echo "Error: $errstr ($errno)";
+                }
                 return false;
             }
 

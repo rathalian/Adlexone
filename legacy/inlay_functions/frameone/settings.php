@@ -41,6 +41,21 @@ function openFrameOneAppSettings(): void
         case 'delete_rule':
             deleteFrameOneRule($slug);
             break;
+        case 'toggle_rule':
+            toggleFrameOneRule($slug);
+            break;
+        case 'duplicate_rule':
+            duplicateFrameOneRule($slug);
+            break;
+        case 'move_rule':
+            moveFrameOneRule($slug);
+            break;
+        case 'try_rule':
+            showFrameOneRuleTry($slug, false);
+            break;
+        case 'run_rule':
+            showFrameOneRuleTry($slug, true);
+            break;
         case 'settings':
         default:
             showFrameOneAppSettings($slug);
@@ -74,6 +89,21 @@ function showFrameOneAppSettings(string $slug): void
     RenderViews::renderThemePage('main_page_content', SET_THEME);
 }
 
+function rulesFormAction(string $slug, string $option): string
+{
+    $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('index.php?application=' . rawurlencode($slug));
+    return $base . '&option=' . $option . '&app=' . rawurlencode($slug);
+}
+
+function rulesHomeUrl(string $slug): string
+{
+    if (defined('RULES_HOME_URL')) {
+        return RULES_HOME_URL;
+    }
+    $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('index.php?application=' . rawurlencode($slug));
+    return $base . '&option=settings';
+}
+
 function frameOneRulesHtml(string $slug): string
 {
     $app = ApplicationStore::findBySlug($slug);
@@ -83,17 +113,16 @@ function frameOneRulesHtml(string $slug): string
     $applicationId = (int) $app['application_id'];
     $typeIds = AppSettings::allowedItemTypeIds($slug);
     $fields = Rules::fieldChoices($typeIds);
-    $outcomes = Rules::outcomes();
+    $typeNames = ruleTypeNames($typeIds);
 
     $grouped = [];
     foreach (Rules::forApplication($applicationId) as $rule) {
-        $outcome = (string) $rule['outcome'];
-        $grouped[$outcomes[$outcome] ?? $outcome][] = $rule;
+        $typeId = (int) $rule['item_type_id'];
+        $grouped[$typeId][] = $rule;
     }
 
     $listGroups = [];
-    foreach ($grouped as $outcomeLabel => $rows) {
-        usort($rows, static fn (array $a, array $b): int => strcasecmp((string) $a['name'], (string) $b['name']));
+    foreach ($grouped as $typeId => $rows) {
         $listRows = [];
         foreach ($rows as $rule) {
             $name = (string) $rule['name'];
@@ -104,31 +133,58 @@ function frameOneRulesHtml(string $slug): string
             }
             $listRows[] = [
                 'name' => $name,
-                'href' => MAN_BASE_URL . '&option=edit_rule&rule_id=' . $id,
-                'meta' => $outcomeLabel,
+                'href' => rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $id,
+                'meta' => (int) $rule['enabled'] === 1 ? 'On' : 'Off',
                 'cells' => [
                     'description' => $description,
                 ],
                 'search' => $description,
-                'actions' => [[
-                    'href' => MAN_BASE_URL . '&option=delete_rule&rule_id=' . $id,
-                    'label' => TXT_315,
-                    'tone' => 'danger',
-                    'confirm' => $name . "\n" . TXT_400,
-                ]],
+                'actions' => [
+                    [
+                        'href' => rulesFormAction($slug, 'try_rule') . '&rule_id=' . $id,
+                        'label' => 'Try',
+                    ],
+                    [
+                        'href' => rulesFormAction($slug, 'toggle_rule') . '&rule_id=' . $id,
+                        'label' => (int) $rule['enabled'] === 1 ? 'Turn off' : 'Turn on',
+                    ],
+                    [
+                        'href' => rulesFormAction($slug, 'duplicate_rule') . '&rule_id=' . $id,
+                        'label' => 'Duplicate',
+                    ],
+                    [
+                        'href' => rulesFormAction($slug, 'move_rule') . '&rule_id=' . $id . '&dir=up',
+                        'label' => 'Move up',
+                    ],
+                    [
+                        'href' => rulesFormAction($slug, 'move_rule') . '&rule_id=' . $id . '&dir=down',
+                        'label' => 'Move down',
+                    ],
+                    [
+                        'href' => rulesFormAction($slug, 'delete_rule') . '&rule_id=' . $id,
+                        'label' => TXT_315,
+                        'tone' => 'danger',
+                        'confirm' => $name . "\n" . TXT_400,
+                    ],
+                ],
             ];
         }
-        $listGroups[] = ['label' => $outcomeLabel, 'rows' => $listRows];
+        $label = $typeNames[$typeId] ?? '';
+        if ($label === '') {
+            $type = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [(int) $typeId]);
+            $label = (string) ($type['item_type_name'] ?? ('Type ' . $typeId));
+        }
+        $listGroups[] = ['label' => $label, 'rows' => $listRows];
     }
 
     $list = RenderViews::buildRecordList([
-        'column' => TXT_299,
+        'column' => 'Rule',
         'columns' => [
-            ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
+            ['key' => 'description', 'label' => 'What it does', 'wrap' => true],
         ],
         'searchLabel' => TXT_3,
         'primary' => $typeIds === [] ? null : [
-            'href' => MAN_BASE_URL . '&option=new_rule',
+            'href' => rulesFormAction($slug, 'new_rule'),
             'label' => 'Add a rule',
         ],
         'empty' => 'No rules yet.',
@@ -136,7 +192,24 @@ function frameOneRulesHtml(string $slug): string
         'groups' => $listGroups,
     ]);
 
-    return RenderViews::buildVerticalCards([['title' => 'Rules', 'html' => $list]]);
+    return RenderViews::buildVerticalCards([[
+        'title' => 'Rules',
+        'html' => $list . '<p class="record-list__meta">Rules run from top to bottom. Put “set the owner” above “email the owner”.</p>',
+    ]]);
+}
+
+/**
+ * @param list<int> $typeIds
+ * @return array<int, string>
+ */
+function ruleTypeNames(array $typeIds): array
+{
+    $names = [];
+    foreach ($typeIds as $typeId) {
+        $type = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [(int) $typeId]);
+        $names[(int) $typeId] = (string) ($type['item_type_name'] ?? ('Type ' . $typeId));
+    }
+    return $names;
 }
 
 function showFrameOneRuleForm(string $slug, ?int $ruleId): void
@@ -157,85 +230,460 @@ function showFrameOneRuleForm(string $slug, ?int $ruleId): void
     }
 
     $typeIds = AppSettings::allowedItemTypeIds($slug);
-    $typeValues = [];
-    $typeLabels = [];
-    foreach ($typeIds as $typeId) {
+    $typeNames = ruleTypeNames($typeIds);
+    if ($rule !== null && !isset($typeNames[(int) $rule['item_type_id']])) {
+        $typeId = (int) $rule['item_type_id'];
         $type = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$typeId]);
-        $typeValues[] = (string) $typeId;
-        $typeLabels[] = (string) ($type['item_type_name'] ?? ('Type ' . $typeId));
+        $typeNames[$typeId] = (string) ($type['item_type_name'] ?? ('Type ' . $typeId));
+        $typeIds[] = $typeId;
     }
-    if ($typeValues === []) {
+    if ($typeNames === []) {
         RenderViews::buildResponse('Add a record type before creating a rule.');
         return;
     }
 
-    $fields = Rules::fieldChoices($typeIds);
-    $setFields = $fields;
-    unset($setFields['']);
-    $events = Rules::events();
-    $operators = Rules::operators();
-    $outcomes = Rules::outcomes();
-    $owners = Rules::ownerChoices();
     $editing = $rule !== null;
-    $selectedType = (string) ($rule['item_type_id'] ?? ($typeValues[0] ?? ''));
+    if (!is_array($rule)) {
+        $rule = [];
+    }
+    $selectedType = (string) ($rule['item_type_id'] ?? (string) ($typeIds[0] ?? ''));
+    $catalog = [];
+    foreach ($typeIds as $typeId) {
+        $catalog[(string) $typeId] = Rules::fieldCatalog((int) $typeId);
+    }
+    $fields = $catalog[$selectedType] ?? Rules::fieldCatalog((int) $selectedType);
     $enabled = $editing && (int) $rule['enabled'] !== 1 ? 'No' : 'Yes';
-    $outcome = (string) ($rule['outcome'] ?? Rules::OUTCOME_EMAIL);
+    $emailActor = $editing && (int) ($rule['skip_actor'] ?? 1) === 0 ? 'Yes' : 'No';
+    $steps = is_array($rule['steps'] ?? null) ? $rule['steps'] : [];
 
     $formFields = [
-        'Name' => RenderViews::buildTextInput('name', (string) ($rule['name'] ?? ''), 'Email the owner when priority is high'),
-        'Enabled' => RenderViews::buildSelectDropdown('enabled', ['Yes', 'No'], ['Yes', 'No'], $enabled),
-        'Record type' => RenderViews::buildSelectDropdown('item_type_id', $typeValues, $typeLabels, $selectedType),
-        'When' => RenderViews::buildSelectDropdown('event', array_keys($events), array_values($events), (string) ($rule['event'] ?? Rules::EVENT_UPDATE)),
-        'If' => RenderViews::buildSelectDropdown('operator', array_keys($operators), array_values($operators), (string) ($rule['operator'] ?? Rules::OP_BECOMES))
-            . ' ' . RenderViews::buildSelectDropdown('field_key', array_keys($fields), array_values($fields), (string) ($rule['field_key'] ?? ''))
-            . ' ' . RenderViews::buildTextInput('match_value', (string) ($rule['match_value'] ?? ''), 'High'),
-        'Then' => RenderViews::buildSelectDropdown('outcome', array_keys($outcomes), array_values($outcomes), $outcome),
-        'Set field' => RenderViews::buildSelectDropdown('action_field', array_keys($setFields), array_values($setFields), (string) ($rule['action_field'] ?? '')),
-        'Set to' => RenderViews::buildTextInput('action_value', $outcome === Rules::OUTCOME_SET_FIELD ? (string) ($rule['action_value'] ?? '') : '', 'Closed'),
-        'Owner' => RenderViews::buildSelectDropdown('owner_id', array_keys($owners), array_values($owners), (string) ($rule['action_value'] ?? Rules::OWNER_CREATOR)),
-        'Email to' => RenderViews::buildSelectDropdown('recipient', array_keys(Rules::recipients()), array_values(Rules::recipients()), (string) ($rule['recipient'] ?? Rules::TO_OWNER))
-            . ' ' . RenderViews::buildTextInput('address', (string) ($rule['address'] ?? ''), 'name@example.com'),
-        'Subject' => RenderViews::buildTextInput('subject', (string) ($rule['subject'] ?? ''), 'ITEM_TITLE'),
-        'Message' => RenderViews::buildTextArea('body', (string) ($rule['body'] ?? ''), '4'),
+        'Name' => ruleText('name', (string) ($rule['name'] ?? ''), 'Email the owner when priority is high'),
+        'Enabled' => ruleSelect('enabled', ['Yes' => 'Yes', 'No' => 'No'], $enabled),
+        'Record type' => ruleSelect('item_type_id', $typeNames, $selectedType, 'rule-type'),
+        'When' => ruleSelect('event', Rules::events(), (string) ($rule['event'] ?? Rules::EVENT_UPDATE), 'rule-event')
+            . '<span class="rule-log-role"> ' . ruleSelect('min_log_role', Rules::logRoles(), (string) (int) ($rule['min_log_role'] ?? 0)) . '</span>',
+        'If' => ruleSelect('operator', Rules::operators(), (string) ($rule['operator'] ?? Rules::OP_BECOMES), 'rule-operator')
+            . ' <span class="rule-field">' . ruleFieldSelect('field_key', $fields, (string) ($rule['field_key'] ?? ''), true) . '</span>'
+            . ' <span class="rule-from">from ' . ruleValueControl('match_from', $fields, (string) ($rule['field_key'] ?? ''), (string) ($rule['match_from'] ?? '')) . '</span>'
+            . ' <span class="rule-value">' . ruleValueControl('match_value', $fields, (string) ($rule['field_key'] ?? ''), (string) ($rule['match_value'] ?? '')) . '</span>',
+        'Also email the person who saved' => ruleSelect('email_actor', ['No' => 'No', 'Yes' => 'Yes'], $emailActor),
+        'Then' => ruleStepsHtml($steps, $fields),
     ];
     if ($editing) {
         $formFields[''] = RenderViews::buildHiddenInput('rule_id', (string) $rule['id']);
     }
 
-    define('BODY_CONTENT', RenderViews::buildForm(
+    $html = RenderViews::buildForm(
         $editing ? 'Edit rule' : 'Add a rule',
-        MAN_BASE_URL . '&option=' . ($editing ? 'update_rule' : 'add_rule'),
+        rulesFormAction($slug, $editing ? 'update_rule' : 'add_rule'),
         $formFields,
         [
             RenderViews::buildFormButton('submit', 'submit_button', $editing ? 'Save' : 'Add rule'),
-            RenderViews::buildFormButton('button', '', 'Back', 'onclick="location.href=\'' . MAN_BASE_URL . '&option=settings\'"', 'secondary'),
+            RenderViews::buildFormButton('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(rulesHomeUrl($slug), ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
         ]
-    ) . '<script>
+    );
+    $html .= ruleEditorScript($catalog);
+    if ($editing) {
+        $html .= ruleRunsHtml($slug, $rule);
+    }
+    define('BODY_CONTENT', $html);
+    RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+/**
+ * @param array<int|string, string> $options
+ */
+function ruleSelect(string $name, array $options, string $selected, string $class = ''): string
+{
+    $html = '<select name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" class="select ' . htmlspecialchars($class, ENT_QUOTES, 'UTF-8') . '">';
+    foreach ($options as $value => $label) {
+        $current = (string) $value === $selected ? ' selected' : '';
+        $html .= '<option value="' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
+            . htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8') . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+}
+
+function ruleText(string $name, string $value, string $placeholder = ''): string
+{
+    return '<input type="text" class="input rule-token-target" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+        . '" value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8')
+        . '" placeholder="' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '">';
+}
+
+function ruleArea(string $name, string $value): string
+{
+    return '<textarea class="input rule-token-target" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
+        . '" rows="4">' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</textarea>';
+}
+
+/**
+ * @param list<array{key: string, label: string, kind: string, options: list<array{value: string, label: string}>}> $fields
+ */
+function ruleFieldSelect(string $name, array $fields, string $selected, bool $includeBlank): string
+{
+    $options = [];
+    if ($includeBlank) {
+        $options[''] = 'Any record';
+    }
+    foreach ($fields as $field) {
+        if (!$includeBlank && in_array($field['key'], ['owner', 'creator', 'groups'], true)) {
+            continue;
+        }
+        $options[$field['key']] = $field['label'];
+    }
+    return ruleSelect($name, $options, $selected, 'rule-field-select');
+}
+
+/**
+ * @param list<array{key: string, label: string, kind: string, options: list<array{value: string, label: string}>}> $fields
+ */
+function ruleValueControl(string $name, array $fields, string $fieldKey, string $value): string
+{
+    $options = [];
+    foreach ($fields as $field) {
+        if ($field['key'] === $fieldKey) {
+            foreach ($field['options'] as $option) {
+                $options[$option['value']] = $option['label'];
+            }
+            break;
+        }
+    }
+    $text = ruleText($name, $value, 'High');
+    if ($options === []) {
+        return $text;
+    }
+    if (!isset($options[$value]) && $value !== '') {
+        $options[$value] = $value;
+    }
+    return '<span class="rule-value-choice">' . ruleSelect($name . '_choice', $options, $value, 'rule-value-select') . '</span>'
+        . '<span class="rule-value-text" hidden>' . $text . '</span>';
+}
+
+/**
+ * @param list<array<string, mixed>> $steps
+ * @param list<array{key: string, label: string, kind: string, options: list<array{value: string, label: string}>}> $fields
+ */
+function ruleStepsHtml(array $steps, array $fields): string
+{
+    $html = '<div class="rule-steps">';
+    for ($i = 0; $i < 4; $i++) {
+        $step = $steps[$i] ?? [];
+        $outcome = (string) ($step['outcome'] ?? ($i === 0 ? Rules::OUTCOME_EMAIL : ''));
+        $outcomes = $i === 0 ? Rules::outcomes() : ['' => 'No further action'] + Rules::outcomes();
+        $people = [];
+        $groups = [];
+        foreach ($fields as $field) {
+            if ($field['key'] === 'owner') {
+                foreach ($field['options'] as $option) {
+                    $people[$option['value']] = $option['label'];
+                }
+            }
+            if ($field['key'] === 'groups') {
+                foreach ($field['options'] as $option) {
+                    $groups[$option['value']] = $option['label'];
+                }
+            }
+        }
+        $prefix = 'steps[' . $i . ']';
+        $html .= '<div class="rule-step" data-step="' . $i . '">';
+        $html .= '<div class="rule-step-head">Action ' . ($i + 1) . ' ' . ruleSelect($prefix . '[outcome]', $outcomes, $outcome, 'rule-outcome') . '</div>';
+        $html .= '<div class="rule-step-panel" data-for="email">'
+            . '<div>To ' . ruleSelect($prefix . '[recipient]', Rules::recipients(), (string) ($step['recipient'] ?? Rules::TO_OWNER), 'rule-recipient') . '</div>'
+            . '<div class="rule-recipient-user">Person ' . ruleSelect($prefix . '[user_id]', $people, (string) (int) ($step['user_id'] ?? 0)) . '</div>'
+            . '<div class="rule-recipient-group">Group ' . ruleSelect($prefix . '[group_id]', $groups, (string) (int) ($step['group_id'] ?? 0)) . '</div>'
+            . '<div class="rule-recipient-address">Address ' . ruleText($prefix . '[address]', (string) ($step['address'] ?? ''), 'name@example.com') . '</div>'
+            . '<div>Subject ' . ruleText($prefix . '[subject]', (string) ($step['subject'] ?? ''), 'ITEM_TITLE') . '</div>'
+            . '<div>Message ' . ruleArea($prefix . '[body]', (string) ($step['body'] ?? '')) . '</div>'
+            . '</div>';
+        $html .= '<div class="rule-step-panel" data-for="log">'
+            . '<div>Message ' . ruleArea($prefix . '[body]', (string) ($step['body'] ?? '')) . '</div>'
+            . '<div>Visible to ' . ruleSelect($prefix . '[role_id]', [5 => 'Everyone', 4 => 'Users', 3 => 'Managers', 2 => 'Administrators'], (string) (int) ($step['role_id'] ?? 5)) . '</div>'
+            . '</div>';
+        $html .= '<div class="rule-step-panel" data-for="set_field">'
+            . '<div>Field ' . ruleFieldSelect($prefix . '[action_field]', $fields, (string) ($step['action_field'] ?? ''), false) . '</div>'
+            . '<div>Value ' . ruleText($prefix . '[action_value]', (string) ($step['action_value'] ?? ''), 'Closed') . '</div>'
+            . '</div>';
+        $owners = Rules::ownerChoices();
+        $html .= '<div class="rule-step-panel" data-for="set_owner">'
+            . '<div>Owner ' . ruleSelect($prefix . '[owner_id]', $owners, (string) ($step['action_value'] ?? Rules::OWNER_CREATOR)) . '</div>'
+            . '</div>';
+        $html .= '</div>';
+    }
+    $html .= '<div class="rule-tokens"><span class="record-list__meta">Insert </span><span class="rule-token-list"></span></div>';
+    $html .= '</div>';
+    return $html;
+}
+
+/**
+ * @param array<string, list<array<string, mixed>>> $catalog
+ */
+function ruleEditorScript(array $catalog): string
+{
+    $json = json_encode($catalog, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    if (!is_string($json)) {
+        $json = '{}';
+    }
+    return '<script>
 (function () {
-    var outcome = document.querySelector("select[name=outcome]");
-    if (!outcome) return;
-    var rows = {
-        email: ["Email to", "Subject", "Message"],
-        log: ["Message"],
-        set_field: ["Set field", "Set to"],
-        set_owner: ["Owner"]
-    };
-    var gated = ["Email to", "Subject", "Message", "Set field", "Set to", "Owner"];
-    function sync() {
-        var show = rows[outcome.value] || [];
-        document.querySelectorAll(".form-grid .field").forEach(function (field) {
-            var label = field.querySelector(".label");
-            if (!label) return;
-            var name = label.textContent.trim();
-            if (gated.indexOf(name) === -1) return;
-            field.hidden = show.indexOf(name) === -1;
+    var catalog = ' . $json . ';
+    var form = document.querySelector("form");
+    if (!form) return;
+    var type = form.querySelector(".rule-type");
+    var operator = form.querySelector(".rule-operator");
+    var eventSel = form.querySelector(".rule-event");
+    var fieldWrap = form.querySelector(".rule-field");
+    var fromWrap = form.querySelector(".rule-from");
+    var valueWrap = form.querySelector(".rule-value");
+    var logRole = form.querySelector(".rule-log-role");
+    function optionsFor(key) {
+        var fields = catalog[type ? type.value : ""] || [];
+        for (var i = 0; i < fields.length; i++) {
+            if (fields[i].key === key) return fields[i].options || [];
+        }
+        return [];
+    }
+    function fillSelect(select, rows, blank) {
+        if (!select) return;
+        var current = select.value;
+        select.innerHTML = "";
+        if (blank) {
+            var any = document.createElement("option");
+            any.value = "";
+            any.textContent = "Any record";
+            select.appendChild(any);
+        }
+        rows.forEach(function (row) {
+            var opt = document.createElement("option");
+            opt.value = row.key || row.value;
+            opt.textContent = row.label;
+            select.appendChild(opt);
+        });
+        if (current) select.value = current;
+    }
+    function syncMatch() {
+        var op = operator ? operator.value : "always";
+        var hideValue = op === "always" || op === "empty" || op === "not_empty" || op === "changed";
+        if (fieldWrap) fieldWrap.hidden = op === "always";
+        if (fromWrap) fromWrap.hidden = op !== "from_to";
+        if (valueWrap) valueWrap.hidden = hideValue;
+        if (logRole) logRole.hidden = !eventSel || eventSel.value !== "log";
+        ["match_from", "match_value"].forEach(function (name) {
+            var wrap = name === "match_from" ? fromWrap : valueWrap;
+            if (!wrap) return;
+            var select = wrap.querySelector("select");
+            var text = wrap.querySelector("input");
+            var choice = wrap.querySelector(".rule-value-choice");
+            var textWrap = wrap.querySelector(".rule-value-text");
+            var key = form.querySelector("[name=field_key]");
+            var opts = optionsFor(key ? key.value : "");
+            if (select && opts.length) {
+                fillSelect(select, opts, false);
+                if (choice) choice.hidden = false;
+                if (textWrap) textWrap.hidden = true;
+            } else {
+                if (choice) choice.hidden = true;
+                if (textWrap) textWrap.hidden = false;
+            }
+            if (select && text && choice && !choice.hidden) text.value = select.value;
         });
     }
-    outcome.addEventListener("change", sync);
-    sync();
+    function syncSteps() {
+        form.querySelectorAll(".rule-step").forEach(function (step) {
+            var outcome = step.querySelector(".rule-outcome");
+            var value = outcome ? outcome.value : "";
+            step.querySelectorAll(".rule-step-panel").forEach(function (panel) {
+                var hide = panel.getAttribute("data-for") !== value;
+                panel.hidden = hide;
+                panel.querySelectorAll("input, textarea, select").forEach(function (el) {
+                    el.disabled = hide;
+                });
+            });
+            var recipient = step.querySelector(".rule-recipient");
+            var kind = recipient ? recipient.value : "";
+            var user = step.querySelector(".rule-recipient-user");
+            var group = step.querySelector(".rule-recipient-group");
+            var address = step.querySelector(".rule-recipient-address");
+            if (user) user.hidden = kind !== "user";
+            if (group) group.hidden = kind !== "group";
+            if (address) address.hidden = kind !== "address";
+        });
+    }
+    function syncTokens() {
+        var host = form.querySelector(".rule-token-list");
+        if (!host) return;
+        host.innerHTML = "";
+        var tokens = [
+            ["ITEM_ID", "Record id"],
+            ["ITEM_TITLE", "Title"],
+            ["ITEM_CREATOR", "Creator"],
+            ["ITEM_OWNER", "Owner"]
+        ];
+        (catalog[type ? type.value : ""] || []).forEach(function (field) {
+            var match = /^custom_field_(\d+)$/.exec(field.key || "");
+            if (match) tokens.push(["CUSTOM_FIELD_" + match[1], field.label]);
+        });
+        tokens.forEach(function (token) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn btn--sm";
+            button.textContent = token[1];
+            button.addEventListener("click", function () {
+                var target = form.querySelector(".rule-token-target:focus") || form.querySelector("[name=\'steps[0][body]\']");
+                if (!target) return;
+                var start = target.selectionStart || target.value.length;
+                var end = target.selectionEnd || start;
+                target.value = target.value.slice(0, start) + token[0] + target.value.slice(end);
+                target.focus();
+            });
+            host.appendChild(button);
+            host.appendChild(document.createTextNode(" "));
+        });
+    }
+    function syncFields() {
+        var rows = catalog[type ? type.value : ""] || [];
+        fillSelect(form.querySelector("[name=field_key]"), rows, true);
+        form.querySelectorAll("[name$=\'[action_field]\']").forEach(function (select) {
+            var keep = [];
+            rows.forEach(function (row) {
+                if (row.key === "owner" || row.key === "creator" || row.key === "groups") return;
+                keep.push(row);
+            });
+            fillSelect(select, keep, false);
+        });
+        syncMatch();
+        syncTokens();
+    }
+    form.addEventListener("change", function (event) {
+        var name = event.target && event.target.name;
+        if (name === "item_type_id") syncFields();
+        if (name === "operator" || name === "field_key" || name === "event" || name === "match_value_choice" || name === "match_from_choice") syncMatch();
+        if (event.target && (event.target.classList.contains("rule-outcome") || event.target.classList.contains("rule-recipient"))) syncSteps();
+    });
+    form.addEventListener("submit", function () {
+        ["match_from", "match_value"].forEach(function (name) {
+            var choice = form.querySelector("[name=\'" + name + "_choice\']");
+            var text = form.querySelector("[name=\'" + name + "\']");
+            var wrap = name === "match_from" ? fromWrap : valueWrap;
+            var choiceWrap = wrap ? wrap.querySelector(".rule-value-choice") : null;
+            if (choice && text && choiceWrap && !choiceWrap.hidden) text.value = choice.value;
+        });
+    });
+    syncFields();
+    syncSteps();
 })();
-</script>');
+</script>';
+}
+
+/**
+ * @param array<string, mixed> $rule
+ */
+function ruleRunsHtml(string $slug, array $rule): string
+{
+    $runs = Rules::recentRuns((int) $rule['id'], 12);
+    $html = '<p><a class="btn btn--sm" href="' . htmlspecialchars(rulesFormAction($slug, 'try_rule') . '&rule_id=' . (int) $rule['id'], ENT_QUOTES, 'UTF-8') . '">Try this rule</a></p>';
+    if ($runs === []) {
+        $html .= '<p class="record-list__empty">This rule has not run yet.</p>';
+    } else {
+        foreach ($runs as $run) {
+            $when = date('j M Y, g:i a', (int) ($run['ran_at'] ?? time()));
+            $html .= '<div class="log-item"><div class="log-heading"><strong>'
+                . htmlspecialchars($when, ENT_QUOTES, 'UTF-8')
+                . ' — record ' . (int) ($run['item_id'] ?? 0)
+                . '</strong></div><div class="log-text">'
+                . nl2br(htmlspecialchars((string) ($run['detail'] ?? ''), ENT_QUOTES, 'UTF-8'))
+                . '</div></div>';
+        }
+    }
+    return RenderViews::buildVerticalCards([['title' => 'Recent runs', 'html' => $html]]);
+}
+
+function showFrameOneRuleTry(string $slug, bool $execute): void
+{
+    $app = ApplicationStore::findBySlug($slug);
+    if ($app === null) {
+        RenderViews::buildResponse('Open settings from inside an application.');
+        return;
+    }
+    $applicationId = (int) $app['application_id'];
+    $ruleId = (int) ($_GET['rule_id'] ?? $_POST['rule_id'] ?? 0);
+    $rule = Rules::find($ruleId, $applicationId);
+    if ($rule === null) {
+        RenderViews::buildResponse('That rule is not on this application.');
+        return;
+    }
+    $itemId = (int) ($_POST['item_id'] ?? $_GET['item_id'] ?? 0);
+    $result = null;
+    if ($itemId > 0 && $execute && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+        $result = Rules::executeOne($ruleId, $applicationId, $itemId);
+    } elseif ($itemId > 0) {
+        $result = Rules::preview($ruleId, $applicationId, $itemId);
+    }
+    $items = Database::select(
+        'items',
+        ['item_id', 'item_title'],
+        'item_type_id = ?',
+        [(int) $rule['item_type_id']],
+        'item_id DESC',
+        25
+    );
+    $ids = [''];
+    $labels = ['Choose a record'];
+    foreach ($items as $item) {
+        $ids[] = (string) $item['item_id'];
+        $labels[] = (string) $item['item_id'] . ' — ' . (string) $item['item_title'];
+    }
+    $fields = Rules::fieldChoices([(int) $rule['item_type_id']]);
+    $html = '<p>' . htmlspecialchars(Rules::summary($rule, $fields), ENT_QUOTES, 'UTF-8') . '</p>';
+    $html .= RenderViews::buildForm(
+        'Try this rule',
+        rulesFormAction($slug, 'try_rule') . '&rule_id=' . $ruleId,
+        [
+            'Record' => RenderViews::buildSelectDropdown('item_id', $ids, $labels, (string) $itemId),
+            '' => RenderViews::buildHiddenInput('rule_id', (string) $ruleId),
+        ],
+        [
+            RenderViews::buildFormButton('submit', 'submit_button', 'Preview'),
+            RenderViews::buildFormButton('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
+        ]
+    );
+    if (is_array($result)) {
+        $html .= '<p><strong>' . htmlspecialchars((string) ($result['reason'] ?? ''), ENT_QUOTES, 'UTF-8') . '</strong></p>';
+        foreach ($result['steps'] ?? [] as $step) {
+            if (!is_array($step)) {
+                continue;
+            }
+            $html .= '<p>' . htmlspecialchars((string) ($step['detail'] ?? ''), ENT_QUOTES, 'UTF-8') . '</p>';
+        }
+        if (($result['matches'] ?? false) === true && ($result['ran'] ?? false) !== true) {
+            $html .= '<form method="post" action="' . htmlspecialchars(rulesFormAction($slug, 'run_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '">'
+                . RenderViews::buildHiddenInput('rule_id', (string) $ruleId)
+                . RenderViews::buildHiddenInput('item_id', (string) $itemId)
+                . RenderViews::buildFormButton('submit', 'submit_button', 'Run it now')
+                . '</form>';
+        }
+    }
+    define('BODY_CONTENT', $html);
     RenderViews::renderThemePage('main_page_content', SET_THEME);
+}
+
+function ruleTypeAllowed(string $slug, int $typeId, int $ruleId): bool
+{
+    if (AppSettings::allowsItemType($slug, $typeId)) {
+        return true;
+    }
+    if ($typeId <= 0 || Database::first('item_types', ['item_type_id'], 'item_type_id = ?', [$typeId]) === null) {
+        return false;
+    }
+    if ($ruleId > 0) {
+        $app = ApplicationStore::findBySlug($slug);
+        $existing = $app === null ? null : Rules::find($ruleId, (int) $app['application_id']);
+        if ($existing !== null && (int) $existing['item_type_id'] === $typeId) {
+            return true;
+        }
+    }
+    return defined('RULES_HOME_URL');
 }
 
 function saveFrameOneRule(string $slug, int $ruleId): void
@@ -246,7 +694,7 @@ function saveFrameOneRule(string $slug, int $ruleId): void
         return;
     }
     $typeId = (int) ($_POST['item_type_id'] ?? 0);
-    if (!AppSettings::allowsItemType($slug, $typeId)) {
+    if (!ruleTypeAllowed($slug, $typeId, $ruleId)) {
         \Adlexone\Auth\Access::deny();
     }
     $applicationId = (int) $app['application_id'];
@@ -255,7 +703,7 @@ function saveFrameOneRule(string $slug, int $ruleId): void
     } else {
         Rules::add($applicationId, $_POST);
     }
-    header('Location: ' . MAN_BASE_URL . '&option=settings');
+    header('Location: ' . rulesHomeUrl($slug));
     exit;
 }
 
@@ -267,7 +715,49 @@ function deleteFrameOneRule(string $slug): void
         return;
     }
     Rules::delete((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
-    header('Location: ' . MAN_BASE_URL . '&option=settings');
+    header('Location: ' . rulesHomeUrl($slug));
+    exit;
+}
+
+function toggleFrameOneRule(string $slug): void
+{
+    $app = ApplicationStore::findBySlug($slug);
+    if ($app === null) {
+        RenderViews::buildResponse('Open settings from inside an application.');
+        return;
+    }
+    $rule = Rules::find((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
+    if ($rule !== null) {
+        Rules::setEnabled((int) $rule['id'], (int) $app['application_id'], (int) $rule['enabled'] !== 1);
+    }
+    header('Location: ' . rulesHomeUrl($slug));
+    exit;
+}
+
+function duplicateFrameOneRule(string $slug): void
+{
+    $app = ApplicationStore::findBySlug($slug);
+    if ($app === null) {
+        RenderViews::buildResponse('Open settings from inside an application.');
+        return;
+    }
+    $id = Rules::duplicate((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
+    $target = $id > 0
+        ? rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $id
+        : rulesHomeUrl($slug);
+    header('Location: ' . $target);
+    exit;
+}
+
+function moveFrameOneRule(string $slug): void
+{
+    $app = ApplicationStore::findBySlug($slug);
+    if ($app === null) {
+        RenderViews::buildResponse('Open settings from inside an application.');
+        return;
+    }
+    Rules::move((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id'], (string) ($_GET['dir'] ?? 'down'));
+    header('Location: ' . rulesHomeUrl($slug));
     exit;
 }
 

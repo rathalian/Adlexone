@@ -31,8 +31,7 @@ final class RenderNavigation
 
     public static function workflowURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?manage=workflow&option=show_defined_actions', TXT_411, 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('index.php?manage=workflow&option=show_action_packages', TXT_255, 'ic-new-action'), Permission::ADMIN_ACTIONS);
+        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('index.php?manage=workflow', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }

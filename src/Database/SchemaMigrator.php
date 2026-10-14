@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Database;
 
+use Adlexone\Application\Rules;
 use Adlexone\Data\GroupMembership;
 use Adlexone\support\Database;
 
@@ -14,7 +15,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 7;
+    private const VERSION = 8;
 
     private static bool $done = false;
 
@@ -66,6 +67,11 @@ final class SchemaMigrator
         if ($current < 7) {
             self::applyV7();
             self::mark(7);
+            $current = 7;
+        }
+        if ($current < 8) {
+            self::applyV8();
+            self::mark(8);
         }
     }
 
@@ -592,5 +598,336 @@ final class SchemaMigrator
         if (!Database::columnExists('application_rules', 'action_value')) {
             Database::exec('ALTER TABLE application_rules ADD COLUMN action_value TEXT NOT NULL DEFAULT ""');
         }
+    }
+
+    /**
+     * Ordered actions, richer conditions, a run log, and the old action packages.
+     */
+    private static function applyV8(): void
+    {
+        if (!Database::tableExists('application_rules')) {
+            return;
+        }
+        foreach ([
+            'sort_order' => 'INTEGER NOT NULL DEFAULT 0',
+            'match_from' => 'TEXT NOT NULL DEFAULT ""',
+            'skip_actor' => 'INTEGER NOT NULL DEFAULT 1',
+            'min_log_role' => 'INTEGER NOT NULL DEFAULT 0',
+        ] as $column => $type) {
+            if (!Database::columnExists('application_rules', $column)) {
+                Database::exec('ALTER TABLE application_rules ADD COLUMN ' . $column . ' ' . $type);
+            }
+        }
+        Database::exec(
+            'CREATE TABLE IF NOT EXISTS application_rule_steps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                rule_id INTEGER NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                outcome TEXT NOT NULL,
+                recipient TEXT NOT NULL DEFAULT "owner",
+                address TEXT NOT NULL DEFAULT "",
+                subject TEXT NOT NULL DEFAULT "",
+                body TEXT NOT NULL DEFAULT "",
+                role_id INTEGER NOT NULL DEFAULT 5,
+                action_field TEXT NOT NULL DEFAULT "",
+                action_value TEXT NOT NULL DEFAULT "",
+                user_id INTEGER NOT NULL DEFAULT 0,
+                group_id INTEGER NOT NULL DEFAULT 0
+            )'
+        );
+        Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rule_steps_rule ON application_rule_steps (rule_id, sort_order)');
+        Database::exec(
+            'CREATE TABLE IF NOT EXISTS application_rule_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                rule_id INTEGER NOT NULL,
+                item_id INTEGER NOT NULL,
+                ran_at INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                detail TEXT NOT NULL DEFAULT ""
+            )'
+        );
+        Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rule_runs_rule ON application_rule_runs (rule_id, id)');
+        Database::exec('CREATE INDEX IF NOT EXISTS idx_application_rule_runs_item ON application_rule_runs (item_id, id)');
+        self::backfillRuleSteps();
+        self::migrateActionPackages();
+    }
+
+    private static function backfillRuleSteps(): void
+    {
+        foreach (Database::select('application_rules', '*', '', [], 'id ASC') as $rule) {
+            $id = (int) ($rule['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            if ((int) ($rule['sort_order'] ?? 0) <= 0) {
+                Database::update('application_rules', ['sort_order' => $id * 10], 'id = ?', [$id]);
+            }
+            if (Database::first('application_rule_steps', ['id'], 'rule_id = ?', [$id]) !== null) {
+                continue;
+            }
+            if ((string) ($rule['outcome'] ?? '') === '') {
+                continue;
+            }
+            Database::insert('application_rule_steps', [
+                'rule_id' => $id,
+                'sort_order' => 0,
+                'outcome' => (string) $rule['outcome'],
+                'recipient' => (string) ($rule['recipient'] ?? 'owner'),
+                'address' => (string) ($rule['address'] ?? ''),
+                'subject' => (string) ($rule['subject'] ?? ''),
+                'body' => (string) ($rule['body'] ?? ''),
+                'role_id' => (int) ($rule['role_id'] ?? 5),
+                'action_field' => (string) ($rule['action_field'] ?? ''),
+                'action_value' => (string) ($rule['action_value'] ?? ''),
+                'user_id' => 0,
+                'group_id' => 0,
+            ]);
+        }
+    }
+
+    /**
+     * Turn trigger-plus-email package rows into one rule each, then remove them.
+     */
+    private static function migrateActionPackages(): void
+    {
+        if (!Database::tableExists('action_definitions')) {
+            return;
+        }
+        $rows = Database::select('action_definitions', '*', '', [], 'action_id ASC');
+        if ($rows === []) {
+            return;
+        }
+        $byId = [];
+        foreach ($rows as $row) {
+            $byId[(int) $row['action_id']] = $row;
+        }
+        $consumed = [];
+        foreach ($rows as $row) {
+            $function = (string) ($row['package_function'] ?? '');
+            if ($function !== 'TriggerActionCustomField' && $function !== 'TriggerActionSystemField') {
+                continue;
+            }
+            $targetId = (int) ($row['action_data'] ?? 0);
+            $target = $byId[$targetId] ?? null;
+            $step = $target !== null ? self::stepFromPackage($target) : null;
+            if ($step === null) {
+                continue;
+            }
+            $typeId = (int) ($row['item_type_id'] ?? 0);
+            if ($typeId <= 0 && $target !== null) {
+                $typeId = (int) ($target['item_type_id'] ?? 0);
+            }
+            $applicationId = self::applicationIdForItemType($typeId);
+            if ($applicationId <= 0 || $typeId <= 0) {
+                continue;
+            }
+            $condition = self::conditionFromPackage($row);
+            $params = explode('}-{', (string) ($target['action_parameters'] ?? ''));
+            $includeActor = strtolower((string) ($params[2] ?? 'yes')) !== 'no';
+            Rules::add($applicationId, [
+                'item_type_id' => $typeId,
+                'name' => (string) ($target['action_name'] ?? $row['action_name'] ?? 'Rule'),
+                'enabled' => (string) ($row['enabled'] ?? 'Yes') === 'Yes' ? 1 : 0,
+                'event' => $condition['event'],
+                'field_key' => $condition['field_key'],
+                'operator' => $condition['operator'],
+                'match_value' => $condition['match_value'],
+                'match_from' => $condition['match_from'],
+                'min_log_role' => $condition['min_log_role'],
+                'skip_actor' => $includeActor ? 0 : 1,
+                'sort_order' => (int) $row['action_id'] * 10,
+                'steps' => [$step],
+            ]);
+            $consumed[(int) $row['action_id']] = true;
+            $consumed[$targetId] = true;
+        }
+        foreach ($rows as $row) {
+            $id = (int) $row['action_id'];
+            if (isset($consumed[$id])) {
+                continue;
+            }
+            $step = self::stepFromPackage($row);
+            if ($step === null) {
+                continue;
+            }
+            $typeId = (int) ($row['item_type_id'] ?? 0);
+            $applicationId = self::applicationIdForItemType($typeId);
+            if ($applicationId <= 0 || $typeId <= 0) {
+                continue;
+            }
+            $params = explode('}-{', (string) ($row['action_parameters'] ?? ''));
+            $includeActor = strtolower((string) ($params[2] ?? 'yes')) !== 'no';
+            Rules::add($applicationId, [
+                'item_type_id' => $typeId,
+                'name' => (string) ($row['action_name'] ?? 'Rule'),
+                'enabled' => (string) ($row['enabled'] ?? 'Yes') === 'Yes' ? 1 : 0,
+                'event' => Rules::EVENT_UPDATE,
+                'operator' => Rules::OP_ALWAYS,
+                'skip_actor' => $includeActor ? 0 : 1,
+                'sort_order' => $id * 10,
+                'steps' => [$step],
+            ]);
+            $consumed[$id] = true;
+        }
+        foreach (array_keys($consumed) as $id) {
+            Database::delete('action_definitions', 'action_id = ?', [(int) $id]);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>|null
+     */
+    private static function stepFromPackage(array $row): ?array
+    {
+        $function = (string) ($row['package_function'] ?? '');
+        if ($function === 'SendEmail') {
+            $data = explode('}-{', (string) ($row['action_data'] ?? ''));
+            $params = explode('}-{', (string) ($row['action_parameters'] ?? ''));
+            $recipient = self::recipientFromPackage((string) ($params[1] ?? 'owner'));
+            return [
+                'outcome' => Rules::OUTCOME_EMAIL,
+                'recipient' => $recipient,
+                'address' => trim((string) ($params[0] ?? '')),
+                'subject' => (string) ($data[1] ?? ''),
+                'body' => (string) ($data[2] ?? ''),
+            ];
+        }
+        if ($function === 'UpdateLog') {
+            $data = explode('}-{', (string) ($row['action_data'] ?? ''));
+            return [
+                'outcome' => Rules::OUTCOME_LOG,
+                'body' => (string) ($data[1] ?? ''),
+                'role_id' => (int) ($row['action_parameters'] ?? 5),
+            ];
+        }
+        return null;
+    }
+
+    private static function recipientFromPackage(string $option): string
+    {
+        return match ($option) {
+            'creator' => Rules::TO_CREATOR,
+            'creator_owner' => Rules::TO_BOTH,
+            'owner_groups' => Rules::TO_OWNER_GROUPS,
+            'creator_groups' => Rules::TO_CREATOR_GROUPS,
+            'creator_owner_groups' => Rules::TO_BOTH_GROUPS,
+            'groups' => Rules::TO_ITEM_GROUPS,
+            'recipients' => Rules::TO_ADDRESS,
+            default => Rules::TO_OWNER,
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array{event: string, field_key: string, operator: string, match_value: string, match_from: string, min_log_role: int}
+     */
+    private static function conditionFromPackage(array $row): array
+    {
+        $blank = [
+            'event' => Rules::EVENT_UPDATE,
+            'field_key' => '',
+            'operator' => Rules::OP_ALWAYS,
+            'match_value' => '',
+            'match_from' => '',
+            'min_log_role' => 0,
+        ];
+        $type = (string) ($row['action_type'] ?? '');
+        $function = (string) ($row['package_function'] ?? '');
+        if ($function === 'TriggerActionSystemField') {
+            $map = [
+                'user_security' => 'owner',
+                'creator_security' => 'creator',
+                'item_title' => 'item_title',
+                'group_security' => 'groups',
+            ];
+            $field = $map[(string) ($row['action_condition_pre'] ?? '')] ?? '';
+            $blank['event'] = str_starts_with($type, 'create') ? Rules::EVENT_CREATE : Rules::EVENT_UPDATE;
+            if (str_contains($type, 'log')) {
+                $blank['event'] = Rules::EVENT_LOG;
+            }
+            if (str_contains($type, 'attachment')) {
+                $blank['event'] = Rules::EVENT_ATTACHMENT;
+            }
+            if ($field !== '') {
+                $blank['field_key'] = $field;
+                $blank['operator'] = Rules::OP_CHANGED;
+            }
+            return $blank;
+        }
+        $post = explode('}-{', (string) ($row['action_condition_post'] ?? ''));
+        $pre = explode('}-{', (string) ($row['action_condition_pre'] ?? ''));
+        $field = self::packageFieldKey((string) ($post[0] ?? ''));
+        $op = (string) ($post[1] ?? '==');
+        $value = (string) ($post[2] ?? '');
+        $role = (int) ($post[3] ?? 0);
+        if ($type === 'create_item_every_item') {
+            $blank['event'] = Rules::EVENT_CREATE;
+            return $blank;
+        }
+        if ($type === 'update_item_log_entry') {
+            $blank['event'] = Rules::EVENT_LOG;
+            $blank['min_log_role'] = $role;
+            return $blank;
+        }
+        if ($type === 'item_attachment') {
+            $blank['event'] = Rules::EVENT_ATTACHMENT;
+            return $blank;
+        }
+        if ($type === 'update_item_any_trigger') {
+            $blank['field_key'] = $field;
+            $blank['operator'] = Rules::OP_CHANGED;
+            return $blank;
+        }
+        if ($type === 'update_item_all_met') {
+            $blank['field_key'] = $field !== '' ? $field : self::packageFieldKey((string) ($pre[0] ?? ''));
+            $blank['operator'] = Rules::OP_FROM_TO;
+            $blank['match_from'] = (string) ($pre[2] ?? '');
+            $blank['match_value'] = $value;
+            return $blank;
+        }
+        $blank['event'] = str_starts_with($type, 'create') ? Rules::EVENT_CREATE : Rules::EVENT_UPDATE;
+        $blank['field_key'] = $field;
+        $blank['operator'] = $op === '!=' || $op === '<>' ? Rules::OP_NEQ : Rules::OP_EQ;
+        $blank['match_value'] = $value;
+        return $blank;
+    }
+
+    private static function packageFieldKey(string $field): string
+    {
+        if (preg_match('/(\d+)\s*$/', $field, $match) === 1 && str_contains($field, 'field')) {
+            return 'custom_field_' . $match[1];
+        }
+        return match ($field) {
+            'user_security' => 'owner',
+            'creator_security' => 'creator',
+            'item_title' => 'item_title',
+            'group_security' => 'groups',
+            default => '',
+        };
+    }
+
+    private static function applicationIdForItemType(int $typeId): int
+    {
+        if ($typeId <= 0 || !Database::tableExists('applications')) {
+            return 0;
+        }
+        $needle = (string) $typeId;
+        foreach (Database::select('applications', ['application_id', 'settings_json'], '', [], 'application_id ASC') as $app) {
+            $settings = json_decode((string) ($app['settings_json'] ?? ''), true);
+            if (is_array($settings) && (string) ($settings['default_item_type_id'] ?? '') === $needle) {
+                return (int) $app['application_id'];
+            }
+        }
+        if (Database::tableExists('application_nav')) {
+            foreach (Database::select('application_nav', ['application_id', 'config_json'], '', [], 'nav_id ASC') as $link) {
+                $config = json_decode((string) ($link['config_json'] ?? ''), true);
+                if (is_array($config) && (string) ($config['item_type_id'] ?? '') === $needle) {
+                    return (int) $link['application_id'];
+                }
+            }
+        }
+        $first = Database::first('applications', ['application_id'], '', [], 'application_id ASC');
+        return (int) ($first['application_id'] ?? 0);
     }
 }

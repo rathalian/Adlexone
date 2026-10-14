@@ -52,7 +52,7 @@ $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');
             $manageItems = array_merge($manageItems, [
                 ['label' => 'Fields', 'href' => 'index.php?manage=fields', 'icon' => 'ic-manage-fields', 'controller' => 'manage_fields'],
                 ['label' => 'Item types', 'href' => 'index.php?manage=item-types', 'icon' => 'ic-manage-item-types', 'controller' => 'manage_item_types'],
-                ['label' => 'Rules', 'href' => 'index.php?manage=workflow&option=show_defined_actions', 'icon' => 'ic-manage-actions', 'controller' => 'manage_actions'],
+                ['label' => 'Rules', 'href' => 'index.php?manage=workflow', 'icon' => 'ic-manage-actions', 'controller' => 'manage_actions'],
                 ['label' => 'Security', 'href' => 'index.php?manage=security&option=manage_users', 'icon' => 'ic-manage-users', 'controller' => 'manage_security'],
                 ['label' => 'Settings', 'href' => 'index.php?manage=settings&option=adlexone_settings', 'icon' => 'ic-system-settings', 'controller' => 'manage_settings'],
             ]);

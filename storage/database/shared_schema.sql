@@ -255,10 +255,44 @@ CREATE TABLE IF NOT EXISTS application_rules (
   body TEXT NOT NULL DEFAULT '',
   role_id INTEGER NOT NULL DEFAULT 5,
   action_field TEXT NOT NULL DEFAULT '',
-  action_value TEXT NOT NULL DEFAULT ''
+  action_value TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  match_from TEXT NOT NULL DEFAULT '',
+  skip_actor INTEGER NOT NULL DEFAULT 1,
+  min_log_role INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_application_rules_type ON application_rules (item_type_id, event);
 CREATE INDEX IF NOT EXISTS idx_application_rules_app ON application_rules (application_id);
+
+CREATE TABLE IF NOT EXISTS application_rule_steps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rule_id INTEGER NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  outcome TEXT NOT NULL,
+  recipient TEXT NOT NULL DEFAULT 'owner',
+  address TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  role_id INTEGER NOT NULL DEFAULT 5,
+  action_field TEXT NOT NULL DEFAULT '',
+  action_value TEXT NOT NULL DEFAULT '',
+  user_id INTEGER NOT NULL DEFAULT 0,
+  group_id INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_rule_steps_rule ON application_rule_steps (rule_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS application_rule_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rule_id INTEGER NOT NULL,
+  item_id INTEGER NOT NULL,
+  ran_at INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_rule_runs_rule ON application_rule_runs (rule_id, id);
+CREATE INDEX IF NOT EXISTS idx_application_rule_runs_item ON application_rule_runs (item_id, id);
 
 COMMIT;

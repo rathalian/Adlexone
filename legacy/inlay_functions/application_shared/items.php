@@ -1158,6 +1158,9 @@ function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no
                 updateKnoweldgeCount(array($itemID));
             }
 
+            if ($itemRole < 4) {
+                $html .= \Adlexone\Application\Rules::recordCard((int) $itemID);
+            }
             define('BODY_CONTENT', $html);
             RenderViews::renderThemePage('main_page_content', SET_THEME);
         } else {
@@ -1664,6 +1667,7 @@ function updateSecurityAssignment(string $itemID): void
     // Collect selected group values, trim and ignore empty entries
     $selected = array_values(array_filter($_POST, fn($v) => trim((string)$v) !== ''));
     $ids = array_map(static fn($v) => (int) $v, $selected);
+    $_POST['group_security'] = \Adlexone\Data\GroupMembership::toDelimited($ids);
 
     // Execute any configured actions for this update
     Actions::executeAction($itemID, 'update_item', false);

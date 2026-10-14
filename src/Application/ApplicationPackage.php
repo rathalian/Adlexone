@@ -157,28 +157,7 @@ final class ApplicationPackage
      */
     private static function exportActions(array $typeIds): array
     {
-        if ($typeIds === [] || !Database::tableExists('action_definitions')) {
-            return [];
-        }
-        $out = [];
-        foreach ($typeIds as $typeId) {
-            foreach (Database::select('action_definitions', '*', 'item_type_id = ?', [$typeId], 'action_id ASC') as $row) {
-                $out[] = [
-                    'action_name' => (string) ($row['action_name'] ?? ''),
-                    'action_condition_pre' => (string) ($row['action_condition_pre'] ?? ''),
-                    'action_condition_post' => (string) ($row['action_condition_post'] ?? ''),
-                    'action_data' => (string) ($row['action_data'] ?? ''),
-                    'action_parameters' => (string) ($row['action_parameters'] ?? ''),
-                    'action_type' => (string) ($row['action_type'] ?? ''),
-                    'package_file' => (string) ($row['package_file'] ?? ''),
-                    'package_function' => (string) ($row['package_function'] ?? ''),
-                    'enabled' => (string) ($row['enabled'] ?? 'Yes'),
-                    'item_type_name' => (string) (Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$typeId])['item_type_name'] ?? ''),
-                    'source_item_type_id' => $typeId,
-                ];
-            }
-        }
-        return $out;
+        return [];
     }
 
     /**
@@ -424,37 +403,6 @@ final class ApplicationPackage
      */
     private static function importActions(array $typeNameToId, array $oldToNewType, array $actions): void
     {
-        if ($actions === [] || !Database::tableExists('action_definitions')) {
-            return;
-        }
-        foreach ($actions as $action) {
-            if (!is_array($action)) {
-                continue;
-            }
-            $typeId = 0;
-            $sourceType = (int) ($action['source_item_type_id'] ?? 0);
-            if ($sourceType > 0 && isset($oldToNewType[$sourceType])) {
-                $typeId = $oldToNewType[$sourceType];
-            } else {
-                $typeName = (string) ($action['item_type_name'] ?? '');
-                $typeId = $typeNameToId[$typeName] ?? 0;
-            }
-            if ($typeId <= 0) {
-                continue;
-            }
-            Database::insert('action_definitions', [
-                'action_name' => (string) ($action['action_name'] ?? 'Rule'),
-                'action_condition_pre' => (string) ($action['action_condition_pre'] ?? ''),
-                'action_condition_post' => (string) ($action['action_condition_post'] ?? ''),
-                'action_data' => (string) ($action['action_data'] ?? ''),
-                'item_type_id' => $typeId,
-                'action_parameters' => (string) ($action['action_parameters'] ?? ''),
-                'action_type' => (string) ($action['action_type'] ?? ''),
-                'package_file' => (string) ($action['package_file'] ?? ''),
-                'package_function' => (string) ($action['package_function'] ?? ''),
-                'enabled' => (string) ($action['enabled'] ?? 'Yes'),
-            ]);
-        }
     }
 
     /**
@@ -482,6 +430,24 @@ final class ApplicationPackage
                 'role_id' => (int) $rule['role_id'],
                 'action_field' => (string) ($rule['action_field'] ?? ''),
                 'action_value' => (string) ($rule['action_value'] ?? ''),
+                'sort_order' => (int) ($rule['sort_order'] ?? 0),
+                'match_from' => (string) ($rule['match_from'] ?? ''),
+                'skip_actor' => (int) ($rule['skip_actor'] ?? 1),
+                'min_log_role' => (int) ($rule['min_log_role'] ?? 0),
+                'steps' => array_map(static function (array $step): array {
+                    return [
+                        'outcome' => (string) ($step['outcome'] ?? ''),
+                        'recipient' => (string) ($step['recipient'] ?? ''),
+                        'address' => (string) ($step['address'] ?? ''),
+                        'subject' => (string) ($step['subject'] ?? ''),
+                        'body' => (string) ($step['body'] ?? ''),
+                        'role_id' => (int) ($step['role_id'] ?? 5),
+                        'action_field' => (string) ($step['action_field'] ?? ''),
+                        'action_value' => (string) ($step['action_value'] ?? ''),
+                        'user_id' => (int) ($step['user_id'] ?? 0),
+                        'group_id' => (int) ($step['group_id'] ?? 0),
+                    ];
+                }, is_array($rule['steps'] ?? null) ? $rule['steps'] : []),
                 'source_item_type_id' => (int) $rule['item_type_id'],
             ];
         }
@@ -517,13 +483,28 @@ final class ApplicationPackage
                 $newActionField = $oldToNewField[(int) $actionMatch[1]] ?? 0;
                 $actionField = $newActionField > 0 ? 'custom_field_' . $newActionField : '';
             }
+            $steps = [];
+            foreach (is_array($rule['steps'] ?? null) ? $rule['steps'] : [] as $step) {
+                if (!is_array($step)) {
+                    continue;
+                }
+                $stepField = (string) ($step['action_field'] ?? '');
+                if (preg_match('/^custom_field_(\d+)$/', $stepField, $stepMatch) === 1) {
+                    $mapped = $oldToNewField[(int) $stepMatch[1]] ?? 0;
+                    $stepField = $mapped > 0 ? 'custom_field_' . $mapped : '';
+                }
+                $step['action_field'] = $stepField;
+                $steps[] = $step;
+            }
             Rules::add($applicationId, [
                 'item_type_id' => $typeId,
                 'name' => (string) ($rule['name'] ?? ''),
+                'enabled' => (int) ($rule['enabled'] ?? 1),
                 'event' => (string) ($rule['event'] ?? ''),
                 'field_key' => $fieldKey,
                 'operator' => (string) ($rule['operator'] ?? ''),
                 'match_value' => (string) ($rule['match_value'] ?? ''),
+                'match_from' => (string) ($rule['match_from'] ?? ''),
                 'outcome' => (string) ($rule['outcome'] ?? ''),
                 'recipient' => (string) ($rule['recipient'] ?? ''),
                 'address' => (string) ($rule['address'] ?? ''),
@@ -532,6 +513,10 @@ final class ApplicationPackage
                 'role_id' => (int) ($rule['role_id'] ?? 5),
                 'action_field' => $actionField,
                 'action_value' => (string) ($rule['action_value'] ?? ''),
+                'skip_actor' => (int) ($rule['skip_actor'] ?? 1),
+                'min_log_role' => (int) ($rule['min_log_role'] ?? 0),
+                'sort_order' => (int) ($rule['sort_order'] ?? 0),
+                'steps' => $steps,
             ]);
         }
     }
