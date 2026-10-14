@@ -11,12 +11,12 @@ When reading, searching, grepping, or analysing this repo:
 
 - Do not open, index, or count `composer.phar`.
 - Do not treat classes inside it as Adlexone classes.
-- Point searches at application trees (`src/`, `inlay_functions/`, `layouts/`, `actions/`, `bootstrap/`) or pass an explicit exclusion.
+- Point searches at application trees (`src/`, `layouts/`, `bootstrap/`) or pass an explicit exclusion.
 
 ```text
 # Bad — walks the Composer binary
 rg "class " .
 
 # Good — application PHP only
-rg "class " src inlay_functions layouts actions bootstrap
+rg "class " src layouts bootstrap
 ```

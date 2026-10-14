@@ -97,16 +97,13 @@ final class ApplicationStore
             if (!$app['enabled'] || !Access::can((string) $app['permission'])) {
                 continue;
             }
-            $legacy = $app['entry_mode'] === 'legacy' && $app['legacy_controller'] !== '';
             $items[] = [
                 'label' => $app['name'],
                 'hint' => $app['hint'],
                 'icon' => $app['icon'],
-                'href' => $legacy
-                    ? 'index.php?controller=' . rawurlencode((string) $app['legacy_controller'])
-                    : \Adlexone\Http\Router::applicationUrl((string) $app['slug']),
-                'controller' => $legacy ? $app['legacy_controller'] : 'application',
-                'app' => $legacy ? '' : $app['slug'],
+                'href' => \Adlexone\Http\Router::applicationUrl((string) $app['slug']),
+                'controller' => 'application',
+                'app' => $app['slug'],
             ];
         }
         return $items;
@@ -498,14 +495,7 @@ final class ApplicationStore
             if (empty($app['enabled'])) {
                 continue;
             }
-            $legacy = trim((string) ($app['legacy_controller'] ?? ''));
-            if ((string) $app['entry_mode'] === 'shell' && $legacy === '') {
-                $choices[] = ['application:' . $app['slug'], (string) $app['name']];
-                continue;
-            }
-            if ($legacy !== '') {
-                $choices[] = [$legacy, (string) $app['name']];
-            }
+            $choices[] = ['application:' . $app['slug'], (string) $app['name']];
         }
         return $choices;
     }

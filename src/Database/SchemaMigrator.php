@@ -286,7 +286,12 @@ final class SchemaMigrator
             return;
         }
         Database::run(
-            "DELETE FROM action_definitions WHERE package_file = 'Time_Manager.actions.php'"
+            "DELETE FROM action_definitions WHERE package_file IN (
+                'Time_Manager.actions.php',
+                'Email_Notifications.actions.php',
+                'Action_Triggers.actions.php',
+                'Log_Updates.actions.php'
+            )"
         );
     }
 

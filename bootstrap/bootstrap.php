@@ -150,10 +150,6 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     if (Router::bare(Router::requested())) {
         Router::open(Router::requested());
     } else {
-        $main = SET_INSTALL_PATH . 'legacy' . DIRECTORY_SEPARATOR . 'inlay_functions' . DIRECTORY_SEPARATOR . 'main.php';
-        if (!is_file($main)) {
-            $main = SET_INSTALL_PATH . 'inlay_functions' . DIRECTORY_SEPARATOR . 'main.php';
-        }
-        include $main;
+        RenderViews::renderThemePage('main_page', SET_THEME);
     }
 }

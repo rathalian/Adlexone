@@ -5,7 +5,7 @@ if (!defined('ADLEXONE_PAGE_SHELL')) {
     define('ADLEXONE_PAGE_SHELL', true);
 }
 ob_start();
-controller();
+\Adlexone\Http\Router::open(\Adlexone\Http\Router::requested());
 $pageBody = ob_get_clean();
 $hasSectionNav = defined('APP_SECTION_NAV') && APP_SECTION_NAV !== '';
 $sprite = htmlspecialchars(Theme::spriteHref(), ENT_QUOTES, 'UTF-8');

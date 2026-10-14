@@ -14,7 +14,7 @@
     "psr-4": {
       "Adlexone\\": "src/"
     },
-    "classmap": ["legacy/inlay_functions/", "legacy/actions/", "src/"]
+    "classmap": ["src/"]
   },
   "config": {
     "optimize-autoloader": true

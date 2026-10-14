@@ -150,11 +150,11 @@ final class Capabilities
             return;
         }
         if ($capability === Library::ANNOUNCEMENTS) {
-            self::includeFrameOne('announcements.php', 'openFrameOneAnnouncements');
+            \Adlexone\Screen\AnnouncementsScreen::openFrameOneAnnouncements();
             return;
         }
         if ($capability === Library::SETTINGS) {
-            self::includeFrameOne('settings.php', 'openFrameOneAppSettings');
+            \Adlexone\Screen\AppSettingsScreen::openFrameOneAppSettings();
             return;
         }
 
@@ -175,33 +175,12 @@ final class Capabilities
      */
     private static function openWork(array $config): void
     {
-        $file = SET_INSTALL_PATH . 'legacy/inlay_functions/application_shared/work.php';
-        if (!is_file($file)) {
-            RenderViews::buildResponse('The work screen is missing.');
-            return;
-        }
-        include_once $file;
         $itemType = trim((string) ($config['item_type_id'] ?? ''));
         if ($itemType === '' && defined('APPLICATION_SLUG')) {
             $itemType = AppSettings::defaultItemTypeId((string) APPLICATION_SLUG);
         }
         $typeId = $itemType !== '' && ctype_digit($itemType) ? (int) $itemType : null;
-        showApplicationWork($typeId, 'Work');
-    }
-
-    private static function includeFrameOne(string $file, string $opener): void
-    {
-        $path = SET_INSTALL_PATH . 'legacy/inlay_functions/frameone/' . $file;
-        if (!is_file($path)) {
-            RenderViews::buildResponse('This screen is missing.');
-            return;
-        }
-        include_once $path;
-        if (!function_exists($opener)) {
-            RenderViews::buildResponse('This screen is missing.');
-            return;
-        }
-        $opener();
+        \Adlexone\Screen\WorkScreen::showApplicationWork($typeId, 'Work');
     }
 
     /**
@@ -308,12 +287,15 @@ final class Capabilities
 
     private static function includeShared(string $controller): void
     {
-        $file = \Adlexone\Http\Router::path($controller) ?? '';
-        if (!is_file($file)) {
-            RenderViews::buildResponse('The shared screen is missing.');
+        if ($controller === \Adlexone\Http\Router::ITEMS) {
+            \Adlexone\Screen\ItemScreen::open();
             return;
         }
-        include $file;
+        if ($controller === \Adlexone\Http\Router::SEARCH) {
+            \Adlexone\Screen\SearchScreen::open();
+            return;
+        }
+        RenderViews::buildResponse('The shared screen is missing.');
     }
 
     /**

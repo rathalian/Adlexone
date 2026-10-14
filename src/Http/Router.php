@@ -5,36 +5,33 @@ namespace Adlexone\Http;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\Screen\ApplicationScreen;
+use Adlexone\Screen\ApplicationsScreen;
+use Adlexone\Screen\BuilderScreen;
+use Adlexone\Screen\FieldsScreen;
+use Adlexone\Screen\HomeScreen;
+use Adlexone\Screen\ItemScreen;
+use Adlexone\Screen\ItemTypesScreen;
+use Adlexone\Screen\LoginScreen;
+use Adlexone\Screen\PrintScreen;
+use Adlexone\Screen\SearchScreen;
+use Adlexone\Screen\SecurityScreen;
+use Adlexone\Screen\SettingsScreen;
+use Adlexone\Screen\WorkflowScreen;
 use Adlexone\support\RenderViews;
 
 /**
- * One map from a request to an inlay function file.
+ * One map from a request to a screen class.
  *
  * Home is index.php. Manage pages use manage. An application uses
  * application and nav. item and search name the record on that page.
  * Older controller and subcontroller names open the same screens.
- * A name that is not in the map is not included.
+ * A name that is not in the map is not opened.
  */
 final class Router
 {
     public const ITEMS = 'item_management_manage';
     public const SEARCH = 'search_management_manage';
-
-    /**
-     * Retired product surfaces — admin-only when opened by direct controller URL.
-     *
-     * @var list<string>
-     */
-    private const LEGACY = [
-        'manage_portal',
-        'all_actions',
-        'crm_management_manage',
-        'dummy',
-        'item_management_main',
-        'search_management_main',
-        'social_management_main',
-        'social_management_manage',
-    ];
 
     /** @var list<string> */
     private const ITEM_OPTIONS = [
@@ -71,7 +68,7 @@ final class Router
     ];
 
     /**
-     * Public or legacy name => canonical file key.
+     * Public or older name => canonical screen key.
      *
      * @var array<string, string>
      */
@@ -95,37 +92,6 @@ final class Router
         'administration_security' => 'manage_security',
         'administration_settings' => 'manage_settings',
         'administration_portal' => 'manage_portal',
-    ];
-
-    /**
-     * Canonical name => path under the install root.
-     *
-     * @var array<string, string>
-     */
-    private const FILES = [
-        'login' => 'legacy/inlay_functions/login.php',
-        'home' => 'legacy/inlay_functions/home.php',
-        'full_page_view' => 'legacy/inlay_functions/full_page_view.php',
-        'application' => 'legacy/inlay_functions/application.php',
-        'manage_main' => 'legacy/inlay_functions/manage/main.php',
-        'manage_applications' => 'legacy/inlay_functions/manage/applications.php',
-        'manage_builder' => 'legacy/inlay_functions/manage/builder.php',
-        'manage_fields' => 'legacy/inlay_functions/manage/fields.php',
-        'manage_item_types' => 'legacy/inlay_functions/manage/item_types.php',
-        'manage_items' => 'legacy/inlay_functions/manage/items.php',
-        'manage_actions' => 'legacy/inlay_functions/manage/actions.php',
-        'manage_security' => 'legacy/inlay_functions/manage/security.php',
-        'manage_settings' => 'legacy/inlay_functions/manage/settings.php',
-        self::ITEMS => 'legacy/inlay_functions/application_shared/items.php',
-        self::SEARCH => 'legacy/inlay_functions/application_shared/search.php',
-        'manage_portal' => 'legacy/retired/manage_portal.php',
-        'all_actions' => 'legacy/retired/all_actions.php',
-        'crm_management_manage' => 'legacy/retired/crm_management_manage.php',
-        'dummy' => 'legacy/retired/dummy.php',
-        'item_management_main' => 'legacy/retired/item_management_main.php',
-        'search_management_main' => 'legacy/retired/search_management_main.php',
-        'social_management_main' => 'legacy/retired/social_management_main.php',
-        'social_management_manage' => 'legacy/retired/social_management_manage.php',
     ];
 
     public static function requested(): string
@@ -294,13 +260,49 @@ final class Router
     {
         self::prepare();
         $canonical = self::canonical(self::queryName($name));
-        $file = self::path($canonical);
-        if ($file === null) {
-            RenderViews::buildResponse('This screen is not available.');
+        if ($canonical === 'manage_main') {
+            $sub = self::queryName((string) ($_GET['subcontroller'] ?? ''));
+            $forward = [
+                'manage_security',
+                'manage_fields',
+                'manage_item_types',
+                'manage_items',
+                'manage_actions',
+                'manage_settings',
+            ];
+            if (in_array($sub, $forward, true)) {
+                self::open($sub);
+                return;
+            }
+            header('Location: index.php');
+            exit;
+        }
+        if ($canonical === 'manage_items') {
+            $option = (string) ($_GET['option'] ?? '');
+            $typeOptions = [
+                'new_item_type',
+                'add_item_type',
+                'modify_item_type',
+                'update_item_type',
+                'manage_item_types',
+                'delete_item_type',
+            ];
+            if (in_array($option, $typeOptions, true)) {
+                $_GET['manage'] = 'item-types';
+                self::open('manage_item_types');
+                return;
+            }
+            $_GET['manage'] = 'fields';
+            if ($option === '') {
+                $_GET['option'] = 'manage_fields';
+            }
+            self::open('manage_fields');
             return;
         }
-        if (in_array($canonical, self::LEGACY, true) && !Access::can(Permission::ADMIN_SYSTEM)) {
-            Access::deny();
+        $handler = self::handler($canonical);
+        if ($handler === null) {
+            RenderViews::buildResponse('This screen is not available.');
+            return;
         }
         if (
             ($canonical === self::ITEMS || $canonical === self::SEARCH)
@@ -313,49 +315,27 @@ final class Router
         if ((string) ($_GET['controller'] ?? '') === '' || $canonical !== self::queryName($name)) {
             $_GET['controller'] = $canonical;
         }
-        include $file;
+        $handler();
     }
 
-    public static function path(string $name): ?string
+    private static function handler(string $canonical): ?callable
     {
-        $canonical = self::canonical(self::queryName($name));
-        if ($canonical === '') {
-            return null;
-        }
-        if (isset(self::FILES[$canonical])) {
-            return self::resolveRelative(self::FILES[$canonical]);
-        }
-        if (str_starts_with($canonical, 'app_')) {
-            $app = explode('_', $canonical)[1] ?? '';
-            $relative = 'legacy/app/http/controllers/applications/' . $app . '/controllers/' . $canonical . '.php';
-
-            return self::resolveRelative($relative);
-        }
-
-        return null;
-    }
-
-    /**
-     * Screen files moved under legacy/. Accept either location so a partial upload still opens.
-     */
-    private static function resolveRelative(string $relative): ?string
-    {
-        $relative = ltrim(str_replace('\\', '/', $relative), '/');
-        $candidates = [$relative];
-        if (str_starts_with($relative, 'legacy/')) {
-            $candidates[] = substr($relative, strlen('legacy/'));
-        } else {
-            $candidates[] = 'legacy/' . $relative;
-        }
-        $root = rtrim((string) SET_INSTALL_PATH, '/\\');
-        foreach ($candidates as $candidate) {
-            $file = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $candidate);
-            if (is_file($file)) {
-                return $file;
-            }
-        }
-
-        return null;
+        return match ($canonical) {
+            'login' => [LoginScreen::class, 'open'],
+            'home' => [HomeScreen::class, 'open'],
+            'full_page_view' => [PrintScreen::class, 'open'],
+            'application' => [ApplicationScreen::class, 'open'],
+            'manage_applications' => [ApplicationsScreen::class, 'open'],
+            'manage_builder' => [BuilderScreen::class, 'open'],
+            'manage_fields' => [FieldsScreen::class, 'open'],
+            'manage_item_types' => [ItemTypesScreen::class, 'open'],
+            'manage_actions' => [WorkflowScreen::class, 'open'],
+            'manage_security' => [SecurityScreen::class, 'open'],
+            'manage_settings' => [SettingsScreen::class, 'open'],
+            self::ITEMS => [ItemScreen::class, 'open'],
+            self::SEARCH => [SearchScreen::class, 'open'],
+            default => null,
+        };
     }
 
     private static function prepare(): void
