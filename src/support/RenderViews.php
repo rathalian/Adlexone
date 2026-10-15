@@ -77,6 +77,7 @@ class RenderViews
             [
                 'title' => $formTitle,
                 'html' => $html,
+                'class' => 'card--sheet',
             ],
         ]);
     }
@@ -218,7 +219,8 @@ class RenderViews
             $rawTitle = trim((string)($b['title'] ?? ''));
             $title = $rawTitle !== '' ? htmlspecialchars($rawTitle, ENT_QUOTES, 'UTF-8') : '';
             $repeatsSection = self::titleRepeatsSection($rawTitle);
-            $html .= '<section class="card span-2">';                      // full width always
+            $extraClass = trim((string) ($b['class'] ?? ''));
+            $html .= '<section class="card span-2' . ($extraClass !== '' ? ' ' . htmlspecialchars($extraClass, ENT_QUOTES, 'UTF-8') : '') . '">';
             if ($title !== '' && !$liftTitle && !$repeatsSection) {
                 $html .= '<div class="card-title">' . $title . '</div>';
             }

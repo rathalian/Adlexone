@@ -20,7 +20,8 @@ body{
 .builder__title,
 .empty-state__title,
 .sectionbar__name,
-.launchpad__intro-title{
+.launchpad__intro-title,
+.card--sheet > .card-title{
     font-family:"Iowan Old Style",Palatino,"Palatino Linotype","Book Antiqua",Georgia,serif;
 }
 
@@ -273,12 +274,17 @@ body{
 /* ---------- Layout spacing & grid ---------- */
 /* Rhythm: 4 / 8 / 12 / 16 / 20 — label→control 8, field stacks 12, cards 16, page inset 20 */
 .wrap{
-    display:grid; grid-template-columns:1fr; gap:16px; padding:20px 28px 36px;
+    display:grid; grid-template-columns:1fr; gap:20px; padding:28px 32px 48px;
     min-height:calc(100vh - 140px); align-items:start;
 }
 .wrap.has-sidebar{ grid-template-columns:280px 1fr; }
 .wrap > * { min-width:0; }
-@media (max-width:960px){ .wrap, .wrap.has-sidebar{ grid-template-columns:1fr; } }
+@media (max-width:960px){
+    .wrap, .wrap.has-sidebar{ grid-template-columns:1fr; }
+    .wrap{ padding:20px 16px 36px; }
+    .pagehead{ padding:20px 16px 0; }
+    .card--sheet{ padding:22px 18px 18px; }
+}
 
 /* ---------- Sidebar card ---------- */
 .sidebar{
@@ -329,8 +335,8 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 
 /* ---------- Main, cards, forms ---------- */
 .main{ padding:0; min-width:0; background:transparent; z-index:5; position:relative; }
-.card{ background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow:0 1px 0 rgba(15,23,42,.04); }
-.grid{ display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:22px 24px; box-shadow:0 1px 0 rgba(15,23,42,.04); }
+.grid{ display:grid; gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .span-2{ grid-column:1 / -1; }
 @media (max-width:960px){ .grid{ grid-template-columns:1fr; } }
 
@@ -351,8 +357,8 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 }
 .input,.textarea,.select,.login-panel .input,.text{
     box-sizing:border-box;
-    width:100%; max-width:100%; min-width:0; background:#fff;
-    border:1px solid var(--form-border); border-radius:6px; padding:9px 12px; color:var(--input);
+    width:100%; max-width:100%; min-width:0; min-height:42px; background:#fff;
+    border:1px solid var(--form-border); border-radius:8px; padding:10px 14px; color:var(--input);
     transition: box-shadow .15s, border-color .15s, background .15s;
 }
 .input::placeholder,.textarea::placeholder{ color:var(--placeholder); }
@@ -429,8 +435,8 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 }
 .btn--primary:hover{ color:#fff; background:var(--btn-primary-hover); border-color:transparent; }
 .btn.-sm, .btn.btn--sm{ padding:6px 10px; border-radius:6px; font-size:12.5px; font-weight:600; letter-spacing:0; min-height:30px; }
-.form-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
-.form-actions--flush{ margin-top:0; margin-bottom:12px; }
+.form-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
+.form-actions--flush{ margin-top:0; margin-bottom:12px; padding-top:0; border-top:0; }
 .input-file{ width:100%; }
 
 .group-security-list{ display:flex; flex-direction:column; gap:8px; flex:1 1 100%; min-width:0; }
@@ -549,7 +555,11 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     border-radius:12px;
     background:#fff;
 }
-.launchpad__intro--illustrated .empty-state__art{ margin:0 0 12px; }
+.launchpad__intro--illustrated .empty-state__art{
+    width:min(160px, 55vw);
+    margin:0 0 12px;
+    filter:none;
+}
 .launchpad__brand{
     gap:14px; margin:0 0 4px;
 }
@@ -573,22 +583,34 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     .launch-tile{ min-height:72px; }
 }
 
-/* Empty states */
+/* Empty states — the illustrated panel used when a list has nothing in it */
 .empty-state{
     display:flex; flex-direction:column; align-items:center; text-align:center;
-    gap:8px; padding:28px 16px 20px; max-width:28rem; margin:0 auto;
+    gap:12px; padding:48px 24px 40px; max-width:32rem; margin:0 auto;
     animation:empty-in .35s ease both;
 }
 .empty-state__art{
-    width:min(160px, 55vw); height:auto; display:block; margin:0 0 4px;
+    width:min(200px, 64vw); height:auto; display:block; margin:0 0 4px;
+    filter:drop-shadow(0 12px 18px rgba(15, 118, 110, .14));
 }
 .empty-state__title{
-    margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.02em; color:var(--ink);
+    margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-0.03em; color:var(--ink);
 }
 .empty-state__copy{
-    margin:0; font-size:13.5px; line-height:1.45; color:var(--title);
+    margin:0; max-width:26rem; font-size:15px; line-height:1.5; color:var(--title);
 }
-.empty-state__actions{ margin-top:8px; }
+.empty-state__actions{ margin-top:6px; }
+.card:has(> .form-block > .empty-state:only-child){
+    min-height:calc(100vh - 220px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 28px;
+    background:
+        radial-gradient(420px 240px at 50% 42%, color-mix(in srgb, var(--stone) 48%, white), transparent 70%),
+        var(--panel);
+}
+.card:has(> .form-block > .empty-state:only-child) > .form-block{ width:min(100%, 36rem); }
 @keyframes empty-in{
     from{ opacity:0; transform:translateY(6px); }
     to{ opacity:1; transform:none; }
@@ -1045,10 +1067,42 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     font-size: 0.92rem;
 }
 .form-help {
-    margin: 4px 0 0;
-    font-size: 13px;
-    line-height: 1.4;
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    line-height: 1.45;
     color: var(--placeholder);
+}
+.card--sheet{
+    padding:28px 28px 24px;
+    border-radius:12px;
+}
+.card--sheet > .card-title{
+    display:block;
+    margin:0 0 18px;
+    padding:0;
+    font-size:1.65rem;
+    font-weight:700;
+    letter-spacing:-0.03em;
+    line-height:1.15;
+    color:var(--ink);
+}
+body:has(.sectionbar) .main > .grid > .card.card--sheet > .card-title{
+    display:block;
+}
+.card--sheet > .form-block > form{
+    display:flex;
+    flex-direction:column;
+}
+.form-grid .well{
+    margin:6px 0 0;
+    padding:0;
+    background:none;
+    border:0;
+    font-family:"Iowan Old Style",Palatino,"Palatino Linotype","Book Antiqua",Georgia,serif;
+    font-size:1.15rem;
+    font-weight:700;
+    letter-spacing:-0.02em;
+    color:var(--ink);
 }
 .form-help--spaced{ margin-top:12px; }
 
@@ -1102,7 +1156,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     text-align:left; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--title);
 }
 .record-list tbody:first-of-type .record-list__grouphead th{ padding-top:8px; }
-.record-list .empty-state{ padding:20px 0 12px; max-width:none; }
+.record-list .empty-state{ padding:56px 20px 48px; max-width:32rem; }
 .record-list .table-hover tbody tr.record-list__grouphead:hover{ background:transparent; }
 .record-list__badge{
     display:inline-flex; align-items:center; justify-content:center; min-width:1.5rem;
@@ -1296,16 +1350,12 @@ a.work-stand__bucket.is-selected{
 .form-grid{
     display:flex;
     flex-direction:column;
-    gap:12px;
-    max-width:44rem;
+    gap:18px;
+    width:100%;
+    max-width:none;
 }
 .form-grid .field{ display:grid; gap:8px; }
-.form-grid:has(.field-picker),
-.form-grid:has(.mlm-fields),
-.form-grid:has(.group-security-list){ max-width:none; }
 .form-grid .label{ font-size:13px; font-weight:600; color:var(--title); white-space:normal; overflow:visible; text-overflow:unset; }
-.form-grid:has(.criteria-row),
-.form-grid:has(.choice-list){ max-width:56rem; }
 .criteria-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .criteria-row > .select,
 .criteria-row > .input{ width:auto; flex:1 1 9rem; min-width:8rem; }
@@ -1350,7 +1400,7 @@ a.work-stand__bucket.is-selected{
 .log-heading{ margin:0 0 6px; font-size:13px; color:var(--placeholder); }
 .log-text{ line-height:1.5; overflow-wrap:anywhere; }
 
-.pagehead{ padding:24px 28px 0; }
+.pagehead{ padding:28px 32px 0; }
 .pagehead__title--sr{
     position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
     clip:rect(0,0,0,0); white-space:nowrap; border:0;
