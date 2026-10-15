@@ -135,19 +135,31 @@ final class AnnouncementsScreen
 
         $canManage = ApplicationAccess::canAnnounce();
         $html = '';
+        $index = 0;
+        $art = \Adlexone\Theme\Theme::illustrationHref('notice');
         foreach ($result as $row) {
+            $lead = $index === 0;
             $actions = '';
             if ($canManage) {
-                $actions = '<div class="announcement__actions">'
+                $actions = '<div class="notice__actions">'
+                    . ($lead ? RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary') : '')
                     . RenderViews::buildURL(MAN_BASE_URL . '&option=edit_announcement&id=' . $row['id'], 'Edit', '', 'btn btn--sm btn--quiet')
                     . RenderViews::buildURL(MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'], 'Delete', '', 'btn btn--sm btn--danger', 'onClick="return confirm(\'Delete this announcement?\')"')
                     . '</div>';
             }
-            $html .= '<article class="announcement">'
-                . '<h2 class="announcement__subject">' . htmlspecialchars((string) $row['subject'], ENT_QUOTES, 'UTF-8') . '</h2>'
-                . '<div class="announcement__body">' . $row['message'] . '</div>'
-                . '<div class="announcement__meta"><time>' . htmlspecialchars(date(SET_DATE_FORMAT, (int) $row['time']), ENT_QUOTES, 'UTF-8') . '</time>' . $actions . '</div>'
-                . '</article>';
+            $picture = $lead && $art !== ''
+                ? '<img class="notice__art" src="' . htmlspecialchars($art, ENT_QUOTES, 'UTF-8') . '" alt="" width="160" height="120">'
+                : '';
+            $kicker = $lead ? 'On the wall' : '';
+            $html .= '<article class="notice' . ($lead ? ' notice--lead' : '') . '">'
+                . $picture
+                . '<div class="notice__copy">'
+                . ($kicker !== '' ? '<p class="notice__kicker">' . $kicker . '</p>' : '')
+                . '<h2 class="notice__subject">' . htmlspecialchars((string) $row['subject'], ENT_QUOTES, 'UTF-8') . '</h2>'
+                . '<div class="notice__body">' . $row['message'] . '</div>'
+                . '<div class="notice__meta"><time datetime="' . date('c', (int) $row['time']) . '">' . htmlspecialchars(date(SET_DATE_FORMAT, (int) $row['time']), ENT_QUOTES, 'UTF-8') . '</time>' . $actions . '</div>'
+                . '</div></article>';
+            $index++;
         }
         if ($html === '') {
             $html = RenderViews::buildEmptyState([
@@ -160,10 +172,8 @@ final class AnnouncementsScreen
                     ? RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary')
                     : '',
             ]);
-        } elseif ($canManage) {
-            $html = '<div class="form-actions form-actions--flush">'
-                . RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary btn--sm')
-                . '</div>' . $html;
+        } else {
+            $html = '<div class="notice-wall">' . $html . '</div>';
         }
 
         define('BODY_CONTENT', RenderViews::buildVerticalCards([

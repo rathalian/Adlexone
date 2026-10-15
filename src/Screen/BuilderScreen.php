@@ -200,7 +200,7 @@ final class BuilderScreen
         foreach (Capabilities::icons() as $iconId) {
             $active = $iconId === $icon ? ' is-selected' : '';
             $label = $iconLabels[$iconId] ?? $iconId;
-            $iconsHtml .= '<label class="builder__icon' . $active . '">'
+            $iconsHtml .= '<label class="builder__icon' . $active . '" title="' . $h($label) . '">'
                 . '<input type="radio" name="icon" value="' . $h($iconId) . '"' . ($iconId === $icon ? ' checked' : '') . '>'
                 . '<span class="builder__icon-mark" aria-hidden="true"><svg class="icon"><use href="' . $sprite . '#' . $h($iconId) . '"></use></svg></span>'
                 . '<span class="builder__icon-name">' . $h($label) . '</span>'
@@ -303,7 +303,6 @@ final class BuilderScreen
             . '</section>'
             . '<div class="form-actions">'
             . RenderViews::buildFormButton('submit', 'submit_button', 'Create this app')
-            . '<a class="btn" href="?manage=applications">Open Applications</a>'
             . '</div></form>'
             . '<aside class="builder__preview builder__panel" aria-live="polite">'
             . '<p class="builder__kicker">This application</p>'
@@ -319,7 +318,6 @@ final class BuilderScreen
             . $ruleRow
             . '<div><dt>Who can open it</dt><dd id="builder-preview-access">' . $h($accessLine) . '</dd></div>'
             . '</dl>'
-            . '<button type="submit" form="builder-form" class="btn btn--primary builder__create">Create this app</button>'
             . '</aside>'
             . '<details class="builder__import builder__panel">'
             . '<summary>Import a JSON package</summary>'
