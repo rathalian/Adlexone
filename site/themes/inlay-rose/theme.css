@@ -1,0 +1,32 @@
+/* Inlay Rose — warm paper, a deep rose for the work. */
+:root{
+    --ink:#3c1424;
+    --inlay:#be185d;
+    --stone:#f8dce8;
+    --brand:var(--inlay);
+    --brand2:#9d174d;
+    --text:#3c1424;
+    --panel:#ffffff;
+    --border:#eedde4;
+    --hover:rgba(190, 24, 93, 0.08);
+    --ring:rgba(190, 24, 93, 0.35);
+    --title:#4a1c30;
+    --label:#4a1c30;
+    --body:#3c1424;
+    --input:#3c1424;
+    --placeholder:#8a6070;
+    --title-strip:#f8eef2;
+    --title-strip-border:#eedde4;
+    --title-size:11.5px;
+    --title-weight:700;
+    --title-tracking:.045em;
+    --form-surface:#ffffff;
+    --form-border:#e4c9d4;
+    --form-hover-shadow:0 0 0 3px rgba(190, 24, 93, 0.20);
+    --page-bg:#fbf5f7;
+    --brandbar-border:#f0e4ea;
+    --brandmaker:#7a5362;
+    --btn-primary-hover:#9d174d;
+    --danger:#b91c1c;
+    --danger-ink:#991b1b;
+}

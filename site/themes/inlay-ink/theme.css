@@ -1,0 +1,32 @@
+/* Inlay Ink — ink ground, bone pieces, a brass joint. */
+:root{
+    --ink:#1c1917;
+    --inlay:#1c1917;
+    --stone:#e8e0d4;
+    --brand:var(--inlay);
+    --brand2:#44403c;
+    --text:#1c1917;
+    --panel:#ffffff;
+    --border:#e4ddd4;
+    --hover:rgba(28, 25, 23, 0.06);
+    --ring:rgba(176, 137, 88, 0.45);
+    --title:#292524;
+    --label:#292524;
+    --body:#1c1917;
+    --input:#1c1917;
+    --placeholder:#78716c;
+    --title-strip:#f4f0ea;
+    --title-strip-border:#e6dfd4;
+    --title-size:11.5px;
+    --title-weight:700;
+    --title-tracking:.045em;
+    --form-surface:#ffffff;
+    --form-border:#d9d1c6;
+    --form-hover-shadow:0 0 0 3px rgba(176, 137, 88, 0.28);
+    --page-bg:#f6f3ee;
+    --brandbar-border:#e8e2da;
+    --brandmaker:#57534e;
+    --btn-primary-hover:#3f3a34;
+    --danger:#b91c1c;
+    --danger-ink:#991b1b;
+}

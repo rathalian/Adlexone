@@ -1,0 +1,32 @@
+/* Inlay Slate — cool gray paper, graphite for the work. */
+:root{
+    --ink:#0f172a;
+    --inlay:#334155;
+    --stone:#e2e8f0;
+    --brand:var(--inlay);
+    --brand2:#1e293b;
+    --text:#0f172a;
+    --panel:#ffffff;
+    --border:#d8dee6;
+    --hover:rgba(51, 65, 85, 0.08);
+    --ring:rgba(51, 65, 85, 0.35);
+    --title:#1e293b;
+    --label:#1e293b;
+    --body:#0f172a;
+    --input:#0f172a;
+    --placeholder:#64748b;
+    --title-strip:#eef1f5;
+    --title-strip-border:#d8dee6;
+    --title-size:11.5px;
+    --title-weight:700;
+    --title-tracking:.045em;
+    --form-surface:#ffffff;
+    --form-border:#c5ced8;
+    --form-hover-shadow:0 0 0 3px rgba(51, 65, 85, 0.18);
+    --page-bg:#f4f6f8;
+    --brandbar-border:#e4e8ee;
+    --brandmaker:#475569;
+    --btn-primary-hover:#1e293b;
+    --danger:#b91c1c;
+    --danger-ink:#991b1b;
+}

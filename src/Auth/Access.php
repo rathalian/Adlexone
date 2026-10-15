@@ -169,12 +169,52 @@ final class Access
         }
     }
 
+    /**
+     * Return $value when the user has at least one permission, otherwise null.
+     */
+    public static function outputIfAllowed(mixed $value, string ...$permissions): mixed
+    {
+        return self::can(...$permissions) ? $value : null;
+    }
+
+    /**
+     * Return $value when the legacy role check passes. Lower role numbers are higher privilege.
+     */
+    public static function outputIfRoleAllowed(mixed $value, int $userRole, int $allowedRole): mixed
+    {
+        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($allowedRole)) {
+            return $value;
+        }
+        $effective = self::legacyRole();
+        if ($effective !== $userRole && isset($_SESSION['access_permissions'])) {
+            $userRole = $effective;
+        }
+
+        return $allowedRole >= $userRole ? $value : null;
+    }
+
+    /**
+     * Stop the request when the legacy role is not sufficient.
+     */
+    public static function terminateIfRoleNotAllowed(int $userRole, int $allowedRole): void
+    {
+        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($allowedRole)) {
+            return;
+        }
+        if (isset($_SESSION['access_permissions'])) {
+            $userRole = self::legacyRole();
+        }
+        if ($allowedRole < $userRole) {
+            self::deny();
+        }
+    }
+
     public static function deny(): never
     {
         $message = defined('TXT_356')
             ? TXT_356
             : 'You do not have access to this area. Please contact your administrator.';
-        \Adlexone\support\RenderViews::buildResponse($message);
+        \Adlexone\Http\View::respond($message);
         exit;
     }
 

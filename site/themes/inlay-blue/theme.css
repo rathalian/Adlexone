@@ -1,32 +1,32 @@
-/* Inlay Teal — Work OS teal/ink skin (tokens only) */
+/* Inlay Blue — cool paper, one clear blue for the work. */
 :root{
-    --ink:#0f172a;
-    --inlay:#0f766e;
-    --stone:#5eead4;
+    --ink:#0f2340;
+    --inlay:#1a4f8b;
+    --stone:#d9e6f5;
     --brand:var(--inlay);
-    --brand2:#115e59;
-    --text:#0f172a;
+    --brand2:#143f70;
+    --text:#0f2340;
     --panel:#ffffff;
-    --border:#d7e0e8;
-    --hover:rgba(15, 118, 110, 0.12);
-    --ring:rgba(15, 118, 110, 0.45);
-    --title:#1e293b;
-    --label:#1e293b;
-    --body:#0f172a;
-    --input:#0f172a;
-    --placeholder:#475569;
-    --title-strip:#eef3f6;
-    --title-strip-border:#d7e0e8;
+    --border:#d3deeb;
+    --hover:rgba(26, 79, 139, 0.08);
+    --ring:rgba(26, 79, 139, 0.40);
+    --title:#183154;
+    --label:#183154;
+    --body:#0f2340;
+    --input:#0f2340;
+    --placeholder:#5e7390;
+    --title-strip:#eef3f9;
+    --title-strip-border:#d3deeb;
     --title-size:11.5px;
     --title-weight:700;
     --title-tracking:.045em;
     --form-surface:#ffffff;
-    --form-border:#c5d0dc;
-    --form-hover-shadow:0 0 0 3px rgba(15, 118, 110, 0.22);
-    --page-bg:#f4f7f8;
-    --brandbar-border:#e2e8f0;
-    --brandmaker:#334155;
-    --btn-primary-hover:#0d5c56;
+    --form-border:#c3d2e4;
+    --form-hover-shadow:0 0 0 3px rgba(26, 79, 139, 0.22);
+    --page-bg:#f4f7fb;
+    --brandbar-border:#e3ebf4;
+    --brandmaker:#4a6280;
+    --btn-primary-hover:#143f70;
     --danger:#b91c1c;
     --danger-ink:#991b1b;
 }

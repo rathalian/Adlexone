@@ -1,32 +1,32 @@
-/* Inlay Stone — warm companion with teal accents (tokens only) */
+/* Inlay Stone — warm paper with a brass accent. */
 :root{
-    --ink:#0f172a;
-    --inlay:#0f766e;
-    --stone:#5eead4;
+    --ink:#1c1917;
+    --inlay:#8a6432;
+    --stone:#f3eadc;
     --brand:var(--inlay);
-    --brand2:#115e59;
-    --text:#0f172a;
+    --brand2:#6b4e28;
+    --text:#1c1917;
     --panel:#ffffff;
     --border:#e4ddd4;
-    --hover:rgba(15, 118, 110, 0.12);
-    --ring:rgba(15, 118, 110, 0.40);
+    --hover:rgba(138, 100, 50, 0.10);
+    --ring:rgba(138, 100, 50, 0.40);
     --title:#292524;
     --label:#292524;
     --body:#1c1917;
-    --input:#0f172a;
-    --placeholder:#57534e;
+    --input:#1c1917;
+    --placeholder:#78716c;
     --title-strip:#f3efe8;
     --title-strip-border:#e4ddd4;
     --title-size:11.5px;
     --title-weight:700;
     --title-tracking:.045em;
     --form-surface:#ffffff;
-    --form-border:#d4cdc3;
-    --form-hover-shadow:0 0 0 3px rgba(15, 118, 110, 0.18);
+    --form-border:#d6cfc5;
+    --form-hover-shadow:0 0 0 3px rgba(138, 100, 50, 0.22);
     --page-bg:#f7f5f1;
     --brandbar-border:#e8e2da;
-    --brandmaker:#44403c;
-    --btn-primary-hover:#0d5c56;
+    --brandmaker:#57534e;
+    --btn-primary-hover:#6b4e28;
     --danger:#b91c1c;
     --danger-ink:#991b1b;
 }

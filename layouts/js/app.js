@@ -168,6 +168,77 @@
     update();
 })();
 
+/* Record lists opt in with data-record-list. Confirm links opt in with data-confirm. */
+(() => {
+    const lists = Array.from(document.querySelectorAll('[data-record-list]'));
+
+    const apply = (root) => {
+        const input = root.querySelector('.record-list__search');
+        if (!input) return;
+        const count = root.querySelector('.record-list__count');
+        const empty = root.querySelector('.record-list__nomatch');
+        const total = root.querySelectorAll('tr[data-search]').length;
+        const q = (input.value || '').trim().toLowerCase();
+        let shown = 0;
+        root.querySelectorAll('tr[data-search]').forEach((row) => {
+            const hit = q === '' || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
+            row.hidden = !hit;
+            if (hit) shown += 1;
+        });
+        root.querySelectorAll('tbody[data-group]').forEach((group) => {
+            const visible = group.querySelectorAll('tr[data-search]:not([hidden])').length;
+            group.hidden = visible === 0;
+            const badge = group.querySelector('.record-list__badge');
+            if (badge) badge.textContent = String(visible);
+        });
+        if (count) count.textContent = q === '' ? String(total) : (shown + ' / ' + total);
+        if (empty) empty.hidden = shown !== 0;
+    };
+
+    const place = (menu) => {
+        const panel = menu.querySelector('.rowmenu__panel');
+        const summary = menu.querySelector('summary');
+        if (!panel || !summary) return;
+        const rect = summary.getBoundingClientRect();
+        panel.style.top = (rect.bottom + 4) + 'px';
+        panel.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+    };
+
+    lists.forEach((root) => {
+        const input = root.querySelector('.record-list__search');
+        if (input) input.addEventListener('input', () => apply(root));
+        root.querySelectorAll('details.rowmenu').forEach((menu) => {
+            menu.addEventListener('toggle', () => {
+                if (!menu.open) return;
+                root.querySelectorAll('details.rowmenu[open]').forEach((other) => {
+                    if (other !== menu) other.open = false;
+                });
+                place(menu);
+            });
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        const confirmNode = event.target.closest('[data-confirm]');
+        if (confirmNode) {
+            const message = confirmNode.getAttribute('data-confirm') || '';
+            if (message !== '' && !window.confirm(message)) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+        }
+        if (event.target.closest('.rowmenu')) return;
+        document.querySelectorAll('[data-record-list] details.rowmenu[open]').forEach((menu) => {
+            menu.open = false;
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        document.querySelectorAll('[data-record-list] details.rowmenu[open]').forEach(place);
+    });
+})();
+
 /* Mark inline .URL actions that match the current ?option= */
 (() => {
     const norm = (value) => (value || '').toString().trim().toLowerCase();

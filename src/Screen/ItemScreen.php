@@ -9,6 +9,7 @@ use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 use Adlexone\support\Actions;
 use Adlexone\support\AttachmentUpload;
+use Adlexone\Html\FieldControl;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
@@ -244,9 +245,27 @@ final class ItemScreen
         if ($rows === []) {
             $list .= '<p class="record-list__empty">No groups yet.</p>';
         }
+        $list .= RenderViews::buildHiddenInput('groups_posted', '1');
         $list .= '</div>';
 
         return $list;
+    }
+
+    /**
+     * @param list<int> $ids
+     */
+    private static function groupNames(array $ids): string
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return '';
+        }
+        $names = [];
+        foreach (Database::select('groups', ['group_name'], 'group_id IN (' . implode(',', $ids) . ')', [], 'group_name ASC') as $row) {
+            $names[] = (string) $row['group_name'];
+        }
+
+        return implode(', ', $names);
     }
 
     /**
@@ -674,6 +693,7 @@ final class ItemScreen
                 }
             }
         }
+        $peopleHidden = '';
         if ($itemRole < 4) {//Admins and manager can set
             // If the item type does not specify a default user use the logged in user
             if (!isset($values['user_security'])) {
@@ -682,21 +702,32 @@ final class ItemScreen
                 }
                 $itemTypeFields['creator_security'] = $_SESSION['access_user_id'];
             }
-            // Security is setup by default from the item
-            $columnArray = array('user_id', 'user_name');
-            $condition = "WHERE lastactive <> 'inactive' ORDER BY user_name ASC";
-            foreach (Database::select('users', $columnArray, $condition) as $row) {
-                $userIDArray[] = $row['user_id'];
-                $userArray[] = $row['user_name'];
-            }// while
-            $fields[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = RenderViews::buildSelectDropdown('creator_security', $userIDArray, $userArray, $itemTypeFields['creator_security']);
-            $columnArray = array('user_id', 'user_name');
-            $condition = "WHERE lastactive <> 'inactive' AND role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
-            foreach (Database::select('users', $columnArray, $condition) as $row) {
-                $filterdUserIDArray[] = $row['user_id'];
-                $filteredUserArray[] = $row['user_name'];
-            }// while
-            $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = RenderViews::buildSelectDropdown('user_security', $filterdUserIDArray, $filteredUserArray, $itemTypeFields['user_security']);
+            if ($inApplication) {
+                $peopleHidden = RenderViews::buildHiddenInput('creator_security', (string) $itemTypeFields['creator_security'])
+                    . RenderViews::buildHiddenInput('user_security', (string) $itemTypeFields['user_security']);
+            } else {
+                // Security is setup by default from the item
+                $columnArray = array('user_id', 'user_name');
+                $condition = "WHERE lastactive <> 'inactive' ORDER BY user_name ASC";
+                foreach (Database::select('users', $columnArray, $condition) as $row) {
+                    $userIDArray[] = $row['user_id'];
+                    $userArray[] = $row['user_name'];
+                }// while
+                $fields[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = RenderViews::buildSelectDropdown('creator_security', $userIDArray, $userArray, $itemTypeFields['creator_security']);
+                $columnArray = array('user_id', 'user_name');
+                $condition = "WHERE lastactive <> 'inactive' AND role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
+                foreach (Database::select('users', $columnArray, $condition) as $row) {
+                    $filterdUserIDArray[] = $row['user_id'];
+                    $filteredUserArray[] = $row['user_name'];
+                }// while
+                $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = RenderViews::buildSelectDropdown('user_security', $filterdUserIDArray, $filteredUserArray, $itemTypeFields['user_security']);
+            }
+        } elseif ($inApplication) {
+            $ownerId = ($itemTypeFields['user_security'] ?? '') === ''
+                ? (string) $_SESSION['access_user_id']
+                : (string) $itemTypeFields['user_security'];
+            $peopleHidden = RenderViews::buildHiddenInput('creator_security', (string) $_SESSION['access_user_id'])
+                . RenderViews::buildHiddenInput('user_security', $ownerId);
         } else {
             $columnArray = array('user_name');
             $condition = "WHERE user_id ='" . $_SESSION['access_user_id'] . "'";
@@ -718,7 +749,9 @@ final class ItemScreen
         $selectedGroups = isset($values['user_security'])
             ? GroupMembership::idsFromPost($values)
             : GroupMembership::itemTypeGroupIds((int) $itemTypeID);
-        $fields[TXT_270] = self::itemGroupPicker($selectedGroups);
+        if (!$inApplication) {
+            $fields[TXT_270] = self::itemGroupPicker($selectedGroups);
+        }
         $fields[$inApplication ? 'Name' : RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildTextInput('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
         $columnArray = array('custom_field_id');
         $condition = "WHERE item_type_id = '" . $itemTypeID . "' ORDER BY custom_field_order ASC";
@@ -816,17 +849,22 @@ final class ItemScreen
                 }
             }
             switch ($row['field_type']) {
-                case FieldTypes::TEXT_BOX :
-                    $fields[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $defaultValue);
-                    break;
-                case 'password' :
-                    $fields[$row['custom_field_name']] = RenderViews::buildPasswordInput('custom_field_' . $row['custom_field_id'], $defaultValue);
-                    break;
-                case 'hidden' :
-                    $fields[$row['custom_field_name']] = RenderViews::buildHiddenInput('custom_field_' . $row['custom_field_id'], $defaultValue);
-                    break;
-                case FieldTypes::TEXT_AREA :
-                    $fields[$row['custom_field_name']] = RenderViews::buildTextArea('custom_field_' . $row['custom_field_id'], $defaultValue, SET_FORM_FIELD_HEIGHT);
+                case FieldTypes::TEXT_BOX:
+                case 'password':
+                case 'hidden':
+                case FieldTypes::TEXT_AREA:
+                case 'URL':
+                case 'dynamicURL':
+                case 'workerField':
+                    $control = FieldControl::render(
+                        (string) $row['field_type'],
+                        ($row['field_type'] === 'workerField' ? 'worker_field_' : 'custom_field_') . $row['custom_field_id'],
+                        $defaultValue,
+                        $row
+                    );
+                    if ($control !== null) {
+                        $fields[$row['custom_field_name']] = $control;
+                    }
                     break;
                 case FieldTypes::MENU :
                     $childId = (int)($row['sub_menu'] ?? 0);
@@ -840,15 +878,6 @@ final class ItemScreen
                     break;
                 case FieldTypes::CHECK_BOX :
                     $fields[$row['custom_field_name']] = RenderViews::buildCheckBox('custom_field_' . $row['custom_field_id'], $row['custom_field_id'], '');
-                    break;
-                case 'URL' :
-                    $fields[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $defaultValue);
-                    break;
-                case 'dynamicURL' :
-                    $fields[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $defaultValue);
-                    break;
-                case 'workerField' :
-                    $fields[$row['custom_field_name']] = RenderViews::buildTextInput('worker_field_' . $row['custom_field_id'], $defaultValue);
                     break;
                 case 'workerFieldMenu' :
                     $columnArray = array('default_value');
@@ -866,11 +895,23 @@ final class ItemScreen
                     unset($menuArray);
                     break;
                 default :
+                    $control = FieldControl::render(
+                        (string) $row['field_type'],
+                        'custom_field_' . $row['custom_field_id'],
+                        $defaultValue,
+                        $row
+                    );
+                    if ($control !== null) {
+                        $fields[$row['custom_field_name']] = $control;
+                    }
                     break;
             }
         }
 
-        $fields[''] = RenderViews::buildHiddenInput('item_type_id', (string)$itemTypeFields['item_type_id']);
+        if ($inApplication) {
+            $fields['Access'] = self::itemGroupPicker($selectedGroups);
+        }
+        $fields[''] = RenderViews::buildHiddenInput('item_type_id', (string)$itemTypeFields['item_type_id']) . $peopleHidden;
         $formOptions = [];
         if (ADD_ATTACHMENTS == 'yes') {
             $fields[TXT_393] = RenderViews::buildFileInput('attachment', SET_MAX_ATTACHMENT * 1000000);
@@ -961,8 +1002,13 @@ final class ItemScreen
                 $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
                 $row = Database::first('item_types', $columnArray, $condition);
                 $itemTypeName = $row['item_type_name'];
-
-                if ($_SESSION['access_role_id'] < 4) {//Managers, admins and oneorzero admins and global admins
+                $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+                $itemField = [];
+                $peopleHidden = '';
+                if ($inApplication) {
+                    $peopleHidden = RenderViews::buildHiddenInput('creator_security', (string) ($itemFields['creator_security'] ?? ''))
+                        . RenderViews::buildHiddenInput('user_security', (string) ($itemFields['user_security'] ?? ''));
+                } elseif ($_SESSION['access_role_id'] < 4) {//Managers, admins and oneorzero admins and global admins
                     // Build table array
                     // Security is setup by default from the item
                     $columnArray = array('user_id', 'user_name');
@@ -1009,7 +1055,7 @@ final class ItemScreen
                     $itemRole = 3;
                     //they are owner so give them manager rights
                 }
-                if ($itemRole < 4) {
+                if (!$inApplication && $itemRole < 4) {
                     // Create group membership list
                     $groupArray = array_values(array_filter(array_map('intval', $itemGroupIds)));
                     $groupMembership = '';
@@ -1040,10 +1086,11 @@ final class ItemScreen
                             )
                         );
                 }
+                $titleLabel = $inApplication ? 'Name' : RenderViews::getLanguageConstant('LA_84', 'TXT_84');
                 if ($itemRole >= 4) {//Users and viewers can read only
-                    $itemField[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildHiddenInput('item_title', $itemFields['item_title']) . $itemFields['item_title'];
+                    $itemField[$titleLabel] = RenderViews::buildHiddenInput('item_title', $itemFields['item_title']) . $itemFields['item_title'];
                 } else {
-                    $itemField[RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = RenderViews::buildTextInput('item_title', $itemFields['item_title']);
+                    $itemField[$titleLabel] = RenderViews::buildTextInput('item_title', $itemFields['item_title']);
                 }
                 // Setup custom field display
                 $columnArray = array('custom_field_id');
@@ -1162,17 +1209,20 @@ final class ItemScreen
                         case 'text' :
                             $itemField[$row['custom_field_name']] = $value . RenderViews::buildHiddenInput('custom_field_' . $row['custom_field_id'], $hiddenValue);
                             break;
-                        case FieldTypes::TEXT_BOX :
-                            $itemField[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $value);
-                            break;
-                        case 'password' :
-                            $itemField[$row['custom_field_name']] = RenderViews::buildPasswordInput('custom_field_' . $row['custom_field_id'], $value);
-                            break;
-                        case 'hidden' :
-                            $itemField[$row['custom_field_name']] = RenderViews::buildHiddenInput('custom_field_' . @$row['custom_field_id'], $value);
-                            break;
-                        case FieldTypes::TEXT_AREA :
-                            $itemField[$row['custom_field_name']] = RenderViews::buildTextArea('custom_field_' . $row['custom_field_id'], $value, SET_FORM_FIELD_HEIGHT);
+                        case FieldTypes::TEXT_BOX:
+                        case 'password':
+                        case 'hidden':
+                        case FieldTypes::TEXT_AREA:
+                        case 'workerField':
+                            $control = FieldControl::render(
+                                (string) $fieldType,
+                                ($fieldType === 'workerField' ? 'worker_field_' : 'custom_field_') . $row['custom_field_id'],
+                                $value,
+                                $row
+                            );
+                            if ($control !== null) {
+                                $itemField[$row['custom_field_name']] = $control;
+                            }
                             break;
                         case FieldTypes::MENU :
                             $childId = (int)($row['sub_menu'] ?? 0);
@@ -1205,9 +1255,6 @@ final class ItemScreen
                             }
                             $itemField[$row['custom_field_name']] = RenderViews::buildTextInput('custom_field_' . $row['custom_field_id'], $value) . @$url;
                             break;
-                        case 'workerField' :
-                            $itemField[$row['custom_field_name']] = RenderViews::buildTextInput('worker_field_' . $row['custom_field_id'], $value);
-                            break;
                         case 'workerFieldMenu' :
                             $columnArray = array('default_value');
                             $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
@@ -1224,6 +1271,15 @@ final class ItemScreen
                             unset($menuArray);
                             break;
                         default :
+                            $control = FieldControl::render(
+                                (string) $fieldType,
+                                'custom_field_' . $row['custom_field_id'],
+                                $value,
+                                $row
+                            );
+                            if ($control !== null) {
+                                $itemField[$row['custom_field_name']] = $control;
+                            }
                             break;
                     }
                 }
@@ -1271,11 +1327,33 @@ final class ItemScreen
                     $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56, $javascript);
                 }
 
-                $itemField[''] = RenderViews::buildHiddenInput('item_type_id', $itemFields['item_type_id']).RenderViews::buildHiddenInput('item_id', $itemFields['item_id']);
-                $html .= RenderViews::buildForm(RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName,MAN_BASE_URL . '&option=update_item',$itemField,$buttons);
+                $itemField[''] = RenderViews::buildHiddenInput('item_type_id', $itemFields['item_type_id']).RenderViews::buildHiddenInput('item_id', $itemFields['item_id']) . $peopleHidden;
+                $recordTitle = trim((string) ($itemFields['item_title'] ?? ''));
+                $formTitle = $inApplication
+                    ? ($recordTitle !== '' ? $recordTitle : $itemTypeName)
+                    : RenderViews::getLanguageConstant('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName;
+                $html .= RenderViews::buildForm($formTitle,MAN_BASE_URL . '&option=update_item',$itemField,$buttons);
+
+                if ($inApplication) {
+                    $selectedGroups = (is_array($values) && isset($values['groups_posted']))
+                        ? GroupMembership::idsFromPost($values)
+                        : $itemGroupIds;
+                    $html .= self::groupCard(
+                        (string) $itemID,
+                        (string) ($itemFields['item_type_id'] ?? ''),
+                        $selectedGroups,
+                        $itemRole < 4
+                    );
+                    if (SET_LOG_ENTRY === 'yes') {
+                        $html .= self::logCard((string) $itemID, $itemRole < 4);
+                    }
+                    if (SET_ATTACHMENTS === 'yes') {
+                        $html .= self::attachmentCard((string) $itemID, $itemRole < 4);
+                    }
+                }
 
                 //Show transform option
-                if ($_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
+                if (!$inApplication && $_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
                     // Administrative functions
                     $columnArray = array('item_type_id', 'item_type_name');
                     $result = Database::select('item_types', $columnArray);
@@ -1343,6 +1421,7 @@ final class ItemScreen
             $array['core_log_updated'] = time();
             $groupIds = GroupMembership::idsFromPost($_POST);
             unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id'], $_POST['_csrf']);
+            unset($_POST['groups_posted']);
             foreach (array_keys($_POST) as $postKey) {
                 if (str_starts_with((string) $postKey, 'group_')) {
                     unset($_POST[$postKey]);
@@ -1465,6 +1544,28 @@ final class ItemScreen
             // Remove unwanted posted information
             unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id'], $_POST['_csrf']);
             MenuOptions::collapseRequest($_POST);
+            if (isset($_POST['groups_posted'])) {
+                unset($_POST['groups_posted']);
+                $_POST['group_security'] = \Adlexone\Data\GroupMembership::toDelimited(
+                    \Adlexone\Data\GroupMembership::idsFromPost($_POST)
+                );
+                foreach (array_keys($_POST) as $postKey) {
+                    if (preg_match('/^group_\d+$/', (string) $postKey) === 1) {
+                        unset($_POST[$postKey]);
+                    }
+                }
+            }
+            if (isset($_POST['groups_only'])) {
+                unset($_POST['groups_only']);
+                Actions::executeAction($itemID, 'update_item', false);
+                if (isset($_POST['group_security'])) {
+                    self::syncItemGroupsFromSecurity((int) $itemID, (string) $_POST['group_security']);
+                }
+                if (!self::returnToItem($itemID)) {
+                    RenderViews::buildResponse(TXT_320, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID, TXT_353, 'URL'));
+                }
+                return;
+            }
             // Handle the log update
             if (isset($_POST['log_entry']) and $_POST['log_entry'] != '') {
                 self::addLogEntry($itemID, false, false);
@@ -1553,9 +1654,16 @@ final class ItemScreen
         $columnArray['item_identifier'] = 0;
         //0 Reserved for item log update
         $columnArray['log_item_sequence'] = $SequenceID;
-        $columnArray['log_text'] = $_POST['log_entry'];
+        $logText = trim((string) ($_POST['log_entry'] ?? ''));
+        if ($logText === '') {
+            if ($showInformation == true && !self::returnToItem($itemID)) {
+                self::showLogEntry($itemID);
+            }
+            return;
+        }
+        $columnArray['log_text'] = $logText;
         $columnArray['security_id'] = $_SESSION['access_user_id'];
-        $columnArray['role_id'] = $_POST['role_id'];
+        $columnArray['role_id'] = $_POST['role_id'] ?? 5;
         // Insert into log table
         Database::insert('core_log', $columnArray);
         // Update entry in item table
@@ -1567,11 +1675,26 @@ final class ItemScreen
             Actions::executeAction($itemID, 'update_item_log_entry', false);
         }
         if ($showInformation == true) {
+            if (self::returnToItem($itemID)) {
+                return;
+            }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
             RenderViews::buildResponse(TXT_248, RenderViews::buildURL(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
             return;
         }
+    }
+
+    /**
+     * Application records stay on the item. Returns true after sending the browser there.
+     */
+    private static function returnToItem($itemID): bool
+    {
+        if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+            return false;
+        }
+        header('Location: ' . MAN_BASE_URL . '&item=' . rawurlencode((string) $itemID));
+        exit;
     }
 
     /**
@@ -1581,22 +1704,32 @@ final class ItemScreen
      * @return Return the log in html format
      */
     // Refactored snippet: render logs into a vertical card (escape user content, keep line breaks & double-spaces)
-    public static function showItemLog($itemID)
+    public static function showItemLog($itemID, string $title = '', string $empty = '')
+    {
+        $blocks = [
+            ['title' => $title !== '' ? $title : TXT_146, 'html' => self::logEntriesHtml($itemID, $empty, true)]
+        ];
+
+        return RenderViews::buildVerticalCards($blocks);
+    }
+
+    private static function logEntriesHtml($itemID, string $empty, bool $withRole): string
     {
         $itemsHtml = '';
-        $columnArray = ['*'];
-        $condition = "WHERE item_id = :item_id ORDER BY log_item_sequence DESC";
-        $result = Database::select('core_log', $columnArray, $condition, ['item_id' => $itemID]);
+        $result = Database::select('core_log', ['*'], 'WHERE item_id = :item_id ORDER BY log_item_sequence DESC', ['item_id' => $itemID]);
 
         foreach ($result as $row) {
-            if ($_SESSION['access_role_id'] <= $row['role_id']) {
-                $userName = '';
-                if ((string)$row['security_id'] !== '') {
-                    $userResult = Database::select('users', ['user_name'], 'WHERE user_id = ' . (int)$row['security_id']);
-                    $userRow = $userResult[0] ?? null;
-                    $userName = is_array($userRow) ? (string)($userRow['user_name'] ?? '') : '';
-                }
-                $role = match ((int)$row['role_id']) {
+            if ($_SESSION['access_role_id'] > $row['role_id']) {
+                continue;
+            }
+            $userName = '';
+            if ((string) $row['security_id'] !== '') {
+                $userRow = Database::first('users', ['user_name'], 'WHERE user_id = ' . (int) $row['security_id']);
+                $userName = is_array($userRow) ? (string) ($userRow['user_name'] ?? '') : '';
+            }
+            $role = '';
+            if ($withRole) {
+                $role = match ((int) $row['role_id']) {
                     0 => TXT_190,
                     1 => TXT_191,
                     2 => TXT_192,
@@ -1605,31 +1738,77 @@ final class ItemScreen
                     5 => TXT_303,
                     default => ''
                 };
-
-                $heading = '<div class="log-heading"><strong>'
-                    . htmlspecialchars(date(SET_DATE_FORMAT, (int)$row['create_date']), ENT_QUOTES, 'UTF-8')
-                    . ' ' . htmlspecialchars((string)TXT_260, ENT_QUOTES, 'UTF-8') . ' '
-                    . htmlspecialchars((string)$userName, ENT_QUOTES, 'UTF-8')
-                    . ($role !== '' ? ' (' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . ')' : '')
-                    . '</strong></div>';
-
-                // Sanitize and format log text
-                $text = htmlspecialchars((string)$row['log_text'], ENT_QUOTES, 'UTF-8');
-                $text = nl2br($text);
-                $text = str_replace('  ', '&nbsp;&nbsp;', $text);
-
-                $itemsHtml .= '<div class="log-item">' . $heading . '<div class="log-text">' . $text . '</div></div>';
             }
+
+            $heading = '<div class="log-heading"><strong>'
+                . htmlspecialchars(date(SET_DATE_FORMAT, (int) $row['create_date']), ENT_QUOTES, 'UTF-8')
+                . ($userName !== '' ? ' ' . htmlspecialchars((string) TXT_260, ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') : '')
+                . ($role !== '' ? ' (' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . ')' : '')
+                . '</strong></div>';
+            $text = htmlspecialchars((string) $row['log_text'], ENT_QUOTES, 'UTF-8');
+            $text = nl2br($text);
+            $text = str_replace('  ', '&nbsp;&nbsp;', $text);
+            $itemsHtml .= '<div class="log-item">' . $heading . '<div class="log-text">' . $text . '</div></div>';
         }
 
         if ($itemsHtml === '') {
-            $itemsHtml = '<p class="record-list__empty">' . htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8') . '</p>';
+            $emptyText = $empty !== '' ? $empty : (string) TXT_115;
+            $itemsHtml = '<p class="record-list__empty">' . htmlspecialchars($emptyText, ENT_QUOTES, 'UTF-8') . '</p>';
         }
-        $blocks = [
-            ['title' => TXT_146, 'html' => $itemsHtml]
-        ];
 
-        return RenderViews::buildVerticalCards($blocks);
+        return $itemsHtml;
+    }
+
+    /**
+     * @param list<int> $selectedIds
+     */
+    private static function groupCard(string $itemID, string $itemTypeId, array $selectedIds, bool $canEdit): string
+    {
+        if (!$canEdit) {
+            $names = self::groupNames($selectedIds);
+            $html = $names === ''
+                ? '<p class="record-list__empty">Not shared.</p>'
+                : '<div class="readonly-value">' . htmlspecialchars($names, ENT_QUOTES, 'UTF-8') . '</div>';
+
+            return RenderViews::buildVerticalCards([['title' => 'Access', 'html' => $html, 'class' => 'card--sheet', 'disclosure' => true]]);
+        }
+
+        return RenderViews::buildForm(
+            'Access',
+            MAN_BASE_URL . '&option=update_item',
+            [
+                '' => self::itemGroupPicker($selectedIds)
+                    . RenderViews::buildHiddenInput('item_id', $itemID)
+                    . RenderViews::buildHiddenInput('item_type_id', $itemTypeId)
+                    . RenderViews::buildHiddenInput('groups_only', '1'),
+            ],
+            [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)],
+            ['disclosure' => true]
+        );
+    }
+
+    private static function logCard(string $itemID, bool $canEdit): string
+    {
+        $entries = self::logEntriesHtml($itemID, 'No notes yet.', false);
+        if (!$canEdit) {
+            return RenderViews::buildVerticalCards([['title' => 'Notes', 'html' => $entries, 'class' => 'card--sheet', 'disclosure' => true]]);
+        }
+
+        $note = preg_replace('/<textarea\b/', '<textarea aria-label="Note"', RenderViews::buildTextArea('log_entry', '', '4'), 1);
+
+        return RenderViews::buildForm(
+            'Notes',
+            MAN_BASE_URL . '&option=add_log_entry',
+            [
+                '' => '<div class="form-grid">' . $entries
+                    . $note
+                    . RenderViews::buildHiddenInput('item_id', $itemID)
+                    . RenderViews::buildHiddenInput('role_id', '5')
+                    . '</div>',
+            ],
+            [RenderViews::buildFormButton('submit', 'submit_button', 'Add')],
+            ['disclosure' => true]
+        );
     }
 
     public static function showCustomFields(): string
@@ -1877,15 +2056,18 @@ final class ItemScreen
         }
 
         if ($showAttachments) {
+            if (self::returnToItem($itemID)) {
+                return;
+            }
             self::showAttachments($itemID);
         }
     }
 
-    public static function showAttachments($itemID)
+    private static function attachmentListHtml(string $itemID, string $empty): string
     {
         $canDelete = $_SESSION['access_role_id'] <= 2;
         $sql = "SELECT * FROM item_attachments WHERE item_id = '$itemID'";
-            $result = Database::rows($sql);
+        $result = Database::rows($sql);
         $rows = [];
         foreach ($result as $row) {
             $actions = [];
@@ -1908,16 +2090,49 @@ final class ItemScreen
                 'actions' => $actions,
             ];
         }
-        $list = RenderViews::buildRecordList([
+
+        return RenderViews::buildRecordList([
             'column' => TXT_394,
             'columns' => [
                 ['key' => 'type', 'label' => TXT_395],
                 ['key' => 'size', 'label' => TXT_396],
                 ['key' => 'opened', 'label' => TXT_397],
             ],
-            'empty' => TXT_399,
+            'empty' => $empty,
             'groups' => [['rows' => $rows]],
         ]);
+    }
+
+    private static function attachmentCard(string $itemID, bool $canEdit): string
+    {
+        $list = self::attachmentListHtml($itemID, 'No files yet.');
+        if (!$canEdit) {
+            return RenderViews::buildVerticalCards([
+                ['title' => 'Attachments', 'html' => $list, 'class' => 'card--sheet', 'disclosure' => true],
+            ]);
+        }
+
+        $file = preg_replace(
+            '/<input(?=[^>]*\bname="attachment")/',
+            '<input aria-label="File"',
+            RenderViews::buildFileInput('attachment', (string) (SET_MAX_ATTACHMENT * 1000000)),
+            1
+        );
+
+        return RenderViews::buildForm(
+            'Attachments',
+            MAN_BASE_URL . '&option=add_attachment&item_id=' . rawurlencode($itemID),
+            [
+                '' => '<div class="form-grid">' . $list . $file . '</div>',
+            ],
+            [RenderViews::buildFormButton('submit', 'submit_button', 'Add')],
+            ['enctype' => 'multipart/form-data', 'disclosure' => true]
+        );
+    }
+
+    public static function showAttachments($itemID)
+    {
+        $list = self::attachmentListHtml((string) $itemID, (string) TXT_399);
 
         $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
@@ -1971,6 +2186,9 @@ final class ItemScreen
         // Delete entry from attachment table
         $condition = "WHERE id='$id'";
         Database::delete('item_attachments', $condition);
+        if (self::returnToItem($itemID)) {
+            return;
+        }
         self::showAttachments($itemID);
     }
 

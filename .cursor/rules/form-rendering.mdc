@@ -8,6 +8,10 @@ alwaysApply: false
 
 Use `RenderViews::buildForm()` for new forms and when touching an existing form. Do not assemble forms with `buildStartForm()`, `buildFormFieldsGrid()`, or `buildEndFormWithButtons()` unless you are only patching a file that has not been migrated yet.
 
+`RenderViews` is a facade. Add form markup in `src/Html/Form.php`, cards and lists in `src/Html/Blocks.php`, and page rendering in `src/Http/View.php`. Do not add new behavior to `RenderViews`. List behavior belongs in `layouts/js/app.js` behind a data attribute. Class names stay aligned with `layouts/css/base.css`.
+
+A new plain field type is `FieldControl::register($type, $render)`. Menus stay in the item screen. An application wording prefix is `Wording::register($controllerPrefix, $constantPrefix)`.
+
 Do not set the `HEADING` constant. Pass the card title as the first argument to `buildForm()`. Do not use `buildFormSectionHeading()`.
 
 ## Pattern

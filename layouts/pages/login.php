@@ -1,6 +1,5 @@
 <?php
 use Adlexone\Theme\Theme;
-$panelArt = Theme::illustrationHref('login-panel');
 $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
     ? (string) SET_HOME_LEAD
     : 'The work, arranged the way your team actually does it.';
@@ -20,14 +19,27 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
 <main class="main" id="content">
     <div class="login-shell">
         <aside class="login-atmosphere" aria-hidden="true">
-            <?php if ($panelArt !== ''): ?>
-                <img class="login-atmosphere__art" src="<?php echo htmlspecialchars($panelArt, ENT_QUOTES, 'UTF-8'); ?>" alt="">
-            <?php endif; ?>
             <div class="login-atmosphere__copy">
                 <div class="login-atmosphere__brand">
                     <?php include Theme::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . 'brand_lockup.php'; ?>
                 </div>
                 <p class="login-atmosphere__lead"><?php echo htmlspecialchars($homeLead, ENT_QUOTES, 'UTF-8'); ?></p>
+            </div>
+            <div class="login-board">
+                <div class="login-board__piece login-board__piece--ink">
+                    <span class="login-board__label">Applications</span>
+                    <span class="login-board__rule"></span>
+                </div>
+                <div class="login-board__piece login-board__piece--bone">
+                    <span class="login-board__label">Work</span>
+                    <span class="login-board__rule"></span>
+                    <span class="login-board__rule login-board__rule--short"></span>
+                </div>
+                <div class="login-board__piece login-board__piece--stone">
+                    <span class="login-board__label">Information</span>
+                    <span class="login-board__rule"></span>
+                    <span class="login-board__rule login-board__rule--short"></span>
+                </div>
             </div>
         </aside>
 
@@ -99,6 +111,16 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                     </section>
                 <?php endif; ?>
             </div>
+            <form class="login-theme" method="get" action="?controller=login">
+                <label class="login-theme__label" for="preview_theme">Theme</label>
+                <select class="select" id="preview_theme" name="theme" onchange="this.form.submit()">
+                    <?php foreach (Theme::installed() as $slug => $label): ?>
+                        <option value="<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $slug === (defined('SET_THEME') ? (string) SET_THEME : '') ? ' selected' : ''; ?>>
+                            <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
         </div>
     </div>
 </main>

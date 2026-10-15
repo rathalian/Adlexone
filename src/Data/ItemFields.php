@@ -133,7 +133,8 @@ final class ItemFields
                 unset($data[$key]);
             }
         }
-        unset($data['group_security'], $data['_csrf']);
+        unset($data['group_security'], $data['groups_posted'], $data['_csrf']);
+
         return $data;
     }
 

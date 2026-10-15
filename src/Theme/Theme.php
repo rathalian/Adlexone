@@ -11,7 +11,13 @@ final class Theme
 {
     private const KNOWN_LABELS = [
         'inlay-stone' => 'Inlay Stone',
+        'inlay-ink' => 'Inlay Ink',
         'inlay-blue' => 'Inlay Blue',
+        'inlay-indigo' => 'Inlay Indigo',
+        'inlay-slate' => 'Inlay Slate',
+        'inlay-violet' => 'Inlay Violet',
+        'inlay-rose' => 'Inlay Rose',
+        'inlay-emerald' => 'Inlay Emerald',
     ];
 
     /** Former slug kept so saved user/settings values still resolve. */
@@ -23,6 +29,26 @@ final class Theme
     {
         $theme = trim($theme);
         return self::ALIASES[$theme] ?? $theme;
+    }
+
+    /**
+     * Theme for the sign-in page. A valid ?theme= choice is kept for this session.
+     */
+    public static function forLogin(): string
+    {
+        $installed = self::installed();
+        $asked = self::canonicalize((string) ($_GET['theme'] ?? ''));
+        if ($asked !== '' && isset($installed[$asked])) {
+            $_SESSION['preview_theme'] = $asked;
+        }
+        $stored = self::canonicalize((string) ($_SESSION['preview_theme'] ?? ''));
+        if ($stored !== '' && isset($installed[$stored])) {
+            return $stored;
+        }
+
+        $fallback = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'inlay-stone';
+
+        return self::canonicalize($fallback);
     }
 
     public static function name(): string

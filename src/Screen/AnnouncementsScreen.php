@@ -144,7 +144,7 @@ final class AnnouncementsScreen
                 $actions = '<div class="notice__actions">'
                     . ($lead ? RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary') : '')
                     . RenderViews::buildURL(MAN_BASE_URL . '&option=edit_announcement&id=' . $row['id'], 'Edit', '', 'btn btn--sm btn--quiet')
-                    . RenderViews::buildURL(MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'], 'Delete', '', 'btn btn--sm btn--danger', 'onClick="return confirm(\'Delete this announcement?\')"')
+                    . RenderViews::buildURL(MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'], 'Delete', '', 'btn btn--sm btn--danger', '', '_parent', 'Delete this announcement?')
                     . '</div>';
             }
             $picture = $lead && $art !== ''

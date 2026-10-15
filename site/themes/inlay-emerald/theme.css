@@ -1,0 +1,32 @@
+/* Inlay Emerald — quiet paper, a deep emerald for the work. */
+:root{
+    --ink:#052e24;
+    --inlay:#047857;
+    --stone:#d7efe6;
+    --brand:var(--inlay);
+    --brand2:#065f46;
+    --text:#052e24;
+    --panel:#ffffff;
+    --border:#d3e4dc;
+    --hover:rgba(4, 120, 87, 0.08);
+    --ring:rgba(4, 120, 87, 0.35);
+    --title:#14382c;
+    --label:#14382c;
+    --body:#052e24;
+    --input:#052e24;
+    --placeholder:#5d7a6e;
+    --title-strip:#eef6f2;
+    --title-strip-border:#d3e4dc;
+    --title-size:11.5px;
+    --title-weight:700;
+    --title-tracking:.045em;
+    --form-surface:#ffffff;
+    --form-border:#c5dbd2;
+    --form-hover-shadow:0 0 0 3px rgba(4, 120, 87, 0.20);
+    --page-bg:#f3f7f5;
+    --brandbar-border:#e0ebe6;
+    --brandmaker:#4d6b60;
+    --btn-primary-hover:#065f46;
+    --danger:#b91c1c;
+    --danger-ink:#991b1b;
+}

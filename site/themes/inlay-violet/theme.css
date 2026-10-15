@@ -1,0 +1,32 @@
+/* Inlay Violet — pale paper, a clear violet for the work. */
+:root{
+    --ink:#2a1248;
+    --inlay:#6d28d9;
+    --stone:#eadcff;
+    --brand:var(--inlay);
+    --brand2:#5b21b6;
+    --text:#2a1248;
+    --panel:#ffffff;
+    --border:#e0d4f0;
+    --hover:rgba(109, 40, 217, 0.08);
+    --ring:rgba(109, 40, 217, 0.38);
+    --title:#3b1d63;
+    --label:#3b1d63;
+    --body:#2a1248;
+    --input:#2a1248;
+    --placeholder:#7a6594;
+    --title-strip:#f3eef9;
+    --title-strip-border:#e0d4f0;
+    --title-size:11.5px;
+    --title-weight:700;
+    --title-tracking:.045em;
+    --form-surface:#ffffff;
+    --form-border:#d4c4e8;
+    --form-hover-shadow:0 0 0 3px rgba(109, 40, 217, 0.22);
+    --page-bg:#f6f3fb;
+    --brandbar-border:#e8e0f2;
+    --brandmaker:#6b5484;
+    --btn-primary-hover:#5b21b6;
+    --danger:#b91c1c;
+    --danger-ink:#991b1b;
+}
