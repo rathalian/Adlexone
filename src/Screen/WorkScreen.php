@@ -65,45 +65,26 @@ final class WorkScreen
         $base = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './';
         $stand = self::workStand($ids, $itemTypeId, $base);
         $shown = self::workFocusIds($ids, $stand['field_id'], $stand['values']);
-        $rows = [];
-        if ($shown !== []) {
-            $result = Database::select(
-                'items',
-                ['item_id', 'item_title', 'create_date', 'item_type_id'],
-                'WHERE item_id IN (' . implode(',', $shown) . ') ORDER BY item_id DESC'
-            );
-            foreach ($result as $row) {
-                $itemId = (int) $row['item_id'];
-                $rows[] = RenderViews::itemRecord(
-                    $row,
-                    $base . '&item=' . $itemId,
-                    RenderViews::itemActions($itemId, $base)
-                );
-            }
-        }
-
+        $status = self::workStatusField($itemTypeId);
+        $canBoard = $status !== null && $status['values'] !== [];
+        $view = $canBoard && self::workView() === 'board' ? 'board' : 'list';
         $createHref = $base . '&option=show_item_types';
         $new = '<a class="btn btn--primary" href="' . htmlspecialchars($createHref, ENT_QUOTES, 'UTF-8') . '">New</a>';
-        $board = self::workBoard($ids, $itemTypeId, $base, $stand);
+        $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
+        $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . $new . '</div>';
         if ($ids === []) {
             $body = RenderViews::buildEmptyState([
                 'illustration' => 'empty-work',
                 'title' => 'Nothing here yet',
-                'copy' => 'Add the first one. It will sit on the board.',
+                'copy' => 'Add the first one.',
                 'action' => $new,
             ]);
-        } elseif ($board !== '') {
-            $body = '<div class="work-toolbar">' . $new . '</div>' . $stand['html'] . $board;
+        } elseif ($shown === []) {
+            $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . htmlspecialchars(self::workHref($base, $view), ENT_QUOTES, 'UTF-8') . '">Show all</a></p>';
+        } elseif ($view === 'board') {
+            $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
         } else {
-            $body = '<div class="work-toolbar">' . $new . '</div>' . RenderViews::buildRecordList([
-                'column' => 'Work',
-                'columns' => [
-                    ['key' => 'opened', 'label' => 'Opened'],
-                ],
-                'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
-                'empty' => 'Nothing here yet',
-                'groups' => [['rows' => $rows]],
-            ]);
+            $body = $toolbar . self::workList($shown, $itemTypeId, $base, $stand);
         }
         define('BODY_CONTENT', RenderViews::buildVerticalCards([
             [
@@ -115,32 +96,15 @@ final class WorkScreen
     }
 
     /**
-     * Counts for the records this person can open, grouped by the status menu when the record type has one.
+     * Whose work is on screen, plus the menu value stored on each record.
      *
      * @param list<int> $ids
      * @return array{html: string, field_id: int, values: array<int, string>}
      */
     public static function workStand(array $ids, ?int $itemTypeId, string $base): array
     {
-        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-        $mine = 0;
-        if ($ids !== [] && $userId > 0) {
-            $owned = Database::select(
-                'items',
-                ['item_id'],
-                'user_security = ? AND item_id IN (' . implode(',', $ids) . ')',
-                [$userId]
-            );
-            $mine = count($owned);
-        }
-
         $status = self::workStatusField($itemTypeId);
         $fieldId = (int) ($status['id'] ?? 0);
-        $defined = $status['values'] ?? [];
-        $counts = [];
-        foreach ($defined as $value) {
-            $counts[$value] = 0;
-        }
         $valueByItem = [];
         if ($fieldId > 0 && $ids !== []) {
             $stored = Database::rows(
@@ -150,44 +114,20 @@ final class WorkScreen
             foreach ($stored as $row) {
                 $valueByItem[(int) $row['item_id']] = (string) ($row['value'] ?? '');
             }
-            foreach ($ids as $id) {
-                $value = $valueByItem[$id] ?? '';
-                if ($value === '') {
-                    continue;
-                }
-                $counts[$value] = ($counts[$value] ?? 0) + 1;
-            }
         }
 
         $focus = (string) ($_GET['focus'] ?? '');
         if (!in_array($focus, ['', 'mine', 'status', 'empty'], true)) {
             $focus = '';
         }
-        $selected = (string) ($_GET['status'] ?? '');
 
-        $buckets = [
-            self::workStandBucket($base, '', '', 'All', count($ids), $focus === '', 'records'),
-            self::workStandBucket($base, 'mine', '', 'Mine', $mine, $focus === 'mine', 'mine'),
-        ];
-        if ($fieldId > 0) {
-            $empty = 0;
-            foreach ($ids as $id) {
-                if (($valueByItem[$id] ?? '') === '') {
-                    $empty++;
-                }
-            }
-            foreach ($counts as $value => $count) {
-                $buckets[] = self::workStandBucket($base, 'status', (string) $value, (string) $value, $count, $focus === 'status' && $selected === (string) $value, 'status:' . $value);
-            }
-            if ($empty > 0) {
-                $buckets[] = self::workStandBucket($base, 'empty', '', 'Not set', $empty, $focus === 'empty', 'empty');
-            }
-        }
-
-        $label = $fieldId > 0 ? 'Where the work stands, by ' . (string) $status['name'] : 'Where the work stands';
+        $label = 'Whose work';
 
         return [
-            'html' => '<nav class="work-stand" aria-label="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '">' . implode('', $buckets) . '</nav>',
+            'html' => '<nav class="work-scope" aria-label="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '">'
+                . self::workScopeLink($base, '', 'All', $focus === '')
+                . self::workScopeLink($base, 'mine', 'Mine', $focus === 'mine')
+                . '</nav>',
             'field_id' => $fieldId,
             'values' => $valueByItem,
         ];
@@ -305,21 +245,104 @@ final class WorkScreen
         ];
     }
 
-    public static function workStandBucket(string $base, string $focus, string $status, string $label, int $count, bool $selected, string $key): string
+    public static function workScopeLink(string $base, string $focus, string $label, bool $selected): string
     {
-        $href = $base;
-        if ($focus !== '') {
+        $href = self::workHref($base, self::workView(), $focus);
+        $class = 'work-scope__link' . ($selected ? ' is-selected' : '');
+        $current = $selected ? ' aria-current="page"' : '';
+
+        return '<a class="' . $class . '" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
+            . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+    }
+
+    private static function workView(): string
+    {
+        return (string) ($_GET['view'] ?? '') === 'board' ? 'board' : 'list';
+    }
+
+    private static function currentFocus(): string
+    {
+        $focus = (string) ($_GET['focus'] ?? '');
+
+        return in_array($focus, ['mine', 'status', 'empty'], true) ? $focus : '';
+    }
+
+    private static function workHref(string $base, string $view, string $focus = ''): string
+    {
+        $href = $base . '&view=' . rawurlencode($view);
+        if ($focus === 'mine' || $focus === 'status' || $focus === 'empty') {
             $href .= '&focus=' . rawurlencode($focus);
             if ($focus === 'status') {
-                $href .= '&status=' . rawurlencode($status);
+                $href .= '&status=' . rawurlencode((string) ($_GET['status'] ?? ''));
             }
         }
-        $class = 'work-stand__bucket' . ($selected ? ' is-selected' : '');
 
-        return '<a class="' . $class . '" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" data-stand="' . htmlspecialchars($key, ENT_QUOTES, 'UTF-8') . '">'
-            . '<span class="work-stand__num">' . $count . '</span>'
-            . '<span class="work-stand__label">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
-            . '</a>';
+        return $href;
+    }
+
+    private static function workViewSwitch(string $base, string $view): string
+    {
+        $focus = self::currentFocus();
+        $links = '';
+        foreach (['list' => 'List', 'board' => 'Board'] as $key => $label) {
+            $selected = $view === $key;
+            $links .= '<a class="work-views__link' . ($selected ? ' is-selected' : '') . '" href="'
+                . htmlspecialchars(self::workHref($base, $key, $focus), ENT_QUOTES, 'UTF-8') . '"'
+                . ($selected ? ' aria-current="page"' : '') . '>'
+                . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+        }
+
+        return '<div class="work-views" role="group" aria-label="View">' . $links . '</div>';
+    }
+
+    /**
+     * @param list<int> $ids
+     * @param array{html: string, field_id: int, values: array<int, string>} $stand
+     */
+    private static function workList(array $ids, ?int $itemTypeId, string $base, array $stand): string
+    {
+        $facts = self::workCardFacts($ids);
+        $status = self::workStatusField($itemTypeId);
+        $rows = [];
+        if ($ids !== []) {
+            $result = Database::select(
+                'items',
+                ['item_id', 'item_title', 'create_date', 'item_type_id'],
+                'WHERE item_id IN (' . implode(',', array_map('intval', $ids)) . ') ORDER BY item_id DESC'
+            );
+            foreach ($result as $row) {
+                $itemId = (int) $row['item_id'];
+                $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
+                $record = RenderViews::itemRecord($row, $base . '&item=' . $itemId, RenderViews::itemActions($itemId, $base));
+                $bits = array_values(array_filter([
+                    trim((string) ($fact['detail'] ?? '')),
+                    trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
+                ]));
+                $record['meta'] = implode(' · ', $bits);
+                $record['cells']['stand'] = (string) ($stand['values'][$itemId] ?? '');
+                $rows[] = $record;
+            }
+        }
+        $columns = [];
+        if ($status !== null && $status['values'] !== []) {
+            $columns[] = ['key' => 'stand', 'label' => self::workFieldLabel((string) $status['name'])];
+        }
+        $columns[] = ['key' => 'opened', 'label' => 'Opened'];
+
+        return RenderViews::buildRecordList([
+            'column' => 'Work',
+            'columns' => $columns,
+            'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
+            'empty' => 'Nothing here yet',
+            'groups' => [['rows' => $rows]],
+        ]);
+    }
+
+    private static function workFieldLabel(string $name): string
+    {
+        $plain = self::plainFieldName($name);
+
+        return $plain === '' ? $name : ucfirst($plain);
     }
 
     /**
@@ -331,7 +354,7 @@ final class WorkScreen
     public static function workBoard(array $ids, ?int $itemTypeId, string $base, array $stand): string
     {
         $status = self::workStatusField($itemTypeId);
-        if ($status === null || $status['values'] === []) {
+        if ($status === null || $status['values'] === [] || $ids === []) {
             return '';
         }
         $fieldId = (int) $status['id'];
@@ -344,15 +367,8 @@ final class WorkScreen
         $facts = self::workCardFacts($ids);
         foreach ($ids as $id) {
             $value = $values[$id] ?? '';
-            $toneIndex = array_search($value, $status['values'], true);
-            $card = self::workCard(
-                $id,
-                $facts[$id] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''],
-                $base,
-                $value,
-                $status['values'],
-                $toneIndex === false ? -1 : (int) $toneIndex
-            );
+            $fact = $facts[$id] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
+            $card = self::workCard($id, $fact, $base, $value, $status['values']);
             if (isset($columns[$value])) {
                 $columns[$value][] = $card;
             } else {
@@ -361,10 +377,8 @@ final class WorkScreen
         }
 
         $html = '';
-        $tone = 0;
         foreach ($columns as $value => $cards) {
-            $html .= self::workColumn((string) $value, $cards, true, $tone);
-            $tone++;
+            $html .= self::workColumn((string) $value, $cards, true);
         }
         if ($unset !== []) {
             $html .= self::workColumn('Not set', $unset, false);
@@ -382,21 +396,13 @@ final class WorkScreen
     /**
      * @param list<string> $cards
      */
-    public static function workColumn(string $label, array $cards, bool $drop, int $tone = -1): string
+    private static function workColumn(string $label, array $cards, bool $drop): string
     {
-        $dropAttr = $drop
-            ? ' data-status="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '"'
-            : '';
-        if ($tone >= 0) {
-            $dropAttr .= ' data-tone="' . $tone . '"';
-        }
-        $countKey = $drop
-            ? ' data-count="' . htmlspecialchars('status:' . $label, ENT_QUOTES, 'UTF-8') . '"'
-            : '';
+        $dropAttr = $drop ? ' data-status="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '"' : '';
 
         return '<div class="work-board__col"' . $dropAttr . '>'
             . '<div class="work-board__head"><span>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
-            . '<span class="work-board__count"' . $countKey . '>' . count($cards) . '</span></div>'
+            . '<span class="work-board__count">' . count($cards) . '</span></div>'
             . '<div class="work-board__cards">' . implode('', $cards) . '</div>'
             . '</div>';
     }
@@ -405,7 +411,7 @@ final class WorkScreen
      * @param array{title: string, owner: string, log: string, detail?: string, next?: string} $fact
      * @param list<string> $statuses
      */
-    public static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses, int $tone = -1): string
+    private static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses): string
     {
         $title = $fact['title'] !== '' ? $fact['title'] : ('Record ' . $itemId);
         $href = htmlspecialchars($base . '&item=' . $itemId, ENT_QUOTES, 'UTF-8');
@@ -413,46 +419,35 @@ final class WorkScreen
         $detail = trim((string) ($fact['detail'] ?? ''));
         $next = trim((string) ($fact['next'] ?? ''));
         if ($next === '') {
-            $next = $fact['log'];
+            $next = trim((string) $fact['log']);
         }
-        $ownerName = $fact['owner'];
-        $personHidden = $ownerName === '' ? ' hidden' : '';
+        $owner = trim((string) $fact['owner']);
         $detailHtml = $detail !== ''
             ? '<p class="work-card__detail">' . htmlspecialchars($detail, ENT_QUOTES, 'UTF-8') . '</p>'
             : '';
-        $person = '<p class="work-card__person"' . $personHidden . '>'
-            . '<span class="work-card__avatar" aria-hidden="true">' . htmlspecialchars(self::initials($ownerName), ENT_QUOTES, 'UTF-8') . '</span>'
-            . '<span class="work-card__owner">' . htmlspecialchars($ownerName, ENT_QUOTES, 'UTF-8') . '</span></p>';
-        $log = $next !== ''
+        $nextHtml = $next !== ''
             ? '<p class="work-card__log">' . htmlspecialchars($next, ENT_QUOTES, 'UTF-8') . '</p>'
             : '<p class="work-card__log" hidden></p>';
+        $ownerHtml = $owner !== ''
+            ? '<p class="work-card__owner">' . htmlspecialchars($owner, ENT_QUOTES, 'UTF-8') . '</p>'
+            : '<p class="work-card__owner" hidden></p>';
         $options = '<option value="">Move to</option>';
         foreach ($statuses as $value) {
-            $hidden = $value === $status ? ' hidden' : '';
-            $options .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"' . $hidden . '>' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</option>';
+            if ($value === $status) {
+                continue;
+            }
+            $options .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</option>';
         }
-        $toneAttr = $tone >= 0 ? ' data-tone="' . $tone . '"' : '';
 
-        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '"' . $toneAttr . '>'
+        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '">'
             . '<a class="work-card__title" draggable="false" href="' . $href . '">' . $titleEsc . '</a>'
             . $detailHtml
-            . $person
-            . $log
+            . $nextHtml
+            . $ownerHtml
             . '<label class="work-card__move">Move <select aria-label="Move ' . $titleEsc . '">' . $options . '</select></label>'
             . '</article>';
     }
 
-    private static function initials(string $name): string
-    {
-        $initials = '';
-        foreach (array_slice(preg_split('/\s+/', trim($name)) ?: [], 0, 2) as $part) {
-            if ($part !== '') {
-                $initials .= strtoupper(substr($part, 0, 1));
-            }
-        }
-
-        return $initials;
-    }
 
     /**
      * @param list<int> $ids
@@ -513,6 +508,23 @@ final class WorkScreen
     }
 
     /**
+     * Field names are unique in the database, so a later app may be stored as
+     * "Next step (Matters) 2". The work surface uses the name the builder asked for.
+     */
+    private static function plainFieldName(string $name): string
+    {
+        $name = strtolower(trim($name));
+        $previous = null;
+        while ($name !== $previous) {
+            $previous = $name;
+            $name = trim((string) preg_replace('/\s+\d+$/', '', $name));
+            $name = trim((string) preg_replace('/\s*\([^)]*\)$/', '', $name));
+        }
+
+        return $name;
+    }
+
+    /**
      * Client, place, or the first short text field, plus a Next step when the record has one.
      *
      * @param array<int, array<string, mixed>> $facts
@@ -547,8 +559,7 @@ final class WorkScreen
                 if ($field === null || FieldTypes::normalise((string) ($field['field_type'] ?? '')) !== FieldTypes::TEXT_BOX) {
                     continue;
                 }
-                $name = strtolower(trim((string) $field['custom_field_name']));
-                $name = trim((string) preg_replace('/\s*\([^)]*\)$/', '', $name));
+                $name = self::plainFieldName((string) $field['custom_field_name']);
                 $fieldId = (int) $field['custom_field_id'];
                 if ($name === 'next step') {
                     $nextField[$typeId] = $fieldId;
@@ -676,112 +687,110 @@ final class WorkScreen
 
     public static function workBoardScript(): string
     {
-        return '<script>
-    (function () {
-        var board = document.querySelector(".work-board");
-        if (!board) return;
-        var url = board.getAttribute("data-move") || "";
-        var token = board.getAttribute("data-csrf") || "";
+        return <<<'JS'
+<script>
+(function () {
+    var board = document.querySelector(".work-board");
+    if (!board) return;
+    var url = board.getAttribute("data-move") || "";
+    var token = board.getAttribute("data-csrf") || "";
+    var busy = false;
 
-        function setCount(key, count) {
-            document.querySelectorAll("[data-stand=\"" + key.replace(/"/g, "") + "\"] .work-stand__num, [data-count=\"" + key.replace(/"/g, "") + "\"]").forEach(function (el) {
-                el.textContent = String(count);
+    function cssAttr(value) {
+        return String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\"");
+    }
+
+    function columnCount(column) {
+        var count = column.querySelector(".work-board__count");
+        var cards = column.querySelector(".work-board__cards");
+        if (count && cards) count.textContent = String(cards.children.length);
+    }
+
+    function apply(card, data) {
+        if (!data || !data.ok) return;
+        var column = board.querySelector('.work-board__col[data-status="' + cssAttr(data.status) + '"]');
+        var cards = column ? column.querySelector(".work-board__cards") : null;
+        if (!cards) return;
+        var previous = card.closest(".work-board__col");
+        cards.appendChild(card);
+        card.setAttribute("data-status", data.status);
+        if (previous) columnCount(previous);
+        columnCount(column);
+        var log = card.querySelector(".work-card__log");
+        if (log) {
+            log.textContent = data.log || "";
+            log.hidden = !data.log;
+        }
+        var owner = card.querySelector(".work-card__owner");
+        if (owner) {
+            owner.textContent = data.owner || "";
+            owner.hidden = !data.owner;
+        }
+        var select = card.querySelector("select");
+        if (select) {
+            var current = data.status;
+            select.value = "";
+            Array.prototype.forEach.call(select.options, function (option) {
+                option.hidden = option.value !== "" && option.value === current;
             });
         }
+    }
 
-        function apply(card, data) {
-            if (!data || !data.ok) return;
-            var column = board.querySelector(".work-board__col[data-status=\"" + cssAttr(data.status) + "\"] .work-board__cards");
-            if (column) column.appendChild(card);
-            card.setAttribute("data-status", data.status);
-            var host = column ? column.closest(".work-board__col") : null;
-            if (host && host.hasAttribute("data-tone")) card.setAttribute("data-tone", host.getAttribute("data-tone"));
-            var person = card.querySelector(".work-card__person");
-            var owner = card.querySelector(".work-card__owner");
-            var avatar = card.querySelector(".work-card__avatar");
-            if (person) person.hidden = !data.owner;
-            if (owner) owner.textContent = data.owner || "";
-            if (avatar) {
-                avatar.textContent = String(data.owner || "").trim().split(/\s+/).slice(0, 2).map(function (part) {
-                    return part ? part.charAt(0).toUpperCase() : "";
-                }).join("");
-            }
-            var log = card.querySelector(".work-card__log");
-            if (log) {
-                log.textContent = data.log || "";
-                log.hidden = !data.log;
-            }
-            var select = card.querySelector("select");
-            if (select) {
-                select.value = "";
-                Array.prototype.forEach.call(select.options, function (option) {
-                    option.hidden = option.value !== "" && option.value === data.status;
-                });
-            }
-            setCount("records", data.records);
-            setCount("mine", data.mine);
-            Object.keys(data.counts || {}).forEach(function (status) {
-                setCount("status:" + status, data.counts[status]);
-            });
-        }
-
-        function cssAttr(value) {
-            return String(value).replace(/\\\\/g, "\\\\\\\\").replace(/"/g, "\\\\\\"");
-        }
-
-        function move(card, status) {
-            if (!card || !status || card.getAttribute("data-status") === status) return;
-            var body = new URLSearchParams();
-            body.set("item_id", card.getAttribute("data-item") || "");
-            body.set("status", status);
-            body.set("_csrf", token);
-            fetch(url, {
-                method: "POST",
-                headers: {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
-                body: body.toString()
-            }).then(function (response) { return response.json(); }).then(function (data) {
-                apply(card, data);
-            }).catch(function () {});
-        }
-
-        board.querySelectorAll(".work-card").forEach(function (card) {
-            card.addEventListener("dragstart", function (event) {
-                if (event.target.closest("select")) {
-                    event.preventDefault();
-                    return;
-                }
-                event.dataTransfer.setData("text/plain", card.getAttribute("data-item") || "");
-                event.dataTransfer.effectAllowed = "move";
-                card.classList.add("is-dragging");
-            });
-            card.addEventListener("dragend", function () {
-                card.classList.remove("is-dragging");
-            });
-            var select = card.querySelector("select");
-            if (select) {
-                select.addEventListener("change", function () {
-                    if (select.value) move(card, select.value);
-                });
-            }
+    function move(card, status) {
+        if (busy || !card || !status || card.getAttribute("data-status") === status) return;
+        busy = true;
+        var body = new URLSearchParams();
+        body.set("item_id", card.getAttribute("data-item") || "");
+        body.set("status", status);
+        body.set("_csrf", token);
+        fetch(url, {
+            method: "POST",
+            headers: {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+            body: body.toString()
+        }).then(function (response) { return response.json(); }).then(function (data) {
+            apply(card, data);
+        }).catch(function () {}).finally(function () {
+            busy = false;
         });
+    }
 
-        board.querySelectorAll(".work-board__col[data-status]").forEach(function (column) {
-            column.addEventListener("dragover", function (event) {
-                event.preventDefault();
-                column.classList.add("is-over");
-            });
-            column.addEventListener("dragleave", function () {
-                column.classList.remove("is-over");
-            });
-            column.addEventListener("drop", function (event) {
-                event.preventDefault();
-                column.classList.remove("is-over");
-                var id = event.dataTransfer.getData("text/plain");
-                var card = board.querySelector(".work-card[data-item=\"" + cssAttr(id) + "\"]");
-                move(card, column.getAttribute("data-status") || "");
-            });
+    board.addEventListener("dragstart", function (event) {
+        var card = event.target.closest(".work-card");
+        if (!card || event.target.closest("select")) {
+            event.preventDefault();
+            return;
+        }
+        event.dataTransfer.setData("text/plain", card.getAttribute("data-item") || "");
+        event.dataTransfer.effectAllowed = "move";
+        card.classList.add("is-dragging");
+    });
+    board.addEventListener("dragend", function (event) {
+        var card = event.target.closest(".work-card");
+        if (card) card.classList.remove("is-dragging");
+    });
+    board.addEventListener("change", function (event) {
+        var select = event.target.closest("select");
+        if (!select || !select.value) return;
+        move(select.closest(".work-card"), select.value);
+    });
+    board.querySelectorAll(".work-board__col[data-status]").forEach(function (column) {
+        column.addEventListener("dragover", function (event) {
+            event.preventDefault();
+            column.classList.add("is-over");
         });
-    })();
-    </script>';
+        column.addEventListener("dragleave", function () {
+            column.classList.remove("is-over");
+        });
+        column.addEventListener("drop", function (event) {
+            event.preventDefault();
+            column.classList.remove("is-over");
+            var id = event.dataTransfer.getData("text/plain");
+            var card = board.querySelector('.work-card[data-item="' + cssAttr(id) + '"]');
+            move(card, column.getAttribute("data-status") || "");
+        });
+    });
+})();
+</script>
+JS;
     }
 }

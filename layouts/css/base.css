@@ -1209,50 +1209,55 @@ body:has(.sectionbar) .main > .grid > .card.card--sheet > .card-title{
 
 .work-toolbar{
     display:flex;
-    justify-content:flex-end;
-    margin:0 0 16px;
-}
-.work-stand{
-    display:flex;
+    align-items:center;
     flex-wrap:wrap;
-    gap:8px;
+    gap:12px 16px;
     margin:0 0 16px;
 }
-a.work-stand__bucket{
-    display:block;
-    min-width:5.5rem;
-    padding:10px 12px;
-    border:1px solid var(--border);
+.work-toolbar .btn{ margin-left:auto; }
+.work-views{
+    display:inline-flex;
+    gap:2px;
+    padding:3px;
     border-radius:8px;
-    background:var(--page-bg);
+    background:var(--stone);
+}
+.work-views__link{
+    padding:6px 12px;
+    border-radius:6px;
+    color:var(--body);
+    font-size:13px;
+    font-weight:600;
     text-decoration:none;
-    color:inherit;
 }
-a.work-stand__bucket:hover{ background:var(--hover); }
-a.work-stand__bucket.is-selected{
-    border-color:var(--brand);
-    background:var(--hover);
+.work-views__link:hover{ color:var(--ink); }
+.work-views__link.is-selected{
+    background:var(--panel);
+    color:var(--ink);
 }
-.work-stand__num{
-    display:block;
-    font-size:20px;
-    font-weight:700;
-    letter-spacing:-0.03em;
-    line-height:1.1;
+.work-scope{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
 }
-.work-stand__label{
-    display:block;
-    margin-top:2px;
-    font-size:12px;
+.work-scope__link{
     color:var(--placeholder);
+    font-size:13px;
+    font-weight:600;
+    text-decoration:none;
 }
+.work-scope__link:hover,
+.work-scope__link.is-selected{ color:var(--ink); }
+.work-scope__link.is-selected{ box-shadow:inset 0 -2px 0 var(--brand); }
+.work-empty{ margin:8px 0 0; color:var(--placeholder); }
+.work-empty a{ color:var(--brand2); }
 
 .work-board{
     display:flex;
     gap:12px;
     overflow-x:auto;
     align-items:stretch;
-    margin:0 0 20px;
+    margin:0 0 8px;
     padding-bottom:4px;
 }
 .work-board__col{
@@ -1291,25 +1296,13 @@ a.work-stand__bucket.is-selected{
     min-height:4.5rem;
 }
 .work-card{
-    padding:12px 12px 10px;
+    padding:12px;
     border:1px solid var(--border);
-    border-left-width:3px;
     border-radius:10px;
     background:var(--panel);
     cursor:grab;
-    transition:transform .16s ease, box-shadow .16s ease;
 }
-.work-card[data-tone="0"]{ border-left-color:#94a3b8; }
-.work-card[data-tone="1"]{ border-left-color:#5eead4; }
-.work-card[data-tone="2"]{ border-left-color:var(--brand); }
-.work-card[data-tone="3"]{ border-left-color:#d97706; }
-.work-card[data-tone="4"]{ border-left-color:#0f766e; }
-.work-card[data-tone="5"]{ border-left-color:#64748b; }
-.work-card:hover{
-    transform:translateY(-2px);
-    box-shadow:0 10px 24px rgba(15,23,42,.08);
-}
-.work-card.is-dragging{ opacity:.55; transform:none; }
+.work-card.is-dragging{ opacity:.55; }
 .work-card__title{
     display:block;
     font-weight:700;
@@ -1317,36 +1310,15 @@ a.work-stand__bucket.is-selected{
     text-decoration:none;
     color:inherit;
 }
-.work-card__detail{
+.work-card__detail,
+.work-card__log,
+.work-card__owner{
     margin:6px 0 0;
     font-size:13px;
     line-height:1.35;
     color:var(--body);
 }
-.work-card__person{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin:10px 0 0;
-}
-.work-card__avatar{
-    width:22px; height:22px; border-radius:6px;
-    display:grid; place-items:center; flex:0 0 auto;
-    background:var(--stone); color:var(--brand2);
-    font-size:10px; font-weight:700; letter-spacing:0;
-}
-.work-card__owner,
-.work-card__log{
-    margin:0;
-    font-size:12px;
-    line-height:1.35;
-    color:var(--placeholder);
-}
-.work-card__log{ margin-top:6px; }
-@media (prefers-reduced-motion: reduce){
-    .work-card,.launch-tile,.launch-tile__icon,.topnav .menu__panel{ transition:none; animation:none; }
-    .work-card:hover,.launch-tile:hover{ transform:none; }
-}
+.work-card__owner{ color:var(--placeholder); font-size:12px; }
 .work-card__move{
     display:block;
     margin-top:8px;
@@ -1356,6 +1328,10 @@ a.work-stand__bucket.is-selected{
 .work-card__move select{
     margin-left:4px;
     max-width:100%;
+}
+@media (prefers-reduced-motion: reduce){
+    .launch-tile,.launch-tile__icon,.topnav .menu__panel{ transition:none; animation:none; }
+    .launch-tile:hover{ transform:none; }
 }
 
 .form-grid{

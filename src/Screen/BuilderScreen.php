@@ -94,14 +94,14 @@ final class BuilderScreen
         ];
 
         $screenMeta = [
-            ScreenCatalog::WORK => ['hint' => 'The board', 'icon' => 'ic-search'],
+            ScreenCatalog::WORK => ['hint' => 'List or board', 'icon' => 'ic-search'],
             ScreenCatalog::CREATE => ['hint' => 'Add one', 'icon' => 'ic-itemtype-add'],
             ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-my-ticket-searches'],
             ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announcements'],
             ScreenCatalog::SETTINGS => ['hint' => 'How this app is set up', 'icon' => 'ic-settings'],
         ];
         $levelMeta = [
-            'use' => ['label' => 'Use application', 'hint' => 'Open the board and add work'],
+            'use' => ['label' => 'Use application', 'hint' => 'Open the work and add to it'],
             'announce' => ['label' => 'Announcements', 'hint' => 'Post a notice'],
             'settings' => ['label' => 'Settings', 'hint' => 'Change how the app works'],
         ];
