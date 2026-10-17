@@ -8,8 +8,10 @@ use Adlexone\Application\Rules;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Http\View;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -23,7 +25,7 @@ final class ApplicationSettingsScreen
     {
         $slug = ApplicationAccess::slug();
         if ($slug === '') {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         if (!ApplicationAccess::canSettings()) {
@@ -81,15 +83,15 @@ final class ApplicationSettingsScreen
         }
         $current = ApplicationSettings::defaultItemTypeId($slug);
 
-        $html = RenderViews::buildForm(
+        $html = Form::form(
             'Application settings',
             MAN_BASE_URL . '&option=update_settings',
             [
-                'New work' => RenderViews::buildSelectDropdown('default_item_type_id', $valueArray, $displayArray, $current),
+                'New work' => Form::select('default_item_type_id', $valueArray, $displayArray, $current),
             ],
             [
-                RenderViews::buildFormButton('submit', 'submit_button', 'Save'),
-                RenderViews::buildFormButton('reset', 'reset', 'Reset'),
+                Form::button('submit', 'submit_button', 'Save'),
+                Form::button('reset', 'reset', 'Reset'),
             ]
         );
         $html .= self::rulesHtml($slug);
@@ -184,7 +186,7 @@ final class ApplicationSettingsScreen
             $listGroups[] = ['label' => $label, 'rows' => $listRows];
         }
 
-        $list = RenderViews::buildRecordList([
+        $list = Blocks::recordList([
             'column' => 'Rule',
             'columns' => [
                 ['key' => 'description', 'label' => 'What it does', 'wrap' => true],
@@ -199,7 +201,7 @@ final class ApplicationSettingsScreen
             'groups' => $listGroups,
         ]);
 
-        return RenderViews::buildVerticalCards([[
+        return Blocks::vertical([[
             'title' => 'Rules',
             'html' => $list . '<p class="record-list__meta">Rules run from top to bottom. Put “set the owner” above “email the owner”.</p>',
         ]]);
@@ -223,7 +225,7 @@ final class ApplicationSettingsScreen
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         $applicationId = (int) $app['application_id'];
@@ -231,7 +233,7 @@ final class ApplicationSettingsScreen
         if ($ruleId !== null && $ruleId > 0) {
             $rule = Rules::find($ruleId, $applicationId);
             if ($rule === null) {
-                RenderViews::buildResponse('That rule is not on this application.');
+                View::respond('That rule is not on this application.');
                 return;
             }
         }
@@ -245,7 +247,7 @@ final class ApplicationSettingsScreen
             $typeIds[] = $typeId;
         }
         if ($typeNames === []) {
-            RenderViews::buildResponse('Add a record type before creating a rule.');
+            View::respond('Add a record type before creating a rule.');
             return;
         }
 
@@ -277,16 +279,16 @@ final class ApplicationSettingsScreen
             'Then' => self::ruleStepsHtml($steps, $fields),
         ];
         if ($editing) {
-            $formFields[''] = RenderViews::buildHiddenInput('rule_id', (string) $rule['id']);
+            $formFields[''] = Form::hidden('rule_id', (string) $rule['id']);
         }
 
-        $html = RenderViews::buildForm(
+        $html = Form::form(
             $editing ? 'Edit rule' : 'Add a rule',
             self::rulesFormAction($slug, $editing ? 'update_rule' : 'add_rule'),
             $formFields,
             [
-                RenderViews::buildFormButton('submit', 'submit_button', $editing ? 'Save' : 'Add rule'),
-                RenderViews::buildFormButton('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(self::rulesHomeUrl($slug), ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
+                Form::button('submit', 'submit_button', $editing ? 'Save' : 'Add rule'),
+                Form::button('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(self::rulesHomeUrl($slug), ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
             ]
         );
         $html .= self::ruleEditorScript($catalog);
@@ -602,21 +604,21 @@ final class ApplicationSettingsScreen
                     . '</div></div>';
             }
         }
-        return RenderViews::buildVerticalCards([['title' => 'Recent runs', 'html' => $html]]);
+        return Blocks::vertical([['title' => 'Recent runs', 'html' => $html]]);
     }
 
     public static function tryRule(string $slug, bool $execute): void
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         $applicationId = (int) $app['application_id'];
         $ruleId = (int) ($_GET['rule_id'] ?? $_POST['rule_id'] ?? 0);
         $rule = Rules::find($ruleId, $applicationId);
         if ($rule === null) {
-            RenderViews::buildResponse('That rule is not on this application.');
+            View::respond('That rule is not on this application.');
             return;
         }
         $itemId = (int) ($_POST['item_id'] ?? $_GET['item_id'] ?? 0);
@@ -642,16 +644,16 @@ final class ApplicationSettingsScreen
         }
         $fields = Rules::fieldChoices([(int) $rule['item_type_id']]);
         $html = '<p>' . htmlspecialchars(Rules::summary($rule, $fields), ENT_QUOTES, 'UTF-8') . '</p>';
-        $html .= RenderViews::buildForm(
+        $html .= Form::form(
             'Try this rule',
             self::rulesFormAction($slug, 'try_rule') . '&rule_id=' . $ruleId,
             [
-                'Record' => RenderViews::buildSelectDropdown('item_id', $ids, $labels, (string) $itemId),
-                '' => RenderViews::buildHiddenInput('rule_id', (string) $ruleId),
+                'Record' => Form::select('item_id', $ids, $labels, (string) $itemId),
+                '' => Form::hidden('rule_id', (string) $ruleId),
             ],
             [
-                RenderViews::buildFormButton('submit', 'submit_button', 'Preview'),
-                RenderViews::buildFormButton('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
+                Form::button('submit', 'submit_button', 'Preview'),
+                Form::button('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
             ]
         );
         if (is_array($result)) {
@@ -664,9 +666,9 @@ final class ApplicationSettingsScreen
             }
             if (($result['matches'] ?? false) === true && ($result['ran'] ?? false) !== true) {
                 $html .= '<form method="post" action="' . htmlspecialchars(self::rulesFormAction($slug, 'run_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '">'
-                    . RenderViews::buildHiddenInput('rule_id', (string) $ruleId)
-                    . RenderViews::buildHiddenInput('item_id', (string) $itemId)
-                    . RenderViews::buildFormButton('submit', 'submit_button', 'Run it now')
+                    . Form::hidden('rule_id', (string) $ruleId)
+                    . Form::hidden('item_id', (string) $itemId)
+                    . Form::button('submit', 'submit_button', 'Run it now')
                     . '</form>';
             }
         }
@@ -695,7 +697,7 @@ final class ApplicationSettingsScreen
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         $typeId = (int) ($_POST['item_type_id'] ?? 0);
@@ -716,7 +718,7 @@ final class ApplicationSettingsScreen
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         Rules::delete((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
@@ -728,7 +730,7 @@ final class ApplicationSettingsScreen
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         $rule = Rules::find((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
@@ -743,7 +745,7 @@ final class ApplicationSettingsScreen
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         $id = Rules::duplicate((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
@@ -758,7 +760,7 @@ final class ApplicationSettingsScreen
     {
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
-            RenderViews::buildResponse('Open settings from inside an application.');
+            View::respond('Open settings from inside an application.');
             return;
         }
         Rules::move((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id'], (string) ($_GET['dir'] ?? 'down'));

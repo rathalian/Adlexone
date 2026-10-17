@@ -8,8 +8,8 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -74,7 +74,7 @@ final class WorkScreen
         $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
         $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . $new . '</div>';
         if ($ids === []) {
-            $body = RenderViews::buildEmptyState([
+            $body = Blocks::emptyState([
                 'illustration' => 'empty-work',
                 'title' => 'Nothing here yet',
                 'copy' => 'Add the first one.',
@@ -87,7 +87,7 @@ final class WorkScreen
         } else {
             $body = $toolbar . self::workList($shown, $itemTypeId, $base, $stand);
         }
-        Page::current()->setBody(RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             [
                 'title' => $title,
                 'html' => $body,
@@ -313,7 +313,7 @@ final class WorkScreen
             foreach ($result as $row) {
                 $itemId = (int) $row['item_id'];
                 $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-                $record = RenderViews::itemRecord($row, $base . '&item=' . $itemId, RenderViews::itemActions($itemId, $base));
+                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, Blocks::itemActions($itemId, $base));
                 $bits = array_values(array_filter([
                     trim((string) ($fact['detail'] ?? '')),
                     trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
@@ -329,7 +329,7 @@ final class WorkScreen
         }
         $columns[] = ['key' => 'opened', 'label' => 'Opened'];
 
-        return RenderViews::buildRecordList([
+        return Blocks::recordList([
             'column' => 'Work',
             'columns' => $columns,
             'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',

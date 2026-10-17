@@ -13,8 +13,9 @@ use Adlexone\Application\ScreenCatalog;
 use Adlexone\Http\Router;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -30,8 +31,8 @@ final class BuilderScreen
         define('BUILDER_URL', '?manage=builder');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = RenderViews::buildURL(BUILDER_URL, 'Builder', 'ic-itemtype-add');
-        $section .= RenderViews::buildURL('?manage=applications', 'Applications', 'ic-launch');
+        $section = Blocks::link(BUILDER_URL, 'Builder', 'ic-itemtype-add');
+        $section .= Blocks::link('?manage=applications', 'Applications', 'ic-launch');
         RenderNavigation::applySectionNav('Builder', $section);
         Page::current()->suggestTitle('Design an app');
 
@@ -301,7 +302,7 @@ final class BuilderScreen
             . $levelsHtml
             . '</section>'
             . '<div class="form-actions">'
-            . RenderViews::buildFormButton('submit', 'submit_button', 'Create this app')
+            . Form::button('submit', 'submit_button', 'Create this app')
             . '</div></form>'
             . '<aside class="builder__preview builder__panel" aria-live="polite">'
             . '<p class="builder__kicker">This application</p>'
@@ -329,7 +330,7 @@ final class BuilderScreen
             . '<div class="field"><label class="label" for="import-slug">Address override</label>'
             . '<input class="text" id="import-slug" name="slug" autocomplete="off" spellcheck="false" placeholder="Optional"></div>'
             . '</div><div class="form-actions">'
-            . RenderViews::buildFormButton('submit', 'submit_button', 'Import')
+            . Form::button('submit', 'submit_button', 'Import')
             . '</div></form></details></div>'
             . '<script>'
             . '(function(){'

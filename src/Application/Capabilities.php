@@ -5,8 +5,9 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\support\RenderNavigation;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Http\View;
 
 /**
  * Screens an application nav link can open.
@@ -123,7 +124,7 @@ final class Capabilities
     {
         $capability = ScreenCatalog::resolve((string) $nav['capability']);
         if (!isset(self::catalog()[$capability])) {
-            RenderViews::buildResponse('This navigation link uses an unknown screen.');
+            View::respond('This navigation link uses an unknown screen.');
             return;
         }
 
@@ -133,7 +134,7 @@ final class Capabilities
         self::applyDefaults($capability, $config, ApplicationStore::scopeKey($app));
 
         if ($capability === ScreenCatalog::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
-            RenderViews::buildResponse('Choose a saved search for this link in Manage.');
+            View::respond('Choose a saved search for this link in Manage.');
             return;
         }
 
@@ -164,7 +165,7 @@ final class Capabilities
         match ($capability) {
             ScreenCatalog::CREATE => self::includeShared('item_management_manage'),
             ScreenCatalog::SEARCH_QUICK, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::SEARCH_SAVED, ScreenCatalog::SEARCH_LIST => self::includeShared('search_management_manage'),
-            default => RenderViews::buildResponse('This screen is not available.'),
+            default => View::respond('This screen is not available.'),
         };
     }
 
@@ -288,7 +289,7 @@ final class Capabilities
             \Adlexone\Screen\SearchScreen::open();
             return;
         }
-        RenderViews::buildResponse('The shared screen is missing.');
+        View::respond('The shared screen is missing.');
     }
 
     /**
@@ -304,7 +305,7 @@ final class Capabilities
             }
             $href = \Adlexone\Http\Router::applicationUrl((string) $app['slug'], (int) $link['nav_id']);
             $icon = self::icon((string) $link['capability'], (string) $link['icon']);
-            $html .= RenderViews::buildURL($href, (string) $link['label'], $icon);
+            $html .= Blocks::link($href, (string) $link['label'], $icon);
         }
         RenderNavigation::applySectionNav((string) $app['name'], $html);
     }

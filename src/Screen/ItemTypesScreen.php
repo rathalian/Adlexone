@@ -6,9 +6,13 @@ namespace Adlexone\Screen;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
-use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\support\FormState;
+use Adlexone\Http\View;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -63,32 +67,32 @@ final class ItemTypesScreen
 
         switch ((string) ($_GET['option'] ?? '')) {
             case 'new_item_type':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::showItemType('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
-                $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                self::showItemType('', FormState::keys($_SESSION, 'remove'));
+                $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'add_item_type':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::addItemType();
                 break;
             case 'modify_item_type':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showItemType((string) ($_GET['item_type_id'] ?? ''));
                 break;
             case 'update_item_type':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::updateItemType((string) ($_POST['item_type_id'] ?? ''));
                 break;
             case 'manage_item_types':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showItemTypes();
                 break;
             case 'delete_item_type':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::deleteItemType();
                 break;
             default:
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showItemTypes();
                 break;
         }
@@ -116,7 +120,7 @@ final class ItemTypesScreen
         }
 
         $fields = [];
-        $fields[TXT_87] = RenderViews::buildTextInput('item_type_name', $fieldValues['item_type_name'] ?? '');
+        $fields[TXT_87] = Form::text('item_type_name', $fieldValues['item_type_name'] ?? '');
 
         // User assignment select
         $columnArray = ['user_id', 'user_name'];
@@ -127,7 +131,7 @@ final class ItemTypesScreen
             $userIDArray[] = $row['user_id'];
             $userArray[] = $row['user_name'];
         }
-        $fields[TXT_269] = RenderViews::buildSelectDropdown('user_security', $userIDArray, $userArray, $fieldValues['user_security'] ?? '');
+        $fields[TXT_269] = Form::select('user_security', $userIDArray, $userArray, $fieldValues['user_security'] ?? '');
 
         $columnArray = ['group_id', 'group_name'];
         $condition = "ORDER BY group_name ASC";
@@ -138,17 +142,16 @@ final class ItemTypesScreen
         foreach ($result as $row) {
             $isChecked = in_array((string)$row['group_id'], $groupMembershipArray, true);
             $checkedValue = $isChecked ? (string)$row['group_id'] : '';
-            $groupMembershipHtml .= RenderViews::buildCheckBox(
+            $groupMembershipHtml .= Form::checkbox(
                 'group_' . $row['group_id'],
                 (string)$row['group_id'],
                 $checkedValue,
-                'checkbox',
                 (string)$row['group_name']
             );
         }
         $groupMembershipHtml .= '</div>';
 
-        $fields[TXT_90] = RenderViews::buildSelectDropdown('enabled', ['Yes', 'No'], [TXT_93, TXT_94], $fieldValues['enabled'] ?? '');
+        $fields[TXT_90] = Form::select('enabled', ['Yes', 'No'], [TXT_93, TXT_94], $fieldValues['enabled'] ?? '');
         $fields[TXT_71] = $groupMembershipHtml;
 
         // Custom fields selection (preserve ordering for existing item types)
@@ -263,7 +266,7 @@ final class ItemTypesScreen
     </script>';
 
         $fields[TXT_222] = $pickerHtml;
-        $fields[''] = RenderViews::buildHiddenInput('item_type_id', $itemTypeID);
+        $fields[''] = Form::hidden('item_type_id', $itemTypeID);
 
         $jsFieldNameArray = "['item_type_name']";
         $jsTestTypeArray = "['']";
@@ -272,13 +275,13 @@ final class ItemTypesScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-        Page::current()->setBody(RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             $isNew ? TXT_85 : TXT_286,
             $action,
             $fields,
             [
-                RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
+                Form::button('submit', 'submit_button', TXT_74, $javascript),
+                Form::button('reset', 'reset', TXT_75),
             ]
         ));
     }
@@ -312,10 +315,10 @@ final class ItemTypesScreen
                 ]);
             }
             \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
-            RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_162, RenderViews::buildURL(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+            View::respond($_POST['item_type_name'] . ' ' . TXT_162, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
             return;
         }
-        RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_163, RenderViews::buildURL(ITEM_TYPES_BASE_URL . '&option=new_item_type', TXT_363));
+        View::respond($_POST['item_type_name'] . ' ' . TXT_163, Blocks::link(ITEM_TYPES_BASE_URL . '&option=new_item_type', TXT_363));
     }
 
     /**
@@ -328,7 +331,7 @@ final class ItemTypesScreen
             $typeRows[] = self::itemTypeRecord($row);
         }
 
-        Page::current()->setBody(RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             ['title' => TXT_50, 'html' => self::typeRecordList($typeRows)],
         ]));
     }
@@ -338,7 +341,7 @@ final class ItemTypesScreen
      */
     public static function typeRecordList(array $rows): string
     {
-        return RenderViews::buildRecordList([
+        return Blocks::recordList([
             'column' => TXT_151,
             'columns' => [
                 ['key' => 'enabled', 'label' => TXT_451],
@@ -414,7 +417,7 @@ final class ItemTypesScreen
         // Update form field values into row
         Database::update('item_types', $columnArray, $condition);
         \Adlexone\Data\GroupMembership::setItemTypeGroups((int) $itemTypeID, $ids);
-        RenderViews::buildResponse($_POST['item_type_name'] . ' ' . TXT_164, RenderViews::buildURL(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+        View::respond($_POST['item_type_name'] . ' ' . TXT_164, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
     }
 
     /**
@@ -465,27 +468,27 @@ final class ItemTypesScreen
     public static function deleteItemType(): void
     {
         $itemTypeID = (string)($_GET['item_type_id'] ?? '');
-        $back = RenderViews::buildURL(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362);
+        $back = Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362);
         if ($itemTypeID === '' || !ctype_digit($itemTypeID)) {
-            RenderViews::buildResponse(TXT_115, $back);
+            View::respond(TXT_115, $back);
             return;
         }
 
             $row = Database::first('item_types', '*', 'item_type_id = ?', [$itemTypeID]);
         if (!$row) {
-            RenderViews::buildResponse(TXT_115, $back);
+            View::respond(TXT_115, $back);
             return;
         }
 
         $name = (string)$row['item_type_name'];
         if (Database::exists('items', 'item_type_id = ?', [$itemTypeID])) {
-            RenderViews::buildResponse($name . ' ' . TXT_691, $back);
+            View::respond($name . ' ' . TXT_691, $back);
             return;
         }
 
         $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
         Database::delete('item_type_custom_fields', $condition);
         Database::delete('item_types', $condition);
-        RenderViews::buildResponse($name . ' ' . TXT_47, $back);
+        View::respond($name . ' ' . TXT_47, $back);
     }
 }

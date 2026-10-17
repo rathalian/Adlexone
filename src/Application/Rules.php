@@ -7,6 +7,7 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Communications;
 use Adlexone\support\Database;
+use Adlexone\Html\Blocks;
 
 /**
  * Per-application rules.
@@ -677,7 +678,7 @@ final class Rules
                 . nl2br(htmlspecialchars((string) ($run['detail'] ?? ''), ENT_QUOTES, 'UTF-8'))
                 . '</div></div>';
         }
-        return \Adlexone\support\RenderViews::buildVerticalCards([['title' => 'Rules that ran', 'html' => $html]]);
+        return \Adlexone\Html\Blocks::vertical([['title' => 'Rules that ran', 'html' => $html]]);
     }
 
     /**

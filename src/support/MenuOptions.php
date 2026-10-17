@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Adlexone\support;
 
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+
 /**
  * One menu model for custom fields.
  *
@@ -122,7 +125,7 @@ final class MenuOptions
                 $labels[] = (string)$option['menu_value'];
             }
             $extra = $nested ? 'onchange="this.form.submit()"' : '';
-            $html .= RenderViews::buildSelectDropdown(self::inputName($fieldId, $childId, $level), $values, $labels, $selected, $extra);
+            $html .= Form::select(self::inputName($fieldId, $childId, $level), $values, $labels, $selected, $extra);
 
             $chosen = null;
             foreach ($options as $option) {
@@ -213,11 +216,11 @@ final class MenuOptions
             $id = (int)$node['menu_value_id'];
             $indent = (int)$node['depth'] * 20;
             $rows .= '<div class="menu-editor-row" style="margin-left:' . $indent . 'px">'
-                . RenderViews::buildTextInput((string)$id, (string)$node['menu_value'])
-                . RenderViews::buildHiddenInput('menu_value_old_id_' . $id, (string)$node['menu_value'])
+                . Form::text((string)$id, (string)$node['menu_value'])
+                . Form::hidden('menu_value_old_id_' . $id, (string)$node['menu_value'])
                 . self::parentSelect('parent_' . $id, $fieldId, (int)$node['parent_menu_value_id'], $id)
-                . RenderViews::buildURL(
-                    ITEM_BASE_URL . '&option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . $fieldId,
+                . Blocks::link(
+                    '?manage=fields' . '&option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . $fieldId,
                     TXT_47,
                     '',
                     'URL',
@@ -243,7 +246,7 @@ final class MenuOptions
             $values[] = (string)$id;
             $labels[] = (string)$node['path'];
         }
-        return RenderViews::buildSelectDropdown($name, $values, $labels, (string)$selected);
+        return Form::select($name, $values, $labels, (string)$selected);
     }
 
     public static function valueExists(int $fieldId, string $value, int $parentId): bool

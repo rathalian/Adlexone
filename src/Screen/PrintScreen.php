@@ -3,9 +3,10 @@ namespace Adlexone\Screen;
 
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
-use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -29,7 +30,7 @@ final class PrintScreen
         		break;
         	default :
         		// Not allowed
-        		Page::current()->setBody(RenderViews::buildVerticalCards([['title' => TXT_623, 'html' => '']]));
+        		Page::current()->setBody(Blocks::vertical([['title' => TXT_623, 'html' => '']]));
         }
     }
     /**
@@ -111,7 +112,7 @@ final class PrintScreen
     		foreach ($itemField as $name => $field) {
     			$displayFields[$name] = '<div>' . $field . '</div>';
     		}
-    		$html = RenderViews::buildFormFieldsGrid($displayFields);
+    		$html = Form::fields($displayFields);
     		// Time Manager removed from shared schema.
     		$logHtml = '';
     		// Get item log information from database
@@ -153,12 +154,12 @@ final class PrintScreen
     				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
     			}
     		}
-    		Page::current()->setBody(RenderViews::buildVerticalCards([
+    		Page::current()->setBody(Blocks::vertical([
     			['title' => TXT_624 . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName, 'html' => $html],
     			['title' => TXT_601, 'html' => $logHtml],
     		]));
     	}else{
-    		Page::current()->setBody(RenderViews::buildVerticalCards([['title' => TXT_452, 'html' => '']]));
+    		Page::current()->setBody(Blocks::vertical([['title' => TXT_452, 'html' => '']]));
     	}
     }
 }

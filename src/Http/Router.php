@@ -18,7 +18,6 @@ use Adlexone\Screen\SearchScreen;
 use Adlexone\Screen\SecurityScreen;
 use Adlexone\Screen\RulesScreen;
 use Adlexone\Screen\SiteSettingsScreen;
-use Adlexone\support\RenderViews;
 
 /**
  * One map from a request to a screen class.
@@ -329,7 +328,7 @@ final class Router
         }
         $handler = self::handler($canonical);
         if ($handler === null) {
-            RenderViews::buildResponse('This screen is not available.');
+            View::respond('This screen is not available.');
             return;
         }
         if (

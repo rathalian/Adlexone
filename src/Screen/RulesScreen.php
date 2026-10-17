@@ -5,8 +5,11 @@ use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Rules;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationSettings;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Http\View;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -20,7 +23,7 @@ final class RulesScreen
 
 
 
-        RenderViews::terminateUnlessAllowed(Permission::ADMIN_ACTIONS);
+        Access::require(Permission::ADMIN_ACTIONS);
 
         $slug = trim((string) ($_GET['app'] ?? $_POST['app'] ?? ''));
         $option = (string) ($_GET['option'] ?? '');
@@ -74,16 +77,16 @@ final class RulesScreen
     		$labels[] = (string) $app['name'];
     	}
     	if ($values === []) {
-    		RenderViews::buildResponse('Create an application before adding a rule.');
+    		View::respond('Create an application before adding a rule.');
     		return;
     	}
-    	$html = RenderViews::buildForm(
+    	$html = Form::form(
     		'Add a rule',
     		MAN_BASE_URL . '&option=' . $option,
     		[
-    			'Application' => RenderViews::buildSelectDropdown('app', $values, $labels, $values[0]),
+    			'Application' => Form::select('app', $values, $labels, $values[0]),
     		],
-    		[RenderViews::buildFormButton('submit', 'submit_button', 'Continue')]
+    		[Form::button('submit', 'submit_button', 'Continue')]
     	);
     	Page::current()->setBody($html);
     }
@@ -114,7 +117,7 @@ final class RulesScreen
     		$groups[] = ['label' => (string) $app['name'], 'rows' => $rows];
     	}
 
-    	$html = RenderViews::buildRecordList([
+    	$html = Blocks::recordList([
     		'column' => 'Rule',
     		'columns' => [
     			['key' => 'description', 'label' => 'What it does', 'wrap' => true],
@@ -128,7 +131,7 @@ final class RulesScreen
     		'noMatch' => 'No rules match.',
     		'groups' => $groups,
     	]);
-    	Page::current()->setBody(RenderViews::buildVerticalCards([[
+    	Page::current()->setBody(Blocks::vertical([[
     		'title' => 'Rules',
     		'html' => $html . '<p class="record-list__meta">Each application runs its own rules when a record is created, updated, logged, or gets a file.</p>',
     	]]));

@@ -6,7 +6,7 @@ namespace Adlexone\support;
 /**
  * Custom field types as stored in custom_fields.field_type.
  *
- * The database stores stable type keys (e.g. 'menu'), not RenderViews method names, so that renaming a
+ * The database stores stable type keys (e.g. 'menu'), not form-builder method names, so that renaming a
  * rendering helper never invalidates stored data. Builder-style names written by earlier builds are
  * accepted as aliases and normalised on read.
  */

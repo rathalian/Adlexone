@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
-use Adlexone\support\RenderViews;
+use Adlexone\Http\View;
 
 /**
  * Optional custom screens under site/apps/{pack}/.
@@ -64,7 +64,7 @@ final class AppFunctions
     {
         self::discover();
         if (!isset(self::$registry[$id])) {
-            RenderViews::buildResponse('This screen is missing.');
+            View::respond('This screen is missing.');
             return;
         }
 
@@ -78,7 +78,7 @@ final class AppFunctions
             return;
         }
 
-        RenderViews::buildResponse('This screen is missing.');
+        View::respond('This screen is missing.');
     }
 
     /**

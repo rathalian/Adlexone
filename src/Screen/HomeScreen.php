@@ -5,8 +5,8 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -125,7 +125,7 @@ final class HomeScreen
             . '</div>';
 
         if ($applications === [] && $manage === [] && $intro === '') {
-            $html = RenderViews::buildEmptyState([
+            $html = Blocks::emptyState([
                 'illustration' => 'empty-apps',
                 'title' => 'Nothing is available for this account',
                 'copy' => 'Ask an administrator to grant access to an application.',

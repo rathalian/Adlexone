@@ -10,44 +10,46 @@ use DOMElement;
 use RuntimeException;
 use function libxml_clear_errors;
 use function libxml_use_internal_errors;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
 
 final class RenderNavigation
 {
 
     public static function itemSettingsURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
 
         return $html;
     }
 
     public static function rulesURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=rules', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=rules', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }
 
     public static function systemSettingsURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }
@@ -81,12 +83,6 @@ final class RenderNavigation
         bool  $aside = false
     ): string
     {
-        if (!class_exists(RenderViews::class)) {
-            throw new RuntimeException(
-                'RenderViews class not found. Require RenderViews.php before calling RenderNavigation::render().'
-            );
-        }
-
         // Build blocks
         $blocks = [];
         foreach ($controllers as $title => $links) {
@@ -99,8 +95,8 @@ final class RenderNavigation
 
         // Render cards (responsive by default if $columns is null)
         $content = $columns === null
-            ? RenderViews::buildHorizontalCards($blocks)
-            : RenderViews::buildHorizontalCards($blocks, $columns);
+            ? Blocks::horizontal($blocks)
+            : Blocks::horizontal($blocks, $columns);
 
         // Optional aside wrapper
         if ($aside) {

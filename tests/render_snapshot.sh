@@ -11,7 +11,7 @@
 set -euo pipefail
 
 OUT="${1:?usage: render_snapshot.sh <output-dir>}"
-SRC="$(cd "$(dirname "$0")/.." && pwd)"
+SRC="${SRC:-$(cd "$(dirname "$0")/.." && pwd)}"
 PORT="${PORT:-$((20000 + RANDOM % 20000))}"
 WORK="$(mktemp -d)"
 trap 'kill "$(cat "$WORK/pid" 2>/dev/null || echo 0)" 2>/dev/null || true; rm -rf "$WORK"' EXIT
@@ -42,6 +42,7 @@ normalise() {
         -e 's/(name="_csrf" value=")[0-9a-f]+/\1TOKEN/g' \
         -e 's/(data-csrf=")[0-9a-f]+/\1TOKEN/g' \
         -e 's/\?v=[0-9]+/?v=0/g' \
+        -e 's/(on line <b>)[0-9]+/\1N/g' \
         -e "s#127\\.0\\.0\\.1:$PORT#HOST#g" \
         -e "s#$WORK#ROOT#g"
 }
@@ -118,6 +119,18 @@ for user in Administrator angela; do
     for url in "${URLS[@]}"; do
         fetch "$jar" "$user" "$url"
     done
+done
+
+# Second pass: follow the read-only links that the administrator's pages offer.
+mapfile -t LINKS < <(
+    cat "$OUT"/Administrator__*.html \
+        | grep -oE 'href="\?[^"]+"' | sed -E 's/^href="//; s/"$//; s/&amp;/\&/g' \
+        | grep -vE 'logoff|delete|move|export|oauth|action=' \
+        | sort -u
+)
+for url in "${LINKS[@]}"; do
+    [ -e "$OUT/crawl__$(slug "$url").html" ] && continue
+    fetch "$WORK/Administrator.jar" crawl "$url"
 done
 
 echo "wrote $(ls "$OUT" | wc -l) snapshots to $OUT"

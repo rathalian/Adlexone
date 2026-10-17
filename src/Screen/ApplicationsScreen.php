@@ -8,8 +8,11 @@ use Adlexone\Application\Capabilities;
 use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
-use Adlexone\support\RenderViews;
 use Adlexone\Http\Page;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Http\View;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -18,17 +21,17 @@ final class ApplicationsScreen
 {
     public static function open(): void
     {
-        RenderViews::terminateUnlessAllowed(Permission::ADMIN_SETTINGS);
+        Access::require(Permission::ADMIN_SETTINGS);
 
         define('APPLICATIONS_MANAGE_URL', '?manage=applications');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-launch');
+        $section = Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-launch');
         if (in_array($option, ['edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav'], true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
-                $section .= RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-settings');
-                $section .= RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-manage-fields');
+                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-settings');
+                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-manage-fields');
             }
         }
         RenderNavigation::applySectionNav('Applications', $section);
@@ -136,9 +139,9 @@ final class ApplicationsScreen
             ];
         }
 
-        Page::current()->setBody(RenderViews::buildVerticalCards([[
+        Page::current()->setBody(Blocks::vertical([[
             'title' => 'Applications',
-            'html' => RenderViews::buildRecordList([
+            'html' => Blocks::recordList([
                 'column' => 'Application',
                 'columns' => [
                     ['key' => 'menu', 'label' => 'Menu'],
@@ -148,7 +151,7 @@ final class ApplicationsScreen
                 'primary' => ['href' => '?manage=builder', 'label' => 'Create with builder'],
                 'empty' => 'No applications yet. Use the builder to create one.',
                 'toolbar' => '<div class="record-list__tools">'
-                    . RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=new', 'Expert setup', '', 'btn btn--sm')
+                    . Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Expert setup', '', 'btn btn--sm')
                     . '</div>',
                 'groups' => [['rows' => $rows]],
             ]),
@@ -160,7 +163,7 @@ final class ApplicationsScreen
         try {
             $package = \Adlexone\Application\ApplicationPackage::export($id);
         } catch (\InvalidArgumentException $e) {
-            RenderViews::buildResponse($e->getMessage(), RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond($e->getMessage(), Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
         $slug = (string) ($package['application']['slug'] ?? 'application');
@@ -175,25 +178,25 @@ final class ApplicationsScreen
     {
         $app = $id > 0 ? ApplicationStore::find($id) : null;
         if ($id > 0 && $app === null) {
-            RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
 
         $permission = (string) ($app['permission'] ?? Permission::APP_ACCESS);
         $fields = [
-            'Name' => RenderViews::buildTextInput('name', htmlspecialchars((string) ($app['name'] ?? ''), ENT_QUOTES, 'UTF-8')),
-            'Slug' => RenderViews::buildTextInput('slug', htmlspecialchars((string) ($app['slug'] ?? ''), ENT_QUOTES, 'UTF-8'), 'complaints'),
-            'Description' => RenderViews::buildTextInput('hint', htmlspecialchars((string) ($app['hint'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            'Name' => Form::text('name', htmlspecialchars((string) ($app['name'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            'Slug' => Form::text('slug', htmlspecialchars((string) ($app['slug'] ?? ''), ENT_QUOTES, 'UTF-8'), 'complaints'),
+            'Description' => Form::text('hint', htmlspecialchars((string) ($app['hint'] ?? ''), ENT_QUOTES, 'UTF-8')),
             'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-launch')),
             'Who can open it' => self::permissionSelect('permission', $permission, false),
-            'Menu' => RenderViews::buildCheckBox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'checkbox', 'Show in the Applications menu'),
+            'Menu' => Form::checkbox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'Show in the Applications menu'),
         ];
         if ($app !== null) {
-            $fields[''] = RenderViews::buildHiddenInput('application_id', (string) $app['application_id']);
+            $fields[''] = Form::hidden('application_id', (string) $app['application_id']);
         }
         $action = $app === null ? APPLICATIONS_MANAGE_URL . '&option=add' : APPLICATIONS_MANAGE_URL . '&option=update';
-        $html = RenderViews::buildForm($app === null ? 'New application' : (string) $app['name'], $action, $fields, [
-            RenderViews::buildFormButton('submit', 'submit_button', 'Save'),
+        $html = Form::form($app === null ? 'New application' : (string) $app['name'], $action, $fields, [
+            Form::button('submit', 'submit_button', 'Save'),
         ]);
         Page::current()->setBody($html);
     }
@@ -205,11 +208,11 @@ final class ApplicationsScreen
         $permission = (string) ($_POST['permission'] ?? '');
         $icon = (string) ($_POST['icon'] ?? 'ic-launch');
         if ($name === '' || $slug === '' || !isset(Permission::catalog()[$permission]) || !in_array($icon, Capabilities::icons(), true)) {
-            RenderViews::buildResponse('Enter a name and choose who can open the application.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
+            View::respond('Enter a name and choose who can open the application.', Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
             return;
         }
         if (ApplicationStore::slugInUse($slug, $id)) {
-            RenderViews::buildResponse('That slug is already used.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That slug is already used.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
         $fields = [
@@ -223,7 +226,7 @@ final class ApplicationsScreen
         if ($id > 0) {
             $existing = ApplicationStore::find($id);
             if ($existing === null) {
-                RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+                View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
                 return;
             }
             // Keep shell apps on their app.{slug}.use permission when the slug changes.
@@ -249,7 +252,7 @@ final class ApplicationsScreen
     {
         $app = ApplicationStore::find($applicationId);
         if ($app === null) {
-            RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
 
@@ -275,9 +278,9 @@ final class ApplicationsScreen
             ];
         }
 
-        Page::current()->setBody(RenderViews::buildVerticalCards([[
+        Page::current()->setBody(Blocks::vertical([[
             'title' => (string) $app['name'],
-            'html' => RenderViews::buildRecordList([
+            'html' => Blocks::recordList([
                 'column' => 'Link',
                 'columns' => [
                     ['key' => 'screen', 'label' => 'Screen'],
@@ -297,7 +300,7 @@ final class ApplicationsScreen
     {
         $link = $navId > 0 ? ApplicationStore::findNav($navId) : null;
         if ($navId > 0 && $link === null) {
-            RenderViews::buildResponse('That link does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That link does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
         if ($link !== null) {
@@ -305,7 +308,7 @@ final class ApplicationsScreen
         }
         $app = ApplicationStore::find($applicationId);
         if ($app === null) {
-            RenderViews::buildResponse('That application does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
             return;
         }
 
@@ -314,21 +317,21 @@ final class ApplicationsScreen
         $keys = Capabilities::choiceKeys();
         $labels = array_map(static fn (string $key): string => Capabilities::choiceLabel($key), $keys);
         $fields = [
-            'Label' => RenderViews::buildTextInput('label', htmlspecialchars((string) ($link['label'] ?? ''), ENT_QUOTES, 'UTF-8')),
-            'Screen' => RenderViews::buildSelectDropdown('capability', $keys, $labels, $capability),
+            'Label' => Form::text('label', htmlspecialchars((string) ($link['label'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            'Screen' => Form::select('capability', $keys, $labels, $capability),
             'Who can see it' => self::permissionSelect('permission', (string) ($link['permission'] ?? ''), true),
             'Icon' => self::iconSelect('icon', (string) ($link['icon'] ?? ''), true),
             'Item type' => self::itemTypeSelect((string) ($config['item_type_id'] ?? '')),
             'Saved search' => self::savedSearchSelect((string) ($config['search_id'] ?? ''), ApplicationStore::scopeKey($app)),
-            '' => RenderViews::buildHiddenInput('application_id', (string) $applicationId)
-                . ($link === null ? '' : RenderViews::buildHiddenInput('nav_id', (string) $link['nav_id'])),
+            '' => Form::hidden('application_id', (string) $applicationId)
+                . ($link === null ? '' : Form::hidden('nav_id', (string) $link['nav_id'])),
         ];
         $action = $link === null ? APPLICATIONS_MANAGE_URL . '&option=add_nav' : APPLICATIONS_MANAGE_URL . '&option=update_nav';
-        Page::current()->setBody(RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             $link === null ? 'Add link' : 'Edit link',
             $action,
             $fields,
-            [RenderViews::buildFormButton('submit', 'submit_button', 'Save')]
+            [Form::button('submit', 'submit_button', 'Save')]
         ));
     }
 
@@ -338,7 +341,7 @@ final class ApplicationsScreen
         if ($navId > 0) {
             $existing = ApplicationStore::findNav($navId);
             if ($existing === null) {
-                RenderViews::buildResponse('That link does not exist.', RenderViews::buildURL(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+                View::respond('That link does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
                 return;
             }
             $applicationId = (int) $existing['application_id'];
@@ -351,11 +354,11 @@ final class ApplicationsScreen
         $catalog = Capabilities::catalog();
         $back = APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $applicationId;
         if ($app === null || $label === '' || !isset($catalog[$capability])) {
-            RenderViews::buildResponse('Enter a label and choose a screen.', RenderViews::buildURL($back, 'Navigation', 'URL'));
+            View::respond('Enter a label and choose a screen.', Blocks::link($back, 'Navigation', 'URL'));
             return;
         }
         if ($permission !== '' && !isset(Permission::catalog()[$permission])) {
-            RenderViews::buildResponse('Choose a permission from the list.', RenderViews::buildURL($back, 'Navigation', 'URL'));
+            View::respond('Choose a permission from the list.', Blocks::link($back, 'Navigation', 'URL'));
             return;
         }
         if ($icon !== '' && !in_array($icon, Capabilities::icons(), true)) {
@@ -368,7 +371,7 @@ final class ApplicationsScreen
         if ($catalog[$capability]['config'] === 'saved_search') {
             $searchId = trim((string) ($_POST['search_id'] ?? ''));
             if ($searchId === '') {
-                RenderViews::buildResponse('Choose a saved search. Create one from a Search link first if the list is empty.', RenderViews::buildURL($back, 'Navigation', 'URL'));
+                View::respond('Choose a saved search. Create one from a Search link first if the list is empty.', Blocks::link($back, 'Navigation', 'URL'));
                 return;
             }
             $config['search_id'] = $searchId;
@@ -394,7 +397,7 @@ final class ApplicationsScreen
             $values[] = $key;
             $labels[] = (string) $meta['label'];
         }
-        return RenderViews::buildSelectDropdown($name, $values, $labels, $selected);
+        return Form::select($name, $values, $labels, $selected);
     }
 
     public static function iconSelect(string $name, string $selected, bool $allowEmpty = false): string
@@ -408,7 +411,7 @@ final class ApplicationsScreen
         if ($selected === '' && !$allowEmpty) {
             $selected = 'ic-launch';
         }
-        return RenderViews::buildSelectDropdown($name, $values, $labels, $selected);
+        return Form::select($name, $values, $labels, $selected);
     }
 
     public static function itemTypeSelect(string $selected): string
@@ -420,7 +423,7 @@ final class ApplicationsScreen
             $values[] = (string) $row['item_type_id'];
             $labels[] = htmlspecialchars((string) $row['item_type_name'], ENT_QUOTES, 'UTF-8');
         }
-        return RenderViews::buildSelectDropdown('item_type_id', $values, $labels, $selected);
+        return Form::select('item_type_id', $values, $labels, $selected);
     }
 
     public static function savedSearchSelect(string $selected, string $scope): string
@@ -436,7 +439,7 @@ final class ApplicationsScreen
             }
             $labels[] = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
         }
-        return RenderViews::buildSelectDropdown('search_id', $values, $labels, $selected);
+        return Form::select('search_id', $values, $labels, $selected);
     }
 
     public static function slugify(string $slug, string $name): string
