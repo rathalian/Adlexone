@@ -6,6 +6,7 @@ namespace Adlexone\Application;
 use Adlexone\Auth\Access;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;
 use Adlexone\Http\View;
 
@@ -133,7 +134,7 @@ final class Capabilities
         ApplicationAccess::requireUse();
         self::applyDefaults($capability, $config, ApplicationStore::scopeKey($app));
 
-        if ($capability === ScreenCatalog::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
+        if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'saved_search') {
             View::respond('Choose a saved search for this link in Manage.');
             return;
         }
@@ -189,8 +190,8 @@ final class Capabilities
     {
         self::defineContext($app, $navId);
         ApplicationAccess::requireUse();
-        if (($_GET['application'] ?? '') === '') {
-            $_GET['application'] = ApplicationStore::scopeKey($app);
+        if (!Request::has('application')) {
+            Request::set('application', ApplicationStore::scopeKey($app));
         }
         self::includeShared($subcontroller);
     }
@@ -200,13 +201,13 @@ final class Capabilities
      */
     private static function applyDefaults(string $capability, array $config, string $scope): void
     {
-        $option = (string) ($_GET['option'] ?? '');
+        $option = Request::query('option');
         if ($option === '') {
             $fromPack = AppFunctions::defaultOption($capability);
             if ($fromPack !== '') {
-                $_GET['option'] = $fromPack;
+                Request::set('option', $fromPack);
             } else {
-                $_GET['option'] = match ($capability) {
+                Request::set('option', match ($capability) {
                     ScreenCatalog::WORK => 'show_work',
                     ScreenCatalog::CREATE => 'show_item_types',
                     ScreenCatalog::SEARCH_QUICK => 'show_quick_search',
@@ -216,7 +217,7 @@ final class Capabilities
                     ScreenCatalog::ANNOUNCEMENTS => 'show_announcements',
                     ScreenCatalog::SETTINGS => 'settings',
                     default => '',
-                };
+                });
             }
         }
 
@@ -226,41 +227,41 @@ final class Capabilities
         }
 
         if ($capability === ScreenCatalog::CREATE) {
-            if ($itemType !== '' && (string) ($_GET['default_item_type'] ?? '') === '') {
-                $_GET['default_item_type'] = $itemType;
+            if ($itemType !== '' && !Request::has('default_item_type')) {
+                Request::set('default_item_type', $itemType);
             }
             // Single configured type: skip the picker and open Create directly.
             if (
                 $itemType !== ''
-                && (string) ($_GET['option'] ?? '') === 'show_item_types'
-                && (string) ($_GET['item_type_id'] ?? '') === ''
+                && Request::query('option') === 'show_item_types'
+                && !Request::has('item_type_id')
             ) {
-                $_GET['option'] = 'new_item';
-                $_GET['item_type_id'] = $itemType;
+                Request::set('option', 'new_item');
+                Request::set('item_type_id', $itemType);
             }
         }
-        if ($capability === ScreenCatalog::SEARCH_ADVANCED && (string) ($_GET['item_types'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'show_item_search') {
+        if ($capability === ScreenCatalog::SEARCH_ADVANCED && !Request::has('item_types') && Request::query('option') === 'show_item_search') {
             if ($itemType !== '') {
-                $_GET['item_types'] = $itemType;
+                Request::set('item_types', $itemType);
             } elseif ($scope !== '') {
                 $allowed = ApplicationSettings::allowedItemTypeIds($scope);
                 if ($allowed !== []) {
-                    $_GET['item_types'] = implode(',', $allowed);
+                    Request::set('item_types', implode(',', $allowed));
                 }
             }
         }
         if (
             in_array($capability, [ScreenCatalog::SEARCH_QUICK, ScreenCatalog::SEARCH_LIST, ScreenCatalog::SEARCH_SAVED], true)
-            && (string) ($_GET['item_types'] ?? '') === ''
+            && !Request::has('item_types')
             && $itemType !== ''
         ) {
-            $_GET['item_types'] = $itemType;
+            Request::set('item_types', $itemType);
         }
-        if ($capability === ScreenCatalog::SEARCH_SAVED && (string) ($_GET['id'] ?? '') === '' && (string) ($_GET['option'] ?? '') === 'saved_search') {
-            $_GET['id'] = trim((string) ($config['search_id'] ?? ''));
+        if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'saved_search') {
+            Request::set('id', trim((string) ($config['search_id'] ?? '')));
         }
-        if (str_starts_with($capability, 'search.') && (string) ($_GET['application'] ?? '') === '') {
-            $_GET['application'] = $scope;
+        if (str_starts_with($capability, 'search.') && !Request::has('application')) {
+            Request::set('application', $scope);
         }
     }
 
