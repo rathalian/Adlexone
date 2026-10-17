@@ -10,6 +10,7 @@ use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -233,7 +234,7 @@ final class SiteSettingsScreen
             return in_array($value, ['1', 'true', 'yes', 'on'], true) ? 'Yes' : 'No';
         };
         $esc = static function (string $value): string {
-            return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+            return Html::e($value);
         };
 
         $rows = [];

@@ -14,6 +14,7 @@ use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Text\Wording;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -297,7 +298,7 @@ final class SearchScreen
                         'title' => 'Nothing matched',
                         'copy' => 'Try another search.',
                         'action' => $again !== ''
-                            ? '<a class="btn btn--primary" href="' . htmlspecialchars($again, ENT_QUOTES, 'UTF-8') . '">Search again</a>'
+                            ? '<a class="btn btn--primary" href="' . Html::e($again) . '">Search again</a>'
                             : '',
                     ]),
                 ],
@@ -787,7 +788,7 @@ final class SearchScreen
     		$html .= '</form>';
     	}else{
     		$html = Form::fields([
-    			Wording::get('LA_102', 'TXT_102') => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8'),
+    			Wording::get('LA_102', 'TXT_102') => Html::e(TXT_115),
     		]);
 
     	}
@@ -1495,8 +1496,8 @@ final class SearchScreen
         }
 
         $fields[TXT_258] = '<div class="choice-list__sort">'
-            . '<label class="checkbox">' . Form::radio('sortOrder', 'ascending', 'ascending') . ' ' . htmlspecialchars(TXT_533, ENT_QUOTES, 'UTF-8') . '</label>'
-            . '<label class="checkbox">' . Form::radio('sortOrder', 'descending', '') . ' ' . htmlspecialchars(TXT_534, ENT_QUOTES, 'UTF-8') . '</label>'
+            . '<label class="checkbox">' . Form::radio('sortOrder', 'ascending', 'ascending') . ' ' . Html::e(TXT_533) . '</label>'
+            . '<label class="checkbox">' . Form::radio('sortOrder', 'descending', '') . ' ' . Html::e(TXT_534) . '</label>'
             . '</div>';
 
         $displayChoices = [
@@ -1509,8 +1510,8 @@ final class SearchScreen
             $choiceHtml .= '<div class="choice-list__row">'
                 . Form::checkbox($checkName, 'true', 'true', (string)$label)
                 . ($hiddenName !== '' ? Form::hidden($hiddenName, $hiddenName) : '')
-                . '<span class="choice-list__sort">' . Form::radio('sort_field', $sortValue, $sortChecked ? $sortValue : '', 'aria-label="' . htmlspecialchars(TXT_258, ENT_QUOTES, 'UTF-8') . '"')
-                . htmlspecialchars(TXT_258, ENT_QUOTES, 'UTF-8') . '</span>'
+                . '<span class="choice-list__sort">' . Form::radio('sort_field', $sortValue, $sortChecked ? $sortValue : '', 'aria-label="' . Html::e(TXT_258) . '"')
+                . Html::e(TXT_258) . '</span>'
                 . '</div>';
         }
         $choiceHtml .= '</div>';

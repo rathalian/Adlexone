@@ -13,6 +13,7 @@ use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -184,9 +185,9 @@ final class ApplicationsScreen
 
         $permission = (string) ($app['permission'] ?? Permission::APP_ACCESS);
         $fields = [
-            'Name' => Form::text('name', htmlspecialchars((string) ($app['name'] ?? ''), ENT_QUOTES, 'UTF-8')),
-            'Slug' => Form::text('slug', htmlspecialchars((string) ($app['slug'] ?? ''), ENT_QUOTES, 'UTF-8'), 'complaints'),
-            'Description' => Form::text('hint', htmlspecialchars((string) ($app['hint'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            'Name' => Form::text('name', Html::e((string) ($app['name'] ?? ''))),
+            'Slug' => Form::text('slug', Html::e((string) ($app['slug'] ?? '')), 'complaints'),
+            'Description' => Form::text('hint', Html::e((string) ($app['hint'] ?? ''))),
             'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-launch')),
             'Who can open it' => self::permissionSelect('permission', $permission, false),
             'Menu' => Form::checkbox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'Show in the Applications menu'),
@@ -317,7 +318,7 @@ final class ApplicationsScreen
         $keys = Capabilities::choiceKeys();
         $labels = array_map(static fn (string $key): string => Capabilities::choiceLabel($key), $keys);
         $fields = [
-            'Label' => Form::text('label', htmlspecialchars((string) ($link['label'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            'Label' => Form::text('label', Html::e((string) ($link['label'] ?? ''))),
             'Screen' => Form::select('capability', $keys, $labels, $capability),
             'Who can see it' => self::permissionSelect('permission', (string) ($link['permission'] ?? ''), true),
             'Icon' => self::iconSelect('icon', (string) ($link['icon'] ?? ''), true),
@@ -421,7 +422,7 @@ final class ApplicationsScreen
         $rows = Database::select('item_types', ['item_type_id', 'item_type_name'], 'ORDER BY item_type_name ASC');
         foreach ($rows as $row) {
             $values[] = (string) $row['item_type_id'];
-            $labels[] = htmlspecialchars((string) $row['item_type_name'], ENT_QUOTES, 'UTF-8');
+            $labels[] = Html::e((string) $row['item_type_name']);
         }
         return Form::select('item_type_id', $values, $labels, $selected);
     }
@@ -437,7 +438,7 @@ final class ApplicationsScreen
             if ((string) $row['application'] !== '' && (string) $row['application'] !== $scope) {
                 $name .= ' (' . $row['application'] . ')';
             }
-            $labels[] = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+            $labels[] = Html::e($name);
         }
         return Form::select('search_id', $values, $labels, $selected);
     }

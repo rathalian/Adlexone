@@ -18,6 +18,7 @@ use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Text\Wording;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -242,7 +243,7 @@ final class ItemScreen
                 . Form::checkbox('group_' . $groupId, $groupId, $checked, (string) $row['group_name']);
             $description = trim((string) ($row['description'] ?? ''));
             if ($description !== '') {
-                $list .= '<div class="record-list__meta">' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '</div>';
+                $list .= '<div class="record-list__meta">' . Html::e($description) . '</div>';
             }
             $list .= '</div>';
         }
@@ -459,7 +460,7 @@ final class ItemScreen
                 unset($action);
             }
         } else {
-            $listHtml = Form::fields(['' => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8')]);
+            $listHtml = Form::fields(['' => Html::e(TXT_115)]);
         }
         $paginationHTML = '';
         $hidden = '';
@@ -670,7 +671,7 @@ final class ItemScreen
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => TXT_68,
-                    'html' => '<p class="record-list__empty">' . htmlspecialchars(TXT_68, ENT_QUOTES, 'UTF-8') . '</p>'
+                    'html' => '<p class="record-list__empty">' . Html::e(TXT_68) . '</p>'
                         . '<div class="form-actions">'
                         . Blocks::link($picker, TXT_69, '', 'btn btn--primary btn--sm')
                         . '</div>',
@@ -1076,7 +1077,7 @@ final class ItemScreen
                         '',
                         'btn btn--sm'
                     );
-                    $itemField[TXT_270] = '<div class="criteria-row"><div class="readonly-value">' . htmlspecialchars($groupMembership, ENT_QUOTES, 'UTF-8') . '</div>'
+                    $itemField[TXT_270] = '<div class="criteria-row"><div class="readonly-value">' . Html::e($groupMembership) . '</div>'
                         . $changeSecurityURL . '</div>'
                         . Form::hidden(
                             'group_security',
@@ -1608,7 +1609,7 @@ final class ItemScreen
         $roleIDs = array(2, 3, 4, 5);
         $roleNames = array(TXT_192, TXT_193, TXT_194, TXT_303);
         $logField[TXT_469] = '<div>' . Form::select('role_id', $roleIDs, $roleNames, 5)
-            . '<div class="field-picker-type">' . htmlspecialchars(TXT_470, ENT_QUOTES, 'UTF-8') . '</div></div>';
+            . '<div class="field-picker-type">' . Html::e(TXT_470) . '</div></div>';
 
         $columnArray = array('*');
         $condition = "WHERE item_id = '" . $itemID . "'";
@@ -1628,7 +1629,7 @@ final class ItemScreen
             $logField,
             [
                 Form::button('submit', 'submit_button', TXT_74),
-                '<a class="btn" href="' . htmlspecialchars($backHref, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_385, ENT_QUOTES, 'UTF-8') . '</a>',
+                '<a class="btn" href="' . Html::e($backHref) . '">' . Html::e(TXT_385) . '</a>',
             ]
         ) . self::showItemLog($itemID));
     }
@@ -1738,11 +1739,11 @@ final class ItemScreen
             }
 
             $heading = '<div class="log-heading"><strong>'
-                . htmlspecialchars(date(SET_DATE_FORMAT, (int) $row['create_date']), ENT_QUOTES, 'UTF-8')
-                . ($userName !== '' ? ' ' . htmlspecialchars((string) TXT_260, ENT_QUOTES, 'UTF-8') . ' ' . htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') : '')
-                . ($role !== '' ? ' (' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . ')' : '')
+                . Html::e(date(SET_DATE_FORMAT, (int) $row['create_date']))
+                . ($userName !== '' ? ' ' . Html::e((string) TXT_260) . ' ' . Html::e($userName) : '')
+                . ($role !== '' ? ' (' . Html::e($role) . ')' : '')
                 . '</strong></div>';
-            $text = htmlspecialchars((string) $row['log_text'], ENT_QUOTES, 'UTF-8');
+            $text = Html::e((string) $row['log_text']);
             $text = nl2br($text);
             $text = str_replace('  ', '&nbsp;&nbsp;', $text);
             $itemsHtml .= '<div class="log-item">' . $heading . '<div class="log-text">' . $text . '</div></div>';
@@ -1750,7 +1751,7 @@ final class ItemScreen
 
         if ($itemsHtml === '') {
             $emptyText = $empty !== '' ? $empty : (string) TXT_115;
-            $itemsHtml = '<p class="record-list__empty">' . htmlspecialchars($emptyText, ENT_QUOTES, 'UTF-8') . '</p>';
+            $itemsHtml = '<p class="record-list__empty">' . Html::e($emptyText) . '</p>';
         }
 
         return $itemsHtml;
@@ -1765,7 +1766,7 @@ final class ItemScreen
             $names = self::groupNames($selectedIds);
             $html = $names === ''
                 ? '<p class="record-list__empty">Not shared.</p>'
-                : '<div class="readonly-value">' . htmlspecialchars($names, ENT_QUOTES, 'UTF-8') . '</div>';
+                : '<div class="readonly-value">' . Html::e($names) . '</div>';
 
             return Blocks::vertical([['title' => 'Access', 'html' => $html, 'class' => 'card--sheet', 'disclosure' => true]]);
         }
@@ -1961,7 +1962,7 @@ final class ItemScreen
             $list .= '<div class="group-security-item">'
                 . Form::checkbox($groupId, $groupId, $selectedValue, $groupName);
             if ($description !== '') {
-                $list .= '<div class="record-list__meta">' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '</div>';
+                $list .= '<div class="record-list__meta">' . Html::e($description) . '</div>';
             }
             $list .= '</div>';
         }
@@ -2143,7 +2144,7 @@ final class ItemScreen
             $fields,
             [
                 Form::button('submit', 'submit_button', TXT_74),
-                '<a class="btn" href="' . htmlspecialchars($backHref, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_385, ENT_QUOTES, 'UTF-8') . '</a>',
+                '<a class="btn" href="' . Html::e($backHref) . '">' . Html::e(TXT_385) . '</a>',
             ],
             ['enctype' => 'multipart/form-data']
         ));

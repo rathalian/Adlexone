@@ -5,6 +5,7 @@ namespace Adlexone\support;
 
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
+use Adlexone\Html\Html;
 
 /**
  * One menu model for custom fields.
@@ -110,7 +111,7 @@ final class MenuOptions
             }
             if ($level === 1 && $childId > 0 && isset(self::$names[$childId])) {
                 $html .= '<div class="label menu-cascade-label">'
-                    . htmlspecialchars(self::$names[$childId], ENT_QUOTES, 'UTF-8') . '</div>';
+                    . Html::e(self::$names[$childId]) . '</div>';
             } elseif ($level > 0) {
                 $html .= '<div class="menu-cascade-gap" aria-hidden="true"></div>';
             }
@@ -229,7 +230,7 @@ final class MenuOptions
                 . '</div>';
         }
         if ($rows === '') {
-            $rows = htmlspecialchars(TXT_366, ENT_QUOTES, 'UTF-8');
+            $rows = Html::e(TXT_366);
         }
         return $rows;
     }

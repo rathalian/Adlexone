@@ -7,6 +7,7 @@ use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -146,11 +147,11 @@ final class PrintScreen
     						$role = TXT_303;
     						break;
     				}
-    				$userName = htmlspecialchars((string)($rowUser['user_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$firstName = htmlspecialchars((string)($rowUser['first_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$lastName = htmlspecialchars((string)($rowUser['last_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . htmlspecialchars((string)$role, ENT_QUOTES, 'UTF-8') . ')</i></strong>';
-    				$text = nl2br(htmlspecialchars((string)$row['log_text'], ENT_QUOTES, 'UTF-8'));
+    				$userName = Html::e((string)($rowUser['user_name'] ?? ''));
+    				$firstName = Html::e((string)($rowUser['first_name'] ?? ''));
+    				$lastName = Html::e((string)($rowUser['last_name'] ?? ''));
+    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . Html::e((string)$role) . ')</i></strong>';
+    				$text = nl2br(Html::e((string)$row['log_text']));
     				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
     			}
     		}

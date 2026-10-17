@@ -12,6 +12,7 @@ use function libxml_clear_errors;
 use function libxml_use_internal_errors;
 use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 
 final class RenderNavigation
 {
@@ -218,24 +219,24 @@ final class RenderNavigation
     private static function a(array $lnk, string $class): string
     {
         // Sanitize the href attribute, defaulting to '#' if not provided
-        $href = self::e((string)($lnk['href'] ?? '#'));
+        $href = Html::e((string)($lnk['href'] ?? '#'));
 
         // Sanitize the target attribute, if provided
-        $target = !empty($lnk['target']) ? ' target="' . self::e((string)$lnk['target']) . '"' : '';
+        $target = !empty($lnk['target']) ? ' target="' . Html::e((string)$lnk['target']) . '"' : '';
 
         // Sanitize the rel attribute, if provided
-        $rel = !empty($lnk['rel']) ? ' rel="' . self::e((string)$lnk['rel']) . '"' : '';
+        $rel = !empty($lnk['rel']) ? ' rel="' . Html::e((string)$lnk['rel']) . '"' : '';
 
         // Determine the content of the anchor tag
         // Use the sanitized inner HTML if provided; otherwise, escape the label text
         if (!empty($lnk['html'])) {
             $labelOutput = $lnk['html'];
         } else {
-            $labelOutput = self::e((string)($lnk['label'] ?? ''));
+            $labelOutput = Html::e((string)($lnk['label'] ?? ''));
         }
 
         // Return the constructed anchor tag
-        return '<a class="' . self::e($class) . '" href="' . $href . '"' . $target . $rel . '>' . $labelOutput . '</a>';
+        return '<a class="' . Html::e($class) . '" href="' . $href . '"' . $target . $rel . '>' . $labelOutput . '</a>';
     }
 
     /**
@@ -261,7 +262,7 @@ final class RenderNavigation
     {
         // If aside is true, list all links (no "More" button)
         if ($aside) {
-            $html = '<nav class="side-actions" aria-label="' . self::e($title) . ' quick actions">';
+            $html = '<nav class="side-actions" aria-label="' . Html::e($title) . ' quick actions">';
             foreach ($links as $lnk) {
                 $html .= self::a($lnk, 'URL');
             }
@@ -274,7 +275,7 @@ final class RenderNavigation
         $rest = array_slice($links, max(0, $peek));
 
         // Generate the quick links section
-        $html = '<nav class="side-actions" aria-label="' . self::e($title) . ' quick actions">';
+        $html = '<nav class="side-actions" aria-label="' . Html::e($title) . ' quick actions">';
         foreach ($quick as $lnk) {
             $html .= self::a($lnk, 'URL');
         }
@@ -347,8 +348,8 @@ final class RenderNavigation
         }
 
         $html = '<div class="sectionbar">';
-        $html .= '<p class="sectionbar__name">' . self::e($label) . '</p>';
-        $html .= '<nav class="sectionnav" aria-label="' . self::e($label) . '">';
+        $html .= '<p class="sectionbar__name">' . Html::e($label) . '</p>';
+        $html .= '<nav class="sectionnav" aria-label="' . Html::e($label) . '">';
         foreach ($links as $lnk) {
             $href = (string)($lnk['href'] ?? '#');
             $current = self::linkIsCurrent($href) ? ' aria-current="page"' : '';
@@ -362,9 +363,9 @@ final class RenderNavigation
                 Page::current()->suggestNavLabel($linkLabel);
             }
             $group = self::sectionNavGroup($href) ? ' sectionnav__link--group' : '';
-            $html .= '<a class="sectionnav__link' . $group . '" href="' . self::e($href) . '"' . $current . '>'
+            $html .= '<a class="sectionnav__link' . $group . '" href="' . Html::e($href) . '"' . $current . '>'
                 . $icon
-                . '<span class="sectionnav__label">' . self::e($linkLabel) . '</span></a>';
+                . '<span class="sectionnav__label">' . Html::e($linkLabel) . '</span></a>';
         }
         $html .= '</nav></div>';
 
@@ -404,24 +405,6 @@ final class RenderNavigation
             && (string)($params['subcontroller'] ?? '') === (string)($_GET['subcontroller'] ?? '');
     }
 
-    /**
-     * Escapes a string for safe output in HTML.
-     *
-     * This method uses `htmlspecialchars` to convert special characters in a string
-     * into their corresponding HTML entities. This ensures that the string can be safely
-     * displayed in an HTML context without introducing XSS vulnerabilities.
-     *
-     * Example:
-     * Input: "<script>alert('XSS');</script>"
-     * Output: "&lt;script&gt;alert(&#039;XSS&#039;);&lt;/script&gt;"
-     *
-     * @param string $s The input string to be escaped.
-     * @return string The escaped string, safe for HTML output.
-     */
-    private static function e(string $s): string
-    {
-        return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); // Escape special characters for HTML
-    }
 
 
 }

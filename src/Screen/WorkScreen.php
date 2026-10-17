@@ -10,6 +10,7 @@ use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -70,7 +71,7 @@ final class WorkScreen
         $canBoard = $status !== null && $status['values'] !== [];
         $view = $canBoard && self::workView() === 'board' ? 'board' : 'list';
         $createHref = $base . '&option=show_item_types';
-        $new = '<a class="btn btn--primary" href="' . htmlspecialchars($createHref, ENT_QUOTES, 'UTF-8') . '">New</a>';
+        $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
         $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
         $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . $new . '</div>';
         if ($ids === []) {
@@ -81,7 +82,7 @@ final class WorkScreen
                 'action' => $new,
             ]);
         } elseif ($shown === []) {
-            $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . htmlspecialchars(self::workHref($base, $view), ENT_QUOTES, 'UTF-8') . '">Show all</a></p>';
+            $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
         } elseif ($view === 'board') {
             $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
         } else {
@@ -124,7 +125,7 @@ final class WorkScreen
         $label = 'Whose work';
 
         return [
-            'html' => '<nav class="work-scope" aria-label="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '">'
+            'html' => '<nav class="work-scope" aria-label="' . Html::e($label) . '">'
                 . self::workScopeLink($base, '', 'All', $focus === '')
                 . self::workScopeLink($base, 'mine', 'Mine', $focus === 'mine')
                 . '</nav>',
@@ -251,8 +252,8 @@ final class WorkScreen
         $class = 'work-scope__link' . ($selected ? ' is-selected' : '');
         $current = $selected ? ' aria-current="page"' : '';
 
-        return '<a class="' . $class . '" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
-            . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+        return '<a class="' . $class . '" href="' . Html::e($href) . '"' . $current . '>'
+            . Html::e($label) . '</a>';
     }
 
     private static function workView(): string
@@ -287,9 +288,9 @@ final class WorkScreen
         foreach (['list' => 'List', 'board' => 'Board'] as $key => $label) {
             $selected = $view === $key;
             $links .= '<a class="work-views__link' . ($selected ? ' is-selected' : '') . '" href="'
-                . htmlspecialchars(self::workHref($base, $key, $focus), ENT_QUOTES, 'UTF-8') . '"'
+                . Html::e(self::workHref($base, $key, $focus)) . '"'
                 . ($selected ? ' aria-current="page"' : '') . '>'
-                . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+                . Html::e($label) . '</a>';
         }
 
         return '<div class="work-views" role="group" aria-label="View">' . $links . '</div>';
@@ -384,8 +385,8 @@ final class WorkScreen
             $html .= self::workColumn('Not set', $unset, false);
         }
 
-        $move = htmlspecialchars($base . '&option=move_card', ENT_QUOTES, 'UTF-8');
-        $token = htmlspecialchars(Csrf::token(), ENT_QUOTES, 'UTF-8');
+        $move = Html::e($base . '&option=move_card');
+        $token = Html::e(Csrf::token());
 
         return '<section class="work-board" aria-label="Board" data-move="' . $move . '" data-csrf="' . $token . '">'
             . $html
@@ -398,10 +399,10 @@ final class WorkScreen
      */
     private static function workColumn(string $label, array $cards, bool $drop): string
     {
-        $dropAttr = $drop ? ' data-status="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '"' : '';
+        $dropAttr = $drop ? ' data-status="' . Html::e($label) . '"' : '';
 
         return '<div class="work-board__col"' . $dropAttr . '>'
-            . '<div class="work-board__head"><span>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+            . '<div class="work-board__head"><span>' . Html::e($label) . '</span>'
             . '<span class="work-board__count">' . count($cards) . '</span></div>'
             . '<div class="work-board__cards">' . implode('', $cards) . '</div>'
             . '</div>';
@@ -414,8 +415,8 @@ final class WorkScreen
     private static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses): string
     {
         $title = $fact['title'] !== '' ? $fact['title'] : ('Record ' . $itemId);
-        $href = htmlspecialchars($base . '&item=' . $itemId, ENT_QUOTES, 'UTF-8');
-        $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+        $href = Html::e($base . '&item=' . $itemId);
+        $titleEsc = Html::e($title);
         $detail = trim((string) ($fact['detail'] ?? ''));
         $next = trim((string) ($fact['next'] ?? ''));
         if ($next === '') {
@@ -423,23 +424,23 @@ final class WorkScreen
         }
         $owner = trim((string) $fact['owner']);
         $detailHtml = $detail !== ''
-            ? '<p class="work-card__detail">' . htmlspecialchars($detail, ENT_QUOTES, 'UTF-8') . '</p>'
+            ? '<p class="work-card__detail">' . Html::e($detail) . '</p>'
             : '';
         $nextHtml = $next !== ''
-            ? '<p class="work-card__log">' . htmlspecialchars($next, ENT_QUOTES, 'UTF-8') . '</p>'
+            ? '<p class="work-card__log">' . Html::e($next) . '</p>'
             : '<p class="work-card__log" hidden></p>';
         $ownerHtml = $owner !== ''
-            ? '<p class="work-card__owner">' . htmlspecialchars($owner, ENT_QUOTES, 'UTF-8') . '</p>'
+            ? '<p class="work-card__owner">' . Html::e($owner) . '</p>'
             : '<p class="work-card__owner" hidden></p>';
         $options = '<option value="">Move to</option>';
         foreach ($statuses as $value) {
             if ($value === $status) {
                 continue;
             }
-            $options .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</option>';
+            $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
         }
 
-        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '">'
+        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . Html::e($status) . '">'
             . '<a class="work-card__title" draggable="false" href="' . $href . '">' . $titleEsc . '</a>'
             . $detailHtml
             . $nextHtml

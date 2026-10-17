@@ -12,6 +12,7 @@ use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -288,7 +289,7 @@ final class ApplicationSettingsScreen
             $formFields,
             [
                 Form::button('submit', 'submit_button', $editing ? 'Save' : 'Add rule'),
-                Form::button('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(self::rulesHomeUrl($slug), ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
+                Form::button('button', '', 'Back', 'onclick="location.href=\'' . Html::e(self::rulesHomeUrl($slug)) . '\'"', 'secondary'),
             ]
         );
         $html .= self::ruleEditorScript($catalog);
@@ -303,11 +304,11 @@ final class ApplicationSettingsScreen
      */
     public static function ruleSelect(string $name, array $options, string $selected, string $class = ''): string
     {
-        $html = '<select name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" class="select ' . htmlspecialchars($class, ENT_QUOTES, 'UTF-8') . '">';
+        $html = '<select name="' . Html::e($name) . '" class="select ' . Html::e($class) . '">';
         foreach ($options as $value => $label) {
             $current = (string) $value === $selected ? ' selected' : '';
-            $html .= '<option value="' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
-                . htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8') . '</option>';
+            $html .= '<option value="' . Html::e((string) $value) . '"' . $current . '>'
+                . Html::e((string) $label) . '</option>';
         }
         $html .= '</select>';
         return $html;
@@ -315,15 +316,15 @@ final class ApplicationSettingsScreen
 
     public static function ruleText(string $name, string $value, string $placeholder = ''): string
     {
-        return '<input type="text" class="input rule-token-target" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
-            . '" value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8')
-            . '" placeholder="' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '">';
+        return '<input type="text" class="input rule-token-target" name="' . Html::e($name)
+            . '" value="' . Html::e($value)
+            . '" placeholder="' . Html::e($placeholder) . '">';
     }
 
     public static function ruleArea(string $name, string $value): string
     {
-        return '<textarea class="input rule-token-target" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8')
-            . '" rows="4">' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</textarea>';
+        return '<textarea class="input rule-token-target" name="' . Html::e($name)
+            . '" rows="4">' . Html::e($value) . '</textarea>';
     }
 
     /**
@@ -590,17 +591,17 @@ final class ApplicationSettingsScreen
     public static function ruleRunsHtml(string $slug, array $rule): string
     {
         $runs = Rules::recentRuns((int) $rule['id'], 12);
-        $html = '<p><a class="btn btn--sm" href="' . htmlspecialchars(self::rulesFormAction($slug, 'try_rule') . '&rule_id=' . (int) $rule['id'], ENT_QUOTES, 'UTF-8') . '">Try this rule</a></p>';
+        $html = '<p><a class="btn btn--sm" href="' . Html::e(self::rulesFormAction($slug, 'try_rule') . '&rule_id=' . (int) $rule['id']) . '">Try this rule</a></p>';
         if ($runs === []) {
             $html .= '<p class="record-list__empty">This rule has not run yet.</p>';
         } else {
             foreach ($runs as $run) {
                 $when = date('j M Y, g:i a', (int) ($run['ran_at'] ?? time()));
                 $html .= '<div class="log-item"><div class="log-heading"><strong>'
-                    . htmlspecialchars($when, ENT_QUOTES, 'UTF-8')
+                    . Html::e($when)
                     . ' — record ' . (int) ($run['item_id'] ?? 0)
                     . '</strong></div><div class="log-text">'
-                    . nl2br(htmlspecialchars((string) ($run['detail'] ?? ''), ENT_QUOTES, 'UTF-8'))
+                    . nl2br(Html::e((string) ($run['detail'] ?? '')))
                     . '</div></div>';
             }
         }
@@ -643,7 +644,7 @@ final class ApplicationSettingsScreen
             $labels[] = (string) $item['item_id'] . ' — ' . (string) $item['item_title'];
         }
         $fields = Rules::fieldChoices([(int) $rule['item_type_id']]);
-        $html = '<p>' . htmlspecialchars(Rules::summary($rule, $fields), ENT_QUOTES, 'UTF-8') . '</p>';
+        $html = '<p>' . Html::e(Rules::summary($rule, $fields)) . '</p>';
         $html .= Form::form(
             'Try this rule',
             self::rulesFormAction($slug, 'try_rule') . '&rule_id=' . $ruleId,
@@ -653,19 +654,19 @@ final class ApplicationSettingsScreen
             ],
             [
                 Form::button('submit', 'submit_button', 'Preview'),
-                Form::button('button', '', 'Back', 'onclick="location.href=\'' . htmlspecialchars(self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '\'"', 'secondary'),
+                Form::button('button', '', 'Back', 'onclick="location.href=\'' . Html::e(self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId) . '\'"', 'secondary'),
             ]
         );
         if (is_array($result)) {
-            $html .= '<p><strong>' . htmlspecialchars((string) ($result['reason'] ?? ''), ENT_QUOTES, 'UTF-8') . '</strong></p>';
+            $html .= '<p><strong>' . Html::e((string) ($result['reason'] ?? '')) . '</strong></p>';
             foreach ($result['steps'] ?? [] as $step) {
                 if (!is_array($step)) {
                     continue;
                 }
-                $html .= '<p>' . htmlspecialchars((string) ($step['detail'] ?? ''), ENT_QUOTES, 'UTF-8') . '</p>';
+                $html .= '<p>' . Html::e((string) ($step['detail'] ?? '')) . '</p>';
             }
             if (($result['matches'] ?? false) === true && ($result['ran'] ?? false) !== true) {
-                $html .= '<form method="post" action="' . htmlspecialchars(self::rulesFormAction($slug, 'run_rule') . '&rule_id=' . $ruleId, ENT_QUOTES, 'UTF-8') . '">'
+                $html .= '<form method="post" action="' . Html::e(self::rulesFormAction($slug, 'run_rule') . '&rule_id=' . $ruleId) . '">'
                     . Form::hidden('rule_id', (string) $ruleId)
                     . Form::hidden('item_id', (string) $itemId)
                     . Form::button('submit', 'submit_button', 'Run it now')

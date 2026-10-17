@@ -13,6 +13,7 @@ use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -196,7 +197,7 @@ final class FieldsScreen
     {
         $fieldId = (int)$customFieldID;
         $fields = [];
-        $fields[TXT_288] = '<div class="menu-editor-wrap"><p class="field-note">' . htmlspecialchars(TXT_695, ENT_QUOTES, 'UTF-8') . '</p>'
+        $fields[TXT_288] = '<div class="menu-editor-wrap"><p class="field-note">' . Html::e(TXT_695) . '</p>'
             . MenuOptions::editorRows($fieldId) . '</div>';
         $fields[TXT_292] = Form::text('menu_value', '');
         $fields[TXT_693] = MenuOptions::parentSelect('parent_menu_value_id', $fieldId, 0);

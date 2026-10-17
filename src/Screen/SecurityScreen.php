@@ -12,6 +12,7 @@ use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -321,7 +322,7 @@ final class SecurityScreen
             TXT_186 => Form::textarea('description', $fieldValues['description'] ?? '', SET_FORM_FIELD_HEIGHT),
             TXT_187 => '<div class="field-stack">'
                 . Form::select('role', $roleIDs, $roleNames, $fieldValues['role'] ?? '')
-                . '<p class="form-help">' . htmlspecialchars(TXT_697, ENT_QUOTES, 'UTF-8') . '</p>'
+                . '<p class="form-help">' . Html::e(TXT_697) . '</p>'
                 . '</div>',
             TXT_696 => self::buildGroupPermissionsField($selectedPermissions),
         ];
@@ -334,8 +335,8 @@ final class SecurityScreen
             [
                 Form::button('submit', 'submit_button', TXT_74, $javascript),
                 Form::button('reset', 'reset', TXT_75),
-                '<a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=manage_groups', ENT_QUOTES, 'UTF-8') . '">'
-                    . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
+                '<a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=manage_groups') . '">'
+                    . Html::e(TXT_160) . '</a>',
             ]
         ));
     }
@@ -826,8 +827,8 @@ final class SecurityScreen
         if (count($result) === 0) {
             Page::current()->setBody(Blocks::vertical([[
                 'title' => TXT_239 . ': ' . $userName,
-                'html' => '<p class="form-help">' . htmlspecialchars(TXT_342, ENT_QUOTES, 'UTF-8') . '</p>'
-                    . '<p><a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a></p>',
+                'html' => '<p class="form-help">' . Html::e(TXT_342) . '</p>'
+                    . '<p><a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID) . '">' . Html::e(TXT_160) . '</a></p>',
             ]]));
             return;
         }
@@ -846,7 +847,7 @@ final class SecurityScreen
                 );
             if ($description !== '') {
                 $groupMembershipHtml .= '<div class="record-list__meta">'
-                    . htmlspecialchars($description, ENT_QUOTES, 'UTF-8')
+                    . Html::e($description)
                     . '</div>';
             }
             $groupMembershipHtml .= '</div>';
@@ -862,8 +863,8 @@ final class SecurityScreen
             [
                 Form::button('submit', 'submit_button', TXT_74),
                 Form::button('reset', 'reset', TXT_75),
-                '<a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">'
-                    . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
+                '<a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID) . '">'
+                    . Html::e(TXT_160) . '</a>',
             ]
         ));
     }

@@ -16,6 +16,7 @@ use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -50,7 +51,7 @@ final class BuilderScreen
     }
     public static function showBuilderForm(string $error = ''): void
     {
-        $h = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        $h = static fn (string $value): string => Html::e($value);
 
         $nameRaw = (string) ($_POST['name'] ?? '');
         $slugRaw = (string) ($_POST['slug'] ?? '');

@@ -7,6 +7,7 @@ use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -103,7 +104,7 @@ final class HomeScreen
             $art = \Adlexone\Theme\Theme::illustrationHref('empty-apps');
             $intro = '<section class="launchpad__intro launchpad__intro--illustrated">'
                 . '<div class="empty-state empty-state--brand">'
-                . ($art !== '' ? '<img class="empty-state__art" src="' . htmlspecialchars($art, ENT_QUOTES, 'UTF-8') . '" alt="" width="160" height="120" loading="lazy">' : '')
+                . ($art !== '' ? '<img class="empty-state__art" src="' . Html::e($art) . '" alt="" width="160" height="120" loading="lazy">' : '')
                 . '<div class="brandwrap launchpad__brand">'
                 . '<span class="logoA"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
                 . '<rect width="32" height="32" rx="7" fill="#1c1917"/>'
@@ -113,7 +114,7 @@ final class HomeScreen
                 . '</svg></span>'
                 . '<span class="brandtext"><span class="title-static">Inlay</span><span class="brandmaker">Adlexone</span></span>'
                 . '</div>'
-                . '<p class="empty-state__copy">' . htmlspecialchars($introCopy, ENT_QUOTES, 'UTF-8') . '</p>'
+                . '<p class="empty-state__copy">' . Html::e($introCopy) . '</p>'
                 . '<div class="empty-state__actions"><a class="btn btn--primary" href="?manage=builder">Design an app</a></div>'
                 . '</div></section>';
         }
@@ -173,13 +174,13 @@ final class HomeScreen
      */
     public static function launchTile(string $href, string $title, string $hint, string $icon): string
     {
-        $hrefEsc = htmlspecialchars($href, ENT_QUOTES, 'UTF-8');
-        $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-        $hintEsc = htmlspecialchars($hint, ENT_QUOTES, 'UTF-8');
-        $iconEsc = htmlspecialchars($icon, ENT_QUOTES, 'UTF-8');
+        $hrefEsc = Html::e($href);
+        $titleEsc = Html::e($title);
+        $hintEsc = Html::e($hint);
+        $iconEsc = Html::e($icon);
 
         return '<a class="launch-tile" href="' . $hrefEsc . '">'
-            . '<span class="launch-tile__icon" aria-hidden="true"><svg class="icon"><use href="' . htmlspecialchars(\Adlexone\Theme\Theme::spriteHref(), ENT_QUOTES, 'UTF-8') . '#' . $iconEsc . '"></use></svg></span>'
+            . '<span class="launch-tile__icon" aria-hidden="true"><svg class="icon"><use href="' . Html::e(\Adlexone\Theme\Theme::spriteHref()) . '#' . $iconEsc . '"></use></svg></span>'
             . '<span class="launch-tile__copy">'
             . '<span class="launch-tile__title">' . $titleEsc . '</span>'
             . '<span class="launch-tile__hint">' . $hintEsc . '</span>'
@@ -194,7 +195,7 @@ final class HomeScreen
         if ($tiles === []) {
             return '';
         }
-        $labelEsc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+        $labelEsc = Html::e($label);
 
         return '<section class="launchpad__group" aria-label="' . $labelEsc . '">'
             . '<h2 class="launchpad__heading">' . $labelEsc . '</h2>'

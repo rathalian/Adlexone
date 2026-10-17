@@ -13,6 +13,7 @@ use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -206,11 +207,11 @@ final class ItemTypesScreen
             $typeLabel = $fieldTypeLabels[$typeKey] ?? $typeKey;
             $itemHtml = '<li class="field-picker-item">'
                 . '<label class="checkbox"><input type="checkbox" name="custom_field_id_' . $fieldId . '" value="' . $fieldId . '"' . ($isSelected ? ' checked' : '') . '> '
-                . '<span>' . htmlspecialchars((string)$row['custom_field_name'], ENT_QUOTES, 'UTF-8') . '</span> '
-                . '<span class="field-picker-type">' . htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8') . '</span></label>'
+                . '<span>' . Html::e((string)$row['custom_field_name']) . '</span> '
+                . '<span class="field-picker-type">' . Html::e($typeLabel) . '</span></label>'
                 . '<span class="field-picker-moves">'
-                . '<button type="button" class="btn field-picker-move" data-move="up">' . htmlspecialchars(TXT_686, ENT_QUOTES, 'UTF-8') . '</button>'
-                . '<button type="button" class="btn field-picker-move" data-move="down">' . htmlspecialchars(TXT_687, ENT_QUOTES, 'UTF-8') . '</button>'
+                . '<button type="button" class="btn field-picker-move" data-move="up">' . Html::e(TXT_686) . '</button>'
+                . '<button type="button" class="btn field-picker-move" data-move="down">' . Html::e(TXT_687) . '</button>'
                 . '</span>'
                 . '<input type="hidden" name="custom_field_sort_' . $fieldId . '" value="' . ($isSelected ? $order : 0) . '">'
                 . '</li>';
@@ -226,8 +227,8 @@ final class ItemTypesScreen
         $selectedHtml = implode('', array_column($selectedItems, 'html'));
 
         $pickerHtml = '<div class="field-picker">'
-            . '<div><div class="label">' . htmlspecialchars(TXT_684, ENT_QUOTES, 'UTF-8') . '</div><ul id="availableFields" class="field-picker-list">' . $availableItems . '</ul></div>'
-            . '<div><div class="label">' . htmlspecialchars(TXT_685, ENT_QUOTES, 'UTF-8') . '</div><ul id="selectedFields" class="field-picker-list">' . $selectedHtml . '</ul></div>'
+            . '<div><div class="label">' . Html::e(TXT_684) . '</div><ul id="availableFields" class="field-picker-list">' . $availableItems . '</ul></div>'
+            . '<div><div class="label">' . Html::e(TXT_685) . '</div><ul id="selectedFields" class="field-picker-list">' . $selectedHtml . '</ul></div>'
             . '</div>'
             . '<script>
     (function () {

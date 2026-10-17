@@ -9,6 +9,7 @@ use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -149,16 +150,16 @@ final class AnnouncementsScreen
                     . '</div>';
             }
             $picture = $lead && $art !== ''
-                ? '<img class="notice__art" src="' . htmlspecialchars($art, ENT_QUOTES, 'UTF-8') . '" alt="" width="160" height="120">'
+                ? '<img class="notice__art" src="' . Html::e($art) . '" alt="" width="160" height="120">'
                 : '';
             $kicker = $lead ? 'On the wall' : '';
             $html .= '<article class="notice' . ($lead ? ' notice--lead' : '') . '">'
                 . $picture
                 . '<div class="notice__copy">'
                 . ($kicker !== '' ? '<p class="notice__kicker">' . $kicker . '</p>' : '')
-                . '<h2 class="notice__subject">' . htmlspecialchars((string) $row['subject'], ENT_QUOTES, 'UTF-8') . '</h2>'
+                . '<h2 class="notice__subject">' . Html::e((string) $row['subject']) . '</h2>'
                 . '<div class="notice__body">' . $row['message'] . '</div>'
-                . '<div class="notice__meta"><time datetime="' . date('c', (int) $row['time']) . '">' . htmlspecialchars(date(SET_DATE_FORMAT, (int) $row['time']), ENT_QUOTES, 'UTF-8') . '</time>' . $actions . '</div>'
+                . '<div class="notice__meta"><time datetime="' . date('c', (int) $row['time']) . '">' . Html::e(date(SET_DATE_FORMAT, (int) $row['time'])) . '</time>' . $actions . '</div>'
                 . '</div></article>';
             $index++;
         }
