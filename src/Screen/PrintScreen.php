@@ -37,6 +37,7 @@ final class PrintScreen
 
     public static function printItem($itemID)
     {
+    	$itemID = (int) $itemID;
 
     	$i = 0;
     	if ($_SESSION['access_role_id'] <=2){//Admin, Inlay Admin, Global Inlay Admin have access
@@ -51,36 +52,27 @@ final class PrintScreen
     	if ($i > 0){ //The user is allowed to access the task
     		// Setup item  information for display
     		$columnArray = array ('*');
-    		$condition = "WHERE item_id = '" . $itemID . "'";
-            $itemFields = Database::first('items', $columnArray, $condition); // Build item table
+            $itemFields = Database::first('items', $columnArray, 'item_id = ?', [$itemID]); // Build item table
     		$itemFields = \Adlexone\Data\ItemFields::hydrate($itemFields ?? []);
     		// Get item type name
     		$columnArray = array ('item_type_name');
-    		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
-    		$row = Database::first('item_types', $columnArray, $condition);
+    		$row = Database::first('item_types', $columnArray, 'item_type_id = ?', [$itemFields['item_type_id']]);
     		$itemTypeName = $row['item_type_name'];
     		// Set the creator and owner values
     		$columnArray = array('user_name');
-    		$condition = "WHERE user_id = '".$itemFields['creator_security']."'";
-    		$row = Database::first('users', $columnArray,$condition);
+    		$row = Database::first('users', $columnArray, 'user_id = ?', [$itemFields['creator_security']]);
     		$itemField[TXT_551] = $row['user_name'];
     		$columnArray = array('user_name');
-    		$condition = "WHERE user_id = '".$itemFields['user_security']."'";
-    		$row = Database::first('users', $columnArray,$condition);
+    		$row = Database::first('users', $columnArray, 'user_id = ?', [$itemFields['user_security']]);
     		$itemField[TXT_269] = $row['user_name'];
     		// Create group membership list
     		$groupArray = \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemFields['item_id']);
-    		$i = 0;
-    		foreach($groupArray as $a) {
-    			if ($i == 0) {
-    				$condition = "WHERE group_id='" . $a . "'";
-    			} else {
-    				$condition .= "OR group_id='" . $a . "'";
-    			}
-    			$i++;
-    		}
     		$columnArray = array ('group_id', 'group_name');
-    		$result = Database::select('groups', $columnArray, $condition);
+    		$result = [];
+    		if ($groupArray !== []) {
+    			$placeholders = implode(', ', array_fill(0, count($groupArray), '?'));
+    			$result = Database::select('groups', $columnArray, 'group_id IN (' . $placeholders . ')', array_values($groupArray));
+    		}
     		$i = 0;
     		$groupMembership = '';
     		foreach ($result as $row) {
@@ -95,11 +87,9 @@ final class PrintScreen
     		$itemField[TXT_84] = $itemFields['item_title'];
     		// Setup custom field display
     		$columnArray = array ('custom_field_id');
-    		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
-    		foreach (Database::select('item_type_custom_fields', $columnArray, $condition) as $customFields) {
+    		foreach (Database::select('item_type_custom_fields', $columnArray, 'item_type_id = ?', [$itemFields['item_type_id']], 'custom_field_order ASC') as $customFields) {
     			$columnArray = array ('*');
-    			$condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-    			$row = Database::first('custom_fields', $columnArray, $condition);
+    			$row = Database::first('custom_fields', $columnArray, 'custom_field_id = ?', [$customFields['custom_field_id']]);
     			$row['field_type'] = FieldTypes::normalise($row['field_type']);
     			if ($row['enabled'] != 'Yes'){
     				continue;
@@ -125,15 +115,13 @@ final class PrintScreen
     		$logHtml = '';
     		// Get item log information from database
     		$columnArray = array ('*');
-    		$condition = "WHERE item_id = '" . $itemID . "' ORDER BY log_item_sequence DESC";
-    		foreach (Database::select('core_log', $columnArray, $condition) as $row) {
+    		foreach (Database::select('core_log', $columnArray, 'item_id = ?', [$itemID], 'log_item_sequence DESC') as $row) {
     			//Restrict log viewing
     			if ($_SESSION['access_role_id'] <= $row['role_id']){
     				// Get user name if applicable
     				if ($row['security_id'] != '') {
     					$columnArray = array ('user_name', 'first_name', 'last_name');
-    					$condition = "WHERE user_id = '" . $row['security_id'] . "'";
-    					$rowUser = Database::first('users', $columnArray, $condition);
+    					$rowUser = Database::first('users', $columnArray, 'user_id = ?', [$row['security_id']]);
     				}
     				$role = '';
     				switch ($row['role_id']) {
