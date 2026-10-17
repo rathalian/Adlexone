@@ -8,6 +8,7 @@ use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -271,7 +272,7 @@ final class ItemTypesScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             $isNew ? TXT_85 : TXT_286,
             $action,
             $fields,
@@ -280,7 +281,6 @@ final class ItemTypesScreen
                 RenderViews::buildFormButton('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -328,10 +328,9 @@ final class ItemTypesScreen
             $typeRows[] = self::itemTypeRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             ['title' => TXT_50, 'html' => self::typeRecordList($typeRows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**

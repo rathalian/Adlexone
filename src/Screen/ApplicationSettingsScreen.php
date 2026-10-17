@@ -9,6 +9,7 @@ use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -92,8 +93,7 @@ final class ApplicationSettingsScreen
             ]
         );
         $html .= self::rulesHtml($slug);
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     public static function rulesFormAction(string $slug, string $option): string
@@ -293,8 +293,7 @@ final class ApplicationSettingsScreen
         if ($editing) {
             $html .= self::ruleRunsHtml($slug, $rule);
         }
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     /**
@@ -671,8 +670,7 @@ final class ApplicationSettingsScreen
                     . '</form>';
             }
         }
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     public static function ruleTypeAllowed(string $slug, int $typeId, int $ruleId): bool

@@ -6,6 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -131,8 +132,7 @@ final class HomeScreen
             ]);
         }
 
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
     /**
      * Once an application exists, home opens it. The launchpad is only for a new install.

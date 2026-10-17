@@ -6,6 +6,7 @@ namespace Adlexone\Application;
 use Adlexone\Auth\Access;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screens an application nav link can open.
@@ -173,8 +174,8 @@ final class Capabilities
     private static function openWork(array $config): void
     {
         $itemType = trim((string) ($config['item_type_id'] ?? ''));
-        if ($itemType === '' && defined('APPLICATION_SLUG')) {
-            $itemType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+        if ($itemType === '' && Page::current()->inApplication()) {
+            $itemType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
         }
         $typeId = $itemType !== '' && ctype_digit($itemType) ? (int) $itemType : null;
         \Adlexone\Screen\WorkScreen::showApplicationWork($typeId, 'Work');
@@ -268,12 +269,7 @@ final class Capabilities
     private static function defineContext(array $app, int $navId): void
     {
         $slug = (string) $app['slug'];
-        if (!defined('APPLICATION_SLUG')) {
-            define('APPLICATION_SLUG', $slug);
-        }
-        if (!defined('APPLICATION_NAV_ID')) {
-            define('APPLICATION_NAV_ID', $navId);
-        }
+        Page::current()->enterApplication($slug, $navId);
 
         $base = \Adlexone\Http\Router::applicationUrl($slug, $navId);
         if (!defined('MAN_BASE_URL')) {

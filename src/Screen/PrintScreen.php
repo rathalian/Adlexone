@@ -5,6 +5,7 @@ use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -13,6 +14,7 @@ final class PrintScreen
 {
     public static function open(): void
     {
+        Page::current()->useLayout(Page::PRINT);
         /**
          * Logic to load the appropriate template
          */
@@ -27,8 +29,7 @@ final class PrintScreen
         		break;
         	default :
         		// Not allowed
-        		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_623, 'html' => '']]));
-        		RenderViews::renderThemePage('full_page_view',  SET_THEME);
+        		Page::current()->setBody(RenderViews::buildVerticalCards([['title' => TXT_623, 'html' => '']]));
         }
     }
     /**
@@ -152,14 +153,12 @@ final class PrintScreen
     				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
     			}
     		}
-    		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([
+    		Page::current()->setBody(RenderViews::buildVerticalCards([
     			['title' => TXT_624 . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName, 'html' => $html],
     			['title' => TXT_601, 'html' => $logHtml],
     		]));
-    		RenderViews::renderThemePage('full_page_view',  SET_THEME);
     	}else{
-    		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_452, 'html' => '']]));
-    		RenderViews::renderThemePage('full_page_view',  SET_THEME);
+    		Page::current()->setBody(RenderViews::buildVerticalCards([['title' => TXT_452, 'html' => '']]));
     	}
     }
 }

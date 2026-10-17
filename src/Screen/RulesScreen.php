@@ -6,6 +6,7 @@ use Adlexone\Application\Rules;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -84,8 +85,7 @@ final class RulesScreen
     		],
     		[RenderViews::buildFormButton('submit', 'submit_button', 'Continue')]
     	);
-    	define('BODY_CONTENT', $html);
-    	RenderViews::renderThemePage('main_page_content', SET_THEME);
+    	Page::current()->setBody($html);
     }
 
     public static function showList(): void
@@ -128,10 +128,9 @@ final class RulesScreen
     		'noMatch' => 'No rules match.',
     		'groups' => $groups,
     	]);
-    	define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+    	Page::current()->setBody(RenderViews::buildVerticalCards([[
     		'title' => 'Rules',
     		'html' => $html . '<p class="record-list__meta">Each application runs its own rules when a record is created, updated, logged, or gets a file.</p>',
     	]]));
-    	RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 }

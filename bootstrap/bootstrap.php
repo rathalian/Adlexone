@@ -34,9 +34,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 /** * Import necessary classes
  */
+use Adlexone\Http\Page;
 use Adlexone\Http\PublicBaseUrl;
 use Adlexone\Http\Router;
-use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
 /**
  * Define system paths and constants
@@ -169,9 +169,9 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
     \Adlexone\support\MenuOptions::prepare();
 
-    if (Router::bare(Router::requested())) {
-        Router::open(Router::requested());
-    } else {
-        RenderViews::renderThemePage('main_page', SET_THEME);
-    }
+    $requested = Router::requested();
+    Page::current()->useLayout(Router::bare($requested) ? Page::RESPONSE : Page::SHELL);
+    Router::open($requested);
 }
+
+Page::current()->send();

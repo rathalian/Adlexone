@@ -9,6 +9,7 @@ use Adlexone\Data\ItemFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -86,13 +87,12 @@ final class WorkScreen
         } else {
             $body = $toolbar . self::workList($shown, $itemTypeId, $base, $stand);
         }
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             [
                 'title' => $title,
                 'html' => $body,
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**

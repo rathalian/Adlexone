@@ -6,6 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
 use Adlexone\Auth\Access;
+use Adlexone\Http\Page;
 use Adlexone\support\RenderViews;
 
 /**
@@ -63,9 +64,7 @@ final class ApplicationScreen
             }
         }
         $_SESSION['application_nav_id'] = (int) $current['nav_id'];
-        if (!defined('APPLICATION_NAV_LABEL')) {
-            define('APPLICATION_NAV_LABEL', (string) $current['label']);
-        }
+        Page::current()->suggestNavLabel((string) $current['label']);
 
         $_GET['nav'] = (string) $current['nav_id'];
         Capabilities::sectionNavigation($app, $visible);

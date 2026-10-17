@@ -8,6 +8,7 @@ use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -171,7 +172,7 @@ final class FieldsScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             $title,
             $formAction,
             $fields,
@@ -180,7 +181,6 @@ final class FieldsScreen
                 RenderViews::buildFormButton('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -204,13 +204,12 @@ final class FieldsScreen
             RenderViews::buildFormButton('reset', 'reset', TXT_75),
         ];
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             TXT_287,
             '?manage=fields&option=add_update_menu_value',
             $fields,
             $buttons
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function addUpdateMenuValue($customFieldID)
@@ -222,8 +221,7 @@ final class FieldsScreen
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
                 $html = TXT_294;
                 $html .= '<br><br><a href ="' . FIELDS_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
-                define('BODY_CONTENT', $html);
-                RenderViews::renderThemePage('main_page_content', SET_THEME);
+                Page::current()->setBody($html);
                 return;
             }
             if ($value !== '') {
@@ -320,8 +318,7 @@ final class FieldsScreen
         );
 
         // Set the body content and include the main page layout
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     /**
@@ -339,10 +336,9 @@ final class FieldsScreen
             $fieldRows[] = self::customFieldRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             ['title' => TXT_53, 'html' => self::fieldRecordList($fieldRows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -449,8 +445,7 @@ final class FieldsScreen
             'html' => $html,
         ];
         $contentBody = RenderViews::buildVerticalCards([$bodyBlock]);
-        define('BODY_CONTENT', $contentBody);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($contentBody);
     }
 
     /**

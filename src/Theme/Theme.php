@@ -244,4 +244,9 @@ final class Theme
     {
         return self::layoutFs() . 'pages' . DIRECTORY_SEPARATOR . $page . '.php';
     }
+
+    public static function partialPath(string $name): string
+    {
+        return self::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . $name . '.php';
+    }
 }

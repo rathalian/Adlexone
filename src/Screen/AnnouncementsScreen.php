@@ -6,6 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -82,7 +83,7 @@ final class AnnouncementsScreen
         }
 
         $heading = date(SET_DATE_FORMAT, (int) $row['time']) . ': ' . (string) $row['subject'];
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             [
                 'title' => $heading,
                 'html' => RenderViews::buildFormFieldsGrid([
@@ -90,12 +91,11 @@ final class AnnouncementsScreen
                 ]),
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function showCreate(): void
     {
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             'New announcement',
             MAN_BASE_URL . '&option=add_announcement',
             [
@@ -107,7 +107,6 @@ final class AnnouncementsScreen
                 RenderViews::buildFormButton('reset', 'reset', 'Reset'),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function create(string $slug): void
@@ -176,10 +175,9 @@ final class AnnouncementsScreen
             $html = '<div class="notice-wall">' . $html . '</div>';
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             ['title' => 'Announcements', 'html' => $html],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function showEdit(string $id, string $slug): void
@@ -189,7 +187,7 @@ final class AnnouncementsScreen
             RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
         }
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             'Edit announcement',
             MAN_BASE_URL . '&option=update_announcement',
             [
@@ -202,7 +200,6 @@ final class AnnouncementsScreen
                 RenderViews::buildFormButton('reset', 'reset', 'Reset'),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function update(string $slug): void

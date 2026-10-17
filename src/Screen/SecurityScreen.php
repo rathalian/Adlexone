@@ -7,6 +7,7 @@ use Adlexone\Application\ApplicationStore;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -25,9 +26,9 @@ final class SecurityScreen
             $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
             $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
             if (in_array($securityOption, $userSectionOptions, true)) {
-                define('SECTION_NAV_OPTION', 'manage_users');
+                Page::current()->setNavOption('manage_users');
             } elseif (in_array($securityOption, $groupSectionOptions, true)) {
-                define('SECTION_NAV_OPTION', 'manage_groups');
+                Page::current()->setNavOption('manage_groups');
             }
         }
         RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
@@ -166,8 +167,7 @@ final class SecurityScreen
         $html = RenderViews::outputIfAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
         $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
         $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_28, 'html' => $html]]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody(RenderViews::buildVerticalCards([['title' => TXT_28, 'html' => $html]]));
     }
 
     /**
@@ -279,7 +279,7 @@ final class SecurityScreen
         $submitText = $userID !== '' ? TXT_74 : TXT_69;
         $heading = $userID !== '' ? ($adminEdit ? TXT_154 : TXT_148) : TXT_33;
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             $heading,
             SEC_BASE_URL . '&option=' . $option,
             $fields,
@@ -288,7 +288,6 @@ final class SecurityScreen
                 RenderViews::buildFormButton('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -324,7 +323,7 @@ final class SecurityScreen
         ];
         $fields[] = RenderViews::buildHiddenInput('group_id', $fieldValues['group_id'] ?? '');
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             $isNew ? TXT_184 : TXT_185,
             $action,
             $fields,
@@ -335,7 +334,6 @@ final class SecurityScreen
                     . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -370,10 +368,9 @@ final class SecurityScreen
             $rows[] = self::userRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             ['title' => TXT_40, 'html' => self::userRecordList($rows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -386,10 +383,9 @@ final class SecurityScreen
             $rows[] = self::groupRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             ['title' => TXT_35, 'html' => self::groupRecordList($rows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -764,11 +760,9 @@ final class SecurityScreen
             'html' => $isUsers ? self::userRecordList($rows) : self::groupRecordList($rows),
         ]]);
 
-        // Define the BODY_CONTENT constant with the generated HTML
-        define('BODY_CONTENT', $html);
+        Page::current()->setBody($html);
 
         // Include the main page content file to display the results
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -827,12 +821,11 @@ final class SecurityScreen
             $result = Database::select('groups', ['group_id', 'group_name', 'description'], 'ORDER BY group_name ASC');
 
         if (count($result) === 0) {
-            define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+            Page::current()->setBody(RenderViews::buildVerticalCards([[
                 'title' => TXT_239 . ': ' . $userName,
                 'html' => '<p class="form-help">' . htmlspecialchars(TXT_342, ENT_QUOTES, 'UTF-8') . '</p>'
                     . '<p><a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a></p>',
             ]]));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
 
@@ -858,7 +851,7 @@ final class SecurityScreen
         }
         $groupMembershipHtml .= '</div>';
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             TXT_239 . ': ' . $userName,
             SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID,
             [
@@ -871,6 +864,5 @@ final class SecurityScreen
                     . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 }

@@ -14,6 +14,7 @@ use Adlexone\Http\Router;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -32,9 +33,7 @@ final class BuilderScreen
         $section = RenderViews::buildURL(BUILDER_URL, 'Builder', 'ic-itemtype-add');
         $section .= RenderViews::buildURL('?manage=applications', 'Applications', 'ic-launch');
         RenderNavigation::applySectionNav('Builder', $section);
-        if (!defined('PAGE_TITLE')) {
-            define('PAGE_TITLE', 'Design an app');
-        }
+        Page::current()->suggestTitle('Design an app');
 
         switch ($option) {
             case 'create':
@@ -394,8 +393,7 @@ final class BuilderScreen
             . 'render();'
             . '})();</script>';
 
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     public static function createBusinessApplication(): void

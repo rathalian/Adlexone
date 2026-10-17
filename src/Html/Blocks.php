@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Html;
 
+use Adlexone\Http\Page;
 use Adlexone\support\Database;
 use Adlexone\Text\Wording;
 use Adlexone\Theme\Theme;
@@ -43,13 +44,13 @@ final class Blocks
                 $titles[] = $rawTitle;
             }
         }
-        $inSection = defined('APP_SECTION_NAV');
+        $page = Page::current();
         $liftTitle = count($bodyBlocks) === 1
             && count($titles) === 1
-            && !defined('PAGE_TITLE')
-            && !$inSection;
+            && !$page->hasTitle()
+            && !$page->hasSectionNav();
         if ($liftTitle) {
-            define('PAGE_TITLE', trim(html_entity_decode(strip_tags($titles[0]), ENT_QUOTES, 'UTF-8')));
+            $page->setTitle(trim(html_entity_decode(strip_tags($titles[0]), ENT_QUOTES, 'UTF-8')));
         }
 
         $html = '<div class="grid">';
@@ -384,12 +385,13 @@ final class Blocks
 
     private static function titleRepeatsSection(string $title): bool
     {
-        if (!defined('APP_SECTION_NAV') || !defined('APPLICATION_NAV_LABEL')) {
+        $page = Page::current();
+        if (!$page->hasSectionNav() || !$page->hasNavLabel()) {
             return false;
         }
         $plain = trim(html_entity_decode(strip_tags($title), ENT_QUOTES, 'UTF-8'));
 
-        return $plain !== '' && strcasecmp($plain, trim((string) APPLICATION_NAV_LABEL)) === 0;
+        return $plain !== '' && strcasecmp($plain, trim($page->navLabel())) === 0;
     }
 
     /**

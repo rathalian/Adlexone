@@ -10,6 +10,7 @@ use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RenderViews;
 use Adlexone\support\RssFeed;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -18,7 +19,7 @@ final class SearchScreen
 {
     public static function open(): void
     {
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+        if (Page::current()->inApplication()) {
             ApplicationAccess::requireUse();
         } elseif (!Access::can(Permission::ADMIN_ITEMS)) {
             Access::deny();
@@ -77,7 +78,7 @@ final class SearchScreen
             case 'show_item_search' :
                 RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 $itemTypes = $_GET['item_types'] ?? '';
-                if ($itemTypes === '' && defined('APPLICATION_SLUG')) {
+                if ($itemTypes === '' && Page::current()->inApplication()) {
                     $allowed = self::applicationSearchTypeIds();
                     $itemTypes = $allowed !== [] ? implode(',', $allowed) : '';
                 }
@@ -131,10 +132,10 @@ final class SearchScreen
      */
     public static function applicationSearchTypeIds(): array
     {
-        if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+        if (!Page::current()->inApplication()) {
             return [];
         }
-        return ApplicationSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+        return ApplicationSettings::allowedItemTypeIds(Page::current()->applicationSlug());
     }
 
     /**
@@ -217,13 +218,12 @@ final class SearchScreen
             TXT_683 => RenderViews::buildTextInput('search_value', ''),
             '' => RenderViews::buildHiddenInput('search', 'Search'),
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             RenderViews::applicationText('TXT_62', TXT_376),
             \Adlexone\Http\Router::continueUrl('search') . '&option=quick_search',
             $fields,
             [RenderViews::buildFormButton('submit', 'search', TXT_3, $javascript)]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -286,7 +286,7 @@ final class SearchScreen
 
         if (empty($ids)) {
             $again = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL . '&option=show_quick_search' : '';
-            define('BODY_CONTENT', RenderViews::buildVerticalCards([
+            Page::current()->setBody(RenderViews::buildVerticalCards([
                 [
                     'title' => $heading,
                     'html' => RenderViews::buildEmptyState([
@@ -299,7 +299,6 @@ final class SearchScreen
                     ]),
                 ],
             ]));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
 
@@ -320,7 +319,7 @@ final class SearchScreen
             );
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             [
                 'title' => $heading,
                 'html' => RenderViews::buildRecordList([
@@ -332,7 +331,6 @@ final class SearchScreen
                 ]),
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -801,8 +799,7 @@ final class SearchScreen
     	$heading = (defined('SEARCH_NAME')) ? SEARCH_NAME : RenderViews::languageAlias('LA_44', 'TXT_44');
         $bodyBlock[] = ['title' => $heading, 'html' => $html];
         $bodyContent = RenderViews::buildVerticalCards($bodyBlock);
-    	define('BODY_CONTENT', $bodyContent);
-    	RenderViews::renderThemePage('main_page_content', SET_THEME);
+    	Page::current()->setBody($bodyContent);
     }
 
     public static function quickSearch()
@@ -1083,9 +1080,9 @@ final class SearchScreen
         }
         $toolbar = '';
         $emptyAction = '';
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+        if (Page::current()->inApplication()) {
             $itemType = '';
-            $defaultType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+            $defaultType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
             if ($defaultType !== '') {
                 $itemType = rawurlencode($defaultType);
             }
@@ -1115,13 +1112,12 @@ final class SearchScreen
             'toolbar' => $toolbar,
             'groups' => [['rows' => $rows]],
         ]);
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(RenderViews::buildVerticalCards([
             [
                 'title' => RenderViews::applicationText('TXT_60', TXT_313),
                 'html' => $list,
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescription, $application, $security, array $criteria = [])
@@ -1439,7 +1435,7 @@ final class SearchScreen
 
         $fields = [];
         $allowedTypes = self::applicationSearchTypeIds();
-        $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+        $inApplication = Page::current()->inApplication();
         if (!$inApplication || count($allowedTypes) > 1) {
             $fields[$inApplication ? 'Kind' : TXT_99] = self::showItemTypeMenu($filter);
         }
@@ -1548,7 +1544,7 @@ final class SearchScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             RenderViews::applicationText('TXT_61', (string)RenderViews::getLanguageConstant('LA_96', 'TXT_96')),
             \Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results' . $eventId,
             $fields,
@@ -1559,7 +1555,6 @@ final class SearchScreen
             ],
             ['name' => 'itemSearch', 'id' => 'itemSearch']
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function editSavedSearch($id)
@@ -1580,7 +1575,7 @@ final class SearchScreen
             TXT_627 => RenderViews::buildTextInput('search_name', $row['search_name']),
             TXT_628 => RenderViews::buildTextArea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT),
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             TXT_628 . ' - ' . $row['search_name'],
             $action,
             $fields,
@@ -1589,7 +1584,6 @@ final class SearchScreen
                 RenderViews::buildFormButton('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function updateSavedSearch($id)

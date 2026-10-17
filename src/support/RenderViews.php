@@ -51,24 +51,6 @@ class RenderViews
         return Form::form($formTitle, $formActionURL, $fields, $buttons, $options);
     }
 
-    /** $theme is kept for callers. The active skin is Theme::name(). */
-    public static function renderThemePage(string $page, string $theme = ''): void
-    {
-        unset($theme);
-        View::render($page);
-    }
-
-    /** @deprecated Use renderThemePage(); kept for older action scripts. */
-    public static function renderPage(string $page, string $theme = ''): void
-    {
-        self::renderThemePage($page, $theme);
-    }
-
-    public static function includeControllerFile(?string $controller, string $defaultPage): void
-    {
-        View::includeController($controller, $defaultPage);
-    }
-
     public static function buildLeftNavigationButton(string $queryString, string $buttonText, string|false $navBarTitle = false, bool $navBarDivider = false): string
     {
         return Blocks::sideButton($queryString, $buttonText, $navBarTitle, $navBarDivider);

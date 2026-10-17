@@ -6,6 +6,7 @@ use Adlexone\support\RenderViews;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\SharedMethods;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -205,8 +206,7 @@ final class SiteSettingsScreen
         $fields['Home page blurb'] = RenderViews::buildTextArea('SET_HOME_LEAD', $homeLead, '3');
         $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
         $bodyContent = RenderViews::buildForm(TXT_42,'?manage=settings&option=update_adlexone_settings',$fields,$buttons);
-        define('BODY_CONTENT', $bodyContent);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($bodyContent);
     }
 
     public static function showAdvancedSettings(): void
@@ -217,8 +217,7 @@ final class SiteSettingsScreen
         $fields[TXT_205] = RenderViews::buildSelectDropdown('SET_ERROR_REPORTING_LEVEL', array('6135', '6143'), array(TXT_504, TXT_207), SET_ERROR_REPORTING_LEVEL);
         $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_56);
         $bodyContent = RenderViews::buildForm(TXT_130,'?manage=settings&option=update_advanced_settings',$fields,$buttons);
-        define('BODY_CONTENT', $bodyContent);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($bodyContent);
     }
 
     public static function showSignInSettings(): void
@@ -259,13 +258,12 @@ final class SiteSettingsScreen
             'Redirect URI' => RenderViews::buildTextInput('redirect_uri', $esc(\Adlexone\Auth\AuthConfig::callbackUrl()), '', true),
         ];
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             'Sign-in',
             '?manage=settings&option=update_sign_in_settings',
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -290,13 +288,12 @@ final class SiteSettingsScreen
             'Default theme' => RenderViews::buildSelectDropdown('SET_DEFAULT_THEME', array_keys($themes), array_values($themes), $current)
                 . '<p class="form-help">Used when a person has not chosen a theme on their own account.</p>',
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             'Theme',
             '?manage=settings&option=update_theme_settings',
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function showEmailSettings(): void
@@ -310,12 +307,11 @@ final class SiteSettingsScreen
             TXT_649 => RenderViews::buildTextInput('SET_SMTP_USER', $smtp('SET_SMTP_USER')),
             TXT_650 => RenderViews::buildPasswordInput('SET_SMTP_PASSWORD', $smtp('SET_SMTP_PASSWORD')),
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             TXT_565,
             '?manage=settings&option=update_email_settings',
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', TXT_56)]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 }

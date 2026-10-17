@@ -14,6 +14,7 @@ use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -22,7 +23,7 @@ final class ItemScreen
 {
     public static function open(): void
     {
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+        if (Page::current()->inApplication()) {
             ApplicationAccess::requireUse();
         } elseif (!Access::can(Permission::ADMIN_ITEMS)) {
             Access::deny();
@@ -111,8 +112,8 @@ final class ItemScreen
                 if ($itemTypeId === '' || $itemTypeId === null) {
                     $target = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
                     $defaultType = trim((string) ($_GET['default_item_type'] ?? ''));
-                    if ($defaultType === '' && defined('APPLICATION_SLUG')) {
-                        $defaultType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+                    if ($defaultType === '' && Page::current()->inApplication()) {
+                        $defaultType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
                     }
                     if ($defaultType !== '') {
                         $target .= '&default_item_type=' . rawurlencode($defaultType);
@@ -188,10 +189,10 @@ final class ItemScreen
      */
     public static function applicationAllowsItemType(int $typeId): bool
     {
-        if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+        if (!Page::current()->inApplication()) {
             return true;
         }
-        return ApplicationSettings::allowsItemType((string) APPLICATION_SLUG, $typeId);
+        return ApplicationSettings::allowsItemType(Page::current()->applicationSlug(), $typeId);
     }
 
     /**
@@ -505,8 +506,7 @@ final class ItemScreen
             [],
             ['name' => 'repform', 'id' => 'repform']
         );
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     /**
@@ -528,14 +528,14 @@ final class ItemScreen
         $condition = "WHERE enabled = 'Yes' ORDER BY item_type_name ASC";
         $result = Database::select('item_types', ['item_type_id', 'item_type_name'], $condition);
 
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            $allowed = ApplicationSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+        if (Page::current()->inApplication()) {
+            $allowed = ApplicationSettings::allowedItemTypeIds(Page::current()->applicationSlug());
             $result = array_values(array_filter(
                 $result,
                 static fn (array $row): bool => in_array((int) $row['item_type_id'], $allowed, true)
             ));
             if ($defaultItemType === '' || $defaultItemType === null) {
-                $defaultItemType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
+                $defaultItemType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
             }
         }
 
@@ -589,25 +589,23 @@ final class ItemScreen
         }
 
         if (!$noItemTypes) {
-            $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+            $inApplication = Page::current()->inApplication();
             $fields[$inApplication ? 'What is this' : RenderViews::getLanguageConstant('LA_66', 'TXT_66')] = RenderViews::buildSelectDropdown('item_type_id', $valueArray, $displayArray, $defaultItemType);
-            define('BODY_CONTENT', RenderViews::buildForm(
+            Page::current()->setBody(RenderViews::buildForm(
                 $inApplication ? 'New' : RenderViews::getLanguageConstant('LA_46', 'TXT_46'),
                 MAN_BASE_URL . '&option=new_item',
                 $fields,
                 [RenderViews::buildFormButton('submit', 'submit_button', $inApplication ? 'Continue' : TXT_69)]
             ));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
 
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            define('BODY_CONTENT', RenderViews::buildEmptyState([
+        if (Page::current()->inApplication()) {
+            Page::current()->setBody(RenderViews::buildEmptyState([
                 'illustration' => 'empty-work',
                 'title' => 'Nothing to add yet',
                 'copy' => 'This application does not have anything new to open.',
             ]));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
         RenderViews::buildResponse(TXT_341);
@@ -666,7 +664,7 @@ final class ItemScreen
         $row = Database::first('item_types', $columnArray, $condition);
         if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
             $picker = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
-            define('BODY_CONTENT', RenderViews::buildVerticalCards([
+            Page::current()->setBody(RenderViews::buildVerticalCards([
                 [
                     'title' => TXT_68,
                     'html' => '<p class="record-list__empty">' . htmlspecialchars(TXT_68, ENT_QUOTES, 'UTF-8') . '</p>'
@@ -675,11 +673,10 @@ final class ItemScreen
                         . '</div>',
                 ],
             ]));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
         $itemTypeName = $row['item_type_name'];
-        $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+        $inApplication = Page::current()->inApplication();
         if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin have write access
             $itemRole = 2;
         } else {
@@ -961,8 +958,7 @@ final class ItemScreen
             ? 'New ' . $itemTypeName
             : RenderViews::getLanguageConstant('LA_46', 'TXT_67') . ' — ' . $itemTypeName;
         $bodyContent = RenderViews::buildForm($createHeading,MAN_BASE_URL. '&option=add_item',$fields,$buttons,$formOptions);
-        define('BODY_CONTENT', $bodyContent);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($bodyContent);
     }
 
     /**
@@ -1002,7 +998,7 @@ final class ItemScreen
                 $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
                 $row = Database::first('item_types', $columnArray, $condition);
                 $itemTypeName = $row['item_type_name'];
-                $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+                $inApplication = Page::current()->inApplication();
                 $itemField = [];
                 $peopleHidden = '';
                 if ($inApplication) {
@@ -1385,8 +1381,7 @@ final class ItemScreen
                 if ($itemRole < 4) {
                     $html .= \Adlexone\Application\Rules::recordCard((int) $itemID);
                 }
-                define('BODY_CONTENT', $html);
-                RenderViews::renderThemePage('main_page_content', SET_THEME);
+                Page::current()->setBody($html);
             } else {
                 // Not allowed
                 RenderViews::buildResponse(TXT_452);
@@ -1624,7 +1619,7 @@ final class ItemScreen
             }
         }
         $logField[' '] = $hidden;
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             RenderViews::getLanguageConstant('LA_243', 'TXT_243'),
             MAN_BASE_URL . '&option=add_log_entry',
             $logField,
@@ -1633,7 +1628,6 @@ final class ItemScreen
                 '<a class="btn" href="' . htmlspecialchars($backHref, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_385, ENT_QUOTES, 'UTF-8') . '</a>',
             ]
         ) . self::showItemLog($itemID));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -1690,7 +1684,7 @@ final class ItemScreen
      */
     private static function returnToItem($itemID): bool
     {
-        if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+        if (!Page::current()->inApplication()) {
             return false;
         }
         header('Location: ' . MAN_BASE_URL . '&item=' . rawurlencode((string) $itemID));
@@ -1980,8 +1974,7 @@ final class ItemScreen
         // Render the form inside a vertical card (title uses the same heading constant)
         $html = RenderViews::buildForm(TXT_322, $action, $fields, $buttons);
 
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     public static function updateSecurityAssignment(string $itemID): void
@@ -2141,7 +2134,7 @@ final class ItemScreen
             '' => $list,
             TXT_393 => RenderViews::buildFileInput('attachment', (string)(SET_MAX_ATTACHMENT * 1000000)),
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             TXT_389,
             MAN_BASE_URL . '&option=add_attachment&item_id=' . $itemID,
             $fields,
@@ -2151,7 +2144,6 @@ final class ItemScreen
             ],
             ['enctype' => 'multipart/form-data']
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function downloadAttachment($id)

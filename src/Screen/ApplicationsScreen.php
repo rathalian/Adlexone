@@ -9,6 +9,7 @@ use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -31,9 +32,7 @@ final class ApplicationsScreen
             }
         }
         RenderNavigation::applySectionNav('Applications', $section);
-        if (!defined('PAGE_TITLE')) {
-            define('PAGE_TITLE', 'Applications');
-        }
+        Page::current()->suggestTitle('Applications');
 
         switch ($option) {
             case 'export':
@@ -137,7 +136,7 @@ final class ApplicationsScreen
             ];
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+        Page::current()->setBody(RenderViews::buildVerticalCards([[
             'title' => 'Applications',
             'html' => RenderViews::buildRecordList([
                 'column' => 'Application',
@@ -154,7 +153,6 @@ final class ApplicationsScreen
                 'groups' => [['rows' => $rows]],
             ]),
         ]]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function exportApplicationPackage(int $id): void
@@ -197,8 +195,7 @@ final class ApplicationsScreen
         $html = RenderViews::buildForm($app === null ? 'New application' : (string) $app['name'], $action, $fields, [
             RenderViews::buildFormButton('submit', 'submit_button', 'Save'),
         ]);
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     public static function saveApplication(int $id): void
@@ -278,7 +275,7 @@ final class ApplicationsScreen
             ];
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+        Page::current()->setBody(RenderViews::buildVerticalCards([[
             'title' => (string) $app['name'],
             'html' => RenderViews::buildRecordList([
                 'column' => 'Link',
@@ -294,7 +291,6 @@ final class ApplicationsScreen
                 'groups' => [['rows' => $rows]],
             ]),
         ]]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function showNavForm(int $applicationId, int $navId = 0): void
@@ -328,13 +324,12 @@ final class ApplicationsScreen
                 . ($link === null ? '' : RenderViews::buildHiddenInput('nav_id', (string) $link['nav_id'])),
         ];
         $action = $link === null ? APPLICATIONS_MANAGE_URL . '&option=add_nav' : APPLICATIONS_MANAGE_URL . '&option=update_nav';
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(RenderViews::buildForm(
             $link === null ? 'Add link' : 'Edit link',
             $action,
             $fields,
             [RenderViews::buildFormButton('submit', 'submit_button', 'Save')]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function saveNav(int $navId): void

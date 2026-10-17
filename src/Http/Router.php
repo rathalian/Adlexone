@@ -269,10 +269,8 @@ final class Router
      */
     public static function continueUrl(string $engine = ''): string
     {
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            $nav = defined('APPLICATION_NAV_ID') ? (int) APPLICATION_NAV_ID : 0;
-
-            return self::applicationUrl((string) APPLICATION_SLUG, $nav);
+        if (Page::current()->inApplication()) {
+            return self::applicationUrl(Page::current()->applicationSlug(), Page::current()->navId());
         }
 
         $controller = self::canonical(self::queryName((string) ($_GET['controller'] ?? 'home')));
@@ -336,7 +334,7 @@ final class Router
         }
         if (
             ($canonical === self::ITEMS || $canonical === self::SEARCH)
-            && (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '')
+            && (!Page::current()->inApplication())
             && !Access::can(Permission::ADMIN_ITEMS)
         ) {
             Access::deny();

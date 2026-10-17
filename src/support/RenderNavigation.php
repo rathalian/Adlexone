@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\support;
 
 use Adlexone\Auth\Permission;
+use Adlexone\Http\Page;
 use DOMDocument;
 use DOMElement;
 use RuntimeException;
@@ -329,14 +330,13 @@ final class RenderNavigation
      */
     public static function applySectionNav(string $label, string $linksHtml): void
     {
-        if (defined('APP_SECTION_NAV')) {
+        $page = Page::current();
+        if ($page->hasSectionNav()) {
             return;
         }
-        if (!defined('PAGE_EYEBROW')) {
-            define('PAGE_EYEBROW', $label);
-        }
+        $page->suggestEyebrow($label);
         $built = self::build([$label => $linksHtml]);
-        define('APP_SECTION_NAV', self::sectionNav($built[$label] ?? [], $label));
+        $page->setSectionNav(self::sectionNav($built[$label] ?? [], $label));
     }
 
     /**
@@ -362,8 +362,8 @@ final class RenderNavigation
                 $icon = $match[0];
             }
             $linkLabel = trim((string)($lnk['label'] ?? ''));
-            if ($current !== '' && $linkLabel !== '' && !defined('APPLICATION_NAV_LABEL')) {
-                define('APPLICATION_NAV_LABEL', $linkLabel);
+            if ($current !== '' && $linkLabel !== '') {
+                Page::current()->suggestNavLabel($linkLabel);
             }
             $group = self::sectionNavGroup($href) ? ' sectionnav__link--group' : '';
             $html .= '<a class="sectionnav__link' . $group . '" href="' . self::e($href) . '"' . $current . '>'
@@ -396,8 +396,8 @@ final class RenderNavigation
             return $linkNav === (string)($_GET['nav'] ?? '');
         }
         $linkOption = (string)($params['option'] ?? '');
-        $currentOption = defined('SECTION_NAV_OPTION')
-            ? (string)SECTION_NAV_OPTION
+        $currentOption = Page::current()->navOption() !== ''
+            ? Page::current()->navOption()
             : (string)($_GET['option'] ?? '');
         if ($linkOption !== '' || $currentOption !== '') {
             return $linkOption !== '' && $linkOption === $currentOption;
