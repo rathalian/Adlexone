@@ -261,3 +261,242 @@
         if (fromAttr === pageOpt || fromHref === pageOpt) link.classList.add('is-current');
     });
 })();
+
+/* Forms: inline validation behind the legacy fieldCheck() call, required markers, password reveal, busy submit.
+   Screens still attach onclick="return fieldCheck(header, tests, names, errors, requiredMessages, required)". */
+(() => {
+    const trim = (value) => (value || '').trim();
+
+    const validDate = (value, format) => {
+        if (format !== 'DMY' && format !== 'MDY') return true;
+        const parts = trim(value).split(/[/-]/);
+        if (parts.length !== 3 || parts.some((part) => !/^\d{1,4}$/.test(part))) return false;
+        const [first, second, third] = parts.map(Number);
+        let year = third;
+        if (parts[2].length <= 2) year += year > 50 ? 1900 : 2000;
+        const month = format === 'DMY' ? second : first;
+        const day = format === 'DMY' ? first : second;
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+    };
+
+    const validTime = (value) => {
+        const match = trim(value).match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+        return !!match && Number(match[1]) <= 23 && Number(match[2]) <= 59 && (match[3] === undefined || Number(match[3]) <= 59);
+    };
+
+    const validIp = (value) => {
+        const parts = trim(value).split('.');
+        return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255)
+            && Number(parts[0]) > 0;
+    };
+
+    const validEmail = (value) => trim(value).split(',').every((address) => (
+        /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(trim(address))
+    ));
+
+    const isInvalid = (type, value) => {
+        const [kind, ...options] = (type || '').split(',');
+        switch (kind) {
+            case 'numeric': return isNaN(value);
+            case 'string': return /[^a-z\s'-.]/i.test(trim(value));
+            case 'alphanumeric': return /\W/.test(value);
+            case 'date': return !validDate(value, options[0]);
+            case 'time': return !validTime(value);
+            case 'datetime': {
+                const [day = '', time = ''] = trim(value).split(/\s+/);
+                return !validDate(day, options[0]) || !validTime(time);
+            }
+            case 'ip': return !validIp(value);
+            case 'email': return !validEmail(value);
+            case 'regexp':
+                try { return !new RegExp(options.join(',')).test(value); } catch (e) { return false; }
+            default: return false;
+        }
+    };
+
+    const controlOf = (name) => (name ? document.getElementsByName(name)[0] : undefined);
+    const labelOf = (control) => (
+        control.id ? document.querySelector(`label[for="${CSS.escape(control.id)}"]`) : null
+    );
+
+    const describedBy = (control, id, on) => {
+        const ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter((x) => x && x !== id);
+        if (on) ids.push(id);
+        if (ids.length) control.setAttribute('aria-describedby', ids.join(' '));
+        else control.removeAttribute('aria-describedby');
+    };
+
+    const clearError = (control) => {
+        const form = control.form;
+        control.removeAttribute('aria-invalid');
+        const id = control.dataset.errorId;
+        if (id) {
+            const note = document.getElementById(id);
+            if (note) note.remove();
+            describedBy(control, id, false);
+            delete control.dataset.errorId;
+        }
+        if (form && !form.querySelector('[aria-invalid="true"]')) {
+            const summary = form.querySelector('.form-errors');
+            if (summary) summary.remove();
+        }
+    };
+
+    const showError = (control, message) => {
+        clearError(control);
+        const id = `error-${control.id || control.name}`;
+        const note = document.createElement('p');
+        note.className = 'field-error';
+        note.id = id;
+        note.textContent = message;
+        const host = control.closest('.input-affix') || control;
+        host.insertAdjacentElement('afterend', note);
+        control.setAttribute('aria-invalid', 'true');
+        control.dataset.errorId = id;
+        describedBy(control, id, true);
+    };
+
+    const showSummary = (form, header, problems) => {
+        const old = form.querySelector('.form-errors');
+        if (old) old.remove();
+        const summary = document.createElement('div');
+        summary.className = 'form-errors';
+        summary.setAttribute('role', 'alert');
+        summary.tabIndex = -1;
+        const title = document.createElement('p');
+        title.className = 'form-errors__title';
+        title.textContent = header;
+        const list = document.createElement('ul');
+        problems.forEach(({ control, message }) => {
+            const item = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `#${control.id}`;
+            link.textContent = message;
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                control.focus();
+            });
+            item.appendChild(link);
+            list.appendChild(item);
+        });
+        summary.append(title, list);
+        const anchor = form.querySelector('.form-grid') || form.firstElementChild;
+        form.insertBefore(summary, anchor);
+    };
+
+    window.fieldCheck = (header, testTypes, names, errorMessages, requiredMessages, required) => {
+        const problems = [];
+        let form = null;
+        (names || []).forEach((name, i) => {
+            const control = controlOf(name);
+            if (!control) return;
+            form = form || control.form;
+            clearError(control);
+            const value = control.value || '';
+            let message = '';
+            if (required && required[i] && trim(value) === '') {
+                message = (requiredMessages && requiredMessages[i]) || 'This field is required';
+            } else if (trim(value) !== '' && isInvalid(testTypes && testTypes[i], value)) {
+                message = (errorMessages && errorMessages[i]) || 'This value is not valid';
+            }
+            if (message) problems.push({ control, message });
+        });
+
+        if (!problems.length) return true;
+        problems.forEach(({ control, message }) => showError(control, message));
+        if (form) showSummary(form, header, problems);
+        problems[0].control.focus();
+        problems[0].control.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return false;
+    };
+
+    document.addEventListener('input', (event) => {
+        const control = event.target;
+        if (control instanceof HTMLElement && control.getAttribute('aria-invalid') === 'true') clearError(control);
+    });
+    document.addEventListener('change', (event) => {
+        const control = event.target;
+        if (control instanceof HTMLElement && control.getAttribute('aria-invalid') === 'true') clearError(control);
+    });
+
+    /* Mark the fields a legacy fieldCheck() call will insist on, by running its arguments through a stub. */
+    const markRequired = (control) => {
+        control.setAttribute('aria-required', 'true');
+        const label = labelOf(control);
+        if (label) label.classList.add('is-required');
+    };
+
+    document.querySelectorAll('form [onclick*="fieldCheck("]').forEach((button) => {
+        let args = null;
+        try {
+            new Function('fieldCheck', button.getAttribute('onclick'))((...captured) => {
+                args = captured;
+                return true;
+            });
+        } catch (e) {
+            return;
+        }
+        if (!args) return;
+        const [, , names, , , required] = args;
+        (names || []).forEach((name, i) => {
+            const control = controlOf(name);
+            if (control && required && required[i]) markRequired(control);
+        });
+    });
+
+    document.querySelectorAll('input[required], select[required], textarea[required]').forEach(markRequired);
+
+    /* Password reveal */
+    document.querySelectorAll('form input[type="password"]').forEach((input) => {
+        if (input.closest('.input-affix')) return;
+        const wrap = document.createElement('span');
+        wrap.className = 'input-affix';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'input-affix__toggle';
+        toggle.textContent = 'Show';
+        toggle.setAttribute('aria-label', 'Show password');
+        toggle.setAttribute('aria-pressed', 'false');
+        toggle.addEventListener('click', () => {
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            toggle.textContent = show ? 'Hide' : 'Show';
+            toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+        });
+        wrap.appendChild(toggle);
+    });
+
+    /* Busy submit: one request per form. The button keeps its value, so controllers still see it. */
+    const settle = (form) => {
+        delete form.dataset.submitting;
+        form.removeAttribute('aria-busy');
+        form.querySelectorAll('.is-busy').forEach((node) => node.classList.remove('is-busy'));
+        form.querySelectorAll('.btn[aria-disabled]').forEach((node) => node.removeAttribute('aria-disabled'));
+    };
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.dataset.submitting === '1') {
+            event.preventDefault();
+            return;
+        }
+        setTimeout(() => {
+            if (event.defaultPrevented) return;
+            form.dataset.submitting = '1';
+            form.setAttribute('aria-busy', 'true');
+            const submitter = event.submitter || form.querySelector('[type="submit"]');
+            if (submitter) submitter.classList.add('is-busy');
+            form.querySelectorAll('.btn').forEach((node) => node.setAttribute('aria-disabled', 'true'));
+            setTimeout(() => settle(form), 15000);
+        }, 0);
+    });
+
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) document.querySelectorAll('form[data-submitting]').forEach(settle);
+    });
+})();

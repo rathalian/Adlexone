@@ -190,6 +190,7 @@ final class Form
             'name' => $name,
             'value' => $value,
             'class' => 'input',
+            'autocomplete' => 'new-password',
         ]);
     }
 
@@ -211,7 +212,7 @@ final class Form
     public static function button(string $type, string $name = '', string $value = '', string $attributes = '', string $variant = ''): string
     {
         if ($variant === '') {
-            $variant = $type === 'reset' ? 'secondary' : 'primary';
+            $variant = $type === 'reset' ? 'quiet' : 'primary';
         }
         $class = match ($variant) {
             'primary' => 'btn btn--primary',
