@@ -3,8 +3,11 @@ namespace Adlexone\Screen;
 
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
-use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
+use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -13,6 +16,7 @@ final class PrintScreen
 {
     public static function open(): void
     {
+        Page::current()->useLayout(Page::PRINT);
         /**
          * Logic to load the appropriate template
          */
@@ -27,8 +31,7 @@ final class PrintScreen
         		break;
         	default :
         		// Not allowed
-        		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_623, 'html' => '']]));
-        		RenderViews::renderThemePage('full_page_view',  SET_THEME);
+        		Page::current()->setBody(Blocks::vertical([['title' => TXT_623, 'html' => '']]));
         }
     }
     /**
@@ -110,7 +113,7 @@ final class PrintScreen
     		foreach ($itemField as $name => $field) {
     			$displayFields[$name] = '<div>' . $field . '</div>';
     		}
-    		$html = RenderViews::buildFormFieldsGrid($displayFields);
+    		$html = Form::fields($displayFields);
     		// Time Manager removed from shared schema.
     		$logHtml = '';
     		// Get item log information from database
@@ -144,22 +147,20 @@ final class PrintScreen
     						$role = TXT_303;
     						break;
     				}
-    				$userName = htmlspecialchars((string)($rowUser['user_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$firstName = htmlspecialchars((string)($rowUser['first_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$lastName = htmlspecialchars((string)($rowUser['last_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . htmlspecialchars((string)$role, ENT_QUOTES, 'UTF-8') . ')</i></strong>';
-    				$text = nl2br(htmlspecialchars((string)$row['log_text'], ENT_QUOTES, 'UTF-8'));
+    				$userName = Html::e((string)($rowUser['user_name'] ?? ''));
+    				$firstName = Html::e((string)($rowUser['first_name'] ?? ''));
+    				$lastName = Html::e((string)($rowUser['last_name'] ?? ''));
+    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . Html::e((string)$role) . ')</i></strong>';
+    				$text = nl2br(Html::e((string)$row['log_text']));
     				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
     			}
     		}
-    		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([
+    		Page::current()->setBody(Blocks::vertical([
     			['title' => TXT_624 . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName, 'html' => $html],
     			['title' => TXT_601, 'html' => $logHtml],
     		]));
-    		RenderViews::renderThemePage('full_page_view',  SET_THEME);
     	}else{
-    		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_452, 'html' => '']]));
-    		RenderViews::renderThemePage('full_page_view',  SET_THEME);
+    		Page::current()->setBody(Blocks::vertical([['title' => TXT_452, 'html' => '']]));
     	}
     }
 }

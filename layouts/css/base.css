@@ -45,6 +45,10 @@ body{
     background:none; box-shadow:none; margin-right:0;
 }
 .logoA svg{ width:40px; height:40px; display:block; }
+.logo-mark__ground{ fill:var(--logo-ground, var(--ink)); }
+.logo-mark__bar{ fill:var(--logo-bar, var(--brand)); }
+.logo-mark__piece{ fill:var(--logo-piece, #fff); }
+.logo-mark__joint{ fill:var(--logo-joint, var(--stone)); }
 .brandtext{
     display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px;
     font-weight:700; letter-spacing:-0.03em; font-size:22px; line-height:1; white-space:nowrap; margin-left:0; color:var(--ink);
@@ -898,9 +902,10 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .login-atmosphere__copy{
     position:relative; z-index:1; max-width:28rem;
 }
-.login-atmosphere__brand .logoA{ display:none; }
+.login-atmosphere__brand .logoA,
+.login-atmosphere__brand .logoA svg{ width:64px; height:64px; }
 .login-atmosphere__brand .brandwrap{
-    align-items:flex-start; gap:0;
+    align-items:center; gap:16px;
 }
 .login-atmosphere__brand .brandtext{
     color:var(--ink);
@@ -932,20 +937,20 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     border-radius:14px;
 }
 .login-board__piece--bone{
-    background:#fff;
+    background:var(--logo-piece, #fff);
     color:var(--ink);
-    border:1px solid rgba(28, 25, 23, 0.08);
+    border:1px solid color-mix(in srgb, var(--ink) 8%, transparent);
 }
 .login-board__piece--stone{
-    background:#e4ddd4;
+    background:var(--logo-joint, var(--stone));
     color:var(--ink);
-    border:1px solid rgba(28, 25, 23, 0.08);
+    border:1px solid color-mix(in srgb, var(--ink) 8%, transparent);
 }
 .login-board__piece--ink{
     grid-column:1 / -1;
     min-height:0;
-    background:#1c1917;
-    color:#f3efe6;
+    background:var(--logo-ground, var(--ink));
+    color:var(--logo-piece, #f3efe6);
 }
 .login-board__label{
     font-size:11px;

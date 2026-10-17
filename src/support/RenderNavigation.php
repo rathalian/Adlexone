@@ -4,49 +4,53 @@ declare(strict_types=1);
 namespace Adlexone\support;
 
 use Adlexone\Auth\Permission;
+use Adlexone\Http\Page;
 use DOMDocument;
 use DOMElement;
 use RuntimeException;
 use function libxml_clear_errors;
 use function libxml_use_internal_errors;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 
 final class RenderNavigation
 {
 
     public static function itemSettingsURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
 
         return $html;
     }
 
     public static function rulesURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=rules', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=rules', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }
 
     public static function systemSettingsURLs()
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL('?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
 
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL('?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }
@@ -80,12 +84,6 @@ final class RenderNavigation
         bool  $aside = false
     ): string
     {
-        if (!class_exists(RenderViews::class)) {
-            throw new RuntimeException(
-                'RenderViews class not found. Require RenderViews.php before calling RenderNavigation::render().'
-            );
-        }
-
         // Build blocks
         $blocks = [];
         foreach ($controllers as $title => $links) {
@@ -98,8 +96,8 @@ final class RenderNavigation
 
         // Render cards (responsive by default if $columns is null)
         $content = $columns === null
-            ? RenderViews::buildHorizontalCards($blocks)
-            : RenderViews::buildHorizontalCards($blocks, $columns);
+            ? Blocks::horizontal($blocks)
+            : Blocks::horizontal($blocks, $columns);
 
         // Optional aside wrapper
         if ($aside) {
@@ -221,24 +219,24 @@ final class RenderNavigation
     private static function a(array $lnk, string $class): string
     {
         // Sanitize the href attribute, defaulting to '#' if not provided
-        $href = self::e((string)($lnk['href'] ?? '#'));
+        $href = Html::e((string)($lnk['href'] ?? '#'));
 
         // Sanitize the target attribute, if provided
-        $target = !empty($lnk['target']) ? ' target="' . self::e((string)$lnk['target']) . '"' : '';
+        $target = !empty($lnk['target']) ? ' target="' . Html::e((string)$lnk['target']) . '"' : '';
 
         // Sanitize the rel attribute, if provided
-        $rel = !empty($lnk['rel']) ? ' rel="' . self::e((string)$lnk['rel']) . '"' : '';
+        $rel = !empty($lnk['rel']) ? ' rel="' . Html::e((string)$lnk['rel']) . '"' : '';
 
         // Determine the content of the anchor tag
         // Use the sanitized inner HTML if provided; otherwise, escape the label text
         if (!empty($lnk['html'])) {
             $labelOutput = $lnk['html'];
         } else {
-            $labelOutput = self::e((string)($lnk['label'] ?? ''));
+            $labelOutput = Html::e((string)($lnk['label'] ?? ''));
         }
 
         // Return the constructed anchor tag
-        return '<a class="' . self::e($class) . '" href="' . $href . '"' . $target . $rel . '>' . $labelOutput . '</a>';
+        return '<a class="' . Html::e($class) . '" href="' . $href . '"' . $target . $rel . '>' . $labelOutput . '</a>';
     }
 
     /**
@@ -264,7 +262,7 @@ final class RenderNavigation
     {
         // If aside is true, list all links (no "More" button)
         if ($aside) {
-            $html = '<nav class="side-actions" aria-label="' . self::e($title) . ' quick actions">';
+            $html = '<nav class="side-actions" aria-label="' . Html::e($title) . ' quick actions">';
             foreach ($links as $lnk) {
                 $html .= self::a($lnk, 'URL');
             }
@@ -277,7 +275,7 @@ final class RenderNavigation
         $rest = array_slice($links, max(0, $peek));
 
         // Generate the quick links section
-        $html = '<nav class="side-actions" aria-label="' . self::e($title) . ' quick actions">';
+        $html = '<nav class="side-actions" aria-label="' . Html::e($title) . ' quick actions">';
         foreach ($quick as $lnk) {
             $html .= self::a($lnk, 'URL');
         }
@@ -329,14 +327,13 @@ final class RenderNavigation
      */
     public static function applySectionNav(string $label, string $linksHtml): void
     {
-        if (defined('APP_SECTION_NAV')) {
+        $page = Page::current();
+        if ($page->hasSectionNav()) {
             return;
         }
-        if (!defined('PAGE_EYEBROW')) {
-            define('PAGE_EYEBROW', $label);
-        }
+        $page->suggestEyebrow($label);
         $built = self::build([$label => $linksHtml]);
-        define('APP_SECTION_NAV', self::sectionNav($built[$label] ?? [], $label));
+        $page->setSectionNav(self::sectionNav($built[$label] ?? [], $label));
     }
 
     /**
@@ -351,8 +348,8 @@ final class RenderNavigation
         }
 
         $html = '<div class="sectionbar">';
-        $html .= '<p class="sectionbar__name">' . self::e($label) . '</p>';
-        $html .= '<nav class="sectionnav" aria-label="' . self::e($label) . '">';
+        $html .= '<p class="sectionbar__name">' . Html::e($label) . '</p>';
+        $html .= '<nav class="sectionnav" aria-label="' . Html::e($label) . '">';
         foreach ($links as $lnk) {
             $href = (string)($lnk['href'] ?? '#');
             $current = self::linkIsCurrent($href) ? ' aria-current="page"' : '';
@@ -362,13 +359,13 @@ final class RenderNavigation
                 $icon = $match[0];
             }
             $linkLabel = trim((string)($lnk['label'] ?? ''));
-            if ($current !== '' && $linkLabel !== '' && !defined('APPLICATION_NAV_LABEL')) {
-                define('APPLICATION_NAV_LABEL', $linkLabel);
+            if ($current !== '' && $linkLabel !== '') {
+                Page::current()->suggestNavLabel($linkLabel);
             }
             $group = self::sectionNavGroup($href) ? ' sectionnav__link--group' : '';
-            $html .= '<a class="sectionnav__link' . $group . '" href="' . self::e($href) . '"' . $current . '>'
+            $html .= '<a class="sectionnav__link' . $group . '" href="' . Html::e($href) . '"' . $current . '>'
                 . $icon
-                . '<span class="sectionnav__label">' . self::e($linkLabel) . '</span></a>';
+                . '<span class="sectionnav__label">' . Html::e($linkLabel) . '</span></a>';
         }
         $html .= '</nav></div>';
 
@@ -396,8 +393,8 @@ final class RenderNavigation
             return $linkNav === (string)($_GET['nav'] ?? '');
         }
         $linkOption = (string)($params['option'] ?? '');
-        $currentOption = defined('SECTION_NAV_OPTION')
-            ? (string)SECTION_NAV_OPTION
+        $currentOption = Page::current()->navOption() !== ''
+            ? Page::current()->navOption()
             : (string)($_GET['option'] ?? '');
         if ($linkOption !== '' || $currentOption !== '') {
             return $linkOption !== '' && $linkOption === $currentOption;
@@ -408,24 +405,6 @@ final class RenderNavigation
             && (string)($params['subcontroller'] ?? '') === (string)($_GET['subcontroller'] ?? '');
     }
 
-    /**
-     * Escapes a string for safe output in HTML.
-     *
-     * This method uses `htmlspecialchars` to convert special characters in a string
-     * into their corresponding HTML entities. This ensures that the string can be safely
-     * displayed in an HTML context without introducing XSS vulnerabilities.
-     *
-     * Example:
-     * Input: "<script>alert('XSS');</script>"
-     * Output: "&lt;script&gt;alert(&#039;XSS&#039;);&lt;/script&gt;"
-     *
-     * @param string $s The input string to be escaped.
-     * @return string The escaped string, safe for HTML output.
-     */
-    private static function e(string $s): string
-    {
-        return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); // Escape special characters for HTML
-    }
 
 
 }

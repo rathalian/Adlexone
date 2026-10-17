@@ -130,12 +130,13 @@ final class Theme
         return self::url($file, $theme) . ($v > 0 ? '?v=' . $v : '');
     }
 
-    public static function jsHref(): string
+    public static function jsHref(string $name = 'app'): string
     {
-        $fs = self::layoutFs() . 'js' . DIRECTORY_SEPARATOR . 'app.js';
+        $name = preg_replace('/[^A-Za-z0-9_-]+/', '', $name) ?? '';
+        $fs = self::layoutFs() . 'js' . DIRECTORY_SEPARATOR . $name . '.js';
         $v = is_file($fs) ? (int) @filemtime($fs) : 0;
 
-        return self::layoutUrl('js/app.js') . ($v > 0 ? '?v=' . $v : '');
+        return self::layoutUrl('js/' . $name . '.js') . ($v > 0 ? '?v=' . $v : '');
     }
 
     public static function spriteHref(): string
@@ -243,5 +244,10 @@ final class Theme
     public static function pagePath(string $page): string
     {
         return self::layoutFs() . 'pages' . DIRECTORY_SEPARATOR . $page . '.php';
+    }
+
+    public static function partialPath(string $name): string
+    {
+        return self::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . $name . '.php';
     }
 }

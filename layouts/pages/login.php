@@ -1,5 +1,15 @@
 <?php
+use Adlexone\Html\Html;
+use Adlexone\Http\View;
 use Adlexone\Theme\Theme;
+
+/**
+ * @var string $mode local or choose
+ * @var string $error
+ * @var list<\Adlexone\Auth\OauthConnection> $connections
+ * @var bool $showLocal
+ * @var bool $showOauth
+ */
 $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
     ? (string) SET_HOME_LEAD
     : 'The work, arranged the way your team actually does it.';
@@ -7,13 +17,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign in — Inlay</title>
-    <meta name="color-scheme" content="light">
-    <link rel="icon" href="<?php echo htmlspecialchars(Theme::faviconHref(), ENT_QUOTES, 'UTF-8'); ?>" type="image/svg+xml">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(Theme::baseCssHref(), ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(Theme::cssHref(), ENT_QUOTES, 'UTF-8'); ?>">
+<?php View::partial('head', ['title' => 'Sign in — Inlay']); ?>
 </head>
 <body class="page-login">
 <main class="main" id="content">
@@ -21,9 +25,9 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
         <aside class="login-atmosphere" aria-hidden="true">
             <div class="login-atmosphere__copy">
                 <div class="login-atmosphere__brand">
-                    <?php include Theme::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . 'brand_lockup.php'; ?>
+                    <?php View::partial('brand_lockup'); ?>
                 </div>
-                <p class="login-atmosphere__lead"><?php echo htmlspecialchars($homeLead, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p class="login-atmosphere__lead"><?php echo Html::e($homeLead); ?></p>
             </div>
             <div class="login-board">
                 <div class="login-board__piece login-board__piece--ink">
@@ -46,15 +50,15 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
         <div class="login-center">
             <div class="login-brand login-brand--mobile">
                 <div class="brandwrap">
-                    <?php include Theme::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . 'brand_lockup.php'; ?>
+                    <?php View::partial('brand_lockup'); ?>
                 </div>
             </div>
             <div class="login-card">
-                <?php if (AUTH_ERROR_MESSAGE !== ''): ?>
-                    <div class="login-error" role="alert"><?php echo htmlspecialchars(AUTH_ERROR_MESSAGE, ENT_QUOTES, 'UTF-8'); ?></div>
+                <?php if ($error !== ''): ?>
+                    <div class="login-error" role="alert"><?php echo Html::e($error); ?></div>
                 <?php endif; ?>
 
-                <?php if (AUTH_PAGE_MODE === 'local'): ?>
+                <?php if ($mode === 'local'): ?>
                     <section class="login-panel">
                         <h1 class="login-title">Sign in</h1>
                         <p class="login-lead">Use your username and password.</p>
@@ -69,7 +73,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                         </div>
                         <button type="submit" class="btn btn--primary login-submit">Sign in</button>
                     </form>
-                        <?php if (AUTH_PAGE_SHOW_OAUTH): ?>
+                        <?php if ($showOauth): ?>
                             <p class="login-alt"><a href="?stay=1">Other sign-in options</a></p>
                         <?php endif; ?>
                     </section>
@@ -77,35 +81,35 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                     <section class="login-panel">
                         <h1 class="login-title">Sign in</h1>
                         <p class="login-lead">
-                            <?php if (AUTH_PAGE_SHOW_OAUTH && AUTH_PAGE_SHOW_LOCAL): ?>
+                            <?php if ($showOauth && $showLocal): ?>
                                 Sign in with OAuth (your organisation account), or use a username.
-                            <?php elseif (AUTH_PAGE_SHOW_OAUTH): ?>
+                            <?php elseif ($showOauth): ?>
                                 Sign in with OAuth using your organisation account.
                             <?php else: ?>
                                 Choose how you want to sign in to Inlay.
                             <?php endif; ?>
                         </p>
 
-                        <?php if (AUTH_PAGE_SHOW_OAUTH): ?>
+                        <?php if ($showOauth): ?>
                             <div class="login-sso">
-                                <?php foreach (AUTH_PAGE_CONNECTIONS as $connection): ?>
+                                <?php foreach ($connections as $connection): ?>
                                     <a class="btn btn--primary login-sso-btn"
                                        href="?action=oauth_start&amp;connection=<?php echo rawurlencode($connection->id); ?>">
-                                        <?php echo htmlspecialchars($connection->label, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo Html::e($connection->label); ?>
                                     </a>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
 
-                        <?php if (AUTH_PAGE_SHOW_OAUTH && AUTH_PAGE_SHOW_LOCAL): ?>
+                        <?php if ($showOauth && $showLocal): ?>
                             <div class="login-divider" role="separator"><span>or</span></div>
                         <?php endif; ?>
 
-                        <?php if (AUTH_PAGE_SHOW_LOCAL): ?>
+                        <?php if ($showLocal): ?>
                             <a class="btn login-local-btn" href="?action=local">Sign in with username</a>
                         <?php endif; ?>
 
-                        <?php if (!AUTH_PAGE_SHOW_OAUTH && !AUTH_PAGE_SHOW_LOCAL): ?>
+                        <?php if (!$showOauth && !$showLocal): ?>
                             <p class="login-lead">No sign-in methods are turned on. An administrator can enable username sign-in or an identity provider under Settings, Sign-in.</p>
                         <?php endif; ?>
                     </section>
@@ -115,8 +119,8 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                 <label class="login-theme__label" for="preview_theme">Theme</label>
                 <select class="select" id="preview_theme" name="theme" onchange="this.form.submit()">
                     <?php foreach (Theme::installed() as $slug => $label): ?>
-                        <option value="<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $slug === (defined('SET_THEME') ? (string) SET_THEME : '') ? ' selected' : ''; ?>>
-                            <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                        <option value="<?php echo Html::e($slug); ?>"<?php echo $slug === (defined('SET_THEME') ? (string) SET_THEME : '') ? ' selected' : ''; ?>>
+                            <?php echo Html::e($label); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -125,7 +129,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
     </div>
 </main>
 
-<?php include Theme::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . 'footer.php'; ?>
-<script src="<?php echo htmlspecialchars(Theme::jsHref(), ENT_QUOTES, 'UTF-8'); ?>" defer></script>
+<?php View::partial('footer'); ?>
+<script src="<?php echo Html::e(Theme::jsHref()); ?>" defer></script>
 </body>
 </html>

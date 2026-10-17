@@ -215,6 +215,7 @@ final class Access
             ? TXT_356
             : 'You do not have access to this area. Please contact your administrator.';
         \Adlexone\Http\View::respond($message);
+        \Adlexone\Http\Page::current()->send();
         exit;
     }
 

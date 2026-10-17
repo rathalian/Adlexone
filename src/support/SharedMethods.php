@@ -25,6 +25,8 @@
 
 namespace Adlexone\support {
 
+    use Adlexone\Http\View;
+
     /**
      * SharedMethods
      *
@@ -60,7 +62,7 @@ namespace Adlexone\support {
    * This method processes an associative array of settings by trimming double quotes
    * from string values, encoding the array as a JSON string, and writing it to the
    * specified file path. It provides user feedback on success or failure using
-   * the `RenderViews::buildResponse` method.
+   * `View::respond`.
    *
    * @param string $jsonPath The full path to the JSON settings file where the settings will be saved.
    * @param array $settingsArray An associative array of settings to save. Each key-value pair represents a setting.
@@ -88,17 +90,17 @@ namespace Adlexone\support {
       if ($json === false) {
           // Handle JSON encoding errors and render a failure message
           $err = json_last_error_msg();
-          RenderViews::buildResponse("Failed to encode settings to JSON: {$err}");
+          View::respond("Failed to encode settings to JSON: {$err}");
           return false;
 
       } elseif (file_put_contents($jsonPath, $json) === false) {
           // Handle file writing errors and render a failure message
-          RenderViews::buildResponse("Failed to write settings file: {$jsonPath}");
+          View::respond("Failed to write settings file: {$jsonPath}");
           return false;
 
       } else {
           // Render a success message if the operation completes successfully
-          RenderViews::buildResponse(TXT_201);
+          View::respond(TXT_201);
           return true;
       }
   }

@@ -7,6 +7,8 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Communications;
 use Adlexone\support\Database;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 
 /**
  * Per-application rules.
@@ -671,13 +673,13 @@ final class Rules
         foreach ($runs as $run) {
             $when = date('j M Y, g:i a', (int) ($run['ran_at'] ?? time()));
             $html .= '<div class="log-item"><div class="log-heading"><strong>'
-                . htmlspecialchars($when, ENT_QUOTES, 'UTF-8')
-                . ' — ' . htmlspecialchars((string) $run['rule_name'], ENT_QUOTES, 'UTF-8')
+                . Html::e($when)
+                . ' — ' . Html::e((string) $run['rule_name'])
                 . '</strong></div><div class="log-text">'
-                . nl2br(htmlspecialchars((string) ($run['detail'] ?? ''), ENT_QUOTES, 'UTF-8'))
+                . nl2br(Html::e((string) ($run['detail'] ?? '')))
                 . '</div></div>';
         }
-        return \Adlexone\support\RenderViews::buildVerticalCards([['title' => 'Rules that ran', 'html' => $html]]);
+        return \Adlexone\Html\Blocks::vertical([['title' => 'Rules that ran', 'html' => $html]]);
     }
 
     /**
