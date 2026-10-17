@@ -42,5 +42,8 @@ $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
 
 <?php View::partial('footer'); ?>
 <script src="<?php echo Html::e(Theme::jsHref()); ?>" defer></script>
+<?php foreach ($page->scripts() as $script): ?>
+<script src="<?php echo Html::e(Theme::jsHref($script)); ?>" defer></script>
+<?php endforeach; ?>
 </body>
 </html>

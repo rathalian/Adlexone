@@ -33,6 +33,8 @@ final class Page
     private string $layout = self::RESPONSE;
     /** @var array<string, mixed> */
     private array $layoutVars = [];
+    /** @var list<string> */
+    private array $scripts = [];
     private bool $sent = false;
 
     public static function current(): self
@@ -155,6 +157,20 @@ final class Page
     public function navId(): int
     {
         return $this->navId;
+    }
+
+    /** Loads layouts/js/{name}.js after the shared script. Safe to call more than once. */
+    public function addScript(string $name): void
+    {
+        if (!in_array($name, $this->scripts, true)) {
+            $this->scripts[] = $name;
+        }
+    }
+
+    /** @return list<string> */
+    public function scripts(): array
+    {
+        return $this->scripts;
     }
 
     /**
