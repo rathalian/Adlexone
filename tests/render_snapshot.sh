@@ -7,6 +7,7 @@
 #   tests/render_snapshot.sh /tmp/after
 #   diff -ru /tmp/before /tmp/after
 #
+# EMPTY_APPS=1 disables every application first, which shows the launchpad home.
 # The copy keeps the tracked sqlite file untouched (sign-in rewrites password hashes).
 set -euo pipefail
 
@@ -27,6 +28,9 @@ $p = new PDO("sqlite:" . $argv[1] . "/storage/database/adlexone.sqlite");
 $u = $p->prepare("UPDATE users SET password = ? WHERE user_name = ?");
 $u->execute([password_hash("snapshot", PASSWORD_DEFAULT), "Administrator"]);
 $u->execute([password_hash("snapshot", PASSWORD_DEFAULT), "angela"]);
+if (getenv("EMPTY_APPS") === "1") {
+    $p->exec("UPDATE applications SET enabled = 0;");
+}
 ' "$WORK"
 
 php -S "127.0.0.1:$PORT" -t "$WORK" >"$WORK/server.log" 2>&1 &
