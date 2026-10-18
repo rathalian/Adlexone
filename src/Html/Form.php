@@ -13,7 +13,7 @@ final class Form
     /**
      * @param array<string, string> $fields label => control HTML
      * @param list<string> $buttons
-     * @param array{method?: string, name?: string, id?: string, enctype?: string} $options
+     * @param array{method?: string, name?: string, id?: string, enctype?: string, kicker?: string, badge?: string, record?: bool} $options
      */
     public static function form(string $title, string $action, array $fields, array $buttons, array $options = []): string
     {
@@ -30,8 +30,16 @@ final class Form
         $block = [
             'title' => $title,
             'html' => $html,
-            'class' => 'card--sheet',
+            'class' => 'card--sheet' . (!empty($options['record']) ? ' card--record' : ''),
         ];
+        $kicker = trim((string) ($options['kicker'] ?? ''));
+        $badge = trim((string) ($options['badge'] ?? ''));
+        if ($kicker !== '') {
+            $block['kicker'] = $kicker;
+        }
+        if ($badge !== '') {
+            $block['badge'] = $badge;
+        }
         if (!empty($options['disclosure'])) {
             $block['disclosure'] = true;
         }
@@ -88,7 +96,7 @@ final class Form
         foreach ($labelFormElementArray as $label => $element) {
             $fieldIndex++;
             $labelText = trim((string) $label);
-            if ($labelText === '') {
+            if ($labelText === '' || is_int($label)) {
                 $html .= $element;
                 continue;
             }
