@@ -337,9 +337,12 @@
             describedBy(control, id, false);
             delete control.dataset.errorId;
         }
-        if (form && !form.querySelector('[aria-invalid="true"]')) {
-            const summary = form.querySelector('.form-errors');
-            if (summary) summary.remove();
+        const summary = form && form.querySelector('.form-errors');
+        if (summary) {
+            summary.querySelectorAll('li').forEach((item) => {
+                if (item.dataset.for === control.id) item.remove();
+            });
+            if (!form.querySelector('[aria-invalid="true"]')) summary.remove();
         }
     };
 
@@ -370,6 +373,7 @@
         const list = document.createElement('ul');
         problems.forEach(({ control, message }) => {
             const item = document.createElement('li');
+            item.dataset.for = control.id;
             const link = document.createElement('a');
             link.href = `#${control.id}`;
             link.textContent = message;

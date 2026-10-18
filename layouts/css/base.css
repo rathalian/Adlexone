@@ -682,6 +682,7 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:12px;
+    align-items:start;
 }
 .builder__identity .field--wide{ grid-column:1 / -1; }
 .builder__name{ font-size:16px; font-weight:600; }
