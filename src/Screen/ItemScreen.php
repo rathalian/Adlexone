@@ -1284,9 +1284,22 @@ final class ItemScreen
                     }
                 }
 
-                //Javascript field validation
+                $formOptions = [];
+                if ($inApplication) {
+                    $selectedGroups = (is_array($values) && isset($values['groups_posted']))
+                        ? GroupMembership::idsFromPost($values)
+                        : $itemGroupIds;
+                    if ($itemRole < 4) {
+                        $itemField['Access'] = self::itemGroupPicker($selectedGroups);
+                    } else {
+                        $names = self::groupNames($selectedGroups);
+                        $itemField['Access'] = '<div class="readonly-value">' . Html::e($names === '' ? 'Not shared.' : $names) . '</div>';
+                    }
+                }
+
+                // Same client-side check as the new-record form.
                 if (@$JSValidation[2] == "") {
-                    $jsFieldNameArray = "['item_title']";
+                    $jsFieldNameArray = ",['item_title']";
                 } else {
                     $jsFieldNameArray = $JSValidation[2] . ",'item_title'";
                 }
@@ -1295,13 +1308,12 @@ final class ItemScreen
                     if ($jsValFields == 0) {
                         $jsTestTypeArray = "['']";
                     } else {
-                        $jsTestTypeArray = "[" . str_repeat("'',", $JSValFields) . "''";
+                        $jsTestTypeArray = "[" . str_repeat("'',", $jsValFields) . "''";
                     }
                 } else {
                     $jsTestTypeArray = $JSValidation[1] . ",''";
                 }
-
-                if (@$JSValidation[3] == "" || $JSValidation[3] == ",") {
+                if (@$JSValidation[3] == "" || @$JSValidation[3] == ",") {
                     if ($jsValFields == 0) {
                         $jsErrorMsgArray = ",['']";
                     } else {
@@ -1312,45 +1324,49 @@ final class ItemScreen
                 }
 
                 if (@$JSValidation[4] == "") {
-                    $jsRequiredMsgArray = "['" . TXT_476 . "']";
+                    $jsRequiredMsgArray = ",['" . TXT_476 . "']";
                 } else {
                     $jsRequiredMsgArray = $JSValidation[4] . ",'" . TXT_476 . "'";
                 }
 
                 if (@$JSValidation[5] == "") {
-                    $jsRequiredArray = "[true]";
+                    $jsRequiredArray = ",[true";
                 } else {
                     $jsRequiredArray = $JSValidation[5] . ",true";
                 }
-                $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . ',' . $jsFieldNameArray . ',' . $jsErrorMsgArray . ',' . $jsRequiredMsgArray . ',' . $jsRequiredArray . $JSValidation[6] : '';
+
+                $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
+                $buttons = [];
                 if ($_SESSION['access_role_id'] <= 4) {
                     $buttons[] = Form::button('submit', 'submit_button', TXT_56, $javascript);
                 }
 
-                $itemField[''] = Form::hidden('item_type_id', $itemFields['item_type_id']).Form::hidden('item_id', $itemFields['item_id']) . $peopleHidden;
+                $itemField[''] = Form::hidden('item_type_id', $itemFields['item_type_id']) . Form::hidden('item_id', $itemFields['item_id']) . $peopleHidden;
+                if ($inApplication && $itemRole < 4 && ADD_ATTACHMENTS == 'yes') {
+                    $files = (SET_ATTACHMENTS === 'yes' && Database::exists('item_attachments', 'item_id = ?', [(int) $itemID]))
+                        ? self::attachmentListHtml((string) $itemID, '')
+                        : '';
+                    $itemField[TXT_393] = Form::file('attachment', (string) (SET_MAX_ATTACHMENT * 1000000)) . $files;
+                    $formOptions['enctype'] = 'multipart/form-data';
+                } elseif ($inApplication && SET_ATTACHMENTS === 'yes' && Database::exists('item_attachments', 'item_id = ?', [(int) $itemID])) {
+                    $itemField['Attachments'] = self::attachmentListHtml((string) $itemID, '');
+                }
+                if ($inApplication && SET_LOG_ENTRY === 'yes') {
+                    $entries = self::logEntriesHtml((string) $itemID, '', false);
+                    if (str_contains($entries, 'class="record-list__empty"')) {
+                        $entries = '';
+                    }
+                    if ($itemRole < 4) {
+                        $itemField['Notes'] = $entries . Form::textarea('log_entry', '', '4') . Form::hidden('role_id', '5');
+                    } elseif ($entries !== '') {
+                        $itemField['Notes'] = $entries;
+                    }
+                }
                 $recordTitle = trim((string) ($itemFields['item_title'] ?? ''));
                 $formTitle = $inApplication
                     ? ($recordTitle !== '' ? $recordTitle : $itemTypeName)
                     : Wording::get('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName;
-                $html .= Form::form($formTitle,MAN_BASE_URL . '&option=update_item',$itemField,$buttons);
-
-                if ($inApplication) {
-                    $selectedGroups = (is_array($values) && isset($values['groups_posted']))
-                        ? GroupMembership::idsFromPost($values)
-                        : $itemGroupIds;
-                    $html .= self::groupCard(
-                        (string) $itemID,
-                        (string) ($itemFields['item_type_id'] ?? ''),
-                        $selectedGroups,
-                        $itemRole < 4
-                    );
-                    if (SET_LOG_ENTRY === 'yes') {
-                        $html .= self::logCard((string) $itemID, $itemRole < 4);
-                    }
-                    if (SET_ATTACHMENTS === 'yes') {
-                        $html .= self::attachmentCard((string) $itemID, $itemRole < 4);
-                    }
-                }
+                $html .= Form::form($formTitle, MAN_BASE_URL . '&option=update_item', $itemField, $buttons, $formOptions);
 
                 //Show transform option
                 if (!$inApplication && $_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
@@ -1541,7 +1557,7 @@ final class ItemScreen
             self::showItem($_POST['item_id'], $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
         } else {
             // Remove unwanted posted information
-            unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id'], $_POST['_csrf']);
+            unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id'], $_POST['_csrf'], $_POST['MAX_FILE_SIZE']);
             MenuOptions::collapseRequest($_POST);
             if (isset($_POST['groups_posted'])) {
                 unset($_POST['groups_posted']);
@@ -1586,6 +1602,12 @@ final class ItemScreen
             ItemFields::saveFromArray((int) $itemID, $fieldPayload);
             if (isset($fieldPayload['group_security'])) {
                 self::syncItemGroupsFromSecurity((int) $itemID, (string) $fieldPayload['group_security']);
+            }
+            if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') !== '') {
+                self::addAttachment($itemID, false, true);
+            }
+            if (self::returnToItem($itemID)) {
+                return;
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
@@ -1755,58 +1777,6 @@ final class ItemScreen
         }
 
         return $itemsHtml;
-    }
-
-    /**
-     * @param list<int> $selectedIds
-     */
-    private static function groupCard(string $itemID, string $itemTypeId, array $selectedIds, bool $canEdit): string
-    {
-        if (!$canEdit) {
-            $names = self::groupNames($selectedIds);
-            $html = $names === ''
-                ? '<p class="record-list__empty">Not shared.</p>'
-                : '<div class="readonly-value">' . Html::e($names) . '</div>';
-
-            return Blocks::vertical([['title' => 'Access', 'html' => $html, 'class' => 'card--sheet', 'disclosure' => true]]);
-        }
-
-        return Form::form(
-            'Access',
-            MAN_BASE_URL . '&option=update_item',
-            [
-                '' => self::itemGroupPicker($selectedIds)
-                    . Form::hidden('item_id', $itemID)
-                    . Form::hidden('item_type_id', $itemTypeId)
-                    . Form::hidden('groups_only', '1'),
-            ],
-            [Form::button('submit', 'submit_button', TXT_56)],
-            ['disclosure' => true]
-        );
-    }
-
-    private static function logCard(string $itemID, bool $canEdit): string
-    {
-        $entries = self::logEntriesHtml($itemID, 'No notes yet.', false);
-        if (!$canEdit) {
-            return Blocks::vertical([['title' => 'Notes', 'html' => $entries, 'class' => 'card--sheet', 'disclosure' => true]]);
-        }
-
-        $note = preg_replace('/<textarea\b/', '<textarea aria-label="Note"', Form::textarea('log_entry', '', '4'), 1);
-
-        return Form::form(
-            'Notes',
-            MAN_BASE_URL . '&option=add_log_entry',
-            [
-                '' => '<div class="form-grid">' . $entries
-                    . $note
-                    . Form::hidden('item_id', $itemID)
-                    . Form::hidden('role_id', '5')
-                    . '</div>',
-            ],
-            [Form::button('submit', 'submit_button', 'Add')],
-            ['disclosure' => true]
-        );
     }
 
     public static function showCustomFields(): string
@@ -2098,33 +2068,6 @@ final class ItemScreen
             'empty' => $empty,
             'groups' => [['rows' => $rows]],
         ]);
-    }
-
-    private static function attachmentCard(string $itemID, bool $canEdit): string
-    {
-        $list = self::attachmentListHtml($itemID, 'No files yet.');
-        if (!$canEdit) {
-            return Blocks::vertical([
-                ['title' => 'Attachments', 'html' => $list, 'class' => 'card--sheet', 'disclosure' => true],
-            ]);
-        }
-
-        $file = preg_replace(
-            '/<input(?=[^>]*\bname="attachment")/',
-            '<input aria-label="File"',
-            Form::file('attachment', (string) (SET_MAX_ATTACHMENT * 1000000)),
-            1
-        );
-
-        return Form::form(
-            'Attachments',
-            MAN_BASE_URL . '&option=add_attachment&item_id=' . rawurlencode($itemID),
-            [
-                '' => '<div class="form-grid">' . $list . $file . '</div>',
-            ],
-            [Form::button('submit', 'submit_button', 'Add')],
-            ['enctype' => 'multipart/form-data', 'disclosure' => true]
-        );
     }
 
     public static function showAttachments($itemID)
