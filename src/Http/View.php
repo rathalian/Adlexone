@@ -4,77 +4,72 @@ declare(strict_types=1);
 namespace Adlexone\Http;
 
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 use Adlexone\Theme\Theme;
 
 /**
- * Renders a layout page. Screens pass body HTML; the document shell lives in layouts/pages/.
+ * Loads templates from layouts/ and turns a message into a response page.
  */
 final class View
 {
-    public static function render(string $page): void
+    /**
+     * @param array<string, mixed> $vars
+     */
+    public static function render(string $page, array $vars = []): void
     {
-        $path = Theme::pagePath($page);
-        if (!is_file($path)) {
-            echo '<!-- missing layout page: ' . htmlspecialchars($page, ENT_QUOTES, 'UTF-8') . ' -->';
-            return;
-        }
-        include $path;
-    }
-
-    public static function body(string $html, string $page = 'main_page_content'): void
-    {
-        if (!defined('BODY_CONTENT')) {
-            define('BODY_CONTENT', $html);
-        }
-        self::render($page);
+        self::load(Theme::pagePath($page), $page, $vars);
     }
 
     /**
-     * Open a screen by name. Kept for older action scripts.
+     * @param array<string, mixed> $vars
      */
-    public static function includeController(?string $controller, string $defaultPage): void
+    public static function partial(string $name, array $vars = []): void
     {
-        $controller = basename($controller ?? $defaultPage);
-        if (str_contains($controller, ':')) {
-            [$controller, $appSlug] = explode(':', $controller, 2);
-            if (trim((string) ($_GET['app'] ?? '')) === '') {
-                $_GET['app'] = $appSlug;
-            }
-        }
-        if ($controller === '') {
-            $controller = $defaultPage;
-        }
+        self::load(Theme::partialPath($name), 'partial ' . $name, $vars);
+    }
 
-        Router::open($controller);
+    /**
+     * @param array<string, mixed> $vars
+     */
+    public static function partialToString(string $name, array $vars = []): string
+    {
+        ob_start();
+        self::partial($name, $vars);
+
+        return (string) ob_get_clean();
     }
 
     public static function respond(string $text, string $detail = ''): void
     {
         $message = trim($text);
-        if (!defined('PAGE_TITLE')) {
-            define('PAGE_TITLE', $message);
-        }
+        $page = Page::current();
+        $page->suggestTitle($message);
 
         $detail = trim($detail);
         $follow = $detail !== '' ? self::formatDetail($detail) : self::backLink();
-        $body = '<p class="response__message">' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
+        $body = '<p class="response__message">' . Html::e($message) . '</p>';
         if ($follow !== '') {
             $body .= '<div class="response" role="status">' . $follow . '</div>';
         }
 
-        if (defined('ADLEXONE_PAGE_SHELL')) {
-            self::body($body, 'main_page_content');
-            return;
+        if (!$page->hasBody()) {
+            $page->setBody($body);
         }
+    }
 
-        $responseTitle = $message !== '' ? $message : 'Inlay';
-        $responseBody = $body;
-        $path = Theme::pagePath('response');
+    /**
+     * @param array<string, mixed> $vars
+     */
+    private static function load(string $path, string $label, array $vars): void
+    {
         if (!is_file($path)) {
-            echo '<!-- missing layout page: response -->';
+            echo '<!-- missing layout page: ' . Html::e($label) . ' -->';
             return;
         }
-        include $path;
+        (static function () use ($path, $vars): void {
+            extract($vars, EXTR_SKIP);
+            include $path;
+        })();
     }
 
     private static function formatDetail(string $detail): string
@@ -83,7 +78,7 @@ final class View
             return $detail;
         }
 
-        return '<p class="response__detail">' . htmlspecialchars($detail, ENT_QUOTES, 'UTF-8') . '</p>';
+        return '<p class="response__detail">' . Html::e($detail) . '</p>';
     }
 
     private static function backLink(): string

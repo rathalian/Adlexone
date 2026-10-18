@@ -6,8 +6,14 @@ namespace Adlexone\Screen;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
-use Adlexone\support\RenderViews;
 use Adlexone\support\RenderNavigation;
+use Adlexone\Http\Page;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\support\FormState;
+use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -69,41 +75,41 @@ final class FieldsScreen
 
         switch ((string) ($_GET['option'] ?? '')) {
             case 'new_custom_field':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::showCustomField('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
-                $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                self::showCustomField('', FormState::keys($_SESSION, 'remove'));
+                $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'add_custom_field':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::addCustomField();
                 break;
             case 'modify_custom_field':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showCustomField((string) ($_GET['custom_field_id'] ?? ''));
                 break;
             case 'modify_menu_values':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::modifyMenuValues((string) ($_GET['custom_field_id'] ?? ''));
                 break;
             case 'add_update_menu_value':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::addUpdateMenuValue((string) ($_POST['custom_field_id'] ?? ''));
                 break;
             case 'update_menu_value_filter':
             case 'modify_menu_value_filters':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::modifyMenuValues((string) ($_GET['custom_field_id'] ?? $_POST['custom_field_id'] ?? ''));
                 break;
             case 'delete_menu_value':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::deleteMenuValue((string) ($_GET['menu_value_id'] ?? ''), (string) ($_GET['custom_field_id'] ?? ''));
                 break;
             case 'update_custom_field':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::updateCustomField((string) ($_POST['custom_field_id'] ?? ''));
                 break;
             case 'delete_custom_field':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::deleteCustomField();
                 break;
             case 'manage_fields':
@@ -114,19 +120,19 @@ final class FieldsScreen
             case 'show_multilevel_menu':
             case 'show_multilevel_menu_items':
             case 'update_multilevel_menu_items':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showFields();
                 break;
             case 'field_type_search':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showFieldTypeResults();
                 break;
             case 'search':
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showSearchOptions();
                 break;
             default:
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_ITEMS);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showFields();
                 break;
         }
@@ -151,19 +157,19 @@ final class FieldsScreen
             $title = TXT_285;
         }
 
-        $fields[TXT_86] = RenderViews::buildTextInput('custom_field_name', @$fieldValues['custom_field_name']);
-        $fields[TXT_210] = RenderViews::buildTextInput('default_value', @$fieldValues['default_value']);
+        $fields[TXT_86] = Form::text('custom_field_name', @$fieldValues['custom_field_name']);
+        $fields[TXT_210] = Form::text('default_value', @$fieldValues['default_value']);
         $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'hidden', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu');
         $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_216, TXT_478, TXT_479, TXT_490, TXT_501);
-        $fields[TXT_65] = RenderViews::buildSelectDropdown('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
-        $fields[TXT_477] = RenderViews::buildTextInput('data', @$fieldValues['data']);
+        $fields[TXT_65] = Form::select('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
+        $fields[TXT_477] = Form::text('data', @$fieldValues['data']);
         // Javascript field validation setup
-        $fields[TXT_505] = RenderViews::buildSelectDropdown('required', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['required']);
+        $fields[TXT_505] = Form::select('required', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['required']);
         $validationTypes = array(NULL, 'numeric', 'string', 'alphanumeric', 'date', 'time', 'datetime', 'ip', 'email');
         $validationNames = array(TXT_525, TXT_507, TXT_508, TXT_509, TXT_510, TXT_511, TXT_512, TXT_513, TXT_514);
-        $fields[TXT_506] = RenderViews::buildSelectDropdown('validation_type', $validationTypes, $validationNames, @$fieldValues['validation_type']);
-        $fields[TXT_90] = RenderViews::buildSelectDropdown('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
-        $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
+        $fields[TXT_506] = Form::select('validation_type', $validationTypes, $validationNames, @$fieldValues['validation_type']);
+        $fields[TXT_90] = Form::select('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
+        $fields[''] = Form::hidden('custom_field_id', $customFieldID);
         $jsFieldNameArray = "['custom_field_name']";
         $jsTestTypeArray = "['']";
         $jsErrorMsgArray = "['']";
@@ -171,16 +177,15 @@ final class FieldsScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             $title,
             $formAction,
             $fields,
             [
-                RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
+                Form::button('submit', 'submit_button', TXT_74, $javascript),
+                Form::button('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -192,25 +197,24 @@ final class FieldsScreen
     {
         $fieldId = (int)$customFieldID;
         $fields = [];
-        $fields[TXT_288] = '<div class="menu-editor-wrap"><p class="field-note">' . htmlspecialchars(TXT_695, ENT_QUOTES, 'UTF-8') . '</p>'
+        $fields[TXT_288] = '<div class="menu-editor-wrap"><p class="field-note">' . Html::e(TXT_695) . '</p>'
             . MenuOptions::editorRows($fieldId) . '</div>';
-        $fields[TXT_292] = RenderViews::buildTextInput('menu_value', '');
+        $fields[TXT_292] = Form::text('menu_value', '');
         $fields[TXT_693] = MenuOptions::parentSelect('parent_menu_value_id', $fieldId, 0);
-        $fields[''] = RenderViews::buildHiddenInput('custom_field_id', $customFieldID);
+        $fields[''] = Form::hidden('custom_field_id', $customFieldID);
 
         $buttons = [
-            RenderViews::buildFormButton('submit', 'add_new', TXT_545),
-            RenderViews::buildFormButton('submit', 'update_existing', TXT_542),
-            RenderViews::buildFormButton('reset', 'reset', TXT_75),
+            Form::button('submit', 'add_new', TXT_545),
+            Form::button('submit', 'update_existing', TXT_542),
+            Form::button('reset', 'reset', TXT_75),
         ];
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             TXT_287,
             '?manage=fields&option=add_update_menu_value',
             $fields,
             $buttons
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function addUpdateMenuValue($customFieldID)
@@ -222,8 +226,7 @@ final class FieldsScreen
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
                 $html = TXT_294;
                 $html .= '<br><br><a href ="' . FIELDS_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
-                define('BODY_CONTENT', $html);
-                RenderViews::renderThemePage('main_page_content', SET_THEME);
+                Page::current()->setBody($html);
                 return;
             }
             if ($value !== '') {
@@ -271,17 +274,17 @@ final class FieldsScreen
             $id = Database::insert('custom_fields', $columnArray);
             Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
             // Field values live in item_field_values — items schema is not altered.
-            RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_162, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+            View::respond($_POST['custom_field_name'] . ' ' . TXT_162, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
             return;
         }
-        RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_163, RenderViews::buildURL(FIELDS_BASE_URL . '&option=new_custom_field', TXT_362));
+        View::respond($_POST['custom_field_name'] . ' ' . TXT_163, Blocks::link(FIELDS_BASE_URL . '&option=new_custom_field', TXT_362));
     }
 
     /**
      * showSearchOptions
      *
      * Render a small search form for custom fields or item types using the
-     * RenderViews::buildForm pattern. The page heading constant `HEADING` is
+     * Form::form pattern. The page heading constant `HEADING` is
      * deprecated — the form title is passed directly to `buildForm`.
      *
      * Note: `buildFormSectionHeading` is intentionally not used in this pattern.
@@ -291,28 +294,28 @@ final class FieldsScreen
     public static function showSearchOptions(): void
     {
         $formFields = [];
-        $formFields[TXT_682] = RenderViews::buildSelectDropdown(
+        $formFields[TXT_682] = Form::select(
             'type',
             ['custom_field_name', 'item_type_name'],
             [TXT_86, TXT_87],
             ''
         );
-        $formFields[TXT_678] = RenderViews::buildSelectDropdown(
+        $formFields[TXT_678] = Form::select(
             'operator',
             ['LIKE', '='],
             [TXT_80, TXT_81],
             ''
         );
-        $formFields[TXT_82] = RenderViews::buildTextInput('criteria', '');
+        $formFields[TXT_82] = Form::text('criteria', '');
 
         // Create form buttons
         $buttons = [];
-        $buttons[] = RenderViews::buildFormButton('submit', 'submit_button', TXT_74);
-        $buttons[] = RenderViews::buildFormButton('reset', 'reset', TXT_75);
+        $buttons[] = Form::button('submit', 'submit_button', TXT_74);
+        $buttons[] = Form::button('reset', 'reset', TXT_75);
 
         // Render the form using the modern helper.
         // First parameter is the form title (replaces the deprecated HEADING constant).
-        $html = RenderViews::buildForm(
+        $html = Form::form(
             TXT_52,
             '?manage=fields&option=field_type_search',
             $formFields,
@@ -320,8 +323,7 @@ final class FieldsScreen
         );
 
         // Set the body content and include the main page layout
-        define('BODY_CONTENT', $html);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        Page::current()->setBody($html);
     }
 
     /**
@@ -339,10 +341,9 @@ final class FieldsScreen
             $fieldRows[] = self::customFieldRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             ['title' => TXT_53, 'html' => self::fieldRecordList($fieldRows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -350,7 +351,7 @@ final class FieldsScreen
      */
     public static function fieldRecordList(array $rows): string
     {
-        return RenderViews::buildRecordList([
+        return Blocks::recordList([
             'column' => TXT_151,
             'columns' => [
                 ['key' => 'type', 'label' => TXT_395],
@@ -448,9 +449,8 @@ final class FieldsScreen
             'title' => TXT_113,
             'html' => $html,
         ];
-        $contentBody = RenderViews::buildVerticalCards([$bodyBlock]);
-        define('BODY_CONTENT', $contentBody);
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        $contentBody = Blocks::vertical([$bodyBlock]);
+        Page::current()->setBody($contentBody);
     }
 
     /**
@@ -472,7 +472,7 @@ final class FieldsScreen
         $condition = "WHERE custom_field_id = '$customFieldID'";
         // Update form field values into row
         Database::update('custom_fields', $columnArray, $condition);
-        RenderViews::buildResponse($_POST['custom_field_name'] . ' ' . TXT_164, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+        View::respond($_POST['custom_field_name'] . ' ' . TXT_164, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
     }
 
     /**
@@ -482,13 +482,13 @@ final class FieldsScreen
     {
         $customFieldID = (string)($_GET['custom_field_id'] ?? '');
         if ($customFieldID === '' || !ctype_digit($customFieldID)) {
-            RenderViews::buildResponse(TXT_115, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+            View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
             return;
         }
 
         $row = Database::first('custom_fields', '*', "WHERE custom_field_id = '" . $customFieldID . "'");
         if (!$row) {
-            RenderViews::buildResponse(TXT_115, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+            View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
             return;
         }
 
@@ -500,6 +500,6 @@ final class FieldsScreen
         Database::delete('custom_fields', $condition);
         \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
-        RenderViews::buildResponse($name . ' ' . TXT_47, RenderViews::buildURL(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+        View::respond($name . ' ' . TXT_47, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
     }
 }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Auth;
 
+use Adlexone\Html\Html;
+
 /**
  * Session CSRF tokens for authenticated POST forms.
  */
@@ -31,7 +33,7 @@ final class Csrf
             return '';
         }
         return '<input type="hidden" name="' . self::FIELD . '" value="'
-            . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+            . Html::e($token) . '">';
     }
 
     public static function valid(?string $submitted = null): bool

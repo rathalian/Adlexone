@@ -113,11 +113,8 @@ final class Form
     {
         $message = str_replace('\\n', "\n", $message);
 
-        return htmlspecialchars(
-            'return confirm(' . json_encode($message, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ')',
-            ENT_QUOTES,
-            'UTF-8'
-        );
+        return Html::e(
+            'return confirm(' . json_encode($message, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ')');
     }
 
     public static function confirmData(string $message): string

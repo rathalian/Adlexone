@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Adlexone\Auth;
 
-use Adlexone\support\RenderViews;
-
 /**
  * Front controller for unauthenticated requests.
  */
@@ -130,13 +128,12 @@ final class AuthRouter
             $error = (string) LOGON_ERROR;
         }
 
-        // AUTH_PAGE_* avoids clashing with config string constants such as AUTH_OAUTH_ENABLED.
-        define('AUTH_PAGE_MODE', $mode);
-        define('AUTH_ERROR_MESSAGE', $error);
-        define('AUTH_PAGE_CONNECTIONS', AuthConfig::connections());
-        define('AUTH_PAGE_SHOW_LOCAL', AuthConfig::localEnabled());
-        define('AUTH_PAGE_SHOW_OAUTH', AuthConfig::oauthEnabled());
-
-        RenderViews::renderThemePage('login', defined('SET_THEME') ? SET_THEME : 'inlay-stone');
+        \Adlexone\Http\Page::current()->useLayout(\Adlexone\Http\Page::LOGIN, [
+            'mode' => $mode,
+            'error' => $error,
+            'connections' => AuthConfig::connections(),
+            'showLocal' => AuthConfig::localEnabled(),
+            'showOauth' => AuthConfig::oauthEnabled(),
+        ]);
     }
 }

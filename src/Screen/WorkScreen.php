@@ -8,7 +8,9 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
-use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -69,30 +71,29 @@ final class WorkScreen
         $canBoard = $status !== null && $status['values'] !== [];
         $view = $canBoard && self::workView() === 'board' ? 'board' : 'list';
         $createHref = $base . '&option=show_item_types';
-        $new = '<a class="btn btn--primary" href="' . htmlspecialchars($createHref, ENT_QUOTES, 'UTF-8') . '">New</a>';
+        $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
         $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
         $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . $new . '</div>';
         if ($ids === []) {
-            $body = RenderViews::buildEmptyState([
+            $body = Blocks::emptyState([
                 'illustration' => 'empty-work',
                 'title' => 'Nothing here yet',
                 'copy' => 'Add the first one.',
                 'action' => $new,
             ]);
         } elseif ($shown === []) {
-            $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . htmlspecialchars(self::workHref($base, $view), ENT_QUOTES, 'UTF-8') . '">Show all</a></p>';
+            $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
         } elseif ($view === 'board') {
             $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
         } else {
             $body = $toolbar . self::workList($shown, $itemTypeId, $base, $stand);
         }
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             [
                 'title' => $title,
                 'html' => $body,
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -124,7 +125,7 @@ final class WorkScreen
         $label = 'Whose work';
 
         return [
-            'html' => '<nav class="work-scope" aria-label="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '">'
+            'html' => '<nav class="work-scope" aria-label="' . Html::e($label) . '">'
                 . self::workScopeLink($base, '', 'All', $focus === '')
                 . self::workScopeLink($base, 'mine', 'Mine', $focus === 'mine')
                 . '</nav>',
@@ -251,8 +252,8 @@ final class WorkScreen
         $class = 'work-scope__link' . ($selected ? ' is-selected' : '');
         $current = $selected ? ' aria-current="page"' : '';
 
-        return '<a class="' . $class . '" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '"' . $current . '>'
-            . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+        return '<a class="' . $class . '" href="' . Html::e($href) . '"' . $current . '>'
+            . Html::e($label) . '</a>';
     }
 
     private static function workView(): string
@@ -287,9 +288,9 @@ final class WorkScreen
         foreach (['list' => 'List', 'board' => 'Board'] as $key => $label) {
             $selected = $view === $key;
             $links .= '<a class="work-views__link' . ($selected ? ' is-selected' : '') . '" href="'
-                . htmlspecialchars(self::workHref($base, $key, $focus), ENT_QUOTES, 'UTF-8') . '"'
+                . Html::e(self::workHref($base, $key, $focus)) . '"'
                 . ($selected ? ' aria-current="page"' : '') . '>'
-                . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+                . Html::e($label) . '</a>';
         }
 
         return '<div class="work-views" role="group" aria-label="View">' . $links . '</div>';
@@ -313,7 +314,7 @@ final class WorkScreen
             foreach ($result as $row) {
                 $itemId = (int) $row['item_id'];
                 $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-                $record = RenderViews::itemRecord($row, $base . '&item=' . $itemId, RenderViews::itemActions($itemId, $base));
+                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, Blocks::itemActions($itemId, $base));
                 $bits = array_values(array_filter([
                     trim((string) ($fact['detail'] ?? '')),
                     trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
@@ -329,7 +330,7 @@ final class WorkScreen
         }
         $columns[] = ['key' => 'opened', 'label' => 'Opened'];
 
-        return RenderViews::buildRecordList([
+        return Blocks::recordList([
             'column' => 'Work',
             'columns' => $columns,
             'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
@@ -384,13 +385,14 @@ final class WorkScreen
             $html .= self::workColumn('Not set', $unset, false);
         }
 
-        $move = htmlspecialchars($base . '&option=move_card', ENT_QUOTES, 'UTF-8');
-        $token = htmlspecialchars(Csrf::token(), ENT_QUOTES, 'UTF-8');
+        $move = Html::e($base . '&option=move_card');
+        $token = Html::e(Csrf::token());
+
+        Page::current()->addScript('work-board');
 
         return '<section class="work-board" aria-label="Board" data-move="' . $move . '" data-csrf="' . $token . '">'
             . $html
-            . '</section>'
-            . self::workBoardScript();
+            . '</section>';
     }
 
     /**
@@ -398,10 +400,10 @@ final class WorkScreen
      */
     private static function workColumn(string $label, array $cards, bool $drop): string
     {
-        $dropAttr = $drop ? ' data-status="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '"' : '';
+        $dropAttr = $drop ? ' data-status="' . Html::e($label) . '"' : '';
 
         return '<div class="work-board__col"' . $dropAttr . '>'
-            . '<div class="work-board__head"><span>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+            . '<div class="work-board__head"><span>' . Html::e($label) . '</span>'
             . '<span class="work-board__count">' . count($cards) . '</span></div>'
             . '<div class="work-board__cards">' . implode('', $cards) . '</div>'
             . '</div>';
@@ -414,8 +416,8 @@ final class WorkScreen
     private static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses): string
     {
         $title = $fact['title'] !== '' ? $fact['title'] : ('Record ' . $itemId);
-        $href = htmlspecialchars($base . '&item=' . $itemId, ENT_QUOTES, 'UTF-8');
-        $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+        $href = Html::e($base . '&item=' . $itemId);
+        $titleEsc = Html::e($title);
         $detail = trim((string) ($fact['detail'] ?? ''));
         $next = trim((string) ($fact['next'] ?? ''));
         if ($next === '') {
@@ -423,23 +425,23 @@ final class WorkScreen
         }
         $owner = trim((string) $fact['owner']);
         $detailHtml = $detail !== ''
-            ? '<p class="work-card__detail">' . htmlspecialchars($detail, ENT_QUOTES, 'UTF-8') . '</p>'
+            ? '<p class="work-card__detail">' . Html::e($detail) . '</p>'
             : '';
         $nextHtml = $next !== ''
-            ? '<p class="work-card__log">' . htmlspecialchars($next, ENT_QUOTES, 'UTF-8') . '</p>'
+            ? '<p class="work-card__log">' . Html::e($next) . '</p>'
             : '<p class="work-card__log" hidden></p>';
         $ownerHtml = $owner !== ''
-            ? '<p class="work-card__owner">' . htmlspecialchars($owner, ENT_QUOTES, 'UTF-8') . '</p>'
+            ? '<p class="work-card__owner">' . Html::e($owner) . '</p>'
             : '<p class="work-card__owner" hidden></p>';
         $options = '<option value="">Move to</option>';
         foreach ($statuses as $value) {
             if ($value === $status) {
                 continue;
             }
-            $options .= '<option value="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '</option>';
+            $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
         }
 
-        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '">'
+        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . Html::e($status) . '">'
             . '<a class="work-card__title" draggable="false" href="' . $href . '">' . $titleEsc . '</a>'
             . $detailHtml
             . $nextHtml
@@ -683,114 +685,5 @@ final class WorkScreen
         header('Content-Type: application/json; charset=UTF-8');
         echo json_encode($payload, JSON_UNESCAPED_UNICODE);
         exit;
-    }
-
-    public static function workBoardScript(): string
-    {
-        return <<<'JS'
-<script>
-(function () {
-    var board = document.querySelector(".work-board");
-    if (!board) return;
-    var url = board.getAttribute("data-move") || "";
-    var token = board.getAttribute("data-csrf") || "";
-    var busy = false;
-
-    function cssAttr(value) {
-        return String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\"");
-    }
-
-    function columnCount(column) {
-        var count = column.querySelector(".work-board__count");
-        var cards = column.querySelector(".work-board__cards");
-        if (count && cards) count.textContent = String(cards.children.length);
-    }
-
-    function apply(card, data) {
-        if (!data || !data.ok) return;
-        var column = board.querySelector('.work-board__col[data-status="' + cssAttr(data.status) + '"]');
-        var cards = column ? column.querySelector(".work-board__cards") : null;
-        if (!cards) return;
-        var previous = card.closest(".work-board__col");
-        cards.appendChild(card);
-        card.setAttribute("data-status", data.status);
-        if (previous) columnCount(previous);
-        columnCount(column);
-        var log = card.querySelector(".work-card__log");
-        if (log) {
-            log.textContent = data.log || "";
-            log.hidden = !data.log;
-        }
-        var owner = card.querySelector(".work-card__owner");
-        if (owner) {
-            owner.textContent = data.owner || "";
-            owner.hidden = !data.owner;
-        }
-        var select = card.querySelector("select");
-        if (select) {
-            var current = data.status;
-            select.value = "";
-            Array.prototype.forEach.call(select.options, function (option) {
-                option.hidden = option.value !== "" && option.value === current;
-            });
-        }
-    }
-
-    function move(card, status) {
-        if (busy || !card || !status || card.getAttribute("data-status") === status) return;
-        busy = true;
-        var body = new URLSearchParams();
-        body.set("item_id", card.getAttribute("data-item") || "");
-        body.set("status", status);
-        body.set("_csrf", token);
-        fetch(url, {
-            method: "POST",
-            headers: {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
-            body: body.toString()
-        }).then(function (response) { return response.json(); }).then(function (data) {
-            apply(card, data);
-        }).catch(function () {}).finally(function () {
-            busy = false;
-        });
-    }
-
-    board.addEventListener("dragstart", function (event) {
-        var card = event.target.closest(".work-card");
-        if (!card || event.target.closest("select")) {
-            event.preventDefault();
-            return;
-        }
-        event.dataTransfer.setData("text/plain", card.getAttribute("data-item") || "");
-        event.dataTransfer.effectAllowed = "move";
-        card.classList.add("is-dragging");
-    });
-    board.addEventListener("dragend", function (event) {
-        var card = event.target.closest(".work-card");
-        if (card) card.classList.remove("is-dragging");
-    });
-    board.addEventListener("change", function (event) {
-        var select = event.target.closest("select");
-        if (!select || !select.value) return;
-        move(select.closest(".work-card"), select.value);
-    });
-    board.querySelectorAll(".work-board__col[data-status]").forEach(function (column) {
-        column.addEventListener("dragover", function (event) {
-            event.preventDefault();
-            column.classList.add("is-over");
-        });
-        column.addEventListener("dragleave", function () {
-            column.classList.remove("is-over");
-        });
-        column.addEventListener("drop", function (event) {
-            event.preventDefault();
-            column.classList.remove("is-over");
-            var id = event.dataTransfer.getData("text/plain");
-            var card = board.querySelector('.work-card[data-item="' + cssAttr(id) + '"]');
-            move(card, column.getAttribute("data-status") || "");
-        });
-    });
-})();
-</script>
-JS;
     }
 }

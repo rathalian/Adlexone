@@ -6,7 +6,9 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
 use Adlexone\Auth\Access;
-use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
+use Adlexone\Http\Request;
+use Adlexone\Http\View;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -15,14 +17,14 @@ final class ApplicationScreen
 {
     public static function open(): void
     {
-        $slug = trim((string) ($_GET['app'] ?? ''));
+        $slug = Request::query('app');
         if ($slug === '') {
             $slug = trim((string) ($_SESSION['application_slug'] ?? ''));
         }
 
         $app = $slug === '' ? null : ApplicationStore::findBySlug($slug);
         if ($app === null || !$app['enabled']) {
-            RenderViews::buildResponse('This application is not available.');
+            View::respond('This application is not available.');
             return;
         }
         if (!Access::can((string) $app['permission'])) {
@@ -36,11 +38,11 @@ final class ApplicationScreen
             }
         }
         if ($visible === []) {
-            RenderViews::buildResponse('This application has no navigation yet. Add links in Manage.');
+            View::respond('This application has no navigation yet. Add links in Manage.');
             return;
         }
 
-        $requested = (int) ($_GET['nav'] ?? 0);
+        $requested = (int) Request::query('nav');
         $current = $visible[0];
         if ($requested > 0) {
             $current = null;
@@ -63,11 +65,9 @@ final class ApplicationScreen
             }
         }
         $_SESSION['application_nav_id'] = (int) $current['nav_id'];
-        if (!defined('APPLICATION_NAV_LABEL')) {
-            define('APPLICATION_NAV_LABEL', (string) $current['label']);
-        }
+        Page::current()->suggestNavLabel((string) $current['label']);
 
-        $_GET['nav'] = (string) $current['nav_id'];
+        Request::set('nav', (string) $current['nav_id']);
         Capabilities::sectionNavigation($app, $visible);
 
         $engine = \Adlexone\Http\Router::engine();

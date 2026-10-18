@@ -631,7 +631,7 @@ class Database
     private static function trace(string $sql): void
     {
         if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
-            echo '<!-- SQL: ' . htmlspecialchars($sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . " -->\n";
+            error_log('SQL: ' . preg_replace('/\s+/', ' ', trim($sql)));
         }
     }
 }

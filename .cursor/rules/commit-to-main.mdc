@@ -1,0 +1,13 @@
+---
+description: Commit and push straight to main, not to feature branches
+alwaysApply: true
+---
+
+# Commits go to main
+
+Commit work directly to `main` and push to `origin/main`.
+
+- Do not create feature branches for this repository.
+- Do not open pull requests for routine changes.
+- Before committing, check out `main` and bring it up to date with `git pull --ff-only origin main`.
+- Still follow `commit-settings-sqlite.mdc` when staging.

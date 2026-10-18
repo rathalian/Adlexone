@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
 {
     public static $prefixLengthsPsr4 = array (
-        'A' => 
+        'A' =>
         array (
             'Adlexone\\' => 9,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Adlexone\\' => 
+        'Adlexone\\' =>
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
@@ -45,8 +45,16 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Data\\ItemFields' => __DIR__ . '/../..' . '/src/Data/ItemFields.php',
         'Adlexone\\Data\\SavedSearch' => __DIR__ . '/../..' . '/src/Data/SavedSearch.php',
         'Adlexone\\Database\\SchemaMigrator' => __DIR__ . '/../..' . '/src/Database/SchemaMigrator.php',
+        'Adlexone\\Html\\Blocks' => __DIR__ . '/../..' . '/src/Html/Blocks.php',
+        'Adlexone\\Html\\FieldControl' => __DIR__ . '/../..' . '/src/Html/FieldControl.php',
+        'Adlexone\\Html\\Form' => __DIR__ . '/../..' . '/src/Html/Form.php',
+        'Adlexone\\Html\\Html' => __DIR__ . '/../..' . '/src/Html/Html.php',
+        'Adlexone\\Http\\Page' => __DIR__ . '/../..' . '/src/Http/Page.php',
         'Adlexone\\Http\\PublicBaseUrl' => __DIR__ . '/../..' . '/src/Http/PublicBaseUrl.php',
+        'Adlexone\\Http\\Request' => __DIR__ . '/../..' . '/src/Http/Request.php',
         'Adlexone\\Http\\Router' => __DIR__ . '/../..' . '/src/Http/Router.php',
+        'Adlexone\\Http\\TopNav' => __DIR__ . '/../..' . '/src/Http/TopNav.php',
+        'Adlexone\\Http\\View' => __DIR__ . '/../..' . '/src/Http/View.php',
         'Adlexone\\Screen\\AnnouncementsScreen' => __DIR__ . '/../..' . '/src/Screen/AnnouncementsScreen.php',
         'Adlexone\\Screen\\ApplicationScreen' => __DIR__ . '/../..' . '/src/Screen/ApplicationScreen.php',
         'Adlexone\\Screen\\ApplicationSettingsScreen' => __DIR__ . '/../..' . '/src/Screen/ApplicationSettingsScreen.php',
@@ -63,6 +71,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Screen\\SecurityScreen' => __DIR__ . '/../..' . '/src/Screen/SecurityScreen.php',
         'Adlexone\\Screen\\SiteSettingsScreen' => __DIR__ . '/../..' . '/src/Screen/SiteSettingsScreen.php',
         'Adlexone\\Screen\\WorkScreen' => __DIR__ . '/../..' . '/src/Screen/WorkScreen.php',
+        'Adlexone\\Text\\Wording' => __DIR__ . '/../..' . '/src/Text/Wording.php',
         'Adlexone\\Theme\\Theme' => __DIR__ . '/../..' . '/src/Theme/Theme.php',
         'Adlexone\\support\\Actions' => __DIR__ . '/../..' . '/src/support/Actions.php',
         'Adlexone\\support\\AttachmentUpload' => __DIR__ . '/../..' . '/src/support/AttachmentUpload.php',
@@ -70,9 +79,9 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\support\\DB_Result' => __DIR__ . '/../..' . '/src/support/Database.php',
         'Adlexone\\support\\Database' => __DIR__ . '/../..' . '/src/support/Database.php',
         'Adlexone\\support\\FieldTypes' => __DIR__ . '/../..' . '/src/support/FieldTypes.php',
+        'Adlexone\\support\\FormState' => __DIR__ . '/../..' . '/src/support/FormState.php',
         'Adlexone\\support\\MenuOptions' => __DIR__ . '/../..' . '/src/support/MenuOptions.php',
         'Adlexone\\support\\RenderNavigation' => __DIR__ . '/../..' . '/src/support/RenderNavigation.php',
-        'Adlexone\\support\\RenderViews' => __DIR__ . '/../..' . '/src/support/RenderViews.php',
         'Adlexone\\support\\RssFeed' => __DIR__ . '/../..' . '/src/support/RssFeed.php',
         'Adlexone\\support\\SharedMethods' => __DIR__ . '/../..' . '/src/support/SharedMethods.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',

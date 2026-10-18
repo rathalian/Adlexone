@@ -3,8 +3,11 @@ namespace Adlexone\Screen;
 
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
-use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
+use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -13,6 +16,7 @@ final class PrintScreen
 {
     public static function open(): void
     {
+        Page::current()->useLayout(Page::PRINT);
         /**
          * Logic to load the appropriate template
          */
@@ -27,8 +31,7 @@ final class PrintScreen
         		break;
         	default :
         		// Not allowed
-        		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_623, 'html' => '']]));
-        		RenderViews::renderThemePage('full_page_view',  SET_THEME);
+        		Page::current()->setBody(Blocks::vertical([['title' => TXT_623, 'html' => '']]));
         }
     }
     /**
@@ -37,6 +40,7 @@ final class PrintScreen
 
     public static function printItem($itemID)
     {
+    	$itemID = (int) $itemID;
 
     	$i = 0;
     	if ($_SESSION['access_role_id'] <=2){//Admin, Inlay Admin, Global Inlay Admin have access
@@ -51,36 +55,27 @@ final class PrintScreen
     	if ($i > 0){ //The user is allowed to access the task
     		// Setup item  information for display
     		$columnArray = array ('*');
-    		$condition = "WHERE item_id = '" . $itemID . "'";
-            $itemFields = Database::first('items', $columnArray, $condition); // Build item table
+            $itemFields = Database::first('items', $columnArray, 'item_id = ?', [$itemID]); // Build item table
     		$itemFields = \Adlexone\Data\ItemFields::hydrate($itemFields ?? []);
     		// Get item type name
     		$columnArray = array ('item_type_name');
-    		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
-    		$row = Database::first('item_types', $columnArray, $condition);
+    		$row = Database::first('item_types', $columnArray, 'item_type_id = ?', [$itemFields['item_type_id']]);
     		$itemTypeName = $row['item_type_name'];
     		// Set the creator and owner values
     		$columnArray = array('user_name');
-    		$condition = "WHERE user_id = '".$itemFields['creator_security']."'";
-    		$row = Database::first('users', $columnArray,$condition);
+    		$row = Database::first('users', $columnArray, 'user_id = ?', [$itemFields['creator_security']]);
     		$itemField[TXT_551] = $row['user_name'];
     		$columnArray = array('user_name');
-    		$condition = "WHERE user_id = '".$itemFields['user_security']."'";
-    		$row = Database::first('users', $columnArray,$condition);
+    		$row = Database::first('users', $columnArray, 'user_id = ?', [$itemFields['user_security']]);
     		$itemField[TXT_269] = $row['user_name'];
     		// Create group membership list
     		$groupArray = \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemFields['item_id']);
-    		$i = 0;
-    		foreach($groupArray as $a) {
-    			if ($i == 0) {
-    				$condition = "WHERE group_id='" . $a . "'";
-    			} else {
-    				$condition .= "OR group_id='" . $a . "'";
-    			}
-    			$i++;
-    		}
     		$columnArray = array ('group_id', 'group_name');
-    		$result = Database::select('groups', $columnArray, $condition);
+    		$result = [];
+    		if ($groupArray !== []) {
+    			$placeholders = implode(', ', array_fill(0, count($groupArray), '?'));
+    			$result = Database::select('groups', $columnArray, 'group_id IN (' . $placeholders . ')', array_values($groupArray));
+    		}
     		$i = 0;
     		$groupMembership = '';
     		foreach ($result as $row) {
@@ -95,11 +90,9 @@ final class PrintScreen
     		$itemField[TXT_84] = $itemFields['item_title'];
     		// Setup custom field display
     		$columnArray = array ('custom_field_id');
-    		$condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
-    		foreach (Database::select('item_type_custom_fields', $columnArray, $condition) as $customFields) {
+    		foreach (Database::select('item_type_custom_fields', $columnArray, 'item_type_id = ?', [$itemFields['item_type_id']], 'custom_field_order ASC') as $customFields) {
     			$columnArray = array ('*');
-    			$condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-    			$row = Database::first('custom_fields', $columnArray, $condition);
+    			$row = Database::first('custom_fields', $columnArray, 'custom_field_id = ?', [$customFields['custom_field_id']]);
     			$row['field_type'] = FieldTypes::normalise($row['field_type']);
     			if ($row['enabled'] != 'Yes'){
     				continue;
@@ -120,20 +113,18 @@ final class PrintScreen
     		foreach ($itemField as $name => $field) {
     			$displayFields[$name] = '<div>' . $field . '</div>';
     		}
-    		$html = RenderViews::buildFormFieldsGrid($displayFields);
+    		$html = Form::fields($displayFields);
     		// Time Manager removed from shared schema.
     		$logHtml = '';
     		// Get item log information from database
     		$columnArray = array ('*');
-    		$condition = "WHERE item_id = '" . $itemID . "' ORDER BY log_item_sequence DESC";
-    		foreach (Database::select('core_log', $columnArray, $condition) as $row) {
+    		foreach (Database::select('core_log', $columnArray, 'item_id = ?', [$itemID], 'log_item_sequence DESC') as $row) {
     			//Restrict log viewing
     			if ($_SESSION['access_role_id'] <= $row['role_id']){
     				// Get user name if applicable
     				if ($row['security_id'] != '') {
     					$columnArray = array ('user_name', 'first_name', 'last_name');
-    					$condition = "WHERE user_id = '" . $row['security_id'] . "'";
-    					$rowUser = Database::first('users', $columnArray, $condition);
+    					$rowUser = Database::first('users', $columnArray, 'user_id = ?', [$row['security_id']]);
     				}
     				$role = '';
     				switch ($row['role_id']) {
@@ -156,22 +147,20 @@ final class PrintScreen
     						$role = TXT_303;
     						break;
     				}
-    				$userName = htmlspecialchars((string)($rowUser['user_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$firstName = htmlspecialchars((string)($rowUser['first_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$lastName = htmlspecialchars((string)($rowUser['last_name'] ?? ''), ENT_QUOTES, 'UTF-8');
-    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . htmlspecialchars((string)$role, ENT_QUOTES, 'UTF-8') . ')</i></strong>';
-    				$text = nl2br(htmlspecialchars((string)$row['log_text'], ENT_QUOTES, 'UTF-8'));
+    				$userName = Html::e((string)($rowUser['user_name'] ?? ''));
+    				$firstName = Html::e((string)($rowUser['first_name'] ?? ''));
+    				$lastName = Html::e((string)($rowUser['last_name'] ?? ''));
+    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . Html::e((string)$role) . ')</i></strong>';
+    				$text = nl2br(Html::e((string)$row['log_text']));
     				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
     			}
     		}
-    		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([
+    		Page::current()->setBody(Blocks::vertical([
     			['title' => TXT_624 . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName, 'html' => $html],
     			['title' => TXT_601, 'html' => $logHtml],
     		]));
-    		RenderViews::renderThemePage('full_page_view',  SET_THEME);
     	}else{
-    		define('FULL_PAGE_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_452, 'html' => '']]));
-    		RenderViews::renderThemePage('full_page_view',  SET_THEME);
+    		Page::current()->setBody(Blocks::vertical([['title' => TXT_452, 'html' => '']]));
     	}
     }
 }

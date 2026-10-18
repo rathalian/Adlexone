@@ -5,6 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\Http\Page;
 
 /**
  * Whether the signed-in person may use the application that is open.
@@ -13,8 +14,8 @@ final class ApplicationAccess
 {
     public static function slug(): string
     {
-        if (defined('APPLICATION_SLUG')) {
-            return (string) APPLICATION_SLUG;
+        if (Page::current()->inApplication()) {
+            return Page::current()->applicationSlug();
         }
         return trim((string) ($_GET['app'] ?? $_SESSION['application_slug'] ?? ''));
     }

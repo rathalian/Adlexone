@@ -6,7 +6,13 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
-use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
+use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\support\FormState;
+use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -25,9 +31,9 @@ final class SecurityScreen
             $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
             $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
             if (in_array($securityOption, $userSectionOptions, true)) {
-                define('SECTION_NAV_OPTION', 'manage_users');
+                Page::current()->setNavOption('manage_users');
             } elseif (in_array($securityOption, $groupSectionOptions, true)) {
-                define('SECTION_NAV_OPTION', 'manage_groups');
+                Page::current()->setNavOption('manage_groups');
             }
         }
         RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
@@ -77,76 +83,76 @@ final class SecurityScreen
         switch (@$_GET['option']) {
             case 'manage_users' :
             case 'manage_users_groups' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::showUsers();
                 break;
             case 'manage_groups' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::showGroups();
                 break;
             case 'user_group_search' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::showUserGroupResults();
                 break;
             case 'new_user' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 // Removes leading VBL_ from any session variables (used for form value persistence)
-                self::showUser('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
+                self::showUser('', FormState::keys($_SESSION, 'remove'));
                 // Unset session variables starting with VBL_
-                $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+                $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'admin_modify_user' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::showUser($_GET['user_id'], '', true);
                 break;
             case 'modify_user' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::APP_ACCESS);
+                Access::require(\Adlexone\Auth\Permission::APP_ACCESS);
                 self::showUser($_SESSION['access_user_id'], '', false);
                 break;
             case 'new_group' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 // Removes leading VBL_ from any session variables (used for form value persistence)
-                self::showGroup('', RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
+                self::showGroup('', FormState::keys($_SESSION, 'remove'));
                 // Unset session variables starting with VBL_
-                $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+                $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'add_user' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::addUser();
                 break;
             case 'update_user' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::APP_ACCESS);
+                Access::require(\Adlexone\Auth\Permission::APP_ACCESS);
                 self::updateUser($_POST['user_id']);
                 break;
             case 'delete_user' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::deleteUser($_GET['user_id']);
                 break;
             case 'add_group' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::addGroup();
                 break;
             case 'modify_group' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 // Removes leading VBL_ from any session variables (used for form value persistence)
-                self::showGroup($_GET['group_id'], RenderViews::processVBLPrefixedKeys($_SESSION, 'remove'));
+                self::showGroup($_GET['group_id'], FormState::keys($_SESSION, 'remove'));
                 // Unset session variables starting with VBL_
-                $_SESSION = RenderViews::processVBLPrefixedKeys($_SESSION, 'unset');
+                $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'modify_group_membership' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::showGroupMembership($_GET['user_id']);
                 break;
             case 'update_group_membership' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::updateGroupMembership($_GET['user_id']);
                 break;
             case 'update_group' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::updateGroup($_POST['group_id']);
                 break;
             case 'delete_group' :
-                RenderViews::terminateUnlessAllowed(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::deleteGroup($_GET['group_id']);
                 break;
             default :
@@ -163,11 +169,10 @@ final class SecurityScreen
      */
     public static function showSecurityOptions(): void
     {
-        $html = RenderViews::outputIfAllowed(RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= RenderViews::outputIfAllowed('<br>' . RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([['title' => TXT_28, 'html' => $html]]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
+        $html = Access::outputIfAllowed(Blocks::link(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        Page::current()->setBody(Blocks::vertical([['title' => TXT_28, 'html' => $html]]));
     }
 
     /**
@@ -186,18 +191,18 @@ final class SecurityScreen
 
         $fields = [];
         if ($adminEdit) {
-            $fields[TXT_149] = RenderViews::buildTextInput('user_name', @$fieldValues['user_name']);
+            $fields[TXT_149] = Form::text('user_name', @$fieldValues['user_name']);
         } else {
-            $fields[TXT_149] = RenderViews::buildHiddenInput('user_name', @$fieldValues['user_name']) . @$fieldValues['user_name'];
+            $fields[TXT_149] = Form::hidden('user_name', @$fieldValues['user_name']) . @$fieldValues['user_name'];
         }
         $message = $userID !== '' ? TXT_159 : '';
-        $fields[TXT_165] = RenderViews::buildPasswordInput('password_ftype', '') . ' ' . $message;
+        $fields[TXT_165] = Form::password('password_ftype', '') . ' ' . $message;
         if ($userID === '') {
-            $fields[TXT_166] = RenderViews::buildPasswordInput('password_confirm', '') . ' ' . $message;
+            $fields[TXT_166] = Form::password('password_confirm', '') . ' ' . $message;
         }
-        $fields[TXT_167] = RenderViews::buildTextInput('first_name', @$fieldValues['first_name']);
-        $fields[TXT_168] = RenderViews::buildTextInput('last_name', @$fieldValues['last_name']);
-        $fields[TXT_169] = RenderViews::buildTextInput('email', @$fieldValues['email']);
+        $fields[TXT_167] = Form::text('first_name', @$fieldValues['first_name']);
+        $fields[TXT_168] = Form::text('last_name', @$fieldValues['last_name']);
+        $fields[TXT_169] = Form::text('email', @$fieldValues['email']);
 
         if (!\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SYSTEM)) {
             $roleIDs = [1, 2, 3, 4, 5];
@@ -207,12 +212,12 @@ final class SecurityScreen
             $roleNames = [TXT_190, TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
         }
 
-        $fields[TXT_187] = RenderViews::outputIfAllowed(
-            RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, @$fieldValues['role']),
+        $fields[TXT_187] = Access::outputIfAllowed(
+            Form::select('role', $roleIDs, $roleNames, @$fieldValues['role']),
             \Adlexone\Auth\Permission::ADMIN_SECURITY
         );
-        $fields[TXT_653] = RenderViews::outputIfAllowed(
-            RenderViews::buildSelectDropdown('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
+        $fields[TXT_653] = Access::outputIfAllowed(
+            Form::select('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
             \Adlexone\Auth\Permission::ADMIN_SECURITY
         );
         if (empty($fields[TXT_187])) {
@@ -222,22 +227,22 @@ final class SecurityScreen
             unset($fields[TXT_653]);
         }
 
-        $fields[TXT_171] = RenderViews::buildTextInput('phone', @$fieldValues['phone']);
-        $fields[TXT_172] = RenderViews::buildTextArea('address', @$fieldValues['address'], SET_FORM_FIELD_HEIGHT);
-        $fields[TXT_173] = RenderViews::buildTextInput('city', @$fieldValues['city']);
-        $fields[TXT_174] = RenderViews::buildTextInput('state_province', @$fieldValues['state_province']);
-        $fields[TXT_175] = RenderViews::buildTextInput('zip_postal', @$fieldValues['zip_postal']);
-        $fields[TXT_176] = RenderViews::buildTextInput('country', @$fieldValues['country']);
-        $fields[TXT_177] = RenderViews::buildTextInput('website', @$fieldValues['website']);
-        $fields[TXT_178] = RenderViews::buildTextArea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT);
-        $fields[TXT_179] = RenderViews::buildTextInput('secret_question', @$fieldValues['secret_question']);
-        $fields[TXT_180] = RenderViews::buildTextInput('secret_answer', @$fieldValues['secret_answer']);
+        $fields[TXT_171] = Form::text('phone', @$fieldValues['phone']);
+        $fields[TXT_172] = Form::textarea('address', @$fieldValues['address'], SET_FORM_FIELD_HEIGHT);
+        $fields[TXT_173] = Form::text('city', @$fieldValues['city']);
+        $fields[TXT_174] = Form::text('state_province', @$fieldValues['state_province']);
+        $fields[TXT_175] = Form::text('zip_postal', @$fieldValues['zip_postal']);
+        $fields[TXT_176] = Form::text('country', @$fieldValues['country']);
+        $fields[TXT_177] = Form::text('website', @$fieldValues['website']);
+        $fields[TXT_178] = Form::textarea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT);
+        $fields[TXT_179] = Form::text('secret_question', @$fieldValues['secret_question']);
+        $fields[TXT_180] = Form::text('secret_answer', @$fieldValues['secret_answer']);
 
         $userPreferences = [];
         if ($adminEdit) {
             $themes = \Adlexone\Theme\Theme::installed();
             $theme = empty($fieldValues['theme']) ? SET_DEFAULT_THEME : $fieldValues['theme'];
-            $userPreferences[TXT_182] = RenderViews::buildSelectDropdown('theme', array_keys($themes), array_values($themes), $theme);
+            $userPreferences[TXT_182] = Form::select('theme', array_keys($themes), array_values($themes), $theme);
         }
 
         $languageFileArray = [];
@@ -248,21 +253,21 @@ final class SecurityScreen
             }
         }
         $language = empty($fieldValues['language']) ? SET_DEFAULT_LANGUAGE : $fieldValues['language'];
-        $userPreferences[TXT_181] = RenderViews::buildSelectDropdown('language', $languageFileArray, $languageFileArray, $language);
+        $userPreferences[TXT_181] = Form::select('language', $languageFileArray, $languageFileArray, $language);
 
         $nameArray = ['Home'];
         $baseURLArray = ['home}-{Home'];
         ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
         $application = empty($fieldValues['home_controller']) ? SET_DEFAULT_APPLICATION : $fieldValues['home_controller'] . '}-{' . @$fieldValues['home_controller_name'];
-        $userPreferences[TXT_297] = RenderViews::buildSelectDropdown('home_controller', $baseURLArray, $nameArray, $application);
-        $userPreferences[TXT_63] = RenderViews::buildSelectDropdown('show_header', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_header']);
-        $userPreferences[TXT_64] = RenderViews::buildSelectDropdown('show_graphics', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_graphics']);
-        $userPreferences[TXT_546] = RenderViews::buildSelectDropdown('show_hide', ['Yes', 'No'], [TXT_563, TXT_564], @$fieldValues['show_hide']);
+        $userPreferences[TXT_297] = Form::select('home_controller', $baseURLArray, $nameArray, $application);
+        $userPreferences[TXT_63] = Form::select('show_header', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_header']);
+        $userPreferences[TXT_64] = Form::select('show_graphics', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_graphics']);
+        $userPreferences[TXT_546] = Form::select('show_hide', ['Yes', 'No'], [TXT_563, TXT_564], @$fieldValues['show_hide']);
 
         foreach ($userPreferences as $label => $element) {
             $fields[$label] = $element;
         }
-        $fields[''] = RenderViews::buildHiddenInput('user_id', @$fieldValues['user_id']);
+        $fields[''] = Form::hidden('user_id', @$fieldValues['user_id']);
 
         if ($userID === '') {
             $jsFieldNameArray = "['user_name','password_ftype','password_confirm','email','first_name','last_name']";
@@ -279,16 +284,15 @@ final class SecurityScreen
         $submitText = $userID !== '' ? TXT_74 : TXT_69;
         $heading = $userID !== '' ? ($adminEdit ? TXT_154 : TXT_148) : TXT_33;
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             $heading,
             SEC_BASE_URL . '&option=' . $option,
             $fields,
             [
-                RenderViews::buildFormButton('submit', 'submit_button', $submitText, $javascript),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
+                Form::button('submit', 'submit_button', $submitText, $javascript),
+                Form::button('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -314,28 +318,27 @@ final class SecurityScreen
         $roleIDs = array(1, 2, 3, 4, 5);
         $roleNames = array(TXT_191, TXT_192, TXT_193, TXT_194, TXT_303);
         $fields = [
-            TXT_150 => RenderViews::buildTextInput('group_name', $fieldValues['group_name'] ?? ''),
-            TXT_186 => RenderViews::buildTextArea('description', $fieldValues['description'] ?? '', SET_FORM_FIELD_HEIGHT),
+            TXT_150 => Form::text('group_name', $fieldValues['group_name'] ?? ''),
+            TXT_186 => Form::textarea('description', $fieldValues['description'] ?? '', SET_FORM_FIELD_HEIGHT),
             TXT_187 => '<div class="field-stack">'
-                . RenderViews::buildSelectDropdown('role', $roleIDs, $roleNames, $fieldValues['role'] ?? '')
-                . '<p class="form-help">' . htmlspecialchars(TXT_697, ENT_QUOTES, 'UTF-8') . '</p>'
+                . Form::select('role', $roleIDs, $roleNames, $fieldValues['role'] ?? '')
+                . '<p class="form-help">' . Html::e(TXT_697) . '</p>'
                 . '</div>',
             TXT_696 => self::buildGroupPermissionsField($selectedPermissions),
         ];
-        $fields[] = RenderViews::buildHiddenInput('group_id', $fieldValues['group_id'] ?? '');
+        $fields[] = Form::hidden('group_id', $fieldValues['group_id'] ?? '');
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             $isNew ? TXT_184 : TXT_185,
             $action,
             $fields,
             [
-                RenderViews::buildFormButton('submit', 'submit_button', TXT_74, $javascript),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
-                '<a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=manage_groups', ENT_QUOTES, 'UTF-8') . '">'
-                    . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
+                Form::button('submit', 'submit_button', TXT_74, $javascript),
+                Form::button('reset', 'reset', TXT_75),
+                '<a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=manage_groups') . '">'
+                    . Html::e(TXT_160) . '</a>',
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -347,11 +350,10 @@ final class SecurityScreen
         foreach (\Adlexone\Auth\Permission::catalog() as $key => $meta) {
             $checked = in_array($key, $selected, true) ? $key : '';
             $html .= '<div class="group-security-item">'
-                . RenderViews::buildCheckBox(
+                . Form::checkbox(
                     'permissions[]',
                     $key,
                     $checked,
-                    'checkbox',
                     (string) $meta['label']
                 )
                 . '</div>';
@@ -370,10 +372,9 @@ final class SecurityScreen
             $rows[] = self::userRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             ['title' => TXT_40, 'html' => self::userRecordList($rows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -386,10 +387,9 @@ final class SecurityScreen
             $rows[] = self::groupRecord($row);
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             ['title' => TXT_35, 'html' => self::groupRecordList($rows)],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -397,7 +397,7 @@ final class SecurityScreen
      */
     public static function userRecordList(array $rows): string
     {
-        return RenderViews::buildRecordList([
+        return Blocks::recordList([
             'column' => TXT_151,
             'columns' => [
                 ['key' => 'username', 'label' => TXT_38],
@@ -418,7 +418,7 @@ final class SecurityScreen
      */
     public static function groupRecordList(array $rows): string
     {
-        return RenderViews::buildRecordList([
+        return Blocks::recordList([
             'column' => TXT_151,
             'columns' => [
                 ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
@@ -573,9 +573,9 @@ final class SecurityScreen
                         self::showGroupMembership($userId);
                     } else {
                         // Render duplicate user message
-                        RenderViews::buildResponse(
+                        View::respond(
                             $userName . ' ' . TXT_163,
-                            RenderViews::buildURL(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL')
+                            Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL')
                         );
                         return;
                     }
@@ -637,9 +637,9 @@ final class SecurityScreen
                 Database::update('users', $columnArray, $condition);
 
                 // Render a success message after the update
-                RenderViews::buildResponse(
+                View::respond(
                     ($_POST['user_name'] ?? '') . ' ' . TXT_164,
-                    RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL')
+                    Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL')
                 );
                 return;
             }
@@ -662,10 +662,10 @@ final class SecurityScreen
             // Insert form field values into row
             $groupId = Database::insert('groups', $columnArray);
             \Adlexone\Auth\Access::setGroupPermissions((int) $groupId, is_array($permissions) ? $permissions : []);
-            RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_162, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+            View::respond($_POST['group_name'] . ' ' . TXT_162, Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
             return;
         }
-        RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_198, RenderViews::buildURL(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
+        View::respond($_POST['group_name'] . ' ' . TXT_198, Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
     }
 
     /**
@@ -685,7 +685,7 @@ final class SecurityScreen
         // Updates form field values into row
         Database::update('groups', $columnArray, $condition);
         \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, is_array($permissions) ? $permissions : []);
-        RenderViews::buildResponse($_POST['group_name'] . ' ' . TXT_164, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+        View::respond($_POST['group_name'] . ' ' . TXT_164, Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
     }
 
     /**
@@ -714,7 +714,7 @@ final class SecurityScreen
             \Adlexone\Data\GroupMembership::idsFromPost($_POST)
         );
 
-        RenderViews::buildResponse(TXT_241, RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+        View::respond(TXT_241, Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
     }
 
     /**
@@ -759,16 +759,14 @@ final class SecurityScreen
             }
         }
 
-        $html = RenderViews::buildVerticalCards([[
+        $html = Blocks::vertical([[
             'title' => TXT_113,
             'html' => $isUsers ? self::userRecordList($rows) : self::groupRecordList($rows),
         ]]);
 
-        // Define the BODY_CONTENT constant with the generated HTML
-        define('BODY_CONTENT', $html);
+        Page::current()->setBody($html);
 
         // Include the main page content file to display the results
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -817,7 +815,7 @@ final class SecurityScreen
         $userID = (int) $userID;
         $user = Database::first('users', ['user_name'], 'user_id = ?', [$userID]);
         if ($user === null) {
-            RenderViews::buildResponse('User not found.', RenderViews::buildURL(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+            View::respond('User not found.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
             return;
         }
         $userName = (string) $user['user_name'];
@@ -827,12 +825,11 @@ final class SecurityScreen
             $result = Database::select('groups', ['group_id', 'group_name', 'description'], 'ORDER BY group_name ASC');
 
         if (count($result) === 0) {
-            define('BODY_CONTENT', RenderViews::buildVerticalCards([[
+            Page::current()->setBody(Blocks::vertical([[
                 'title' => TXT_239 . ': ' . $userName,
-                'html' => '<p class="form-help">' . htmlspecialchars(TXT_342, ENT_QUOTES, 'UTF-8') . '</p>'
-                    . '<p><a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a></p>',
+                'html' => '<p class="form-help">' . Html::e(TXT_342) . '</p>'
+                    . '<p><a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID) . '">' . Html::e(TXT_160) . '</a></p>',
             ]]));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
 
@@ -842,35 +839,33 @@ final class SecurityScreen
             $checked = in_array($groupId, $groupArray, true) ? $groupId : '';
             $description = trim((string) ($row['description'] ?? ''));
             $groupMembershipHtml .= '<div class="group-security-item">'
-                . RenderViews::buildCheckBox(
+                . Form::checkbox(
                     'group_' . $groupId,
                     $groupId,
                     $checked,
-                    'checkbox',
                     (string) $row['group_name']
                 );
             if ($description !== '') {
                 $groupMembershipHtml .= '<div class="record-list__meta">'
-                    . htmlspecialchars($description, ENT_QUOTES, 'UTF-8')
+                    . Html::e($description)
                     . '</div>';
             }
             $groupMembershipHtml .= '</div>';
         }
         $groupMembershipHtml .= '</div>';
 
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             TXT_239 . ': ' . $userName,
             SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID,
             [
                 TXT_71 => $groupMembershipHtml,
             ],
             [
-                RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
-                '<a class="btn btn--quiet" href="' . htmlspecialchars(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID, ENT_QUOTES, 'UTF-8') . '">'
-                    . htmlspecialchars(TXT_160, ENT_QUOTES, 'UTF-8') . '</a>',
+                Form::button('submit', 'submit_button', TXT_74),
+                Form::button('reset', 'reset', TXT_75),
+                '<a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID) . '">'
+                    . Html::e(TXT_160) . '</a>',
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 }

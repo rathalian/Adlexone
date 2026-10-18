@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Html;
 
+use Adlexone\Http\Page;
 use Adlexone\support\Database;
 use Adlexone\Text\Wording;
 use Adlexone\Theme\Theme;
@@ -18,8 +19,8 @@ final class Blocks
         return
             ($navBarDivider ? '<div class="side-divider"></div>' : '') .
             '<div class="side-group">' .
-            (!empty($navBarTitle) ? '<div class="side-title side-title--spaced">' . self::e($navBarTitle) . '</div>' : '') .
-            '<a class="navbtn" href="' . self::e($queryString) . '">' . self::e($buttonText) . '</a>' .
+            (!empty($navBarTitle) ? '<div class="side-title side-title--spaced">' . Html::e($navBarTitle) . '</div>' : '') .
+            '<a class="navbtn" href="' . Html::e($queryString) . '">' . Html::e($buttonText) . '</a>' .
             '</div>';
     }
 
@@ -43,19 +44,19 @@ final class Blocks
                 $titles[] = $rawTitle;
             }
         }
-        $inSection = defined('APP_SECTION_NAV');
+        $page = Page::current();
         $liftTitle = count($bodyBlocks) === 1
             && count($titles) === 1
-            && !defined('PAGE_TITLE')
-            && !$inSection;
+            && !$page->hasTitle()
+            && !$page->hasSectionNav();
         if ($liftTitle) {
-            define('PAGE_TITLE', trim(html_entity_decode(strip_tags($titles[0]), ENT_QUOTES, 'UTF-8')));
+            $page->setTitle(trim(html_entity_decode(strip_tags($titles[0]), ENT_QUOTES, 'UTF-8')));
         }
 
         $html = '<div class="grid">';
         foreach ($bodyBlocks as $block) {
             $rawTitle = trim((string) ($block['title'] ?? ''));
-            $title = $rawTitle !== '' ? self::e($rawTitle) : '';
+            $title = $rawTitle !== '' ? Html::e($rawTitle) : '';
             $repeatsSection = self::titleRepeatsSection($rawTitle);
             $extraClass = trim((string) ($block['class'] ?? ''));
             $disclosure = !empty($block['disclosure']);
@@ -63,7 +64,7 @@ final class Blocks
                 $extraClass = trim($extraClass . ' card--disclosure');
             }
             $html .= '<' . ($disclosure ? 'details' : 'section')
-                . ' class="card span-2' . ($extraClass !== '' ? ' ' . self::e($extraClass) : '') . '"'
+                . ' class="card span-2' . ($extraClass !== '' ? ' ' . Html::e($extraClass) : '') . '"'
                 . '>';
             if ($title !== '' && !$liftTitle && !$repeatsSection) {
                 $html .= $disclosure
@@ -91,7 +92,7 @@ final class Blocks
         $styleAttr = $columns === null ? '' : ' style="--cols: ' . (int) $columns . ';"';
         $html = '<section class="launchpad-grid ' . $modeClass . '"' . $styleAttr . '>';
         foreach ($blocks as $block) {
-            $title = self::e($block['title'] ?? '');
+            $title = Html::e($block['title'] ?? '');
             $body = $block['html'] ?? '';
             $span = !empty($block['full']) ? ' card -full' : ' card';
             $html .= '<article class="' . $span . '">';
@@ -106,12 +107,12 @@ final class Blocks
 
     public static function separator(string $label = '', string $class = '', string $style = ''): string
     {
-        $classAttr = $class !== '' ? ' ' . self::e($class) : '';
-        $styleAttr = $style !== '' ? ' style="' . self::e($style) . '"' : '';
+        $classAttr = $class !== '' ? ' ' . Html::e($class) : '';
+        $styleAttr = $style !== '' ? ' style="' . Html::e($style) . '"' : '';
         if ($label === '') {
             return '<hr class="rv-separator' . $classAttr . '"' . $styleAttr . ' />';
         }
-        $labelEsc = self::e($label);
+        $labelEsc = Html::e($label);
 
         return '<div class="rv-separator-block' . $classAttr . '"' . $styleAttr . ' role="separator" aria-label="' . $labelEsc . '">'
             . '<span class="rv-separator-line" aria-hidden="true"></span>'
@@ -208,13 +209,13 @@ final class Blocks
 
         $html = '<div class="empty-state">';
         if ($src !== '') {
-            $html .= '<img class="empty-state__art" src="' . self::e($src) . '" alt="" width="160" height="120" loading="lazy">';
+            $html .= '<img class="empty-state__art" src="' . Html::e($src) . '" alt="" width="160" height="120" loading="lazy">';
         }
         if ($title !== '') {
-            $html .= '<p class="empty-state__title">' . self::e($title) . '</p>';
+            $html .= '<p class="empty-state__title">' . Html::e($title) . '</p>';
         }
         if ($copy !== '') {
-            $html .= '<p class="empty-state__copy">' . self::e($copy) . '</p>';
+            $html .= '<p class="empty-state__copy">' . Html::e($copy) . '</p>';
         }
         if ($action !== '') {
             $html .= '<div class="empty-state__actions">' . $action . '</div>';
@@ -285,7 +286,7 @@ final class Blocks
                     'copy' => (string) ($list['emptyCopy'] ?? ''),
                     'action' => (string) ($list['emptyAction'] ?? ''),
                 ])
-                : '<p class="record-list__empty">' . self::e($emptyText) . '</p>';
+                : '<p class="record-list__empty">' . Html::e($emptyText) . '</p>';
 
             return '<div class="record-list">'
                 . ($bar !== '' ? '<div class="record-list__bar">' . $bar . '</div>' : '')
@@ -304,7 +305,7 @@ final class Blocks
             $body .= '<tbody data-group>';
             if ($label !== '') {
                 $body .= '<tr class="record-list__grouphead"><th colspan="' . $colCount . '" scope="rowgroup">'
-                    . self::e($label)
+                    . Html::e($label)
                     . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
             }
             foreach ($groupRows as $row) {
@@ -316,26 +317,26 @@ final class Blocks
         $columnHeads = '';
         foreach ($columns as $columnDef) {
             $wrap = !empty($columnDef['wrap']) ? ' record-list__cell--wrap' : '';
-            $columnHeads .= '<th class="record-list__cell' . $wrap . '">' . self::e($columnDef['label']) . '</th>';
+            $columnHeads .= '<th class="record-list__cell' . $wrap . '">' . Html::e($columnDef['label']) . '</th>';
         }
         $manageLabel = defined('TXT_388') ? TXT_388 : '';
         $manageHead = $hasActions
-            ? '<th class="record-list__manage"><span class="record-list__sr">' . self::e($manageLabel) . '</span></th>'
+            ? '<th class="record-list__manage"><span class="record-list__sr">' . Html::e($manageLabel) . '</span></th>'
             : '';
         $searchId = $id . '-search';
 
-        return '<div class="record-list" id="' . self::e($id) . '" data-record-list>'
+        return '<div class="record-list" id="' . Html::e($id) . '" data-record-list>'
             . '<div class="record-list__bar">'
-            . '<input id="' . self::e($searchId) . '" class="input record-list__search" type="search" placeholder="' . self::e($searchLabel) . '" aria-label="' . self::e($searchLabel) . '" autocomplete="off">'
+            . '<input id="' . Html::e($searchId) . '" class="input record-list__search" type="search" placeholder="' . Html::e($searchLabel) . '" aria-label="' . Html::e($searchLabel) . '" autocomplete="off">'
             . '<span class="record-list__count" aria-live="polite">' . count($rows) . '</span>'
             . $toolbar
             . $primary
             . '</div>'
             . '<div class="record-list__tablewrap"><table class="table table-hover">'
-            . '<thead><tr><th>' . self::e($column) . '</th>' . $columnHeads . $manageHead . '</tr></thead>'
+            . '<thead><tr><th>' . Html::e($column) . '</th>' . $columnHeads . $manageHead . '</tr></thead>'
             . $body
             . '</table></div>'
-            . '<p class="record-list__nomatch" hidden>' . self::e($noMatch) . '</p>'
+            . '<p class="record-list__nomatch" hidden>' . Html::e($noMatch) . '</p>'
             . '</div>';
     }
 
@@ -363,13 +364,13 @@ final class Blocks
     ): string {
         $svg = '';
         if ($spriteName !== '') {
-            $svg = '<svg class="icon" aria-hidden="true"><use href="' . self::e(Theme::spriteHref()) . '#' . self::e($spriteName) . '"></use></svg>&nbsp;&nbsp;';
+            $svg = '<svg class="icon" aria-hidden="true"><use href="' . Html::e(Theme::spriteHref()) . '#' . Html::e($spriteName) . '"></use></svg>&nbsp;&nbsp;';
         }
         $attr = $attributes !== '' ? ' ' . $attributes : '';
         $attr .= Form::confirmData($confirm);
 
-        return '<a class="link ' . self::e($class) . '" href="' . self::e($href) . '"' . $attr
-            . ' target="' . self::e($target) . '">' . $svg . self::e($text) . '</a>';
+        return '<a class="link ' . Html::e($class) . '" href="' . Html::e($href) . '"' . $attr
+            . ' target="' . Html::e($target) . '">' . $svg . Html::e($text) . '</a>';
     }
 
     public static function image(string $imageSource, string $enabled = 'Yes', string $altText = '', string $attributes = ''): string
@@ -378,18 +379,19 @@ final class Blocks
             return '';
         }
 
-        return '<img src="' . self::e($imageSource) . '" alt="' . self::e($altText) . '"'
+        return '<img src="' . Html::e($imageSource) . '" alt="' . Html::e($altText) . '"'
             . ($attributes !== '' ? ' ' . $attributes : '') . '>';
     }
 
     private static function titleRepeatsSection(string $title): bool
     {
-        if (!defined('APP_SECTION_NAV') || !defined('APPLICATION_NAV_LABEL')) {
+        $page = Page::current();
+        if (!$page->hasSectionNav() || !$page->hasNavLabel()) {
             return false;
         }
         $plain = trim(html_entity_decode(strip_tags($title), ENT_QUOTES, 'UTF-8'));
 
-        return $plain !== '' && strcasecmp($plain, trim((string) APPLICATION_NAV_LABEL)) === 0;
+        return $plain !== '' && strcasecmp($plain, trim($page->navLabel())) === 0;
     }
 
     /**
@@ -401,8 +403,8 @@ final class Blocks
             return '';
         }
 
-        return '<a class="btn btn--primary btn--sm" href="' . self::e((string) $primary['href']) . '">'
-            . self::e((string) $primary['label']) . '</a>';
+        return '<a class="btn btn--primary btn--sm" href="' . Html::e((string) $primary['href']) . '">'
+            . Html::e((string) $primary['label']) . '</a>';
     }
 
     /**
@@ -436,11 +438,11 @@ final class Blocks
         $name = (string) ($row['name'] ?? '');
         $meta = (string) ($row['meta'] ?? '');
         $search = strtolower($name . ' ' . $groupLabel . ' ' . $meta . ' ' . (string) ($row['search'] ?? ''));
-        $nameHtml = '<a class="record-link" href="' . self::e((string) $row['href']) . '">' . self::e($name) . '</a>';
+        $nameHtml = '<a class="record-link" href="' . Html::e((string) $row['href']) . '">' . Html::e($name) . '</a>';
         if ($meta !== '') {
             $title = (string) ($row['metaTitle'] ?? '');
-            $titleAttr = $title !== '' ? ' title="' . self::e($title) . '"' : '';
-            $nameHtml .= '<div class="record-list__meta"' . $titleAttr . '>' . self::e($meta) . '</div>';
+            $titleAttr = $title !== '' ? ' title="' . Html::e($title) . '"' : '';
+            $nameHtml .= '<div class="record-list__meta"' . $titleAttr . '>' . Html::e($meta) . '</div>';
             $search .= ' ' . strtolower($title);
         }
 
@@ -451,7 +453,7 @@ final class Blocks
             $search .= ' ' . strtolower($value);
             $wrap = !empty($columnDef['wrap']) ? ' record-list__cell--wrap' : '';
             $cellsHtml .= '<td class="record-list__cell' . $wrap . '">'
-                . ($value === '' ? '—' : self::e($value))
+                . ($value === '' ? '—' : Html::e($value))
                 . '</td>';
         }
 
@@ -464,7 +466,7 @@ final class Blocks
             $actionsHtml = '<td class="record-list__manage">' . self::recordListActions($actions, $name, $asMenu) . '</td>';
         }
 
-        return '<tr data-search="' . self::e($search) . '"><td>' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
+        return '<tr data-search="' . Html::e($search) . '"><td>' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
     }
 
     /**
@@ -481,34 +483,30 @@ final class Blocks
             $label = (string) ($action['label'] ?? '');
             $confirm = Form::confirmData((string) ($action['confirm'] ?? ''));
             $target = (string) ($action['target'] ?? '');
-            $targetAttr = $target !== '' ? ' target="' . self::e($target) . '"' : '';
-            $href = self::e((string) ($action['href'] ?? ''));
-            $aria = ' aria-label="' . self::e($label . ': ' . $name) . '"';
+            $targetAttr = $target !== '' ? ' target="' . Html::e($target) . '"' : '';
+            $href = Html::e((string) ($action['href'] ?? ''));
+            $aria = ' aria-label="' . Html::e($label . ': ' . $name) . '"';
             if ($asMenu) {
                 $danger = ($action['tone'] ?? '') === 'danger' ? ' rowmenu__item--danger' : '';
                 $buttons .= '<a class="rowmenu__item' . $danger . '" role="menuitem" href="' . $href . '"'
                     . $targetAttr . $confirm . $aria . '>'
-                    . self::e($label) . '</a>';
+                    . Html::e($label) . '</a>';
                 continue;
             }
             $tone = ($action['tone'] ?? '') === 'danger' ? 'btn--danger' : 'btn--quiet';
             $buttons .= '<a class="btn btn--sm ' . $tone . '" href="' . $href . '"'
                 . $targetAttr . $confirm . $aria . '>'
-                . self::e($label) . '</a>';
+                . Html::e($label) . '</a>';
         }
         if (!$asMenu) {
             return '<span class="record-list__actions">' . $buttons . '</span>';
         }
 
         return '<details class="rowmenu">'
-            . '<summary class="btn btn--sm btn--quiet" aria-label="' . self::e($manageLabel . ': ' . $name) . '">'
-            . self::e($manageLabel) . '</summary>'
+            . '<summary class="btn btn--sm btn--quiet" aria-label="' . Html::e($manageLabel . ': ' . $name) . '">'
+            . Html::e($manageLabel) . '</summary>'
             . '<div class="rowmenu__panel" role="menu">' . $buttons . '</div>'
             . '</details>';
     }
 
-    private static function e(mixed $value): string
-    {
-        return Html::e($value);
-    }
 }
