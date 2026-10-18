@@ -932,12 +932,74 @@ final class ItemScreen
             }
         }
 
-        if ($inApplication) {
-            $fields['Access'] = self::itemGroupPicker($selectedGroups);
-        }
         $fields[''] = Form::hidden('item_type_id', (string)$itemTypeFields['item_type_id']) . $peopleHidden;
         $formOptions = [];
-        if (ADD_ATTACHMENTS == 'yes') {
+        if ($inApplication) {
+            $redisplay = isset($values['user_security']);
+            $folds = '';
+            $shared = count($selectedGroups);
+            if ($itemRole < 4) {
+                $folds .= self::sheetFold(
+                    'Access',
+                    self::itemGroupPicker($selectedGroups),
+                    self::countLabel($shared, 'group', 'Not shared'),
+                    $redisplay
+                );
+            } else {
+                $names = self::groupNames($selectedGroups);
+                $folds .= self::sheetFold(
+                    'Access',
+                    '<div class="readonly-value">' . Html::e($names === '' ? 'Not shared.' : $names) . '</div>',
+                    $names === '' ? 'Not shared' : self::countLabel($shared, 'group', 'Not shared'),
+                    $redisplay
+                );
+            }
+            if ($itemRole < 4 && ADD_ATTACHMENTS == 'yes') {
+                $folds .= self::sheetFold(
+                    (string) TXT_393,
+                    Form::file('attachment', (string) (SET_MAX_ATTACHMENT * 1000000)),
+                    'None',
+                    $redisplay
+                );
+                $formOptions['enctype'] = 'multipart/form-data';
+            }
+            if ($itemRole < 4 && SET_LOG_ENTRY === 'yes') {
+                $noteValue = $redisplay ? (string) ($values['log_entry'] ?? '') : '';
+                $noteText = trim((string) preg_replace('/\s+/', ' ', $noteValue));
+                $noteMeta = $noteText === '' ? 'None' : (mb_strlen($noteText) <= 42 ? $noteText : '1 note');
+                $folds .= self::sheetFold(
+                    'Notes',
+                    Form::textarea('log_entry', $noteValue, '3') . Form::hidden('role_id', '5'),
+                    $noteMeta,
+                    $redisplay
+                );
+            }
+            if ($folds !== '') {
+                $fields[] = '<div class="sheet-folds">' . $folds . '</div>';
+            }
+            $formOptions['record'] = true;
+            $formOptions['kicker'] = $itemTypeName;
+            $status = WorkScreen::workStatusField((int) $itemTypeID);
+            if ($status !== null) {
+                $badge = trim((string) ($itemTypeFields['custom_field_' . $status['id']] ?? ''));
+                if ($badge === '') {
+                    $default = Database::first('custom_fields', ['default_value'], 'custom_field_id = ?', [$status['id']]);
+                    $badge = trim((string) ($default['default_value'] ?? ''));
+                }
+                if ($badge === '') {
+                    $first = Database::first(
+                        'custom_field_menu_values',
+                        ['menu_value'],
+                        'custom_field_id = ? ORDER BY menu_value_id ASC',
+                        [$status['id']]
+                    );
+                    $badge = trim((string) ($first['menu_value'] ?? ''));
+                }
+                if ($badge !== '') {
+                    $formOptions['badge'] = $badge;
+                }
+            }
+        } elseif (ADD_ATTACHMENTS == 'yes') {
             $fields[TXT_393] = Form::file('attachment', SET_MAX_ATTACHMENT * 1000000);
             $formOptions['enctype'] = 'multipart/form-data';
         }
@@ -1514,7 +1576,9 @@ final class ItemScreen
             $array['create_date'] = time();
             $array['core_log_updated'] = time();
             $groupIds = GroupMembership::idsFromPost($_POST);
-            unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id'], $_POST['_csrf']);
+            $logText = trim((string) ($_POST['log_entry'] ?? ''));
+            $roleId = $_POST['role_id'] ?? 5;
+            unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id'], $_POST['_csrf'], $_POST['log_entry'], $_POST['role_id']);
             unset($_POST['groups_posted']);
             foreach (array_keys($_POST) as $postKey) {
                 if (str_starts_with((string) $postKey, 'group_')) {
@@ -1537,6 +1601,11 @@ final class ItemScreen
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') != '') {
                 self::addAttachment($itemId, false, false);
                 Actions::executeAction($itemId, 'item_attachment', false);
+            }
+            if ($logText !== '' && SET_LOG_ENTRY === 'yes') {
+                $_POST['log_entry'] = $logText;
+                $_POST['role_id'] = $roleId;
+                self::addLogEntry($itemId, false, false);
             }
             Actions::executeAction($itemId, 'create_item', false);
             header('Location: ' . MAN_BASE_URL . '&option=show_item&item_id=' . rawurlencode((string) $itemId));
