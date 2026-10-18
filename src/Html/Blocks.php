@@ -67,9 +67,21 @@ final class Blocks
                 . ' class="card span-2' . ($extraClass !== '' ? ' ' . Html::e($extraClass) : '') . '"'
                 . '>';
             if ($title !== '' && !$liftTitle && !$repeatsSection) {
-                $html .= $disclosure
-                    ? '<summary class="card-title">' . $title . '</summary>'
-                    : '<div class="card-title">' . $title . '</div>';
+                if ($disclosure) {
+                    $html .= '<summary class="card-title">' . $title . '</summary>';
+                } else {
+                    $kicker = trim((string) ($block['kicker'] ?? ''));
+                    $badge = trim((string) ($block['badge'] ?? ''));
+                    if ($kicker !== '') {
+                        $html .= '<p class="card-kicker">' . Html::e($kicker) . '</p>';
+                    }
+                    if ($badge !== '') {
+                        $html .= '<div class="card-head"><div class="card-title">' . $title . '</div>'
+                            . '<span class="card-badge">' . Html::e($badge) . '</span></div>';
+                    } else {
+                        $html .= '<div class="card-title">' . $title . '</div>';
+                    }
+                }
             }
             $html .= '<div class="form-block">';
             if (!empty($block['render']) && is_callable($block['render'])) {
