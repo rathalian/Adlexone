@@ -16,9 +16,23 @@ class AttachmentUpload
      */
     public static function uploadItemAttachment($maximumSize, $inputName, $time, $uploadDirectory)
     {
-        $shuffledTime = str_shuffle((string) $time);
-        $fixedName = preg_replace('/[^a-zA-Z0-9\.\$\%\'\`\-\@\{\}\~\!\#\(\)\&\_\^]/', '', str_replace([' ', '%20', '\'', '"'], ['_', '_', '_', '_'], basename($_FILES[$inputName]['name'])));
-        $uploadfile = $uploadDirectory . $shuffledTime . '_' . $fixedName;
+        $original = basename((string) ($_FILES[$inputName]['name'] ?? ''));
+        $ext = strtolower((string) pathinfo($original, PATHINFO_EXTENSION));
+        $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?? '';
+        $blocked = ['php', 'phtml', 'phar', 'php3', 'php4', 'php5', 'pht', 'cgi', 'pl', 'exe', 'sh', 'shtml'];
+        if ($ext !== '' && in_array($ext, $blocked, true)) {
+            View::respond('This file type cannot be uploaded.');
+            Page::current()->send();
+            exit;
+        }
+        $base = (string) pathinfo($original, PATHINFO_FILENAME);
+        $base = preg_replace('/[^A-Za-z0-9._-]/', '', $base) ?? '';
+        if ($base === '') {
+            $base = 'file';
+        }
+        $base = substr($base, 0, 80);
+        $storedName = bin2hex(random_bytes(8)) . '_' . $base . ($ext !== '' ? '.' . $ext : '');
+        $uploadfile = $uploadDirectory . $storedName;
         if ($_FILES[$inputName]['error'] == 0) {
             $result = move_uploaded_file($_FILES[$inputName]['tmp_name'], $uploadfile);
             if (!$result) {
@@ -52,7 +66,7 @@ class AttachmentUpload
                     break;
             }
         }
-        $_FILES[$inputName]['time_name'] = $shuffledTime . '_' . $fixedName;
+        $_FILES[$inputName]['time_name'] = $storedName;
         return $_FILES[$inputName];
     }
 }

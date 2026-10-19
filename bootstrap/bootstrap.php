@@ -37,54 +37,50 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Adlexone\Http\Page;
 use Adlexone\Http\PublicBaseUrl;
 use Adlexone\Http\Router;
+use Adlexone\Platform\OperatorScreen;
+use Adlexone\Platform\Runtime;
+use Adlexone\Platform\SetupScreen;
+use Adlexone\Platform\StatusScreen;
 use Adlexone\support\SharedMethods;
+
 /**
- * Define system paths and constants
+ * Paths, then settings. The database is opened only for an installed site.
+ * Setup and the operator screen run before SchemaMigrator so a missing
+ * SQLite file is not created as an empty database on a GET.
  */
 $baseDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR;
-define('SET_INSTALL_PATH', $baseDir);
-define('SET_CONFIGURATION_PATH', $baseDir . 'config' . DIRECTORY_SEPARATOR);
-define('SET_ATTACHMENTS_PATH', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
-define('DSN', 'sqlite:' . $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
-
-// Shared platform schema (app packs must not own tables).
-\Adlexone\Database\SchemaMigrator::migrate();
-
-/**
- * Load configuration settings from JSON files in the config directory and its subdirectories
- */
-$configDir = SET_CONFIGURATION_PATH;
-$jsonFiles = glob($configDir . '*.json');
-
-foreach ($jsonFiles as $jsonFile) {
-    SharedMethods::loadJsonSettingsToConstants($jsonFile);
-}
-
-$subDirs = glob($configDir . '*', GLOB_ONLYDIR);
-foreach ($subDirs as $subDir) {
-    $subJsonFiles = glob($subDir . '/*.json');
-    foreach ($subJsonFiles as $jsonFile) {
-        Adlexone\support\SharedMethods::loadJsonSettingsToConstants($jsonFile);
-    }
-}
+Runtime::define($baseDir);
+Runtime::loadConfig();
 
 /** * Enable error reporting for debugging (disable in production)
  */
 
-if (SET_DEBUG_MODE == 'Yes') {
-    error_reporting(SET_ERROR_REPORTING_LEVEL);
+if (defined('SET_DEBUG_MODE') && SET_DEBUG_MODE == 'Yes') {
+    error_reporting(defined('SET_ERROR_REPORTING_LEVEL') ? (int) SET_ERROR_REPORTING_LEVEL : E_ALL);
     ini_set('display_errors', '1');
     ini_set('log_errors', '1');
-
 }
 
+Runtime::startSession();
 
-
-/** * Start session if not already started
- */
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+if (Runtime::mode() === Runtime::OPERATOR) {
+    OperatorScreen::handle();
+    Page::current()->send();
+    exit;
 }
+if (Runtime::mode() === Runtime::SETUP) {
+    SetupScreen::handle();
+    Page::current()->send();
+    exit;
+}
+if (Runtime::mode() === Runtime::SUSPENDED || Runtime::mode() === Runtime::UNKNOWN) {
+    StatusScreen::handle();
+    Page::current()->send();
+    exit;
+}
+
+// Shared platform schema (app packs must not own tables).
+\Adlexone\Database\SchemaMigrator::migrate();
 
 /** Start output buffering to prevent headers already sent errors
  */

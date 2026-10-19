@@ -2296,36 +2296,60 @@ final class ItemScreen
 
     public static function downloadAttachment($id)
     {
-        // Get attachment information
-        $condition = "WHERE id='$id'";
-        $row = Database::first('item_attachments', array('*'), $condition);
-        $fileName = SET_ATTACHMENTS_PATH . $row['file_name'];
-        // Output to browser after emptying the output buffer
+        $id = (int) $id;
+        if ($id <= 0) {
+            Access::deny();
+        }
+        $row = Database::first('item_attachments', ['*'], 'id = ?', [$id]);
+        if ($row === null || !self::userCanAccessItem((int) ($row['item_id'] ?? 0))) {
+            Access::deny();
+        }
+        $stored = basename((string) ($row['file_name'] ?? ''));
+        $root = realpath((string) SET_ATTACHMENTS_PATH);
+        $real = ($root !== false && $stored !== '') ? realpath($root . DIRECTORY_SEPARATOR . $stored) : false;
+        if ($root === false || $real === false || !is_file($real) || !str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
+            Access::deny();
+        }
+        $type = (string) ($row['file_type'] ?? '');
+        if (preg_match('#^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$#', $type) !== 1) {
+            $type = 'application/octet-stream';
+        }
+        $label = preg_replace('/^[A-Za-z0-9]+_/', '', $stored, 1) ?? $stored;
+        $label = str_replace(["\r", "\n", '"'], '', $label);
+        if ($label === '') {
+            $label = 'download';
+        }
         ob_clean();
-        header("Expires: 0");
-        header("Pragma: cache");
-        header("Cache-Control: private");
-        header("Content-Type: $row[file_type]");
-        header("Content-Length: $row[file_size]");
-        header("Content-Disposition: attachment; filename=\"" . substr($row['file_name'], 11) . "\"");
-        readfile($fileName);
+        header('Expires: 0');
+        header('Pragma: cache');
+        header('Cache-Control: private');
+        header('Content-Type: ' . $type);
+        header('Content-Length: ' . (string) filesize($real));
+        header('Content-Disposition: attachment; filename="' . $label . '"');
+        header('X-Content-Type-Options: nosniff');
+        readfile($real);
         exit;
     }
 
     public static function deleteAttachment($id, $itemID)
     {
-        // Delete attachment file
-        $condition = "WHERE id='$id'";
-        $row = Database::first('item_attachments', array('file_name'), $condition);
-        // Check for dependant items and only delete file if 1 item is associated
-        $condition = "WHERE file_name='" . $row['file_name'] . "'";
-        $result = Database::select('item_attachments', array('file_name'), $condition);
-        if (count($result) == 1) {
-            unlink(SET_ATTACHMENTS_PATH . $row['file_name']);
+        $id = (int) $id;
+        $row = Database::first('item_attachments', ['file_name', 'item_id'], 'id = ?', [$id]);
+        if ($row === null || !self::userCanAccessItem((int) ($row['item_id'] ?? 0))) {
+            Access::deny();
         }
-        // Delete entry from attachment table
-        $condition = "WHERE id='$id'";
-        Database::delete('item_attachments', $condition);
+        $stored = basename((string) ($row['file_name'] ?? ''));
+        $result = $stored === ''
+            ? []
+            : Database::select('item_attachments', ['file_name'], 'file_name = ?', [$stored]);
+        if (count($result) === 1) {
+            $root = realpath((string) SET_ATTACHMENTS_PATH);
+            $real = ($root !== false) ? realpath($root . DIRECTORY_SEPARATOR . $stored) : false;
+            if ($root !== false && $real !== false && str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
+                unlink($real);
+            }
+        }
+        Database::delete('item_attachments', 'id = ?', [$id]);
         if (self::returnToItem($itemID, 'File removed')) {
             return;
         }

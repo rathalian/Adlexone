@@ -63,6 +63,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                         <h1 class="login-title">Sign in</h1>
                         <p class="login-lead">Use your username and password.</p>
                     <form method="post" action="?action=local" class="login-form">
+                        <?php echo \Adlexone\Auth\Csrf::field(); ?>
                         <div class="field">
                             <label class="login-label label" for="access_user_name">Username</label>
                             <input class="input" type="text" id="access_user_name" name="access_user_name" autocomplete="username" required autofocus>

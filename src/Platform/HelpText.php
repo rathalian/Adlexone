@@ -1,0 +1,248 @@
+<?php
+declare(strict_types=1);
+
+namespace Adlexone\Platform;
+
+use Adlexone\Html\Html;
+
+/**
+ * Plain-language placement and permission notes for setup and the operator screen.
+ */
+final class HelpText
+{
+    /**
+     * @param array<string, string> $paths
+     */
+    public static function customer(array $paths): string
+    {
+        $user = $paths['php_user'] ?? Runtime::phpUser();
+        $config = $paths['config'] ?? '';
+        $sqlite = $paths['sqlite'] ?? '';
+        $attachments = $paths['attachments'] ?? '';
+        $databaseDir = $paths['database_dir'] ?? dirname($sqlite);
+        $public = $paths['public'] ?? '';
+        $install = $paths['install'] ?? '';
+
+        $checks = self::writableLines([
+            'Settings' => $config,
+            'Database folder' => $databaseDir,
+            'Attachments' => $attachments,
+        ]);
+
+        return self::article('Where this site keeps its data', [
+            self::p('The web server document root is only the public folder. The SQLite database, the JSON settings, and uploaded files sit beside that folder. A browser must not be able to download them by guessing a URL.'),
+            self::facts([
+                'Code' => $install,
+                'Document root' => $public,
+                'Settings' => $config,
+                'SQLite database' => $sqlite,
+                'Uploaded files' => $attachments,
+                'PHP is running as' => $user,
+            ]),
+            $checks,
+            self::h('Permissions'),
+            self::p('The account that runs PHP must own these folders and be able to create files in them. Recommended modes:'),
+            self::list([
+                'Directories: 700. The owner can read, write, and enter. Nobody else can.',
+                'The SQLite file: 600. The owner can read and write. Nobody else can.',
+                'JSON files that hold an SMTP password or an OAuth client secret: 600 as well.',
+            ]),
+            self::p('On Linux, as a user who may change ownership:'),
+            self::pre(self::commands($user, [$config, $databaseDir, $attachments], [$sqlite])),
+            self::p('Use the PHP user shown above, not root. If root owns the folders, setup cannot write the database and this page stays in place.'),
+            self::h('Files SQLite creates beside the database'),
+            self::p('While the site is open, SQLite may add ' . self::code(basename($sqlite) . '-wal') . ' and ' . self::code(basename($sqlite) . '-shm') . ' in the same folder. They are part of the live database. Copy them together with the main file if you take a manual backup, or use the operator backup, which folds them back into the main file first.'),
+            self::h('Shared hosting'),
+            self::p('Unzip Inlay outside the web folder, for example in the account home as inlay/. Point the domain’s document root at inlay/public. If the host only lets you pick a folder under public_html, pick inlay/public. Leave config and storage next to public, not inside it.'),
+            self::h('Secrets'),
+            self::p('SMTP passwords and OAuth client secrets are written into the settings folder above when an administrator saves them later. Leave the password field blank on that screen to keep the current value. Do not commit that folder or the SQLite file to git.'),
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $paths
+     */
+    public static function operator(array $paths): string
+    {
+        $user = $paths['php_user'] ?? Runtime::phpUser();
+        $stores = $paths['stores'] ?? '';
+        $platformDb = $paths['platform_db'] ?? '';
+        $operatorHost = $paths['operator_host'] ?? '';
+        $install = $paths['install'] ?? '';
+        $public = $paths['public'] ?? '';
+        $platformJson = rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'platform.json';
+
+        $storeExample = rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . 'acme' . DIRECTORY_SEPARATOR;
+
+        return self::article('How customer stores are kept apart', [
+            self::p('This screen is the operator. It is a separate login in a separate database. It is not a user inside a customer site, and it does not appear in their user list or their backup.'),
+            self::p('Each customer gets one folder. Their people, records, settings, and uploads stay in that folder. One request opens one SQLite file.'),
+            self::facts([
+                'Code' => $install,
+                'Document root' => $public,
+                'Operator address' => $operatorHost !== '' ? $operatorHost : '(not set)',
+                'Operator database' => $platformDb,
+                'Customer folders' => $stores,
+                'Platform settings file' => $platformJson,
+                'PHP is running as' => $user,
+            ]),
+            self::h('What one customer folder contains'),
+            self::list([
+                self::code($storeExample . 'adlexone.sqlite') . ' — their database. Mode 600.',
+                self::code($storeExample . 'config' . DIRECTORY_SEPARATOR) . ' — their settings, including SMTP and OAuth secrets. Mode 700 on the folder, 600 on the JSON files.',
+                self::code($storeExample . 'attachments' . DIRECTORY_SEPARATOR) . ' — their uploaded files. Mode 700.',
+            ]),
+            self::p('The operator database holds your username and the list of customer addresses. It does not hold their records. Keep it beside the stores folder, not inside public and not inside a customer folder.'),
+            self::h('Permissions'),
+            self::p('PHP is running as ' . self::code($user) . '. That account must be able to create the stores folder and the operator database. Recommended:'),
+            self::pre(self::commands($user, [dirname($platformDb), $stores], [$platformDb])),
+            self::p('SQLite also writes -wal and -shm files next to each database while it is in use. Backup on this screen checkpoints those into the main file, then downloads the folder.'),
+            self::h('Turning SaaS mode on'),
+            self::p('Set INLAY_STORES to the customer folder path and INLAY_OPERATOR_HOST to this site’s hostname. You can put the same values in ' . self::code('config/platform.json') . ' next to the code (the install’s config, not a customer config). Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
+            self::h('Creating a customer'),
+            self::p('Choose a short slug, the hostname they will use, and a display name. Leave the admin password blank if they should open that hostname and finish setup themselves. The setup page they see names their database, settings folder, and attachments folder, and it repeats the permission commands. Fill in the admin username and password here if you are creating the first account for them.'),
+            self::h('Suspend, backup, delete'),
+            self::p('Suspend leaves every file in place and stops sign-in. Resume turns the site back on. Backup downloads their SQLite file, settings, and attachments. Delete removes the folder from disk after you type the slug. Delete is permanent.'),
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $paths
+     */
+    public static function suspended(array $paths): string
+    {
+        return self::article('This site is turned off', [
+            self::p('The operator suspended this address. Nothing was deleted.'),
+            self::facts([
+                'SQLite database' => $paths['sqlite'] ?? '',
+                'Settings' => $paths['config'] ?? '',
+                'Uploaded files' => $paths['attachments'] ?? '',
+            ]),
+            self::p('The operator can resume the site from ' . self::code($paths['operator_host'] ?? 'the operator host') . '. Until then this address stays on this page.'),
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $paths
+     */
+    public static function unknown(array $paths, string $notice): string
+    {
+        $blocks = [];
+        if ($notice !== '') {
+            $blocks[] = self::p($notice);
+        }
+        $blocks[] = self::p('Customer sites answer only on a hostname the operator has registered. This address is not one of them.');
+        $blocks[] = self::facts([
+            'Operator address' => ($paths['operator_host'] ?? '') !== '' ? $paths['operator_host'] : '(not set)',
+            'Customer folders' => ($paths['stores'] ?? '') !== '' ? $paths['stores'] : '(single site, no stores directory)',
+            'Operator database' => $paths['platform_db'] ?? '',
+            'Document root' => $paths['public'] ?? '',
+        ]);
+        $blocks[] = self::p('Open the operator address to add a customer. Their database, settings, and uploads are created under the stores folder, outside the document root, owned by ' . self::code($paths['php_user'] ?? Runtime::phpUser()) . ' with directories at mode 700 and the SQLite file at mode 600.');
+
+        return self::article('Address not recognised', $blocks);
+    }
+
+    /**
+     * @param list<string> $blocks
+     */
+    private static function article(string $title, array $blocks): string
+    {
+        return '<h2 class="setup-help__title">' . Html::e($title) . '</h2>' . implode('', $blocks);
+    }
+
+    private static function h(string $text): string
+    {
+        return '<h3 class="setup-help__heading">' . Html::e($text) . '</h3>';
+    }
+
+    private static function p(string $text): string
+    {
+        return '<p class="setup-help__text">' . $text . '</p>';
+    }
+
+    private static function code(string $text): string
+    {
+        return '<code>' . Html::e($text) . '</code>';
+    }
+
+    /**
+     * @param array<string, string> $rows
+     */
+    private static function facts(array $rows): string
+    {
+        $html = '<dl class="setup-facts">';
+        foreach ($rows as $label => $value) {
+            $html .= '<dt>' . Html::e($label) . '</dt><dd>' . ($value !== '' ? self::code($value) : '—') . '</dd>';
+        }
+        $html .= '</dl>';
+
+        return $html;
+    }
+
+    /**
+     * @param list<string> $items
+     */
+    private static function list(array $items): string
+    {
+        $html = '<ul class="setup-help__list">';
+        foreach ($items as $item) {
+            $html .= '<li>' . $item . '</li>';
+        }
+        $html .= '</ul>';
+
+        return $html;
+    }
+
+    private static function pre(string $text): string
+    {
+        return '<pre class="setup-help__pre">' . Html::e($text) . '</pre>';
+    }
+
+    /**
+     * @param list<string> $dirs
+     * @param list<string> $files
+     */
+    private static function commands(string $user, array $dirs, array $files): string
+    {
+        $dirs = array_values(array_filter($dirs, static fn (string $dir): bool => $dir !== '' && $dir !== '.'));
+        $files = array_values(array_filter($files, static fn (string $file): bool => $file !== ''));
+        $lines = [];
+        foreach ($dirs as $dir) {
+            $lines[] = 'mkdir -p ' . self::shell($dir);
+        }
+        if ($dirs !== []) {
+            $lines[] = 'chown -R ' . self::shell($user) . ' ' . implode(' ', array_map([self::class, 'shell'], $dirs));
+            $lines[] = 'chmod 700 ' . implode(' ', array_map([self::class, 'shell'], $dirs));
+        }
+        if ($files !== []) {
+            $lines[] = 'chmod 600 ' . implode(' ', array_map([self::class, 'shell'], $files));
+        }
+
+        return implode("\n", $lines);
+    }
+
+    private static function shell(string $value): string
+    {
+        return escapeshellarg($value);
+    }
+
+    /**
+     * @param array<string, string> $dirs
+     */
+    private static function writableLines(array $dirs): string
+    {
+        $items = [];
+        foreach ($dirs as $label => $dir) {
+            if ($dir === '') {
+                continue;
+            }
+            $ok = Runtime::directoryWritable($dir);
+            $items[] = Html::e($label) . ($ok
+                ? ' can be written by this PHP process.'
+                : ' cannot be written yet. Run the commands below, then reload.');
+        }
+
+        return $items === [] ? '' : self::list($items);
+    }
+}

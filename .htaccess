@@ -1,0 +1,12 @@
+# If the domain is pointed at the install root instead of public/, refuse the
+# data and code paths. The document root should still be public/.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(storage|config|bootstrap|src|vendor|tests)(/|$) - [F,L]
+    RewriteRule ^composer\.(json|lock|phar)$ - [F,L]
+</IfModule>
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|json)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>

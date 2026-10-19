@@ -237,8 +237,6 @@ final class SecurityScreen
         $fields[TXT_176] = Form::text('country', @$fieldValues['country']);
         $fields[TXT_177] = Form::text('website', @$fieldValues['website']);
         $fields[TXT_178] = Form::textarea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT);
-        $fields[TXT_179] = Form::text('secret_question', @$fieldValues['secret_question']);
-        $fields[TXT_180] = Form::text('secret_answer', @$fieldValues['secret_answer']);
 
         $userPreferences = [];
         if ($adminEdit) {

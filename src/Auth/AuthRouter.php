@@ -63,10 +63,19 @@ final class AuthRouter
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $user = LocalAuthenticator::authenticate(
-                (string) ($_POST['access_user_name'] ?? ''),
-                (string) ($_POST['access_password'] ?? '')
-            );
+            if (!Csrf::valid()) {
+                usleep(400000);
+                throw new AuthException('The sign-in form expired. Please try again.');
+            }
+            try {
+                $user = LocalAuthenticator::authenticate(
+                    (string) ($_POST['access_user_name'] ?? ''),
+                    (string) ($_POST['access_password'] ?? '')
+                );
+            } catch (AuthException $e) {
+                usleep(400000);
+                throw $e;
+            }
             AuthSession::establish($user);
             AuthSession::redirectHome();
         }

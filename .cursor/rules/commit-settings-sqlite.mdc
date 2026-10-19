@@ -1,13 +1,14 @@
 ---
-description: Always include live settings and SQLite DB in commits and pushes
+description: Keep live settings and the SQLite database off git
 alwaysApply: true
 ---
 
-# Commit settings and SQLite
+# Do not commit settings or SQLite
 
-When committing or pushing, **always stage and include**:
+Live files hold customer records and secrets. Do not stage or push them:
 
-- `config/adlexone_settings.json` (and other live `config/*.json` that are tracked)
-- `storage/database/adlexone.sqlite`
+- `config/*.json` (copy from `config.example/` on a new install)
+- `storage/database/*.sqlite` and any backup copy
+- `storage/attachments/`
 
-Do not leave these unstaged as “local only.” Adam wants the live settings and database in git so environments stay in sync.
+`config.example/` and `storage/database/shared_schema.sql` stay in git. A new install creates the database from the setup page.

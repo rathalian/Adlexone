@@ -8,7 +8,7 @@
   "terminals": [
     {
       "name": "web",
-      "command": "php -S 0.0.0.0:8000",
+      "command": "php -S 0.0.0.0:8000 -t public public/index.php",
       "description": "Inlay on port 8000"
     }
   ]

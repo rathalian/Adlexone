@@ -135,6 +135,17 @@ final class SiteSettingsScreen
                 $issuer = rtrim(trim((string) ($_POST['connection_issuer'] ?? '')), '/');
                 $clientId = trim((string) ($_POST['connection_client_id'] ?? ''));
                 $clientSecret = (string) ($_POST['connection_client_secret'] ?? '');
+                if ($clientSecret === '' && defined('AUTH_OAUTH_CONNECTIONS_JSON')) {
+                    $kept = json_decode((string) AUTH_OAUTH_CONNECTIONS_JSON, true);
+                    if (is_array($kept)) {
+                        foreach ($kept as $row) {
+                            if (is_array($row) && trim((string) ($row['id'] ?? '')) === $id) {
+                                $clientSecret = (string) ($row['client_secret'] ?? '');
+                                break;
+                            }
+                        }
+                    }
+                }
                 $connection = [
                     'id' => $id,
                     'label' => trim((string) ($_POST['connection_label'] ?? '')) ?: 'Sign in with OAuth',
@@ -179,11 +190,15 @@ final class SiteSettingsScreen
                 break;
             case 'update_email_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
+                $smtpPassword = (string) ($_POST['SET_SMTP_PASSWORD'] ?? '');
+                if ($smtpPassword === '' && defined('SET_SMTP_PASSWORD')) {
+                    $smtpPassword = (string) SET_SMTP_PASSWORD;
+                }
                 SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'email_settings.json', [
                     'SET_SMTP_HOST' => $_POST['SET_SMTP_HOST'] ?? '',
                     'SET_SMTP_PORT' => $_POST['SET_SMTP_PORT'] ?? '',
                     'SET_SMTP_USER' => $_POST['SET_SMTP_USER'] ?? '',
-                    'SET_SMTP_PASSWORD' => $_POST['SET_SMTP_PASSWORD'] ?? '',
+                    'SET_SMTP_PASSWORD' => $smtpPassword,
                 ]);
                 break;
             default :
@@ -356,7 +371,8 @@ final class SiteSettingsScreen
                 . Form::hidden('connection_id', $esc((string) ($connection['id'] ?? 'organisation'))),
             'Issuer URL' => Form::text('connection_issuer', $esc((string) ($connection['issuer'] ?? ''))),
             'Client ID' => Form::text('connection_client_id', $esc((string) ($connection['client_id'] ?? ''))),
-            'Client secret' => Form::password('connection_client_secret', $esc((string) ($connection['client_secret'] ?? ''))),
+            'Client secret' => Form::password('connection_client_secret', '')
+                . '<p class="form-help">Leave this blank to keep the current client secret. It is stored in the settings folder, mode 600, outside the web root.</p>',
             'Scopes' => Form::text('connection_scopes', $esc((string) ($connection['scopes'] ?? 'openid profile email'))),
             'Create an account on first sign-in' => Form::select('connection_auto_provision', ['Yes', 'No'], [TXT_93, TXT_94], $autoProvision),
             'Redirect URI' => Form::text('redirect_uri', $esc(\Adlexone\Auth\AuthConfig::callbackUrl()), '', true),
@@ -409,7 +425,8 @@ final class SiteSettingsScreen
             TXT_645 => Form::text('SET_SMTP_HOST', $smtp('SET_SMTP_HOST')),
             TXT_646 => Form::text('SET_SMTP_PORT', $smtp('SET_SMTP_PORT')),
             TXT_649 => Form::text('SET_SMTP_USER', $smtp('SET_SMTP_USER')),
-            TXT_650 => Form::password('SET_SMTP_PASSWORD', $smtp('SET_SMTP_PASSWORD')),
+            TXT_650 => Form::password('SET_SMTP_PASSWORD', '')
+                . '<p class="form-help">Leave this blank to keep the current SMTP password. It is written to the settings folder beside the SQLite file, not into the page.</p>',
         ];
         Page::current()->setBody(Form::form(
             TXT_565,
