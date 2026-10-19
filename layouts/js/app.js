@@ -1,6 +1,14 @@
 /* Adlexone layout behaviour */
 
 (() => {
+    document.querySelectorAll('[data-toast]').forEach((toast) => {
+        const close = () => toast.remove();
+        toast.querySelector('[data-toast-close]')?.addEventListener('click', close);
+        window.setTimeout(close, 5200);
+    });
+})();
+
+(() => {
     const wrap = document.querySelector('.wrap');
     const sidebar = document.querySelector('.sidebar');
     if (wrap && sidebar) wrap.classList.add('has-sidebar');

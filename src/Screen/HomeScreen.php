@@ -6,8 +6,11 @@ namespace Adlexone\Screen;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Html;
+use Adlexone\Html\Presence;
 use Adlexone\Http\Page;
 use Adlexone\Http\View;
+use Adlexone\support\Database;
 use Adlexone\Theme\Theme;
 
 /**
@@ -24,13 +27,19 @@ final class HomeScreen
         }
 
         $applications = [];
+        $slugs = [];
         foreach (\Adlexone\Application\ApplicationStore::menuItems() as $item) {
             $hint = trim((string) $item['hint']);
+            $slug = (string) ($item['app'] ?? '');
+            $slugs[] = $slug;
+            $pulse = self::pulse($slug);
             $applications[] = self::tile(
                 (string) $item['href'],
                 (string) $item['label'],
                 $hint !== '' ? $hint : (string) $item['label'],
-                (string) $item['icon']
+                (string) $item['icon'],
+                $pulse['stat'],
+                $pulse['when']
             );
         }
 
@@ -109,6 +118,7 @@ final class HomeScreen
 
         $html = '<div class="launchpad">'
             . $intro
+            . self::desk($slugs)
             . self::group('Applications', $applications)
             . self::group('Design', $manage)
             . '</div>';
@@ -164,11 +174,126 @@ final class HomeScreen
     /**
      * Homepage. One tile per destination. Section menus stay inside each app.
      *
-     * @return array{href: string, title: string, hint: string, icon: string}
+     * @return array{href: string, title: string, hint: string, icon: string, stat: string, when: string}
      */
-    private static function tile(string $href, string $title, string $hint, string $icon): array
+    private static function tile(string $href, string $title, string $hint, string $icon, string $stat = '', string $when = ''): array
     {
-        return ['href' => $href, 'title' => $title, 'hint' => $hint, 'icon' => $icon];
+        return [
+            'href' => $href,
+            'title' => $title,
+            'hint' => $hint,
+            'icon' => $icon,
+            'stat' => $stat,
+            'when' => $when,
+        ];
+    }
+
+    /**
+     * @return array{stat: string, when: string}
+     */
+    private static function pulse(string $slug): array
+    {
+        $typeId = self::typeId($slug);
+        if ($typeId <= 0) {
+            return ['stat' => '', 'when' => ''];
+        }
+        $row = Database::rows(
+            'SELECT COUNT(*) AS n, MAX(CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END) AS touched FROM items WHERE item_type_id = ?',
+            [$typeId]
+        );
+        $count = (int) ($row[0]['n'] ?? 0);
+        $touched = (int) ($row[0]['touched'] ?? 0);
+        $label = $count === 1 ? '1 record' : $count . ' records';
+
+        return [
+            'stat' => $label,
+            'when' => $touched > 0 ? Presence::ago($touched) : '',
+        ];
+    }
+
+    /**
+     * @param list<string> $slugs
+     */
+    private static function desk(array $slugs): string
+    {
+        $slugs = array_values(array_filter($slugs));
+        if ($slugs === []) {
+            return '';
+        }
+        $typeToSlug = [];
+        foreach ($slugs as $slug) {
+            $typeId = self::typeId($slug);
+            if ($typeId > 0) {
+                $typeToSlug[$typeId] = $slug;
+            }
+        }
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        $items = [];
+        if ($userId > 0 && $typeToSlug !== []) {
+            $items = Database::rows(
+                'SELECT item_id, item_title, item_type_id, create_date, core_log_updated FROM items WHERE user_security = ? AND item_type_id IN ('
+                . implode(',', array_map('intval', array_keys($typeToSlug)))
+                . ') ORDER BY CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END DESC LIMIT 4',
+                [$userId]
+            );
+        }
+        $list = '';
+        foreach ($items as $item) {
+            $typeId = (int) ($item['item_type_id'] ?? 0);
+            $slug = $typeToSlug[$typeId] ?? '';
+            if ($slug === '') {
+                continue;
+            }
+            $title = trim((string) ($item['item_title'] ?? ''));
+            if ($title === '') {
+                $title = 'Record ' . (int) $item['item_id'];
+            }
+            $when = (int) ($item['core_log_updated'] ?? 0);
+            if ($when <= 0) {
+                $when = (int) ($item['create_date'] ?? 0);
+            }
+            $href = '?application=' . rawurlencode($slug) . '&item=' . (int) $item['item_id'];
+            $list .= '<li><a href="' . Html::e($href) . '">' . Html::e($title) . '</a>'
+                . ($when > 0 ? ' <span class="desk__meta">' . Html::e(Presence::ago($when)) . '</span>' : '')
+                . '</li>';
+        }
+        $wall = '';
+        $placeholders = implode(',', array_fill(0, count($slugs), '?'));
+        $notice = Database::rows(
+            'SELECT subject, application, time FROM announcements WHERE application = \'\' OR application IN (' . $placeholders . ') ORDER BY time DESC LIMIT 1',
+            $slugs
+        );
+        if ($notice !== []) {
+            $subject = trim((string) ($notice[0]['subject'] ?? ''));
+            $app = (string) ($notice[0]['application'] ?? '');
+            if ($subject !== '') {
+                $href = $app !== '' ? '?application=' . rawurlencode($app) : './';
+                $wall = '<p class="desk__wall">On the wall: <a href="' . Html::e($href) . '">' . Html::e($subject) . '</a></p>';
+            }
+        }
+        if ($list === '' && $wall === '') {
+            $list = '<li class="desk__meta">Nothing is waiting on you.</li>';
+        }
+        $art = Theme::illustrationHref('empty-assigned');
+
+        return '<section class="desk" aria-label="Needs you">'
+            . ($art !== '' ? '<img class="desk__art" src="' . Html::e($art) . '" alt="" width="88" height="66">' : '')
+            . '<div><h2 class="desk__title">Needs you</h2><ul class="desk__list">' . $list . '</ul>' . $wall . '</div>'
+            . '</section>';
+    }
+
+    private static function typeId(string $slug): int
+    {
+        if ($slug === '' || !Database::tableExists('applications')) {
+            return 0;
+        }
+        $row = Database::first('applications', ['settings_json'], 'slug = ?', [$slug]);
+        if ($row === null) {
+            return 0;
+        }
+        $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
+
+        return is_array($settings) ? (int) ($settings['default_item_type_id'] ?? 0) : 0;
     }
 
     /**

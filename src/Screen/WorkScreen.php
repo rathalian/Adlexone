@@ -14,6 +14,7 @@ use Adlexone\Http\Page;
 use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Html;
+use Adlexone\Html\Presence;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -88,7 +89,17 @@ final class WorkScreen
                 'action' => $new,
             ]);
         } elseif ($shown === []) {
-            $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
+            $focus = (string) ($_GET['focus'] ?? '');
+            if ($focus === 'mine') {
+                $body = Blocks::emptyState([
+                    'illustration' => 'empty-assigned',
+                    'title' => 'Nothing assigned to you',
+                    'copy' => 'When a record is yours, it will show up here.',
+                    'action' => '<a class="btn btn--sm" href="' . Html::e(self::workHref($base, $view)) . '">Show all</a>',
+                ]);
+            } else {
+                $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
+            }
         } elseif ($view === 'board') {
             $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
         } else {
@@ -327,7 +338,17 @@ final class WorkScreen
                     trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
                 ]));
                 $record['meta'] = implode(' · ', $bits);
-                $record['cells']['stand'] = (string) ($stand['values'][$itemId] ?? '');
+                $record['mark'] = trim((string) ($fact['owner'] ?? ''));
+                $opened = (int) ($row['create_date'] ?? 0);
+                if ($opened > 0) {
+                    $record['cells']['opened'] = Presence::ago($opened);
+                    $record['titles']['opened'] = date(SET_DATE_FORMAT, $opened);
+                }
+                $standValue = trim((string) ($stand['values'][$itemId] ?? ''));
+                $record['cells']['stand'] = $standValue;
+                if ($standValue !== '') {
+                    $record['tones']['stand'] = Presence::tone($standValue);
+                }
                 $rows[] = $record;
             }
         }
@@ -447,8 +468,11 @@ final class WorkScreen
     {
         $dropAttr = $drop ? ' data-status="' . Html::e($label) . '"' : '';
 
-        return '<div class="work-board__col"' . $dropAttr . '>'
-            . '<div class="work-board__head"><span>' . Html::e($label) . '</span>'
+        $tone = Presence::tone($drop ? $label : '');
+
+        return '<div class="work-board__col" data-tone="' . Html::e($tone) . '"' . $dropAttr . '>'
+            . '<div class="work-board__head"><span class="work-board__label"><span class="work-board__dot" aria-hidden="true"></span>'
+            . Html::e($label) . '</span>'
             . '<span class="work-board__count">' . count($cards) . '</span></div>'
             . '<div class="work-board__cards">' . implode('', $cards) . '</div>'
             . '</div>';
@@ -475,9 +499,9 @@ final class WorkScreen
         $nextHtml = $next !== ''
             ? '<p class="work-card__log">' . Html::e($next) . '</p>'
             : '<p class="work-card__log" hidden></p>';
-        $ownerHtml = $owner !== ''
-            ? '<p class="work-card__owner">' . Html::e($owner) . '</p>'
-            : '<p class="work-card__owner" hidden></p>';
+        $ownerHtml = '<p class="work-card__owner"' . ($owner === '' ? ' hidden' : '') . '>'
+            . ($owner !== '' ? Presence::mark($owner) : '')
+            . '<span class="work-card__owner-name">' . Html::e($owner) . '</span></p>';
         $options = '<option value="">Move to</option>';
         foreach ($statuses as $value) {
             if ($value === $status) {

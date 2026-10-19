@@ -39,6 +39,39 @@ final class View
         return (string) ob_get_clean();
     }
 
+    public static function flash(string $message, string $tone = 'success'): void
+    {
+        $message = trim($message);
+        if ($message === '') {
+            return;
+        }
+        $_SESSION['_flash'] = ['message' => $message, 'tone' => $tone];
+    }
+
+    public static function toast(): string
+    {
+        $flash = $_SESSION['_flash'] ?? null;
+        unset($_SESSION['_flash']);
+        if (!is_array($flash)) {
+            return '';
+        }
+        $message = trim((string) ($flash['message'] ?? ''));
+        if ($message === '') {
+            return '';
+        }
+        $tone = (string) ($flash['tone'] ?? 'success');
+        $art = Theme::illustrationHref($tone === 'danger' ? 'confirm-pause' : 'confirm-done');
+        $image = $art !== ''
+            ? '<img class="toast__art" src="' . Html::e($art) . '" alt="" width="72" height="54">'
+            : '';
+
+        return '<div class="toast toast--' . Html::e($tone) . '" role="status" data-toast>'
+            . $image
+            . '<p class="toast__text">' . Html::e($message) . '</p>'
+            . '<button type="button" class="toast__close" data-toast-close>Close</button>'
+            . '</div>';
+    }
+
     public static function respond(string $text, string $detail = ''): void
     {
         $message = trim($text);
@@ -46,14 +79,27 @@ final class View
         $page->suggestTitle($message);
 
         $detail = trim($detail);
+        $href = self::continueHref($detail);
+        if ($href !== null && self::isSuccess($message) && !headers_sent()) {
+            self::flash($message);
+            header('Location: ' . Router::absolute($href));
+            exit;
+        }
+
         $follow = $detail !== '' ? self::formatDetail($detail) : self::backLink();
         if ($follow === '') {
             $follow = Blocks::link('./', 'Home', '', 'btn btn--primary btn--sm');
         }
-        $visibleHeading = trim($page->sectionNav()) === ''
-            && strcasecmp(trim(html_entity_decode(strip_tags($page->title()), ENT_QUOTES, 'UTF-8')), $message) === 0;
-        $body = $visibleHeading ? '' : '<p class="response__message">' . Html::e($message) . '</p>';
-        $body .= '<div class="response" role="status">' . $follow . '</div>';
+        $artName = self::isSuccess($message) ? 'confirm-done' : 'confirm-pause';
+        $art = Theme::illustrationHref($artName);
+        $image = $art !== ''
+            ? '<img class="empty-state__art" src="' . Html::e($art) . '" alt="" width="160" height="120">'
+            : '';
+        $body = '<div class="confirm" role="status">'
+            . $image
+            . '<p class="empty-state__title">' . Html::e($message) . '</p>'
+            . '<div class="response">' . $follow . '</div>'
+            . '</div>';
 
         if (!$page->hasBody()) {
             $page->setBody($body);
@@ -82,6 +128,36 @@ final class View
         }
 
         return '<p class="response__detail">' . Html::e($detail) . '</p>';
+    }
+
+    private static function continueHref(string $detail): ?string
+    {
+        if (!preg_match('/href="([^"]+)"/', $detail, $match)) {
+            return null;
+        }
+        $href = html_entity_decode($match[1], ENT_QUOTES, 'UTF-8');
+        if ($href === '' || str_starts_with($href, 'javascript:') || preg_match('#^https?://#i', $href) === 1) {
+            return null;
+        }
+
+        return $href;
+    }
+
+    private static function isSuccess(string $text): bool
+    {
+        $value = strtolower($text);
+        foreach (['fail', 'not found', 'not here', 'not available', 'not on', 'does not', 'invalid', 'problem', 'error', 'missing', 'cannot', "can't", 'choose', 'enter ', 'exceeds', 'unknown', 'empty file', 'did not', 'partially', 'before '] as $needle) {
+            if (str_contains($value, $needle)) {
+                return false;
+            }
+        }
+        foreach (['success', 'updated', 'saved', 'created', 'added', 'deleted', 'removed', 'completed'] as $needle) {
+            if (str_contains($value, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function backLink(): string

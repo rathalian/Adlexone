@@ -149,6 +149,9 @@ final class ApplicationsScreen
                 'searchLabel' => 'Search',
                 'primary' => ['href' => '?manage=builder', 'label' => 'Create with builder'],
                 'empty' => 'No applications yet. Use the builder to create one.',
+                'emptyIllustration' => 'empty-apps',
+                'emptyTitle' => 'No applications yet',
+                'emptyCopy' => 'Use the builder to set the first one in place.',
                 'toolbar' => '<div class="record-list__tools">'
                     . Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Expert setup', '', 'btn btn--sm')
                     . '</div>',

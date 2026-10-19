@@ -23,6 +23,9 @@
         var previous = card.closest(".work-board__col");
         cards.appendChild(card);
         card.setAttribute("data-status", data.status);
+        card.classList.remove("is-settled");
+        void card.offsetWidth;
+        card.classList.add("is-settled");
         if (previous) columnCount(previous);
         columnCount(column);
         var log = card.querySelector(".work-card__log");
@@ -31,10 +34,20 @@
             log.hidden = !data.log;
         }
         var owner = card.querySelector(".work-card__owner");
-        if (owner) {
+        var ownerName = card.querySelector(".work-card__owner-name");
+        var mark = owner ? owner.querySelector(".mark") : null;
+        if (ownerName) {
+            ownerName.textContent = data.owner || "";
+        } else if (owner) {
             owner.textContent = data.owner || "";
-            owner.hidden = !data.owner;
         }
+        if (mark) {
+            var parts = String(data.owner || "").trim().split(/\s+/).filter(Boolean);
+            mark.textContent = parts.slice(0, 2).map(function (part) {
+                return part.charAt(0).toUpperCase();
+            }).join("");
+        }
+        if (owner) owner.hidden = !data.owner;
         var select = card.querySelector("select");
         if (select) {
             var current = data.status;

@@ -349,7 +349,7 @@ final class RenderNavigation
         }
 
         $html = '<div class="sectionbar">';
-        $html .= '<p class="sectionbar__name">' . Html::e($label) . '</p>';
+        $html .= '<p class="sectionbar__name">' . self::sectionMark() . Html::e($label) . '</p>';
         $html .= '<nav class="sectionnav" aria-label="' . Html::e($label) . '">';
         foreach ($links as $lnk) {
             $href = (string)($lnk['href'] ?? '#');
@@ -371,6 +371,23 @@ final class RenderNavigation
         $html .= '</nav></div>';
 
         return $html;
+    }
+
+    private static function sectionMark(): string
+    {
+        $page = Page::current();
+        if (!$page->inApplication()) {
+            return '';
+        }
+        $app = \Adlexone\Application\ApplicationStore::findBySlug($page->applicationSlug());
+        $icon = is_array($app) ? trim((string) ($app['icon'] ?? '')) : '';
+        if ($icon === '') {
+            return '';
+        }
+
+        return '<span class="sectionbar__mark" aria-hidden="true"><svg class="icon"><use href="'
+            . Html::e(\Adlexone\Theme\Theme::spriteHref()) . '#' . Html::e($icon)
+            . '"></use></svg></span>';
     }
 
     private static function sectionNavGroup(string $href): bool

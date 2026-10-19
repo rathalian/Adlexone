@@ -13,7 +13,7 @@ final class Form
     /**
      * @param array<string, string> $fields label => control HTML
      * @param list<string> $buttons
-     * @param array{method?: string, name?: string, id?: string, enctype?: string, kicker?: string, badge?: string, record?: bool} $options
+     * @param array{method?: string, name?: string, id?: string, enctype?: string, kicker?: string, badge?: string, mark?: string, facts?: list<string>, record?: bool, disclosure?: bool} $options
      */
     public static function form(string $title, string $action, array $fields, array $buttons, array $options = []): string
     {
@@ -39,6 +39,13 @@ final class Form
         }
         if ($badge !== '') {
             $block['badge'] = $badge;
+        }
+        $mark = trim((string) ($options['mark'] ?? ''));
+        if ($mark !== '') {
+            $block['mark'] = $mark;
+        }
+        if (is_array($options['facts'] ?? null) && $options['facts'] !== []) {
+            $block['facts'] = $options['facts'];
         }
         if (!empty($options['disclosure'])) {
             $block['disclosure'] = true;

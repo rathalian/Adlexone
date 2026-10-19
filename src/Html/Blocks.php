@@ -72,12 +72,32 @@ final class Blocks
                 } else {
                     $kicker = trim((string) ($block['kicker'] ?? ''));
                     $badge = trim((string) ($block['badge'] ?? ''));
-                    if ($kicker !== '') {
-                        $html .= '<p class="card-kicker">' . Html::e($kicker) . '</p>';
+                    $mark = trim((string) ($block['mark'] ?? ''));
+                    $facts = [];
+                    foreach ($block['facts'] ?? [] as $fact) {
+                        $fact = trim((string) $fact);
+                        if ($fact !== '') {
+                            $facts[] = $fact;
+                        }
                     }
-                    if ($badge !== '') {
-                        $html .= '<div class="card-head"><div class="card-title">' . $title . '</div>'
-                            . '<span class="card-badge">' . Html::e($badge) . '</span></div>';
+                    if ($kicker !== '' || $badge !== '' || $mark !== '' || $facts !== []) {
+                        $html .= '<div class="identity">';
+                        if ($mark !== '') {
+                            $html .= Presence::mark($mark);
+                        }
+                        $html .= '<div class="identity__copy">';
+                        if ($kicker !== '') {
+                            $html .= '<p class="card-kicker">' . Html::e($kicker) . '</p>';
+                        }
+                        $html .= '<div class="card-title">' . $title . '</div>';
+                        if ($facts !== []) {
+                            $html .= '<p class="identity__facts">' . Html::e(implode(' · ', $facts)) . '</p>';
+                        }
+                        $html .= '</div>';
+                        if ($badge !== '') {
+                            $html .= Presence::pill($badge);
+                        }
+                        $html .= '</div>';
                     } else {
                         $html .= '<div class="card-title">' . $title . '</div>';
                     }
@@ -459,24 +479,39 @@ final class Blocks
     {
         $name = (string) ($row['name'] ?? '');
         $meta = (string) ($row['meta'] ?? '');
-        $search = strtolower($name . ' ' . $groupLabel . ' ' . $meta . ' ' . (string) ($row['search'] ?? ''));
-        $nameHtml = '<a class="record-link" href="' . Html::e((string) $row['href']) . '">' . Html::e($name) . '</a>';
+        $mark = trim((string) ($row['mark'] ?? ''));
+        $search = strtolower($name . ' ' . $groupLabel . ' ' . $meta . ' ' . $mark . ' ' . (string) ($row['search'] ?? ''));
+        $nameHtml = '<span class="record-list__name">'
+            . ($mark !== '' ? Presence::mark($mark) : '')
+            . '<span class="record-list__title"><a class="record-link" href="' . Html::e((string) $row['href']) . '">' . Html::e($name) . '</a>';
         if ($meta !== '') {
             $title = (string) ($row['metaTitle'] ?? '');
             $titleAttr = $title !== '' ? ' title="' . Html::e($title) . '"' : '';
             $nameHtml .= '<div class="record-list__meta"' . $titleAttr . '>' . Html::e($meta) . '</div>';
             $search .= ' ' . strtolower($title);
         }
+        $nameHtml .= '</span></span>';
 
         $cellsHtml = '';
         $cellValues = is_array($row['cells'] ?? null) ? $row['cells'] : [];
+        $tones = is_array($row['tones'] ?? null) ? $row['tones'] : [];
+        $titles = is_array($row['titles'] ?? null) ? $row['titles'] : [];
+        $pillKeys = ['stand', 'status', 'enabled', 'active'];
         foreach ($columns as $columnDef) {
-            $value = trim((string) ($cellValues[$columnDef['key']] ?? ''));
+            $key = $columnDef['key'];
+            $value = trim((string) ($cellValues[$key] ?? ''));
             $search .= ' ' . strtolower($value);
             $wrap = !empty($columnDef['wrap']) ? ' record-list__cell--wrap' : '';
-            $cellsHtml .= '<td class="record-list__cell' . $wrap . '">'
-                . ($value === '' ? '—' : Html::e($value))
-                . '</td>';
+            $cellTitle = trim((string) ($titles[$key] ?? ''));
+            $titleAttr = $cellTitle !== '' ? ' title="' . Html::e($cellTitle) . '"' : '';
+            if ($value === '') {
+                $inner = '—';
+            } elseif (isset($tones[$key]) || in_array($key, $pillKeys, true)) {
+                $inner = Presence::pill($value, (string) ($tones[$key] ?? ''));
+            } else {
+                $inner = Html::e($value);
+            }
+            $cellsHtml .= '<td class="record-list__cell' . $wrap . '"' . $titleAttr . '>' . $inner . '</td>';
         }
 
         $actionsHtml = '';

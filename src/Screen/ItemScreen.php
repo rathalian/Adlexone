@@ -1465,6 +1465,31 @@ final class ItemScreen
                     }
                     $formOptions['record'] = true;
                     $formOptions['kicker'] = $itemTypeName;
+                    $ownerId = (int) ($itemFields['user_security'] ?? 0);
+                    if ($ownerId > 0) {
+                        $owner = Database::first('users', ['user_name', 'first_name', 'last_name'], 'user_id = ?', [$ownerId]);
+                        if ($owner !== null) {
+                            $ownerName = trim((string) ($owner['first_name'] ?? '') . ' ' . (string) ($owner['last_name'] ?? ''));
+                            if ($ownerName === '') {
+                                $ownerName = trim((string) ($owner['user_name'] ?? ''));
+                            }
+                            if ($ownerName !== '') {
+                                $formOptions['mark'] = $ownerName;
+                            }
+                        }
+                    }
+                    $facts = [];
+                    $openedAt = (int) ($itemFields['create_date'] ?? 0);
+                    $updatedAt = (int) ($itemFields['core_log_updated'] ?? 0);
+                    if ($openedAt > 0) {
+                        $facts[] = 'Opened ' . \Adlexone\Html\Presence::ago($openedAt);
+                    }
+                    if ($updatedAt > $openedAt) {
+                        $facts[] = 'Updated ' . \Adlexone\Html\Presence::ago($updatedAt);
+                    }
+                    if ($facts !== []) {
+                        $formOptions['facts'] = $facts;
+                    }
                     $status = WorkScreen::workStatusField((int) ($itemFields['item_type_id'] ?? 0));
                     if ($status !== null) {
                         $badge = trim((string) ($itemFields['custom_field_' . $status['id']] ?? ''));
@@ -1749,7 +1774,7 @@ final class ItemScreen
                 if (isset($_POST['group_security'])) {
                     self::syncItemGroupsFromSecurity((int) $itemID, (string) $_POST['group_security']);
                 }
-                if (!self::returnToItem($itemID)) {
+                if (!self::returnToItem($itemID, (string) TXT_320)) {
                     View::respond(TXT_320, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID, TXT_353, 'URL'));
                 }
                 return;
@@ -1779,12 +1804,12 @@ final class ItemScreen
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') !== '') {
                 self::addAttachment($itemID, false, true);
             }
-            if (self::returnToItem($itemID)) {
+            $message = ($_POST['item_title'] != '') ? TXT_263 : TXT_272;
+            if (self::returnToItem($itemID, (string) $message)) {
                 return;
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            $message = ($_POST['item_title'] != '') ? TXT_263 : TXT_272;
             View::respond($message, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
             return;
         }
@@ -1868,7 +1893,7 @@ final class ItemScreen
             Actions::executeAction($itemID, 'update_item_log_entry', false);
         }
         if ($showInformation == true) {
-            if (self::returnToItem($itemID)) {
+            if (self::returnToItem($itemID, (string) TXT_248)) {
                 return;
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
@@ -1881,10 +1906,13 @@ final class ItemScreen
     /**
      * Application records stay on the item. Returns true after sending the browser there.
      */
-    private static function returnToItem($itemID): bool
+    private static function returnToItem($itemID, string $notice = ''): bool
     {
         if (!Page::current()->inApplication()) {
             return false;
+        }
+        if (trim($notice) !== '') {
+            View::flash($notice);
         }
         header('Location: ' . MAN_BASE_URL . '&item=' . rawurlencode((string) $itemID));
         exit;
@@ -2196,7 +2224,7 @@ final class ItemScreen
         }
 
         if ($showAttachments) {
-            if (self::returnToItem($itemID)) {
+            if (self::returnToItem($itemID, 'File added')) {
                 return;
             }
             self::showAttachments($itemID);
@@ -2298,7 +2326,7 @@ final class ItemScreen
         // Delete entry from attachment table
         $condition = "WHERE id='$id'";
         Database::delete('item_attachments', $condition);
-        if (self::returnToItem($itemID)) {
+        if (self::returnToItem($itemID, 'File removed')) {
             return;
         }
         self::showAttachments($itemID);

@@ -97,6 +97,7 @@ final class ApplicationScreen
         Page::current()->suggestNavLabel((string) $current['label']);
 
         Request::set('nav', (string) $current['nav_id']);
+        Page::current()->enterApplication((string) $app['slug'], (int) $current['nav_id']);
         Capabilities::sectionNavigation($app, $visible);
 
         $engine = \Adlexone\Http\Router::engine();

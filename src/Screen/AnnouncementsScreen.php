@@ -165,7 +165,7 @@ final class AnnouncementsScreen
         }
         if ($html === '') {
             $html = Blocks::emptyState([
-                'illustration' => 'empty-work',
+                'illustration' => 'notice',
                 'title' => 'Nothing on the wall',
                 'copy' => $canManage
                     ? 'Post a notice for the people who use this.'

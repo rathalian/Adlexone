@@ -34,6 +34,7 @@ $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
 </header>
 <?php endif; ?>
 
+<?php echo View::toast(); ?>
 <div class="wrap">
     <main class="main" id="content" tabindex="-1">
         <?php echo $page->body(); ?>

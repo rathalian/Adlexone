@@ -128,6 +128,9 @@ final class RulesScreen
     			'label' => 'Add a rule',
     		],
     		'empty' => 'No rules yet. Add one, or start an app from Studio, Matters, or House.',
+    		'emptyIllustration' => 'empty-rules',
+    		'emptyTitle' => 'No rules yet',
+    		'emptyCopy' => 'A rule runs when a record is created, updated, or gets a note.',
     		'noMatch' => 'No rules match.',
     		'groups' => $groups,
     	]);

@@ -1098,7 +1098,7 @@ final class SearchScreen
             ],
             'searchLabel' => TXT_3,
             'empty' => 'No saved searches yet',
-            'emptyIllustration' => 'empty-search',
+            'emptyIllustration' => 'empty-saved',
             'emptyTitle' => 'No saved searches yet',
             'emptyCopy' => 'Search once, then keep it here.',
             'emptyAction' => $emptyAction,

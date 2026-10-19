@@ -66,4 +66,17 @@
         <path d="M18 8l4 4-4 4"/>
     </symbol>
 
+    <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="8"/>
+        <path d="M8.5 12.2l2.4 2.4 4.6-5.2"/>
+    </symbol>
+    <symbol id="ic-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="8" r="3"/>
+        <path d="M6 19c1.2-3 3.2-4.5 6-4.5s4.8 1.5 6 4.5"/>
+    </symbol>
+    <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 13l2-7h12l2 7"/>
+        <path d="M4 13h5a3 3 0 0 0 6 0h5v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5z"/>
+    </symbol>
+
 </svg>
