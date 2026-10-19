@@ -492,9 +492,19 @@ final class Blocks
     }
 
     /**
+     * Row actions. A compact menu shows an icon instead of the word Manage.
+     *
+     * @param list<array{href?: string, label?: string, tone?: string, confirm?: string, target?: string}> $actions
+     */
+    public static function actionMenu(array $actions, string $name, bool $compact = false): string
+    {
+        return self::recordListActions($actions, $name, count($actions) >= 2, $compact);
+    }
+
+    /**
      * @param array<int, array{href?: string, label?: string, tone?: string, confirm?: string, target?: string}> $actions
      */
-    private static function recordListActions(array $actions, string $name, bool $asMenu): string
+    private static function recordListActions(array $actions, string $name, bool $asMenu, bool $compact = false): string
     {
         if ($actions === []) {
             return '';
@@ -529,9 +539,14 @@ final class Blocks
             return '<span class="record-list__actions">' . $buttons . '</span>';
         }
 
+        $summaryLabel = $compact ? 'More' : $manageLabel;
+        $glyph = $compact
+            ? '<svg class="work-row__dots" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.25"/><circle cx="8" cy="8" r="1.25"/><circle cx="13" cy="8" r="1.25"/></svg>'
+            : Html::e($manageLabel);
+
         return '<details class="rowmenu">'
-            . '<summary class="btn btn--sm btn--quiet" aria-label="' . Html::e($manageLabel . ': ' . $name) . '">'
-            . Html::e($manageLabel) . '</summary>'
+            . '<summary class="btn btn--sm btn--quiet' . ($compact ? ' work-row__more' : '') . '" aria-label="' . Html::e($summaryLabel . ': ' . $name) . '">'
+            . $glyph . '</summary>'
             . '<div class="rowmenu__panel" role="menu">' . $buttons . '</div>'
             . '</details>';
     }
