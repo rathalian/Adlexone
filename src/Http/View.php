@@ -50,7 +50,7 @@ final class View
         if ($follow === '') {
             $follow = Blocks::link('./', 'Home', '', 'btn btn--primary btn--sm');
         }
-        $visibleHeading = !$page->hasSectionNav()
+        $visibleHeading = trim($page->sectionNav()) === ''
             && strcasecmp(trim(html_entity_decode(strip_tags($page->title()), ENT_QUOTES, 'UTF-8')), $message) === 0;
         $body = $visibleHeading ? '' : '<p class="response__message">' . Html::e($message) . '</p>';
         $body .= '<div class="response" role="status">' . $follow . '</div>';

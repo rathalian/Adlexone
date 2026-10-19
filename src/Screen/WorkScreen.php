@@ -321,7 +321,7 @@ final class WorkScreen
             foreach ($result as $row) {
                 $itemId = (int) $row['item_id'];
                 $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, []);
+                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, Blocks::itemActions($itemId, $base));
                 $bits = array_values(array_filter([
                     trim((string) ($fact['detail'] ?? '')),
                     trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
