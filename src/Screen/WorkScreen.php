@@ -78,8 +78,7 @@ final class WorkScreen
             $createHref = $base . '&option=show_item_types';
         }
         $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
-        $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
-        $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . '</div>';
+        $toolbar = self::workToolbar($base, $view, $canBoard, $stand['html']);
         if ($ids === []) {
             $body = Blocks::emptyState([
                 'illustration' => 'empty-work',
@@ -92,7 +91,13 @@ final class WorkScreen
         } elseif ($view === 'board') {
             $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
         } else {
-            $body = $toolbar . self::workList($shown, $itemTypeId, $base, $stand);
+            $searchLabel = defined('TXT_3') ? TXT_3 : 'Search';
+            $search = '<input id="work-search" class="input record-list__search work-search" type="search" placeholder="'
+                . Html::e($searchLabel) . '" aria-label="' . Html::e($searchLabel) . '" autocomplete="off">';
+            $body = '<div class="work" data-record-list>'
+                . self::workToolbar($base, $view, $canBoard, $stand['html'], $search)
+                . self::workList($shown, $base, $stand)
+                . '</div>';
         }
         Page::current()->setBody(Blocks::vertical([
             [
@@ -132,7 +137,7 @@ final class WorkScreen
         $label = 'Whose work';
 
         return [
-            'html' => '<nav class="work-scope" aria-label="' . Html::e($label) . '">'
+            'html' => '<nav class="work-views" aria-label="' . Html::e($label) . '">'
                 . self::workScopeLink($base, '', 'All', $focus === '')
                 . self::workScopeLink($base, 'mine', 'Assigned to me', $focus === 'mine')
                 . '</nav>',
@@ -256,7 +261,7 @@ final class WorkScreen
     public static function workScopeLink(string $base, string $focus, string $label, bool $selected): string
     {
         $href = self::workHref($base, self::workView(), $focus);
-        $class = 'work-scope__link' . ($selected ? ' is-selected' : '');
+        $class = 'work-views__link' . ($selected ? ' is-selected' : '');
         $current = $selected ? ' aria-current="page"' : '';
 
         return '<a class="' . $class . '" href="' . Html::e($href) . '"' . $current . '>'
@@ -303,15 +308,56 @@ final class WorkScreen
         return '<div class="work-views" role="group" aria-label="View">' . $links . '</div>';
     }
 
+    private static function workToolbar(string $base, string $view, bool $canBoard, string $scopeHtml, string $search = ''): string
+    {
+        $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
+
+        return '<div class="work-toolbar">' . $switch . $scopeHtml . $search . '</div>';
+    }
+
+    private static function workWhen(int $timestamp): string
+    {
+        if ($timestamp <= 0) {
+            return '';
+        }
+        $day = date('Y-m-d', $timestamp);
+        if ($day === date('Y-m-d')) {
+            return 'Today';
+        }
+        if ($day === date('Y-m-d', strtotime('-1 day'))) {
+            return 'Yesterday';
+        }
+        if (date('Y', $timestamp) === date('Y')) {
+            return date('j M', $timestamp);
+        }
+
+        return date('j M Y', $timestamp);
+    }
+
+    private static function standTone(string $value): string
+    {
+        $plain = strtolower(trim($value));
+        if ($plain === '') {
+            return 'empty';
+        }
+        if (preg_match('/\b(done|closed|complete|completed|settled|signed)\b/', $plain) === 1) {
+            return 'done';
+        }
+        if (preg_match('/\b(us|our|ours|me|mine)\b/', $plain) === 1) {
+            return 'ours';
+        }
+
+        return 'open';
+    }
+
     /**
      * @param list<int> $ids
      * @param array{html: string, field_id: int, values: array<int, string>} $stand
      */
-    private static function workList(array $ids, ?int $itemTypeId, string $base, array $stand): string
+    private static function workList(array $ids, string $base, array $stand): string
     {
         $facts = self::workCardFacts($ids);
-        $status = self::workStatusField($itemTypeId);
-        $rows = [];
+        $items = '';
         if ($ids !== []) {
             $result = Database::select(
                 'items',
@@ -321,29 +367,46 @@ final class WorkScreen
             foreach ($result as $row) {
                 $itemId = (int) $row['item_id'];
                 $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, Blocks::itemActions($itemId, $base));
+                $title = trim((string) ($row['item_title'] ?? ''));
+                if ($title === '') {
+                    $title = $fact['title'] !== '' ? $fact['title'] : (defined('TXT_357') ? (string) TXT_357 : 'Record ' . $itemId);
+                }
                 $bits = array_values(array_filter([
                     trim((string) ($fact['detail'] ?? '')),
                     trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
                 ]));
-                $record['meta'] = implode(' · ', $bits);
-                $record['cells']['stand'] = (string) ($stand['values'][$itemId] ?? '');
-                $rows[] = $record;
+                $meta = implode(' · ', $bits);
+                $status = trim((string) ($stand['values'][$itemId] ?? ''));
+                $created = (int) ($row['create_date'] ?? 0);
+                $when = self::workWhen($created);
+                $actions = Blocks::itemActions($itemId, $base);
+                $search = strtolower(implode(' ', array_filter([
+                    $title,
+                    $meta,
+                    $status,
+                    $when,
+                    ...array_map(static fn (array $action): string => (string) ($action['label'] ?? ''), $actions),
+                ])));
+                $standHtml = '<span class="work-stand work-stand--' . self::standTone($status) . '">' . Html::e($status) . '</span>';
+                $whenHtml = $when !== ''
+                    ? '<time class="work-row__when" datetime="' . Html::e(date('Y-m-d', $created)) . '">' . Html::e($when) . '</time>'
+                    : '<span class="work-row__when"></span>';
+                $metaHtml = $meta !== '' ? '<span class="work-row__meta">' . Html::e($meta) . '</span>' : '';
+                $items .= '<li class="work-row" data-search="' . Html::e($search) . '">'
+                    . '<a class="work-row__link" href="' . Html::e($base . '&item=' . $itemId) . '">'
+                    . '<span class="work-row__title">' . Html::e($title) . '</span>'
+                    . $metaHtml
+                    . '</a>'
+                    . $standHtml
+                    . $whenHtml
+                    . Blocks::actionMenu($actions, $title, true)
+                    . '</li>';
             }
         }
-        $columns = [];
-        if ($status !== null && $status['values'] !== []) {
-            $columns[] = ['key' => 'stand', 'label' => self::workFieldLabel((string) $status['name'])];
-        }
-        $columns[] = ['key' => 'opened', 'label' => 'Opened'];
+        $noMatch = defined('TXT_689') ? TXT_689 : 'No matches';
 
-        return Blocks::recordList([
-            'column' => self::workColumnName($itemTypeId),
-            'columns' => $columns,
-            'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
-            'empty' => 'Nothing here yet',
-            'groups' => [['rows' => $rows]],
-        ]);
+        return '<ul class="work-queue">' . $items . '</ul>'
+            . '<p class="record-list__nomatch" hidden>' . Html::e($noMatch) . '</p>';
     }
 
     /**
@@ -371,24 +434,6 @@ final class WorkScreen
         }
 
         return '';
-    }
-
-    private static function workColumnName(?int $itemTypeId): string
-    {
-        if ($itemTypeId === null || $itemTypeId <= 0) {
-            return 'Name';
-        }
-        $row = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$itemTypeId]);
-        $name = trim((string) ($row['item_type_name'] ?? ''));
-
-        return $name !== '' ? $name : 'Name';
-    }
-
-    private static function workFieldLabel(string $name): string
-    {
-        $plain = self::plainFieldName($name);
-
-        return $plain === '' ? $name : ucfirst($plain);
     }
 
     /**
@@ -491,7 +536,7 @@ final class WorkScreen
             . $detailHtml
             . $nextHtml
             . $ownerHtml
-            . '<label class="work-card__move">Move <select aria-label="Move ' . $titleEsc . '">' . $options . '</select></label>'
+            . '<label class="work-card__move"><span class="record-list__sr">Move</span><select aria-label="Move ' . $titleEsc . '">' . $options . '</select></label>'
             . '</article>';
     }
 

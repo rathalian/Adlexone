@@ -177,16 +177,16 @@
         if (!input) return;
         const count = root.querySelector('.record-list__count');
         const empty = root.querySelector('.record-list__nomatch');
-        const total = root.querySelectorAll('tr[data-search]').length;
+        const total = root.querySelectorAll('[data-search]').length;
         const q = (input.value || '').trim().toLowerCase();
         let shown = 0;
-        root.querySelectorAll('tr[data-search]').forEach((row) => {
+        root.querySelectorAll('[data-search]').forEach((row) => {
             const hit = q === '' || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
             row.hidden = !hit;
             if (hit) shown += 1;
         });
         root.querySelectorAll('tbody[data-group]').forEach((group) => {
-            const visible = group.querySelectorAll('tr[data-search]:not([hidden])').length;
+            const visible = group.querySelectorAll('[data-search]:not([hidden])').length;
             group.hidden = visible === 0;
             const badge = group.querySelector('.record-list__badge');
             if (badge) badge.textContent = String(visible);
