@@ -15,7 +15,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 8;
+    private const VERSION = 9;
 
     private static bool $done = false;
 
@@ -72,6 +72,11 @@ final class SchemaMigrator
         if ($current < 8) {
             self::applyV8();
             self::mark(8);
+            $current = 8;
+        }
+        if ($current < 9) {
+            self::applyV9();
+            self::mark(9);
         }
     }
 
@@ -527,7 +532,7 @@ final class SchemaMigrator
 
     /**
      * Retire Service Centre as a product: drop the seeded app, legacy permissions,
-     * and orphan announcements scoped to it. Helpdesk remains a Builder blueprint.
+     * and orphan announcements scoped to it.
      */
     private static function applyV5(): void
     {
@@ -693,6 +698,15 @@ final class SchemaMigrator
     /**
      * Turn trigger-plus-email package rows into one rule each, then remove them.
      */
+    /**
+     * Studio, Matters, House, and anything else already installed give way
+     * to the case-file applications. The builder installs those on the next request.
+     */
+    private static function applyV9(): void
+    {
+        \Adlexone\Application\ApplicationBuilder::removeInstalledApplications();
+    }
+
     private static function migrateActionPackages(): void
     {
         if (!Database::tableExists('action_definitions')) {

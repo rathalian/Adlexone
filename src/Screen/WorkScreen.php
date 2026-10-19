@@ -558,7 +558,7 @@ final class WorkScreen
      * Field names are unique in the database, so a later app may be stored as
      * "Next step (Matters) 2". The work surface uses the name the builder asked for.
      */
-    private static function plainFieldName(string $name): string
+    public static function plainFieldName(string $name): string
     {
         $name = strtolower(trim($name));
         $previous = null;

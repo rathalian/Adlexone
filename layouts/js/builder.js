@@ -12,7 +12,7 @@ var slugDirty=slugEl&&slugEl.value.trim()!=="";
 var typeDirty=typeEl&&typeEl.value.trim()!=="";
 function slugify(v){return String(v||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
 function paint(sel){root.querySelectorAll(sel).forEach(function(el){var input=el.querySelector("input");el.classList.toggle("is-selected",!!(input&&input.checked));});}
-function chosenBlueprint(){var input=form.querySelector("input[name=blueprint]:checked");return input?input.value:"studio";}
+function chosenBlueprint(){var input=form.querySelector("input[name=blueprint]:checked");return input?input.value:"matters";}
 function text(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
 function render(){
 paint(".builder__blueprint");paint(".builder__icon");paint(".builder__choice");

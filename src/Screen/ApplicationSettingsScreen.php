@@ -423,6 +423,13 @@ final class ApplicationSettingsScreen
             $html .= '<div class="rule-step-panel" data-for="set_owner">'
                 . '<div>Owner ' . self::ruleSelect($prefix . '[owner_id]', $owners, (string) ($step['action_value'] ?? Rules::OWNER_CREATOR)) . '</div>'
                 . '</div>';
+            $html .= '<div class="rule-step-panel" data-for="stamp">'
+                . '<div>Field ' . self::ruleFieldSelect($prefix . '[action_field]', $fields, (string) ($step['action_field'] ?? ''), false) . '</div>'
+                . '</div>';
+            $html .= '<div class="rule-step-panel" data-for="announce">'
+                . '<div>Subject ' . self::ruleText($prefix . '[subject]', (string) ($step['subject'] ?? ''), 'ITEM_TITLE') . '</div>'
+                . '<div>Message ' . self::ruleArea($prefix . '[body]', (string) ($step['body'] ?? '')) . '</div>'
+                . '</div>';
             $html .= '</div>';
         }
         $html .= '<div class="rule-tokens"><span class="record-list__meta">Insert </span><span class="rule-token-list"></span></div>';

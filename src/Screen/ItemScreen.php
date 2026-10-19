@@ -25,6 +25,16 @@ use Adlexone\Html\Html;
  */
 final class ItemScreen
 {
+    private static function sheetFieldLabel(string $name): string
+    {
+        $plain = WorkScreen::plainFieldName($name);
+        if ($plain === '') {
+            return $name;
+        }
+
+        return ucfirst($plain);
+    }
+
     public static function open(): void
     {
         if (Page::current()->inApplication()) {
@@ -805,6 +815,9 @@ final class ItemScreen
             } else {
                 $prepend = 'custom_field_';
             }
+            if ($inApplication) {
+                $row['custom_field_name'] = self::sheetFieldLabel((string) $row['custom_field_name']);
+            }
             // Override default value if previous values have already been selected.  user_security is a POST variable and is only set when the page is submitted
             if (!isset($values['user_security'])) {
                 $defaultValue = $row['default_value'];
@@ -1205,6 +1218,9 @@ final class ItemScreen
                         $prepend = 'worker_field_';
                     } else {
                         $prepend = 'custom_field_';
+                    }
+                    if ($inApplication) {
+                        $row['custom_field_name'] = self::sheetFieldLabel((string) $row['custom_field_name']);
                     }
                     // Override database value if values have already been selected
                     if (!isset($values['item_id'])) {

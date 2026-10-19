@@ -111,8 +111,10 @@ foreach ($p->query("SELECT a.slug, n.nav_id FROM applications a JOIN application
 URLS+=("${APPS[@]}")
 mapfile -t ITEMS < <(php -r '
 $p = new PDO("sqlite:" . $argv[1] . "/storage/database/adlexone.sqlite");
+$slug = $p->query("SELECT slug FROM applications ORDER BY sort_order, application_id LIMIT 1")->fetchColumn();
+$slug = is_string($slug) && $slug !== "" ? $slug : "matters";
 foreach ($p->query("SELECT item_id FROM items ORDER BY item_id LIMIT 12") as $r) {
-    echo "?application=studio&item=" . $r["item_id"] . "\n";
+    echo "?application=" . $slug . "&item=" . $r["item_id"] . "\n";
 }
 ' "$WORK")
 URLS+=("${ITEMS[@]}")

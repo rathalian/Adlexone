@@ -69,9 +69,8 @@ final class ApplicationStore
     }
 
     /**
-     * Empty installs start with no applications. Use Manage → Builder
-     * (or the guided Create flow) to compose the first business app.
-     * Existing Service Centre rows are left untouched.
+     * An empty install stays empty until the showcase applications are installed.
+     * Use Manage → Builder to compose another business app.
      */
     public static function seedIfEmpty(): void
     {

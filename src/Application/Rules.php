@@ -37,6 +37,8 @@ final class Rules
     public const OUTCOME_LOG = 'log';
     public const OUTCOME_SET_FIELD = 'set_field';
     public const OUTCOME_SET_OWNER = 'set_owner';
+    public const OUTCOME_STAMP = 'stamp';
+    public const OUTCOME_ANNOUNCE = 'announce';
 
     public const OWNER_CREATOR = 'creator';
 
@@ -101,6 +103,8 @@ final class Rules
             self::OUTCOME_LOG => 'Write a log line',
             self::OUTCOME_SET_FIELD => 'Set a field',
             self::OUTCOME_SET_OWNER => 'Set the owner',
+            self::OUTCOME_STAMP => 'Stamp today\'s date',
+            self::OUTCOME_ANNOUNCE => 'Post a notice',
         ];
     }
 
@@ -259,7 +263,7 @@ final class Rules
             }
             $fields[] = [
                 'key' => 'custom_field_' . $fieldId,
-                'label' => (string) $field['custom_field_name'],
+                'label' => self::plainFieldLabel((string) $field['custom_field_name']),
                 'kind' => $kind,
                 'options' => $options,
             ];
@@ -483,39 +487,6 @@ final class Rules
         }
         Database::update('application_rules', ['sort_order' => $rightOrder], 'id = ?', [(int) $siblings[$index]['id']]);
         Database::update('application_rules', ['sort_order' => $leftOrder], 'id = ?', [(int) $siblings[$swap]['id']]);
-    }
-
-    /**
-     * @param array<string, int> $fieldIdsByName
-     */
-    public static function seedBlueprint(int $applicationId, int $itemTypeId, string $blueprint, array $fieldIdsByName): void
-    {
-        $stage = match ($blueprint) {
-            ApplicationBuilder::BLUEPRINT_STUDIO => ['Stage', 'Review', 'Tell the owner a job is ready for review', 'Review: ITEM_TITLE', 'ITEM_TITLE is ready for review.'],
-            ApplicationBuilder::BLUEPRINT_MATTERS => ['Waiting', 'Waiting on us', 'Tell the owner a matter is waiting on us', 'Waiting on us: ITEM_TITLE', 'ITEM_TITLE is waiting on us.'],
-            ApplicationBuilder::BLUEPRINT_HOUSE => ['When', 'Tonight', 'Tell the owner something is on tonight', 'Tonight: ITEM_TITLE', 'ITEM_TITLE is on tonight.'],
-            default => null,
-        };
-        if ($stage === null) {
-            return;
-        }
-        [$fieldName, $match, $name, $subject, $body] = $stage;
-        $fieldId = (int) ($fieldIdsByName[$fieldName] ?? 0);
-        if ($fieldId <= 0) {
-            return;
-        }
-        self::add($applicationId, [
-            'item_type_id' => $itemTypeId,
-            'name' => $name,
-            'event' => self::EVENT_UPDATE,
-            'field_key' => 'custom_field_' . $fieldId,
-            'operator' => self::OP_BECOMES,
-            'match_value' => $match,
-            'outcome' => self::OUTCOME_EMAIL,
-            'recipient' => self::TO_OWNER,
-            'subject' => $subject,
-            'body' => $body,
-        ]);
     }
 
     /**
@@ -853,6 +824,13 @@ final class Rules
         } elseif ($outcome === self::OUTCOME_SET_OWNER) {
             $actionValue = trim((string) ($step['owner_id'] ?? $step['action_value'] ?? ''));
             $recipient = self::TO_OWNER;
+        } elseif ($outcome === self::OUTCOME_STAMP) {
+            $actionField = trim((string) ($step['action_field'] ?? ''));
+            $recipient = self::TO_OWNER;
+        } elseif ($outcome === self::OUTCOME_ANNOUNCE) {
+            $subject = trim((string) ($step['subject'] ?? ''));
+            $body = trim((string) ($step['body'] ?? ''));
+            $recipient = self::TO_OWNER;
         }
         return [
             'outcome' => $outcome,
@@ -1085,6 +1063,36 @@ final class Rules
                 'moved' => $moved,
             ];
         }
+        if ($outcome === self::OUTCOME_STAMP) {
+            $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+            if (!$write) {
+                return ['status' => 'done', 'detail' => self::describeStep($itemId, $step, $current, false, $skip), 'moved' => false];
+            }
+            $dated = $step;
+            $dated['action_value'] = self::today();
+            $moved = self::setField($itemId, $rule, $dated, $current);
+            return [
+                'status' => $moved ? 'done' : 'skipped',
+                'detail' => $moved
+                    ? self::describeStep($itemId, $step, $current, true, $skip)
+                    : 'Skipped the date. It is already today, or the field is not on this record.',
+                'moved' => $moved,
+            ];
+        }
+        if ($outcome === self::OUTCOME_ANNOUNCE) {
+            $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
+            if (!$write) {
+                return ['status' => 'done', 'detail' => self::describeStep($itemId, $step, $current, false, $skip), 'moved' => false];
+            }
+            $posted = self::postNotice($itemId, $rule, $step, $current);
+            return [
+                'status' => $posted ? 'done' : 'skipped',
+                'detail' => $posted
+                    ? self::describeStep($itemId, $step, $current, true, $skip)
+                    : 'Skipped the notice. It needs a subject or a message.',
+                'moved' => false,
+            ];
+        }
         $skip = (int) ($rule['skip_actor'] ?? 1) === 1;
         if (!$write) {
             return ['status' => 'done', 'detail' => self::describeStep($itemId, $step, $current, false, $skip), 'moved' => false];
@@ -1120,6 +1128,21 @@ final class Rules
             $name = self::ownerLabel((string) ($step['action_value'] ?? ''), $current);
             $verb = $past ? 'Set the owner to ' : 'Would set the owner to ';
             return $verb . $name . '.';
+        }
+        if ($outcome === self::OUTCOME_STAMP) {
+            $key = (string) ($step['action_field'] ?? '');
+            $label = self::fieldLabel($key);
+            $when = $past ? trim((string) ($current[$key] ?? '')) : '';
+            if ($when === '') {
+                $when = self::today();
+            }
+            $verb = $past ? 'Stamped' : 'Would stamp';
+            return $verb . ' ' . $label . ' with ' . $when . '.';
+        }
+        if ($outcome === self::OUTCOME_ANNOUNCE) {
+            $subject = self::fill((string) ($step['subject'] ?? ''), $itemId, $current);
+            $verb = $past ? 'Posted a notice' : 'Would post a notice';
+            return $verb . ($subject !== '' ? ': ' . $subject : '') . '.';
         }
         $text = self::fill((string) ($step['body'] ?? ''), $itemId, $current);
         $verb = $past ? 'Wrote a log line: ' : 'Would write a log line: ';
@@ -1474,6 +1497,51 @@ final class Rules
         return true;
     }
 
+    public static function today(): string
+    {
+        $format = 'd-m-Y';
+        if (defined('SET_DATE_FORMAT')) {
+            $head = trim(explode(',', (string) SET_DATE_FORMAT)[0]);
+            if ($head !== '') {
+                $format = $head;
+            }
+        }
+
+        return date($format);
+    }
+
+    /**
+     * @param array<string, mixed> $rule
+     * @param array<string, mixed> $step
+     * @param array<string, mixed> $current
+     */
+    private static function postNotice(int $itemId, array $rule, array $step, array $current): bool
+    {
+        if (!Database::tableExists('announcements')) {
+            return false;
+        }
+        $subject = self::fill((string) ($step['subject'] ?? ''), $itemId, $current);
+        $message = self::fill((string) ($step['body'] ?? ''), $itemId, $current);
+        if ($subject === '' && $message === '') {
+            return false;
+        }
+        $slug = '';
+        $applicationId = (int) ($rule['application_id'] ?? 0);
+        if ($applicationId > 0 && Database::tableExists('applications')) {
+            $app = Database::first('applications', ['slug'], 'application_id = ?', [$applicationId]);
+            $slug = (string) ($app['slug'] ?? '');
+        }
+        Database::insert('announcements', [
+            'time' => time(),
+            'subject' => $subject,
+            'message' => $message,
+            'type' => '',
+            'application' => $slug,
+        ]);
+
+        return true;
+    }
+
     /**
      * @param array<string, mixed> $rule
      * @param array<string, mixed> $step
@@ -1553,8 +1621,20 @@ final class Rules
             self::OUTCOME_SET_FIELD => 'Set ' . ($fieldLabels[(string) ($step['action_field'] ?? '')] ?? self::fieldLabel((string) ($step['action_field'] ?? '')))
                 . ' to ' . (string) ($step['action_value'] ?? ''),
             self::OUTCOME_SET_OWNER => 'Set the owner to ' . self::ownerLabel((string) ($step['action_value'] ?? ''), []),
+            self::OUTCOME_STAMP => 'Stamp ' . ($fieldLabels[(string) ($step['action_field'] ?? '')] ?? self::fieldLabel((string) ($step['action_field'] ?? ''))) . ' with today\'s date',
+            self::OUTCOME_ANNOUNCE => 'Post a notice',
             default => 'Write a log line',
         };
+    }
+
+    private static function plainFieldLabel(string $name): string
+    {
+        $plain = \Adlexone\Screen\WorkScreen::plainFieldName($name);
+        if ($plain === '') {
+            return trim($name);
+        }
+
+        return ucfirst($plain);
     }
 
     private static function fieldLabel(string $key): string
@@ -1567,7 +1647,7 @@ final class Rules
             return 'a field';
         }
         $field = Database::first('custom_fields', ['custom_field_name'], 'custom_field_id = ?', [$id]);
-        $label = trim((string) ($field['custom_field_name'] ?? ''));
+        $label = self::plainFieldLabel((string) ($field['custom_field_name'] ?? ''));
         return $label !== '' ? $label : 'a field';
     }
 
