@@ -327,10 +327,6 @@ final class Capabilities
             if (!self::linkVisible($link)) {
                 continue;
             }
-            $capability = ScreenCatalog::resolve((string) ($link['capability'] ?? ''));
-            if (str_starts_with($capability, 'search.') && $capability !== ScreenCatalog::SEARCH_LIST) {
-                continue;
-            }
             $href = \Adlexone\Http\Router::applicationUrl((string) $app['slug'], (int) $link['nav_id']);
             $icon = self::icon((string) $link['capability'], (string) $link['icon']);
             $html .= Blocks::link($href, (string) $link['label'], $icon);
