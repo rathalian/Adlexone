@@ -2,6 +2,7 @@
 # Idempotent. Copies missing config templates and creates writable dirs.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+ROOT="$(pwd)"
 
 mkdir -p config storage/database storage/attachments storage/writeable
 
@@ -18,3 +19,5 @@ while IFS= read -r -d '' src; do
   rel="${src#config.example/}"
   copy_if_missing "$src" "config/$rel"
 done < <(find config.example -type f -name '*.json' -print0)
+
+exec bash "$ROOT/.cursor/serve.sh"

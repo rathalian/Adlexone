@@ -4,12 +4,5 @@
     "dockerfile": "Dockerfile"
   },
   "install": "composer install --no-interaction --prefer-dist",
-  "start": "bash .cursor/prepare-runtime.sh",
-  "terminals": [
-    {
-      "name": "web",
-      "command": "php -S 0.0.0.0:8000",
-      "description": "Inlay on port 8000"
-    }
-  ]
+  "start": "bash .cursor/prepare-runtime.sh"
 }
