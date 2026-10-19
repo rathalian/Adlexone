@@ -67,6 +67,10 @@ final class TopNav
         if (Access::can(Permission::ADMIN_SETTINGS)) {
             $add('Applications', '?manage=applications', 'ic-launch', 'manage_applications');
         }
+        if (Access::can(Permission::ADMIN_ITEMS)) {
+            $add('Fields', '?manage=fields', 'ic-manage-fields', 'manage_fields');
+            $add('Record types', '?manage=item-types', 'ic-manage-item-types', 'manage_item_types');
+        }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
             $add('Rules', '?manage=rules', 'ic-manage-actions', 'manage_actions');
         }
