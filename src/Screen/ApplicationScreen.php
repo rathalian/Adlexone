@@ -3,12 +3,17 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
+use Adlexone\Application\ScreenCatalog;
 use Adlexone\Auth\Access;
+use Adlexone\Html\Blocks;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
+use Adlexone\Http\Router;
 use Adlexone\Http\View;
+use Adlexone\support\Database;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -42,6 +47,22 @@ final class ApplicationScreen
             return;
         }
 
+        if (Request::has('item')) {
+            $itemId = (int) Request::query('item');
+            $item = $itemId > 0
+                ? Database::first('items', ['item_id', 'item_type_id'], 'item_id = ?', [$itemId])
+                : null;
+            $slug = (string) $app['slug'];
+            if ($item === null || !ApplicationSettings::allowsItemType($slug, (int) ($item['item_type_id'] ?? 0))) {
+                $name = (string) $app['name'];
+                View::respond(
+                    'This record is not in ' . $name . '.',
+                    Blocks::link(Router::applicationUrl($slug), 'Back to ' . $name, '', 'btn btn--primary btn--sm')
+                );
+                return;
+            }
+        }
+
         $requested = (int) Request::query('nav');
         $current = $visible[0];
         if ($requested > 0) {
@@ -59,6 +80,14 @@ final class ApplicationScreen
             $sessionNav = (int) ($_SESSION['application_nav_id'] ?? 0);
             foreach ($visible as $link) {
                 if ((int) $link['nav_id'] === $sessionNav) {
+                    $current = $link;
+                    break;
+                }
+            }
+        }
+        if (Request::has('item')) {
+            foreach ($visible as $link) {
+                if (ScreenCatalog::resolve((string) $link['capability']) === ScreenCatalog::WORK) {
                     $current = $link;
                     break;
                 }

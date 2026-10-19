@@ -110,7 +110,6 @@ final class ApplicationsScreen
                 'href' => APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id,
                 'cells' => [
                     'menu' => $app['enabled'] ? 'Shown' : 'Hidden',
-                    'opens' => 'This application',
                 ],
                 'search' => (string) $app['slug'],
                 'actions' => [
@@ -146,7 +145,6 @@ final class ApplicationsScreen
                 'column' => 'Application',
                 'columns' => [
                     ['key' => 'menu', 'label' => 'Menu'],
-                    ['key' => 'opens', 'label' => 'Opens'],
                 ],
                 'searchLabel' => 'Search',
                 'primary' => ['href' => '?manage=builder', 'label' => 'Create with builder'],
@@ -403,16 +401,30 @@ final class ApplicationsScreen
 
     public static function iconSelect(string $name, string $selected, bool $allowEmpty = false): string
     {
-        $values = $allowEmpty ? [''] : [];
-        $labels = $allowEmpty ? ['Use the screen icon'] : [];
-        foreach (Capabilities::icons() as $icon) {
-            $values[] = $icon;
-            $labels[] = $icon;
-        }
         if ($selected === '' && !$allowEmpty) {
             $selected = 'ic-launch';
         }
-        return Form::select($name, $values, $labels, $selected);
+        $sprite = Html::e(\Adlexone\Theme\Theme::spriteHref());
+        $html = '<div class="builder__icons" role="radiogroup">';
+        if ($allowEmpty) {
+            $active = $selected === '' ? ' is-selected' : '';
+            $html .= '<label class="builder__icon' . $active . '" title="Use the screen icon">'
+                . '<input type="radio" name="' . Html::e($name) . '" value=""' . ($selected === '' ? ' checked' : '') . '>'
+                . '<span class="builder__icon-mark" aria-hidden="true"><svg class="icon"><use href="' . $sprite . '#ic-launch"></use></svg></span>'
+                . '<span class="builder__icon-name">Screen</span>'
+                . '</label>';
+        }
+        foreach (Capabilities::icons() as $icon) {
+            $active = $icon === $selected ? ' is-selected' : '';
+            $label = Capabilities::iconLabel($icon);
+            $html .= '<label class="builder__icon' . $active . '" title="' . Html::e($label) . '">'
+                . '<input type="radio" name="' . Html::e($name) . '" value="' . Html::e($icon) . '"' . ($icon === $selected ? ' checked' : '') . '>'
+                . '<span class="builder__icon-mark" aria-hidden="true"><svg class="icon"><use href="' . $sprite . '#' . Html::e($icon) . '"></use></svg></span>'
+                . '<span class="builder__icon-name">' . Html::e($label) . '</span>'
+                . '</label>';
+        }
+
+        return $html . '</div>';
     }
 
     public static function itemTypeSelect(string $selected): string

@@ -33,6 +33,22 @@ final class FieldTypes
         return self::ALIASES[$fieldType] ?? $fieldType;
     }
 
+    /** Name shown on a field list. Stored keys stay as they are. */
+    public static function label(?string $fieldType): string
+    {
+        return match (self::normalise($fieldType)) {
+            self::TEXT_BOX => 'Text',
+            self::TEXT_AREA => 'Note',
+            self::MENU => 'Menu',
+            self::CHECK_BOX => 'Checkbox',
+            'password' => 'Password',
+            'hidden' => 'Hidden',
+            'URL', 'dynamicURL' => 'Link',
+            'workerField', 'workerFieldMenu' => 'Person',
+            default => self::normalise($fieldType),
+        };
+    }
+
     /**
      * SQL list literal matching a type and any legacy aliases, for use in "field_type IN (...)".
      */

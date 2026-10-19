@@ -51,20 +51,6 @@ final class HomeScreen
                 'ic-launch'
             );
         }
-        if (Access::can(Permission::ADMIN_ITEMS)) {
-            $manage[] = self::tile(
-                '?manage=fields',
-                'Fields',
-                'Custom fields and menus',
-                'ic-manage-fields'
-            );
-            $manage[] = self::tile(
-                '?manage=item-types',
-                'Item types',
-                'Types and their fields',
-                'ic-manage-item-types'
-            );
-        }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
             $manage[] = self::tile(
                 '?manage=rules',

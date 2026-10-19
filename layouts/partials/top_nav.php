@@ -43,6 +43,13 @@ $account = $nav['account'];
                         <span class="menu__account-name"><?php echo Html::e($account['name']); ?></span>
                     </div>
                     <div class="menu__divider" role="separator"></div>
+                    <?php foreach ($account['links'] as $item): ?>
+                    <a role="menuitem" class="menu__item" href="<?php echo Html::e($item['href']); ?>">
+                        <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite . '#' . Html::e($item['icon']); ?>"></use></svg>
+                        <span><?php echo Html::e($item['label']); ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                    <div class="menu__divider" role="separator"></div>
                     <a role="menuitem" class="menu__item" href="?action=logoff">
                         <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-logoff"></use></svg>
                         <span>Logout</span>

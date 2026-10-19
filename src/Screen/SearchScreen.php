@@ -1075,20 +1075,12 @@ final class SearchScreen
         $toolbar = '';
         $emptyAction = '';
         if (Page::current()->inApplication()) {
-            $itemType = '';
-            $defaultType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
-            if ($defaultType !== '') {
-                $itemType = rawurlencode($defaultType);
-            }
-            $quickLabel = Wording::application('TXT_62', 'Quick search');
-            $advancedLabel = Wording::application('TXT_61', 'Advanced search');
-            $searchButton = Blocks::link($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary');
+            $searchButton = Blocks::link($base . '&option=show_quick_search', 'Search', '', 'btn btn--primary');
             if ($rows === []) {
                 $emptyAction = $searchButton;
             } else {
                 $toolbar = '<div class="record-list__tools">'
-                    . Blocks::link($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary btn--sm')
-                    . Blocks::link($base . '&option=show_item_search' . ($itemType !== '' ? '&item_types=' . $itemType : ''), $advancedLabel, '', 'btn btn--sm')
+                    . Blocks::link($base . '&option=show_quick_search', 'Search', '', 'btn btn--primary btn--sm')
                     . '</div>';
             }
         }

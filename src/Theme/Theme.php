@@ -250,4 +250,39 @@ final class Theme
     {
         return self::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . $name . '.php';
     }
+
+    /** Accent colour from a skin, used by the theme picker. */
+    public static function accent(string $theme): string
+    {
+        $theme = self::canonicalize($theme);
+        $file = self::rootFs() . $theme . DIRECTORY_SEPARATOR . self::cssFile($theme);
+        $css = is_file($file) ? (string) file_get_contents($file) : '';
+        if (preg_match('/--inlay:\s*(#[0-9a-fA-F]{3,8})/', $css, $match) === 1) {
+            return $match[1];
+        }
+        if (preg_match('/--brand:\s*(#[0-9a-fA-F]{3,8})/', $css, $match) === 1) {
+            return $match[1];
+        }
+
+        return '#1c1917';
+    }
+
+    public static function picker(string $name, string $current, bool $submitOnChange = false): string
+    {
+        $current = self::canonicalize($current);
+        $change = $submitOnChange ? ' onchange="this.form.submit()"' : '';
+        $html = '<div class="theme-swatches" role="radiogroup">';
+        foreach (self::installed() as $slug => $label) {
+            $checked = $slug === $current ? ' checked' : '';
+            $active = $slug === $current ? ' is-selected' : '';
+            $html .= '<label class="theme-swatch' . $active . '">'
+                . '<input type="radio" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" value="'
+                . htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') . '"' . $checked . $change . '>'
+                . '<span class="theme-swatch__chip" style="background:' . htmlspecialchars(self::accent($slug), ENT_QUOTES, 'UTF-8') . '"></span>'
+                . '<span class="theme-swatch__name">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+                . '</label>';
+        }
+
+        return $html . '</div>';
+    }
 }

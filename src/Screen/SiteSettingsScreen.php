@@ -17,12 +17,31 @@ use Adlexone\Html\Html;
  */
 final class SiteSettingsScreen
 {
+    /** @var list<string> */
+    private const ENGINE_KEYS = [
+        'SET_CUSTOM_FIELDS_IN_SEARCH',
+        'SET_OWNER_MENU',
+        'SET_FORM_FIELD_HEIGHT',
+        'SET_SECURE_TYPE',
+        'SET_LOG_ENTRY',
+        'SET_ATTACHMENTS',
+        'ADD_ATTACHMENTS',
+        'SET_MAX_ATTACHMENT',
+        'SET_DEFAULT_ITEM_TYPE',
+    ];
+
     public static function open(): void
     {
+        $option = (string) ($_GET['option'] ?? '');
+        if ($option === 'my_theme' || $option === 'update_my_theme') {
+            self::myTheme($option === 'update_my_theme');
+            return;
+        }
+
         /**
          * Settings links sit in the top navigation card. There is no left sidebar.
          */
-        RenderNavigation::applySectionNav('System Settings', RenderNavigation::systemSettingsURLs());
+        RenderNavigation::applySectionNav('Settings', RenderNavigation::systemSettingsURLs());
 
 
 
@@ -98,7 +117,7 @@ final class SiteSettingsScreen
                 break;
             case 'update_advanced_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-                SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'advanced_settings.json', $_POST);
+                self::saveAdvanced($_POST);
                 break;
             case 'sign_in_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
@@ -175,53 +194,134 @@ final class SiteSettingsScreen
     }
     public static function showAdlexoneSettings(): void
     {
-        $fields[TXT_199] = Form::select('SET_CUSTOM_FIELDS_IN_SEARCH', array(2, 5, 10, 15), array(2, 5, 10, 15), SET_CUSTOM_FIELDS_IN_SEARCH);
-        $menuValue = (@SET_OWNER_MENU == '') ? 5 : SET_OWNER_MENU;
-        $fields[TXT_613] = Form::select('SET_OWNER_MENU', array(5, 4, 3, 2, 1, 0), array(TXT_303, TXT_194, TXT_193, TXT_192, TXT_191, TXT_190), $menuValue);
-        $fields[TXT_515] = Form::text('SET_ITEMS_PAGE', SET_ITEMS_PAGE);
-        $fields[TXT_228] = Form::text('SET_FORM_FIELD_HEIGHT', SET_FORM_FIELD_HEIGHT);
-        $fields[TXT_599] = Form::select('SET_SECURE_TYPE', array('yes', 'no'), array(TXT_93, TXT_94), SET_SECURE_TYPE);
-        $fields[TXT_145] = Form::select('SET_LOG_ENTRY', array('yes', 'no'), array(TXT_93, TXT_94), SET_LOG_ENTRY);
-        $fields[TXT_390] = Form::select('SET_ATTACHMENTS', array('yes', 'no'), array(TXT_93, TXT_94), SET_ATTACHMENTS);
-        $fields[TXT_593] = Form::select('ADD_ATTACHMENTS', array('yes', 'no'), array(TXT_93, TXT_94), ADD_ATTACHMENTS);
-        $fields[TXT_391] = Form::text('SET_MAX_ATTACHMENT', SET_MAX_ATTACHMENT);
-        $fields[TXT_329] = Form::select('SET_DATE_FORMAT', array('d-m-Y, h:i A', 'm-d-Y, h:i A', 'd.m.Y H:i'), array(TXT_330, TXT_481, TXT_654), SET_DATE_FORMAT);
         $nameArray = ['Home'];
         $baseURLArray = ['home}-{Home'];
         ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
-        $fields[TXT_297] = Form::select('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION, 'form-control');
-        // Get all item types
-        $columnArray = array('item_type_id', 'item_type_name');
-        foreach (Database::select('item_types', $columnArray) as $row) {
-            $valueArray[] = $row['item_type_id'];
-            $displayArray[] = $row['item_type_name'];
+        $groupValues = ['None'];
+        $groupLabels = ['None'];
+        foreach (Database::select('groups', ['group_id', 'group_name']) as $row) {
+            $groupValues[] = $row['group_id'];
+            $groupLabels[] = $row['group_name'];
         }
-        $fields[TXT_229] = Form::select('SET_DEFAULT_ITEM_TYPE', $valueArray, $displayArray, SET_DEFAULT_ITEM_TYPE);
-        $columnArray = array('group_id', 'group_name');
-        $result = Database::select('groups', $columnArray);
-        $listValuesArray[] = "None";
-        $listDisplayValuesArray[] = "None";
-        foreach ($result as $row) {
-            $listValuesArray[] = $row['group_id'];
-            $listDisplayValuesArray[] = $row['group_name'];
-        }
-        $fields[TXT_604] = Form::select('USER_REG_ACTION', $listValuesArray, $listDisplayValuesArray, USER_REG_ACTION);
-        $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'Create the records, rules, and screens your organisation works with every day.';
-        $fields['Home page blurb'] = Form::textarea('SET_HOME_LEAD', $homeLead, '3');
-        $buttons[] = Form::button('submit', 'submit_button', TXT_56);
-        $bodyContent = Form::form(TXT_42,'?manage=settings&option=update_adlexone_settings',$fields,$buttons);
-        Page::current()->setBody($bodyContent);
+        $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'The work, arranged the way your team actually does it.';
+        $fields = [
+            'Records per page' => Form::text('SET_ITEMS_PAGE', SET_ITEMS_PAGE),
+            'Date format' => Form::select(
+                'SET_DATE_FORMAT',
+                ['d-m-Y, h:i A', 'm-d-Y, h:i A', 'd.m.Y H:i'],
+                ['14-10-2026, 10:01 AM', '10-14-2026, 10:01 AM', '14.10.2026 22:01'],
+                SET_DATE_FORMAT
+            ),
+            'Home application' => Form::select('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION),
+            'Group for new accounts' => Form::select('USER_REG_ACTION', $groupValues, $groupLabels, USER_REG_ACTION),
+            'Login sentence' => Form::textarea('SET_HOME_LEAD', $homeLead, '3'),
+        ];
+        Page::current()->setBody(Form::form(
+            'Site',
+            '?manage=settings&option=update_adlexone_settings',
+            $fields,
+            [Form::button('submit', 'submit_button', TXT_56)]
+        ));
     }
 
     public static function showAdvancedSettings(): void
     {
-        // Setup form fields with values from settings file
-        $fields[TXT_355] = Form::select('SET_DEBUG_MODE', array('Yes', 'No'), array(TXT_93, TXT_94), SET_DEBUG_MODE);
-        $fields[TXT_351] = Form::select('SET_SHOW_SQL', array('Yes', 'No'), array(TXT_93, TXT_94), SET_SHOW_SQL);
-        $fields[TXT_205] = Form::select('SET_ERROR_REPORTING_LEVEL', array('6135', '6143'), array(TXT_504, TXT_207), SET_ERROR_REPORTING_LEVEL);
-        $buttons[] = Form::button('submit', 'submit_button', TXT_56);
-        $bodyContent = Form::form(TXT_130,'?manage=settings&option=update_advanced_settings',$fields,$buttons);
-        Page::current()->setBody($bodyContent);
+        $menuValue = (@SET_OWNER_MENU == '') ? 5 : SET_OWNER_MENU;
+        $typeValues = [];
+        $typeLabels = [];
+        $owners = \Adlexone\Application\ApplicationSettings::typeOwners();
+        foreach (Database::select('item_types', ['item_type_id', 'item_type_name'], '', [], 'item_type_name ASC') as $row) {
+            $id = (int) $row['item_type_id'];
+            if (!isset($owners[$id]) && (string) $id !== (string) SET_DEFAULT_ITEM_TYPE) {
+                continue;
+            }
+            $typeValues[] = $row['item_type_id'];
+            $typeLabels[] = $row['item_type_name'];
+        }
+        $fields = [
+            'Search fields to include' => Form::select('SET_CUSTOM_FIELDS_IN_SEARCH', [2, 5, 10, 15], [2, 5, 10, 15], SET_CUSTOM_FIELDS_IN_SEARCH),
+            'Role shown on a record' => Form::select('SET_OWNER_MENU', [5, 4, 3, 2, 1, 0], [TXT_303, TXT_194, TXT_193, TXT_192, TXT_191, TXT_190], $menuValue),
+            'Note height' => Form::text('SET_FORM_FIELD_HEIGHT', SET_FORM_FIELD_HEIGHT),
+            'Ask which record type when creating' => Form::select('SET_SECURE_TYPE', ['yes', 'no'], [TXT_93, TXT_94], SET_SECURE_TYPE),
+            'Show the log on a record' => Form::select('SET_LOG_ENTRY', ['yes', 'no'], [TXT_93, TXT_94], SET_LOG_ENTRY),
+            'Show files on a record' => Form::select('SET_ATTACHMENTS', ['yes', 'no'], [TXT_93, TXT_94], SET_ATTACHMENTS),
+            'Allow a file when creating' => Form::select('ADD_ATTACHMENTS', ['yes', 'no'], [TXT_93, TXT_94], ADD_ATTACHMENTS),
+            'Largest file (MB)' => Form::text('SET_MAX_ATTACHMENT', SET_MAX_ATTACHMENT),
+            'Default record type' => Form::select('SET_DEFAULT_ITEM_TYPE', $typeValues, $typeLabels, SET_DEFAULT_ITEM_TYPE),
+            'Debugging' => Form::select('SET_DEBUG_MODE', ['Yes', 'No'], [TXT_93, TXT_94], SET_DEBUG_MODE),
+            'Show SQL queries' => Form::select('SET_SHOW_SQL', ['Yes', 'No'], [TXT_93, TXT_94], SET_SHOW_SQL),
+            'PHP error reporting' => Form::select('SET_ERROR_REPORTING_LEVEL', ['6135', '6143'], [TXT_504, TXT_207], SET_ERROR_REPORTING_LEVEL),
+        ];
+        Page::current()->setBody(Form::form(
+            'Advanced',
+            '?manage=settings&option=update_advanced_settings',
+            $fields,
+            [Form::button('submit', 'submit_button', TXT_56)]
+        ));
+    }
+
+    /**
+     * @param array<string, mixed> $posted
+     */
+    private static function saveAdvanced(array $posted): void
+    {
+        unset($posted['submit_button'], $posted['reset'], $posted['_csrf']);
+        $engine = [];
+        $advanced = [];
+        foreach ($posted as $key => $value) {
+            if (in_array((string) $key, self::ENGINE_KEYS, true)) {
+                $engine[$key] = $value;
+            } else {
+                $advanced[$key] = $value;
+            }
+        }
+        if ($engine !== []) {
+            $path = SET_CONFIGURATION_PATH . 'adlexone_settings.json';
+            $existing = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+            if (!is_array($existing)) {
+                $existing = [];
+            }
+            file_put_contents($path, json_encode(array_merge($existing, $engine), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        }
+        $path = SET_CONFIGURATION_PATH . 'advanced_settings.json';
+        $existing = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+        if (!is_array($existing)) {
+            $existing = [];
+        }
+        SharedMethods::saveSettingsToJson($path, array_merge($existing, $advanced));
+    }
+
+    private static function myTheme(bool $save): void
+    {
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        if ($userId <= 0) {
+            Access::deny();
+        }
+        $themes = \Adlexone\Theme\Theme::installed();
+        if ($save) {
+            $theme = \Adlexone\Theme\Theme::canonicalize(trim((string) ($_POST['theme'] ?? '')));
+            if (!isset($themes[$theme])) {
+                View::respond('Choose an installed theme.', Blocks::link('?manage=settings&option=my_theme', 'Theme', '', 'btn btn--primary btn--sm'));
+                return;
+            }
+            Database::update('users', ['theme' => $theme], 'user_id = ?', [$userId]);
+            $_SESSION['access_theme'] = $theme;
+            header('Location: ?manage=settings&option=my_theme');
+            exit;
+        }
+        $current = \Adlexone\Theme\Theme::canonicalize((string) ($_SESSION['access_theme'] ?? ''));
+        if (!isset($themes[$current])) {
+            $current = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'inlay-stone';
+        }
+        Page::current()->setBody(Form::form(
+            'Theme',
+            '?manage=settings&option=update_my_theme',
+            [
+                'Your theme' => \Adlexone\Theme\Theme::picker('theme', $current)
+                    . '<p class="form-help">Used on your account. The site default applies when this is left unset.</p>',
+            ],
+            [Form::button('submit', 'submit_button', 'Save')]
+        ));
     }
 
     public static function showSignInSettings(): void
@@ -289,7 +389,7 @@ final class SiteSettingsScreen
             $themes[$current] = $current;
         }
         $fields = [
-            'Default theme' => Form::select('SET_DEFAULT_THEME', array_keys($themes), array_values($themes), $current)
+            'Default theme' => \Adlexone\Theme\Theme::picker('SET_DEFAULT_THEME', $current)
                 . '<p class="form-help">Used when a person has not chosen a theme on their own account.</p>',
         ];
         Page::current()->setBody(Form::form(

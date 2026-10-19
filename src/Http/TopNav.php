@@ -17,7 +17,7 @@ final class TopNav
      * @return array{
      *     apps: array{mode: string, items: list<array{label: string, href: string, icon: string, current: bool}>},
      *     design: list<array{label: string, href: string, icon: string, current: bool}>,
-     *     account: array{name: string, initials: string}|null
+     *     account: array{name: string, initials: string, links: list<array{label: string, href: string, icon: string}>}|null
      * }
      */
     public static function build(): array
@@ -67,26 +67,14 @@ final class TopNav
         if (Access::can(Permission::ADMIN_SETTINGS)) {
             $add('Applications', '?manage=applications', 'ic-launch', 'manage_applications');
         }
-        if (Access::can(Permission::ADMIN_ITEMS)) {
-            $add('Fields', '?manage=fields', 'ic-manage-fields', 'manage_fields');
-            $add('Item types', '?manage=item-types', 'ic-manage-item-types', 'manage_item_types');
-        }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
             $add('Rules', '?manage=rules', 'ic-manage-actions', 'manage_actions');
-        }
-        if (Access::can(Permission::ADMIN_SECURITY)) {
-            $add('Security', '?manage=security&option=manage_users', 'ic-manage-users', 'manage_security');
-        }
-        if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $add('Settings', '?manage=settings&option=adlexone_settings', 'ic-system-settings', 'manage_settings');
-        } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
-            $add('Settings', '?manage=settings&option=sign_in_settings', 'ic-system-settings', 'manage_settings');
         }
 
         return $items;
     }
 
-    /** @return array{name: string, initials: string}|null */
+    /** @return array{name: string, initials: string, links: list<array{label: string, href: string, icon: string}>}|null */
     private static function account(): ?array
     {
         $name = trim((string) ($_SESSION['access_user_name'] ?? ''));
@@ -101,7 +89,24 @@ final class TopNav
             }
         }
 
-        return ['name' => $name, 'initials' => $initials !== '' ? $initials : 'A'];
+        $links = [
+            ['label' => 'My profile', 'href' => '?manage=security&option=modify_user', 'icon' => 'ic-manage-users'],
+            ['label' => 'Theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-system-settings'],
+        ];
+        if (Access::can(Permission::ADMIN_SECURITY)) {
+            $links[] = ['label' => 'People', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-manage-users'];
+        }
+        if (Access::can(Permission::ADMIN_SETTINGS)) {
+            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-settings'];
+        } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
+            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=sign_in_settings', 'icon' => 'ic-settings'];
+        }
+
+        return [
+            'name' => $name,
+            'initials' => $initials !== '' ? $initials : 'A',
+            'links' => $links,
+        ];
     }
 
     private static function applicationIsCurrent(string $slug): bool

@@ -26,17 +26,19 @@ final class SecurityScreen
          */
         define('SEC_BASE_URL', '?manage=security');
 
-        if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
-            $securityOption = (string)($_GET['option'] ?? '');
-            $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
-            $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
-            if (in_array($securityOption, $userSectionOptions, true)) {
-                Page::current()->setNavOption('manage_users');
-            } elseif (in_array($securityOption, $groupSectionOptions, true)) {
-                Page::current()->setNavOption('manage_groups');
+        $securityOption = (string)($_GET['option'] ?? '');
+        if ($securityOption !== 'modify_user') {
+            if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
+                $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
+                $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
+                if (in_array($securityOption, $userSectionOptions, true)) {
+                    Page::current()->setNavOption('manage_users');
+                } elseif (in_array($securityOption, $groupSectionOptions, true)) {
+                    Page::current()->setNavOption('manage_groups');
+                }
             }
+            RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
         }
-        RenderNavigation::applySectionNav('Security', RenderNavigation::securityManagementURLs());
 
 
 
@@ -242,7 +244,7 @@ final class SecurityScreen
         if ($adminEdit) {
             $themes = \Adlexone\Theme\Theme::installed();
             $theme = empty($fieldValues['theme']) ? SET_DEFAULT_THEME : $fieldValues['theme'];
-            $userPreferences[TXT_182] = Form::select('theme', array_keys($themes), array_values($themes), $theme);
+            $userPreferences[TXT_182] = \Adlexone\Theme\Theme::picker('theme', (string) $theme);
         }
 
         $languageFileArray = [];
@@ -282,7 +284,10 @@ final class SecurityScreen
         $jsErrorMsgArray = "['','','','" . TXT_475 . "','','']";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
         $submitText = $userID !== '' ? TXT_74 : TXT_69;
-        $heading = $userID !== '' ? ($adminEdit ? TXT_154 : TXT_148) : TXT_33;
+        $heading = $userID !== '' ? ($adminEdit ? 'Edit person' : 'My profile') : 'Add person';
+        if (Page::current()->hasSectionNav()) {
+            Page::current()->suggestTitle($heading);
+        }
 
         Page::current()->setBody(Form::form(
             $heading,
@@ -328,8 +333,10 @@ final class SecurityScreen
         ];
         $fields[] = Form::hidden('group_id', $fieldValues['group_id'] ?? '');
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
+        $heading = $isNew ? 'Add group' : 'Edit group';
+        Page::current()->suggestTitle($heading);
         Page::current()->setBody(Form::form(
-            $isNew ? TXT_184 : TXT_185,
+            $heading,
             $action,
             $fields,
             [
@@ -406,7 +413,7 @@ final class SecurityScreen
                 ['key' => 'active', 'label' => TXT_653],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => SEC_BASE_URL . '&option=new_user', 'label' => TXT_692],
+            'primary' => ['href' => SEC_BASE_URL . '&option=new_user', 'label' => 'Add person'],
             'empty' => TXT_115,
             'noMatch' => TXT_689,
             'groups' => [['rows' => $rows]],
@@ -425,7 +432,7 @@ final class SecurityScreen
                 ['key' => 'role', 'label' => TXT_187],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => SEC_BASE_URL . '&option=new_group', 'label' => TXT_692],
+            'primary' => ['href' => SEC_BASE_URL . '&option=new_group', 'label' => 'Add group'],
             'empty' => TXT_115,
             'noMatch' => TXT_689,
             'groups' => [['rows' => $rows]],

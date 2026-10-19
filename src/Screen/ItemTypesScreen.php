@@ -23,8 +23,10 @@ final class ItemTypesScreen
     public static function open(): void
     {
         MenuOptions::prepare();
-        RenderNavigation::applySectionNav('Item types', RenderNavigation::itemSettingsURLs());
-        define('ITEM_TYPES_BASE_URL', '?manage=item-types');
+        Page::current()->setNavOption('__section__');
+        RenderNavigation::applySectionNav('Record types', RenderNavigation::itemSettingsURLs());
+        $scope = trim((string) ($_GET['application'] ?? ''));
+        define('ITEM_TYPES_BASE_URL', '?manage=item-types' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 
 
 
@@ -181,18 +183,6 @@ final class ItemTypesScreen
             }
         }
 
-        $fieldTypeLabels = [
-            FieldTypes::TEXT_BOX => TXT_211,
-            'password' => TXT_214,
-            FieldTypes::TEXT_AREA => TXT_212,
-            FieldTypes::MENU => TXT_213,
-            'hidden' => TXT_216,
-            'URL' => TXT_478,
-            'dynamicURL' => TXT_479,
-            'workerField' => TXT_490,
-            'workerFieldMenu' => TXT_501,
-        ];
-
         $columnArray = ['*'];
         $condition = "WHERE enabled = 'Yes' ORDER BY custom_field_name";
         $result = Database::select('custom_fields', $columnArray, $condition);
@@ -204,7 +194,7 @@ final class ItemTypesScreen
             $isSelected = isset($customFieldArray[$fieldId]) || in_array($fieldId, $customFieldArray, true);
             $order = (int)($customFieldSortArray['field_order_' . $fieldId] ?? 0);
             $typeKey = FieldTypes::normalise((string)$row['field_type']);
-            $typeLabel = $fieldTypeLabels[$typeKey] ?? $typeKey;
+            $typeLabel = FieldTypes::label($typeKey);
             $itemHtml = '<li class="field-picker-item">'
                 . '<label class="checkbox"><input type="checkbox" name="custom_field_id_' . $fieldId . '" value="' . $fieldId . '"' . ($isSelected ? ' checked' : '') . '> '
                 . '<span>' . Html::e((string)$row['custom_field_name']) . '</span> '
@@ -241,9 +231,11 @@ final class ItemTypesScreen
         $jsRequiredMsgArray = "['" . TXT_223 . "']";
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $heading = $isNew ? 'Add type' : 'Edit type';
+        Page::current()->suggestTitle($heading);
 
         Page::current()->setBody(Form::form(
-            $isNew ? TXT_85 : TXT_286,
+            $heading,
             $action,
             $fields,
             [
@@ -293,31 +285,67 @@ final class ItemTypesScreen
      */
     public static function showItemTypes(): void
     {
-        $typeRows = [];
-        foreach (Database::select('item_types', '*', 'ORDER BY item_type_name ASC') as $row) {
-            $typeRows[] = self::itemTypeRecord($row);
+        $owners = \Adlexone\Application\ApplicationSettings::typeOwners();
+        $appSlug = trim((string) ($_GET['application'] ?? ''));
+        $appName = '';
+        if ($appSlug !== '') {
+            $app = \Adlexone\Application\ApplicationStore::findBySlug($appSlug);
+            $appName = $app === null ? '' : (string) $app['name'];
         }
-
+        $unused = ($_GET['unused'] ?? '') === '1' && $appName === '';
+        $groups = [];
+        foreach (Database::select('item_types', '*', '', [], 'item_type_name ASC') as $row) {
+            $id = (int) $row['item_type_id'];
+            $apps = $owners[$id] ?? [];
+            if ($appName !== '') {
+                if (!in_array($appName, $apps, true)) {
+                    continue;
+                }
+            } elseif ($unused) {
+                if ($apps !== []) {
+                    continue;
+                }
+            } elseif ($apps === []) {
+                continue;
+            }
+            $label = $apps === [] ? 'Not used by an application' : implode(', ', $apps);
+            $groups[$label][] = self::itemTypeRecord($row);
+        }
+        ksort($groups);
+        $listGroups = [];
+        foreach ($groups as $label => $rows) {
+            $listGroups[] = ['label' => count($groups) > 1 || $appName !== '' ? $label : '', 'rows' => $rows];
+        }
+        Page::current()->suggestTitle($appName !== '' ? 'Record types · ' . $appName : 'Record types');
         Page::current()->setBody(Blocks::vertical([
-            ['title' => TXT_50, 'html' => self::typeRecordList($typeRows)],
+            ['title' => TXT_50, 'html' => self::typeRecordList($listGroups, $unused, $appName !== '')],
         ]));
     }
 
     /**
-     * @param array<int, array<string, mixed>> $rows
+     * @param list<array{label?: string, rows: list<array<string, mixed>>}> $groups
      */
-    public static function typeRecordList(array $rows): string
+    public static function typeRecordList(array $groups, bool $unused = false, bool $scoped = false): string
     {
+        $toggle = '';
+        if (!$scoped) {
+            $href = $unused ? ITEM_TYPES_BASE_URL : ITEM_TYPES_BASE_URL . '&unused=1';
+            $toggle = '<div class="record-list__tools">'
+                . Blocks::link($href, $unused ? 'In use' : 'Unused', '', 'btn btn--sm')
+                . '</div>';
+        }
+
         return Blocks::recordList([
-            'column' => TXT_151,
+            'column' => 'Record type',
             'columns' => [
-                ['key' => 'enabled', 'label' => TXT_451],
+                ['key' => 'enabled', 'label' => 'Enabled'],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => '?manage=item-types&option=new_item_type', 'label' => TXT_692],
-            'empty' => TXT_115,
+            'primary' => ['href' => ITEM_TYPES_BASE_URL . '&option=new_item_type', 'label' => 'Add type'],
+            'toolbar' => $toggle,
+            'empty' => $unused ? 'Every record type is used by an application.' : 'No record types for this view.',
             'noMatch' => TXT_689,
-            'groups' => [['rows' => $rows]],
+            'groups' => $groups === [] ? [['rows' => []]] : $groups,
         ]);
     }
 

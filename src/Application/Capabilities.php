@@ -107,6 +107,27 @@ final class Capabilities
         ];
     }
 
+    public static function iconLabel(string $icon): string
+    {
+        return [
+            'ic-launch' => 'Launch',
+            'ic-servicecentre' => 'Service',
+            'ic-knowledgebase' => 'Knowledge',
+            'ic-search' => 'Search',
+            'ic-time' => 'Time',
+            'ic-announcements' => 'News',
+            'ic-create-ticket' => 'New',
+            'ic-itemtype-add' => 'Add',
+            'ic-quick-search' => 'Quick find',
+            'ic-my-ticket-searches' => 'My work',
+            'ic-new-article' => 'Article',
+            'ic-article-search' => 'Find article',
+            'ic-settings' => 'Settings',
+            'ic-item-mgmt' => 'Records',
+            'ic-manage-fields' => 'Fields',
+        ][$icon] ?? $icon;
+    }
+
     public static function icon(string $capability, string $chosen = ''): string
     {
         if ($chosen !== '' && in_array($chosen, self::icons(), true)) {

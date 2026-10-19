@@ -57,4 +57,16 @@ form.addEventListener("change",function(e){if(e.target&&e.target.name==="bluepri
 if(bp){form.querySelectorAll("input[name=\"screens[]\"]").forEach(function(input){input.checked=bp.screens.indexOf(input.value)!==-1;});
 if(bp.icon){var iconInput=form.querySelector("input[name=icon][value=\""+bp.icon+"\"]");if(iconInput)iconInput.checked=true;}}}render();});
 render();
+var preview=document.querySelector(".builder__preview");
+function placePreview(){
+if(!preview)return;
+var wide=window.matchMedia("(min-width:961px)").matches;
+if(wide)preview.open=true;
+else if(!preview.dataset.touched)preview.open=false;
+}
+if(preview){
+preview.addEventListener("toggle",function(){preview.dataset.touched="1";});
+placePreview();
+window.addEventListener("resize",placePreview);
+}
 })();

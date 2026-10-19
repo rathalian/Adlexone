@@ -95,6 +95,11 @@ final class ApplicationSettingsScreen
                 Form::button('reset', 'reset', 'Reset'),
             ]
         );
+        $html .= '<p class="form-help">'
+            . Blocks::link('?manage=fields&application=' . rawurlencode($slug), 'Fields', '', 'URL')
+            . ' · '
+            . Blocks::link('?manage=item-types&application=' . rawurlencode($slug), 'Record types', '', 'URL')
+            . '</p>';
         $html .= self::rulesHtml($slug);
         Page::current()->setBody($html);
     }

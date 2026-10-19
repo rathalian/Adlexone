@@ -47,10 +47,13 @@ final class View
 
         $detail = trim($detail);
         $follow = $detail !== '' ? self::formatDetail($detail) : self::backLink();
-        $body = '<p class="response__message">' . Html::e($message) . '</p>';
-        if ($follow !== '') {
-            $body .= '<div class="response" role="status">' . $follow . '</div>';
+        if ($follow === '') {
+            $follow = Blocks::link('./', 'Home', '', 'btn btn--primary btn--sm');
         }
+        $visibleHeading = !$page->hasSectionNav()
+            && strcasecmp(trim(html_entity_decode(strip_tags($page->title()), ENT_QUOTES, 'UTF-8')), $message) === 0;
+        $body = $visibleHeading ? '' : '<p class="response__message">' . Html::e($message) . '</p>';
+        $body .= '<div class="response" role="status">' . $follow . '</div>';
 
         if (!$page->hasBody()) {
             $page->setBody($body);

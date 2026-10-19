@@ -23,8 +23,10 @@ final class FieldsScreen
     public static function open(): void
     {
         MenuOptions::prepare();
+        Page::current()->setNavOption('__section__');
         RenderNavigation::applySectionNav('Fields', RenderNavigation::itemSettingsURLs());
-        define('FIELDS_BASE_URL', '?manage=fields');
+        $scope = trim((string) ($_GET['application'] ?? ''));
+        define('FIELDS_BASE_URL', '?manage=fields' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 
 
 
@@ -148,19 +150,19 @@ final class FieldsScreen
         if ($customFieldID == '') {
             $formAction = '?manage=fields&option=add_custom_field';
             $fieldValues = $values;
-            $title = TXT_62;
+            $title = 'Add field';
         } else {
             $columnArray = array('*');
             $condition = "WHERE custom_field_id = '$customFieldID'";
             $fieldValues = Database::first('custom_fields', $columnArray, $condition);
             $formAction = '?manage=fields&option=update_custom_field';
-            $title = TXT_285;
+            $title = 'Edit field';
         }
 
         $fields[TXT_86] = Form::text('custom_field_name', @$fieldValues['custom_field_name']);
         $fields[TXT_210] = Form::text('default_value', @$fieldValues['default_value']);
         $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'hidden', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu');
-        $fieldNames = array(TXT_211, TXT_214, TXT_212, TXT_213, TXT_216, TXT_478, TXT_479, TXT_490, TXT_501);
+        $fieldNames = array_map(static fn (string $type): string => FieldTypes::label($type), $fieldTypes);
         $fields[TXT_65] = Form::select('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
         $fields[TXT_477] = Form::text('data', @$fieldValues['data']);
         // Javascript field validation setup
@@ -176,6 +178,7 @@ final class FieldsScreen
         $jsRequiredMsgArray = "['" . TXT_217 . "']";
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        Page::current()->suggestTitle($title);
 
         Page::current()->setBody(Form::form(
             $title,
@@ -336,33 +339,70 @@ final class FieldsScreen
      */
     public static function showFields(): void
     {
-        $fieldRows = [];
-        foreach (Database::select('custom_fields', '*', 'ORDER BY custom_field_name ASC') as $row) {
-            $fieldRows[] = self::customFieldRecord($row);
+        $owners = \Adlexone\Application\ApplicationSettings::fieldOwners();
+        $appSlug = trim((string) ($_GET['application'] ?? ''));
+        $appName = '';
+        if ($appSlug !== '') {
+            $app = \Adlexone\Application\ApplicationStore::findBySlug($appSlug);
+            $appName = $app === null ? '' : (string) $app['name'];
+        }
+        $unused = ($_GET['unused'] ?? '') === '1' && $appName === '';
+        $groups = [];
+        foreach (Database::select('custom_fields', '*', '', [], 'custom_field_name ASC') as $row) {
+            $id = (int) $row['custom_field_id'];
+            $apps = $owners[$id] ?? [];
+            if ($appName !== '') {
+                if (!in_array($appName, $apps, true)) {
+                    continue;
+                }
+            } elseif ($unused) {
+                if ($apps !== []) {
+                    continue;
+                }
+            } elseif ($apps === []) {
+                continue;
+            }
+            $record = self::customFieldRecord($row);
+            $label = $apps === [] ? 'Not used by an application' : implode(', ', $apps);
+            $groups[$label][] = $record;
+        }
+        ksort($groups);
+        $listGroups = [];
+        foreach ($groups as $label => $rows) {
+            $listGroups[] = ['label' => count($groups) > 1 || $appName !== '' ? $label : '', 'rows' => $rows];
         }
 
+        Page::current()->suggestTitle($appName !== '' ? 'Fields · ' . $appName : 'Fields');
         Page::current()->setBody(Blocks::vertical([
-            ['title' => TXT_53, 'html' => self::fieldRecordList($fieldRows)],
+            ['title' => TXT_53, 'html' => self::fieldRecordList($listGroups, $unused, $appName !== '')],
         ]));
     }
 
     /**
-     * @param array<int, array<string, mixed>> $rows
+     * @param list<array{label?: string, rows: list<array<string, mixed>>}> $groups
      */
-    public static function fieldRecordList(array $rows): string
+    public static function fieldRecordList(array $groups, bool $unused = false, bool $scoped = false): string
     {
+        $toggle = '';
+        if (!$scoped) {
+            $href = $unused ? FIELDS_BASE_URL : FIELDS_BASE_URL . '&unused=1';
+            $toggle = '<div class="record-list__tools">'
+                . Blocks::link($href, $unused ? 'In use' : 'Unused', '', 'btn btn--sm')
+                . '</div>';
+        }
+
         return Blocks::recordList([
-            'column' => TXT_151,
+            'column' => 'Field',
             'columns' => [
-                ['key' => 'type', 'label' => TXT_395],
-                ['key' => 'key', 'label' => TXT_152],
-                ['key' => 'enabled', 'label' => TXT_451],
+                ['key' => 'type', 'label' => 'Type'],
+                ['key' => 'enabled', 'label' => 'Enabled'],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => FIELDS_BASE_URL . '&option=new_custom_field', 'label' => TXT_692],
-            'empty' => TXT_115,
+            'primary' => ['href' => FIELDS_BASE_URL . '&option=new_custom_field', 'label' => 'Add field'],
+            'toolbar' => $toggle,
+            'empty' => $unused ? 'Every field is used by an application.' : 'No fields for this view.',
             'noMatch' => TXT_689,
-            'groups' => [['rows' => $rows]],
+            'groups' => $groups === [] ? [['rows' => []]] : $groups,
         ]);
     }
 
@@ -402,8 +442,7 @@ final class FieldsScreen
             'name' => $name,
             'href' => FIELDS_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $id,
             'cells' => [
-                'type' => (string)$row['field_type'],
-                'key' => $key,
+                'type' => FieldTypes::label((string) $row['field_type']),
                 'enabled' => (string)$row['enabled'],
             ],
             'actions' => $actions,
@@ -443,7 +482,7 @@ final class FieldsScreen
             }
         }
 
-        $html = self::fieldRecordList($rows);
+        $html = self::fieldRecordList([['rows' => $rows]], false, true);
 
         $bodyBlock = [
             'title' => TXT_113,

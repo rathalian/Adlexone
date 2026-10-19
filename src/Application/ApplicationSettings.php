@@ -85,4 +85,65 @@ final class ApplicationSettings
         $allowed = self::allowedItemTypeIds($slug);
         return $allowed !== [] && in_array($typeId, $allowed, true);
     }
+
+    /**
+     * Enabled applications that use each record type.
+     *
+     * @return array<int, list<string>>
+     */
+    public static function typeOwners(): array
+    {
+        $owners = [];
+        foreach (ApplicationStore::all() as $app) {
+            if (empty($app['enabled'])) {
+                continue;
+            }
+            $name = (string) $app['name'];
+            foreach (self::allowedItemTypeIds((string) $app['slug']) as $typeId) {
+                $owners[$typeId][$name] = $name;
+            }
+        }
+        $lists = [];
+        foreach ($owners as $typeId => $names) {
+            $values = array_values($names);
+            sort($values);
+            $lists[(int) $typeId] = $values;
+        }
+
+        return $lists;
+    }
+
+    /**
+     * Enabled applications that use each custom field, via their record types.
+     *
+     * @return array<int, list<string>>
+     */
+    public static function fieldOwners(): array
+    {
+        $typeOwners = self::typeOwners();
+        if ($typeOwners === []) {
+            return [];
+        }
+        $ids = array_map('intval', array_keys($typeOwners));
+        $rows = Database::select(
+            'item_type_custom_fields',
+            ['item_type_id', 'custom_field_id'],
+            'item_type_id IN (' . implode(',', $ids) . ')'
+        );
+        $owners = [];
+        foreach ($rows as $row) {
+            $fieldId = (int) $row['custom_field_id'];
+            foreach ($typeOwners[(int) $row['item_type_id']] ?? [] as $name) {
+                $owners[$fieldId][$name] = $name;
+            }
+        }
+        $lists = [];
+        foreach ($owners as $fieldId => $names) {
+            $values = array_values($names);
+            sort($values);
+            $lists[(int) $fieldId] = $values;
+        }
+
+        return $lists;
+    }
 }

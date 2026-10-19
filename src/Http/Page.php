@@ -106,6 +106,10 @@ final class Page
 
     public function suggestNavLabel(string $label): void
     {
+        $label = self::plain($label);
+        if ($label === '') {
+            return;
+        }
         $this->navLabel ??= $label;
     }
 
@@ -205,6 +209,42 @@ final class Page
     /** Text for the document <title>. */
     public function documentTitle(): string
     {
-        return $this->title !== null && $this->title !== '' ? $this->title . ' — Inlay' : 'Inlay';
+        $parts = [];
+        $label = self::plain($this->navLabel());
+        if ($label === '') {
+            $label = self::plain($this->eyebrow());
+        }
+        $title = self::plain($this->title());
+        if ($title !== '' && $label !== '' && stripos($title, $label) === 0) {
+            $parts[] = $title;
+        } else {
+            if ($label !== '') {
+                $parts[] = $label;
+            }
+            if ($title !== '' && strcasecmp($title, $label) !== 0) {
+                $parts[] = $title;
+            }
+        }
+        if ($this->applicationSlug !== '') {
+            $app = \Adlexone\Application\ApplicationStore::findBySlug($this->applicationSlug);
+            $name = is_array($app) ? self::plain((string) ($app['name'] ?? '')) : '';
+            if ($name !== '' && !in_array($name, $parts, true)) {
+                $parts[] = $name;
+            }
+        }
+        if ($parts === []) {
+            return 'Inlay';
+        }
+
+        return implode(' · ', $parts) . ' — Inlay';
+    }
+
+    private static function plain(string $value): string
+    {
+        $value = str_replace(["\u{00A0}", '&nbsp;'], ' ', $value);
+        $value = trim(html_entity_decode(strip_tags($value), ENT_QUOTES, 'UTF-8'));
+        $value = trim((string) preg_replace('/\s+/u', ' ', $value));
+
+        return $value;
     }
 }

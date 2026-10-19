@@ -115,16 +115,12 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                     </section>
                 <?php endif; ?>
             </div>
+            <?php if (isset($_GET['theme'])): ?>
             <form class="login-theme" method="get" action="?controller=login">
-                <label class="login-theme__label" for="preview_theme">Theme</label>
-                <select class="select" id="preview_theme" name="theme" onchange="this.form.submit()">
-                    <?php foreach (Theme::installed() as $slug => $label): ?>
-                        <option value="<?php echo Html::e($slug); ?>"<?php echo $slug === (defined('SET_THEME') ? (string) SET_THEME : '') ? ' selected' : ''; ?>>
-                            <?php echo Html::e($label); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <p class="login-theme__label">Preview</p>
+                <?php echo Theme::picker('theme', defined('SET_THEME') ? (string) SET_THEME : '', true); ?>
             </form>
+            <?php endif; ?>
         </div>
     </div>
 </main>

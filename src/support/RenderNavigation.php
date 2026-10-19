@@ -172,7 +172,8 @@ final class RenderNavigation
             $rel = $a->getAttribute('rel') ?: null;
 
             // Extract visible text content (may be empty if the anchor contains only child elements like SVGs)
-            $labelText = trim((string)$a->textContent);
+            $labelText = trim(str_replace("\u{00A0}", ' ', (string) $a->textContent));
+            $labelText = trim((string) preg_replace('/\s+/u', ' ', $labelText));
 
             // Extract inner HTML (preserving child elements like SVGs)
             $innerHtml = '';
@@ -393,9 +394,17 @@ final class RenderNavigation
             return $linkNav === (string)($_GET['nav'] ?? '');
         }
         $linkOption = (string)($params['option'] ?? '');
-        $currentOption = Page::current()->navOption() !== ''
-            ? Page::current()->navOption()
+        $navOverride = Page::current()->navOption();
+        $currentOption = $navOverride !== ''
+            ? $navOverride
             : (string)($_GET['option'] ?? '');
+        if ($currentOption === '__section__') {
+            $currentOption = '';
+        }
+        $linkManage = (string)($params['manage'] ?? '');
+        if ($linkManage !== '' && $linkOption === '' && $currentOption === '' && $linkManage === (string)($_GET['manage'] ?? '')) {
+            return true;
+        }
         if ($linkOption !== '' || $currentOption !== '') {
             return $linkOption !== '' && $linkOption === $currentOption;
         }

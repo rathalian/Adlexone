@@ -73,7 +73,7 @@ final class WorkScreen
         $createHref = $base . '&option=show_item_types';
         $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
         $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
-        $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . $new . '</div>';
+        $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . '</div>';
         if ($ids === []) {
             $body = Blocks::emptyState([
                 'illustration' => 'empty-work',
@@ -92,6 +92,7 @@ final class WorkScreen
             [
                 'title' => $title,
                 'html' => $body,
+                'class' => 'card--work',
             ],
         ]));
     }
@@ -127,7 +128,7 @@ final class WorkScreen
         return [
             'html' => '<nav class="work-scope" aria-label="' . Html::e($label) . '">'
                 . self::workScopeLink($base, '', 'All', $focus === '')
-                . self::workScopeLink($base, 'mine', 'Mine', $focus === 'mine')
+                . self::workScopeLink($base, 'mine', 'Assigned to me', $focus === 'mine')
                 . '</nav>',
             'field_id' => $fieldId,
             'values' => $valueByItem,
@@ -314,7 +315,7 @@ final class WorkScreen
             foreach ($result as $row) {
                 $itemId = (int) $row['item_id'];
                 $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, Blocks::itemActions($itemId, $base));
+                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, []);
                 $bits = array_values(array_filter([
                     trim((string) ($fact['detail'] ?? '')),
                     trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),

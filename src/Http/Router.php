@@ -318,7 +318,7 @@ final class Router
         }
         $handler = self::handler($canonical);
         if ($handler === null) {
-            View::respond('This screen is not available.');
+            View::respond('This page is not here.');
             return;
         }
         if (
