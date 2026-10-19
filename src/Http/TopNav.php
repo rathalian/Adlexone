@@ -30,6 +30,7 @@ final class TopNav
         foreach ($applications as $item) {
             $appItems[] = [
                 'label' => (string) $item['label'],
+                'hint' => (string) ($item['hint'] ?? ''),
                 'href' => (string) $item['href'],
                 'icon' => (string) $item['icon'],
                 'current' => self::applicationIsCurrent((string) ($item['app'] ?? '')),
@@ -81,7 +82,7 @@ final class TopNav
     /** @return array{name: string, initials: string, links: list<array{label: string, href: string, icon: string}>}|null */
     private static function account(): ?array
     {
-        $name = trim((string) ($_SESSION['access_user_name'] ?? ''));
+        $name = trim((string) ($_SESSION['access_display_name'] ?? $_SESSION['access_user_name'] ?? ''));
         if ($name === '') {
             return null;
         }

@@ -44,11 +44,20 @@ final class ApplicationAccess
 
     public static function canSettings(): bool
     {
-        $slug = self::slug();
-        if ($slug === '') {
-            return Access::can(Permission::ADMIN_SETTINGS);
-        }
-        return Access::can(Permission::appSettings($slug), Permission::ADMIN_SETTINGS);
+        return self::canDesign();
+    }
+
+    /**
+     * People who design applications. Daily use of an app does not include this.
+     */
+    public static function canDesign(): bool
+    {
+        return Access::can(
+            Permission::ADMIN_SETTINGS,
+            Permission::ADMIN_ITEMS,
+            Permission::ADMIN_ACTIONS,
+            Permission::ADMIN_SYSTEM
+        );
     }
 
     /**

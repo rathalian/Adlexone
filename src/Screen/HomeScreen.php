@@ -124,7 +124,8 @@ final class HomeScreen
         Page::current()->setBody($html);
     }
     /**
-     * Once an application exists, home opens it. The launchpad is only for a new install.
+     * One application opens straight into it. Several applications stay on
+     * this page so the person can choose, unless their account names a home app.
      */
     private static function landingHref(): string
     {
@@ -153,8 +154,11 @@ final class HomeScreen
                 }
             }
         }
+        if (count($items) === 1) {
+            return (string) ($items[0]['href'] ?? '');
+        }
 
-        return (string) ($items[0]['href'] ?? '');
+        return '';
     }
 
     /**

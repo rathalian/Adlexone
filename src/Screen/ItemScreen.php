@@ -1507,6 +1507,15 @@ final class ItemScreen
                 $formTitle = $inApplication
                     ? ($recordTitle !== '' ? $recordTitle : $itemTypeName)
                     : Wording::get('LA_102', 'TXT_102') . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName;
+                if ($inApplication) {
+                    Page::current()->setTitle($formTitle);
+                    $backLabel = trim(str_replace("\u{00A0}", ' ', Page::current()->navLabel()));
+                    if ($backLabel === '' || strcasecmp($backLabel, $formTitle) === 0) {
+                        $backLabel = 'Work';
+                    }
+                    $html .= '<p class="record-back"><a href="' . Html::e((string) MAN_BASE_URL) . '">Back to '
+                        . Html::e($backLabel) . '</a></p>';
+                }
                 $html .= Form::form($formTitle, MAN_BASE_URL . '&option=update_item', $itemField, $buttons, $formOptions);
 
                 //Show transform option

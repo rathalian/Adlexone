@@ -200,8 +200,16 @@
         const summary = menu.querySelector('summary');
         if (!panel || !summary) return;
         const rect = summary.getBoundingClientRect();
+        const viewport = document.documentElement.clientWidth || window.innerWidth;
+        const maxWidth = Math.max(160, viewport - 16);
+        panel.style.maxWidth = maxWidth + 'px';
+        const width = Math.min(panel.offsetWidth || 180, maxWidth);
+        let left = rect.right - width;
+        if (left < 8) left = 8;
+        if (left + width > viewport - 8) left = Math.max(8, viewport - width - 8);
         panel.style.top = (rect.bottom + 4) + 'px';
-        panel.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+        panel.style.left = left + 'px';
+        panel.style.right = 'auto';
     };
 
     lists.forEach((root) => {

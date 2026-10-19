@@ -54,7 +54,7 @@ final class ScreenCatalog
         return [
             self::WORK => 'Work',
             self::CREATE => 'New',
-            self::SEARCH_LIST => 'Searches',
+            self::SEARCH_LIST => 'Saved',
             self::ANNOUNCEMENTS => 'Announcements',
             self::SETTINGS => 'Settings',
         ];

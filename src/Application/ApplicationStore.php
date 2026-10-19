@@ -27,6 +27,7 @@ final class ApplicationStore
         ApplicationBuilder::installShowcase();
         self::retireServiceCentreLegacy();
         self::renameServiceCentreWork();
+        self::renameBusinessNav();
         self::renameServiceCentreAnnouncements();
         self::renameContactCentreCapabilities();
         self::migrateBuiltInScreenIds();
@@ -426,6 +427,25 @@ final class ApplicationStore
             ['hint' => 'Work and announcements'],
             'slug = ? AND hint = ?',
             [self::SERVICE_CENTRE_SLUG, 'Tickets and announcements']
+        );
+    }
+
+    /**
+     * Work uses a list icon, and the saved-search tab is named Saved.
+     */
+    private static function renameBusinessNav(): void
+    {
+        if (!self::tableExists('application_nav')) {
+            return;
+        }
+        Database::run(
+            "UPDATE application_nav SET icon = 'ic-subjects'
+             WHERE capability IN ('items.work', 'servicecentre.work', 'contact_centre.work')
+               AND icon = 'ic-search'"
+        );
+        Database::run(
+            "UPDATE application_nav SET label = 'Saved'
+             WHERE capability = 'search.saved_list' AND label = 'Searches'"
         );
     }
 

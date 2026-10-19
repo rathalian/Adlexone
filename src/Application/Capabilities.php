@@ -40,12 +40,12 @@ final class Capabilities
         ];
 
         return [
-            ScreenCatalog::WORK => $frame('Work', 'ic-search', 'item_type'),
+            ScreenCatalog::WORK => $frame('Work', 'ic-subjects', 'item_type'),
             ScreenCatalog::CREATE => $frame('New', 'ic-itemtype-add', 'item_type'),
             ScreenCatalog::SEARCH_QUICK => $frame('Quick search', 'ic-quick-search', 'none'),
             ScreenCatalog::SEARCH_ADVANCED => $frame('Search', 'ic-search', 'item_type'),
             ScreenCatalog::SEARCH_SAVED => $frame('Saved search', 'ic-search', 'saved_search'),
-            ScreenCatalog::SEARCH_LIST => $frame('Searches', 'ic-search', 'none'),
+            ScreenCatalog::SEARCH_LIST => $frame('Saved', 'ic-search', 'none'),
             ScreenCatalog::ANNOUNCEMENTS => $frame('Announcements', 'ic-announcements', 'none'),
             ScreenCatalog::SETTINGS => $frame('Settings', 'ic-settings', 'none'),
         ];
@@ -104,6 +104,7 @@ final class Capabilities
             'ic-article-search',
             'ic-settings',
             'ic-item-mgmt',
+            'ic-subjects',
             'ic-manage-fields',
         ];
     }
@@ -327,7 +328,7 @@ final class Capabilities
                 continue;
             }
             $capability = ScreenCatalog::resolve((string) ($link['capability'] ?? ''));
-            if (str_starts_with($capability, 'search.')) {
+            if (str_starts_with($capability, 'search.') && $capability !== ScreenCatalog::SEARCH_LIST) {
                 continue;
             }
             $href = \Adlexone\Http\Router::applicationUrl((string) $app['slug'], (int) $link['nav_id']);
@@ -347,6 +348,11 @@ final class Capabilities
      */
     public static function linkVisible(array $link): bool
     {
+        if (ScreenCatalog::resolve((string) ($link['capability'] ?? '')) === ScreenCatalog::SETTINGS
+            && !ApplicationAccess::canDesign()
+        ) {
+            return false;
+        }
         $permission = trim((string) ($link['permission'] ?? ''));
         return $permission === '' || Access::can($permission);
     }

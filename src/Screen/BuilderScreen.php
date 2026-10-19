@@ -81,6 +81,7 @@ final class BuilderScreen
             'ic-servicecentre' => 'Service',
             'ic-knowledgebase' => 'Knowledge',
             'ic-search' => 'Search',
+            'ic-subjects' => 'List',
             'ic-time' => 'Time',
             'ic-announcements' => 'News',
             'ic-create-ticket' => 'New',
@@ -95,7 +96,7 @@ final class BuilderScreen
         ];
 
         $screenMeta = [
-            ScreenCatalog::WORK => ['hint' => 'List or board', 'icon' => 'ic-search'],
+            ScreenCatalog::WORK => ['hint' => 'List or board', 'icon' => 'ic-subjects'],
             ScreenCatalog::CREATE => ['hint' => 'Add one', 'icon' => 'ic-itemtype-add'],
             ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-my-ticket-searches'],
             ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announcements'],

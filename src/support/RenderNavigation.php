@@ -359,7 +359,7 @@ final class RenderNavigation
             if (preg_match('/<svg\b.*?<\/svg>/s', $inner, $match) === 1) {
                 $icon = $match[0];
             }
-            $linkLabel = trim((string)($lnk['label'] ?? ''));
+            $linkLabel = trim(str_replace("\u{00A0}", '', (string)($lnk['label'] ?? '')));
             if ($current !== '' && $linkLabel !== '') {
                 Page::current()->suggestNavLabel($linkLabel);
             }

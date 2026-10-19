@@ -151,12 +151,22 @@ final class Blocks
     {
         $actions = [];
         $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        $inApplication = \Adlexone\Http\Page::current()->inApplication();
         if ($role <= 4) {
-            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=log_entry', 'label' => TXT_246];
-            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=show_attachments', 'label' => TXT_389];
+            $actions[] = [
+                'href' => $base . '&item=' . $itemId . '&option=log_entry',
+                'label' => $inApplication ? 'Notes' : TXT_246,
+            ];
+            $actions[] = [
+                'href' => $base . '&item=' . $itemId . '&option=show_attachments',
+                'label' => $inApplication ? 'Files' : TXT_389,
+            ];
         }
         if ($role <= 3) {
-            $actions[] = ['href' => $base . '&item=' . $itemId . '&option=change_security', 'label' => TXT_28];
+            $actions[] = [
+                'href' => $base . '&item=' . $itemId . '&option=change_security',
+                'label' => $inApplication ? 'Who can see this' : TXT_28,
+            ];
         }
         if ($role <= 5) {
             $actions[] = [
@@ -491,6 +501,7 @@ final class Blocks
         }
         $manageLabel = defined('TXT_388') ? TXT_388 : '';
         $buttons = '';
+        $splitDanger = false;
         foreach ($actions as $action) {
             $label = (string) ($action['label'] ?? '');
             $confirm = Form::confirmData((string) ($action['confirm'] ?? ''));
@@ -499,8 +510,12 @@ final class Blocks
             $href = Html::e((string) ($action['href'] ?? ''));
             $aria = ' aria-label="' . Html::e($label . ': ' . $name) . '"';
             if ($asMenu) {
-                $danger = ($action['tone'] ?? '') === 'danger' ? ' rowmenu__item--danger' : '';
-                $buttons .= '<a class="rowmenu__item' . $danger . '" role="menuitem" href="' . $href . '"'
+                $danger = ($action['tone'] ?? '') === 'danger';
+                if ($danger && !$splitDanger && $buttons !== '') {
+                    $buttons .= '<div class="rowmenu__divider" role="separator"></div>';
+                    $splitDanger = true;
+                }
+                $buttons .= '<a class="rowmenu__item' . ($danger ? ' rowmenu__item--danger' : '') . '" role="menuitem" href="' . $href . '"'
                     . $targetAttr . $confirm . $aria . '>'
                     . Html::e($label) . '</a>';
                 continue;

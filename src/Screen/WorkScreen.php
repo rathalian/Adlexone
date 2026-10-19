@@ -3,12 +3,15 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Application\ApplicationStore;
+use Adlexone\Application\ScreenCatalog;
 use Adlexone\Auth\Csrf;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\Http\Page;
+use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Html;
 
@@ -70,7 +73,10 @@ final class WorkScreen
         $status = self::workStatusField($itemTypeId);
         $canBoard = $status !== null && $status['values'] !== [];
         $view = $canBoard && self::workView() === 'board' ? 'board' : 'list';
-        $createHref = $base . '&option=show_item_types';
+        $createHref = self::createHref();
+        if ($createHref === '') {
+            $createHref = $base . '&option=show_item_types';
+        }
         $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
         $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
         $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . '</div>';
@@ -332,12 +338,50 @@ final class WorkScreen
         $columns[] = ['key' => 'opened', 'label' => 'Opened'];
 
         return Blocks::recordList([
-            'column' => 'Work',
+            'column' => self::workColumnName($itemTypeId),
             'columns' => $columns,
             'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
             'empty' => 'Nothing here yet',
             'groups' => [['rows' => $rows]],
         ]);
+    }
+
+    /**
+     * The New tab is the one place to add a record. The list links there when it is empty.
+     */
+    private static function createHref(): string
+    {
+        if (!Page::current()->inApplication()) {
+            return '';
+        }
+        $slug = Page::current()->applicationSlug();
+        $app = ApplicationStore::findBySlug($slug);
+        if ($app === null) {
+            return '';
+        }
+        foreach (ApplicationStore::navigation((int) $app['application_id']) as $link) {
+            if (ScreenCatalog::resolve((string) ($link['capability'] ?? '')) !== ScreenCatalog::CREATE) {
+                continue;
+            }
+            if (!\Adlexone\Application\Capabilities::linkVisible($link)) {
+                continue;
+            }
+
+            return Router::applicationUrl($slug, (int) $link['nav_id']);
+        }
+
+        return '';
+    }
+
+    private static function workColumnName(?int $itemTypeId): string
+    {
+        if ($itemTypeId === null || $itemTypeId <= 0) {
+            return 'Name';
+        }
+        $row = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$itemTypeId]);
+        $name = trim((string) ($row['item_type_name'] ?? ''));
+
+        return $name !== '' ? $name : 'Name';
     }
 
     private static function workFieldLabel(string $name): string

@@ -188,7 +188,7 @@ final class ApplicationBuilder
         $typeConfig = ['item_type_id' => (string) $itemTypeId];
         $labels = ScreenCatalog::builderScreens();
         $icons = [
-            ScreenCatalog::WORK => 'ic-search',
+            ScreenCatalog::WORK => 'ic-subjects',
             ScreenCatalog::CREATE => 'ic-itemtype-add',
             ScreenCatalog::SEARCH_LIST => 'ic-search',
             ScreenCatalog::ANNOUNCEMENTS => 'ic-announcements',

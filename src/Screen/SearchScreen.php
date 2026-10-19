@@ -217,9 +217,16 @@ final class SearchScreen
         $jsRequiredMsgArray = "['" . TXT_206 . "']";
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $inApplication = Page::current()->inApplication();
+        $typeLabels = $inApplication ? ['Name', 'ID', 'Notes'] : [TXT_84, TXT_102, TXT_601];
         $fields = [
-            TXT_682 => Form::select('search_type', array('item_id', 'item_title', 'log_entries'), array(TXT_102, TXT_84, TXT_601), ''),
-            TXT_683 => Form::text('search_value', ''),
+            TXT_682 => Form::select(
+                'search_type',
+                ['item_title', 'item_id', 'log_entries'],
+                $typeLabels,
+                'item_title'
+            ),
+            ($inApplication ? 'Name' : TXT_683) => Form::text('search_value', ''),
             '' => Form::hidden('search', 'Search'),
         ];
         Page::current()->setBody(Form::form(
