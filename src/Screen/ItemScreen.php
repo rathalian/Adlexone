@@ -179,6 +179,7 @@ final class ItemScreen
                 break;
             case 'log_entry' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
+                self::returnToItem($_GET['item_id'], '', 'notes');
                 self::showLogEntry($_GET['item_id']);
                 break;
             case 'add_log_entry' :
@@ -195,6 +196,7 @@ final class ItemScreen
                 break;
             case 'change_security' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 3);
+                self::returnToItem($_GET['item_id'], '', 'access');
                 self::showSecurityAssignment($_GET['item_id']);
                 break;
             case 'update_security' :
@@ -203,6 +205,7 @@ final class ItemScreen
                 break;
             case 'show_attachments' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                self::returnToItem($_GET['item_id'], '', 'files');
                 self::showAttachments($_GET['item_id']);
                 break;
             case 'add_attachment' :
@@ -2362,6 +2365,11 @@ final class ItemScreen
         Database::run("DELETE FROM item_attachments WHERE item_id = '$itemID'");
         ItemFields::deleteForItem($itemID);
         GroupMembership::setItemGroups($itemID, []);
+        if (Page::current()->inApplication()) {
+            View::flash('The record has been deleted.');
+            header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));
+            exit;
+        }
         self::showMyItems($_SESSION['access_user_id']);
     }
 }
