@@ -1,0 +1,20 @@
+---
+description: Serve the cloud site on port 8000 with nginx so a forwarded port reuses one connection
+alwaysApply: true
+---
+
+# Forwarded dev server
+
+The cloud site on port 8000 is nginx in front of four PHP workers. `.cursor/prepare-runtime.sh` starts it by running `.cursor/serve.sh`.
+
+`php -S` on `0.0.0.0:8000` closes the connection after every file and handles one request at a time. A forwarded port then pays a new round trip for each stylesheet, script, and font, and CSS goes out uncompressed.
+
+When changing how the cloud site is served:
+
+- Keep nginx listening on port 8000.
+- Keep the browser connection open. Gzip CSS, JavaScript, and SVG.
+- Serve real files from disk. Proxy every other request, including `/`, with the original URI. Rewriting `/` to `/index.php` makes bootstrap redirect back to `/` and the browser loops.
+- Run the PHP workers on loopback only (`127.0.0.1:9081` through `9084`), with opcache timestamp checks turned on.
+- Leave `.cursor/start-dev-server.ps1` as the local Windows `php -S` helper. That script is not the forwarded port.
+
+If the start script needs a new package, add that package to `.cursor/Dockerfile` in the same change. Agents boot an image from an environment build. A start script that requires a package missing from that image comes up with nothing listening on port 8000.
