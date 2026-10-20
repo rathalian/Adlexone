@@ -172,19 +172,20 @@ final class Blocks
         $actions = [];
         $role = (int) ($_SESSION['access_role_id'] ?? 5);
         $inApplication = \Adlexone\Http\Page::current()->inApplication();
+        $record = $base . '&item=' . $itemId;
         if ($role <= 4) {
             $actions[] = [
-                'href' => $base . '&item=' . $itemId . '&option=log_entry',
+                'href' => $inApplication ? $record . '&sheet=notes' : $record . '&option=log_entry',
                 'label' => $inApplication ? 'Notes' : TXT_246,
             ];
             $actions[] = [
-                'href' => $base . '&item=' . $itemId . '&option=show_attachments',
+                'href' => $inApplication ? $record . '&sheet=files' : $record . '&option=show_attachments',
                 'label' => $inApplication ? 'Files' : TXT_389,
             ];
         }
         if ($role <= 3) {
             $actions[] = [
-                'href' => $base . '&item=' . $itemId . '&option=change_security',
+                'href' => $inApplication ? $record . '&sheet=access' : $record . '&option=change_security',
                 'label' => $inApplication ? 'Who can see this' : TXT_28,
             ];
         }

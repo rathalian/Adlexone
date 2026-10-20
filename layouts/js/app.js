@@ -208,14 +208,22 @@
         const summary = menu.querySelector('summary');
         if (!panel || !summary) return;
         const rect = summary.getBoundingClientRect();
-        const viewport = document.documentElement.clientWidth || window.innerWidth;
-        const maxWidth = Math.max(160, viewport - 16);
+        const viewportW = document.documentElement.clientWidth || window.innerWidth;
+        const viewportH = document.documentElement.clientHeight || window.innerHeight;
+        const maxWidth = Math.max(160, viewportW - 16);
         panel.style.maxWidth = maxWidth + 'px';
         const width = Math.min(panel.offsetWidth || 180, maxWidth);
+        const height = panel.offsetHeight || 0;
         let left = rect.right - width;
         if (left < 8) left = 8;
-        if (left + width > viewport - 8) left = Math.max(8, viewport - width - 8);
-        panel.style.top = (rect.bottom + 4) + 'px';
+        if (left + width > viewportW - 8) left = Math.max(8, viewportW - width - 8);
+        let top = rect.bottom + 4;
+        const roomBelow = viewportH - 8 - top;
+        const roomAbove = rect.top - 8;
+        if (height > roomBelow && roomAbove > roomBelow) {
+            top = Math.max(8, rect.top - height - 4);
+        }
+        panel.style.top = top + 'px';
         panel.style.left = left + 'px';
         panel.style.right = 'auto';
     };
@@ -250,9 +258,11 @@
         });
     });
 
-    window.addEventListener('resize', () => {
+    const reposition = () => {
         document.querySelectorAll('[data-record-list] details.rowmenu[open]').forEach(place);
-    });
+    };
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
 })();
 
 /* Mark inline .URL actions that match the current ?option= */
