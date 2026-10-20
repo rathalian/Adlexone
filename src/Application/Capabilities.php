@@ -5,6 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\Screen\RecordScreens;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
@@ -48,6 +49,16 @@ final class Capabilities
             ScreenCatalog::SEARCH_LIST => $frame('Saved', 'ic-search', 'none'),
             ScreenCatalog::ANNOUNCEMENTS => $frame('Announcements', 'ic-announcements', 'none'),
             ScreenCatalog::SETTINGS => $frame('Settings', 'ic-settings', 'none'),
+            ScreenCatalog::COUNTS => $frame('Counts', 'ic-search', 'field'),
+            ScreenCatalog::OWNERS => $frame('Owners', 'ic-my-ticket-searches', 'item_type'),
+            ScreenCatalog::STEPS => $frame('Next steps', 'ic-create-ticket', 'field'),
+            ScreenCatalog::DIARY => $frame('Diary', 'ic-time', 'field'),
+            ScreenCatalog::PARTIES => $frame('Parties', 'ic-knowledgebase', 'field'),
+            ScreenCatalog::ACTIVITY => $frame('Activity', 'ic-announcements', 'activity'),
+            ScreenCatalog::FILES => $frame('Files', 'ic-new-article', 'item_type'),
+            ScreenCatalog::AGE => $frame('Ageing', 'ic-time', 'field'),
+            ScreenCatalog::REGISTER => $frame('Register', 'ic-item-mgmt', 'register'),
+            ScreenCatalog::INTAKE => $frame('Intake', 'ic-itemtype-add', 'intake'),
         ];
     }
 
@@ -178,6 +189,21 @@ final class Capabilities
         }
         if ($capability === ScreenCatalog::SETTINGS) {
             \Adlexone\Screen\ApplicationSettingsScreen::open();
+            return;
+        }
+        if (in_array($capability, [
+            ScreenCatalog::COUNTS,
+            ScreenCatalog::OWNERS,
+            ScreenCatalog::STEPS,
+            ScreenCatalog::DIARY,
+            ScreenCatalog::PARTIES,
+            ScreenCatalog::ACTIVITY,
+            ScreenCatalog::FILES,
+            ScreenCatalog::AGE,
+            ScreenCatalog::REGISTER,
+            ScreenCatalog::INTAKE,
+        ], true)) {
+            RecordScreens::open($capability, $config);
             return;
         }
 

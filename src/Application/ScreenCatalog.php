@@ -6,7 +6,8 @@ namespace Adlexone\Application;
 /**
  * Ids of the built-in screens an application can open.
  *
- * Work, create, search, announcements, and application settings.
+ * Work, create, search, announcements, application settings, and the record screens
+ * (counts, owners, next steps, diary, parties, activity, files, ageing, register, intake).
  * Wire them from Manage → Applications → Navigation or the Builder.
  * site/apps packs are only for a screen that cannot be expressed as config.
  */
@@ -22,6 +23,16 @@ final class ScreenCatalog
     public const SEARCH_LIST = 'search.saved_list';
     public const ANNOUNCEMENTS = 'announcements.board';
     public const SETTINGS = 'app.settings';
+    public const COUNTS = 'items.counts';
+    public const OWNERS = 'items.owners';
+    public const STEPS = 'items.steps';
+    public const DIARY = 'items.diary';
+    public const PARTIES = 'items.parties';
+    public const ACTIVITY = 'items.activity';
+    public const FILES = 'items.files';
+    public const AGE = 'items.age';
+    public const REGISTER = 'items.register';
+    public const INTAKE = 'items.intake';
 
     /**
      * Older pack ids → current screen ids.
@@ -54,6 +65,16 @@ final class ScreenCatalog
         return [
             self::WORK => 'Work',
             self::CREATE => 'New',
+            self::COUNTS => 'Counts',
+            self::OWNERS => 'Owners',
+            self::STEPS => 'Next steps',
+            self::DIARY => 'Diary',
+            self::PARTIES => 'Parties',
+            self::ACTIVITY => 'Activity',
+            self::FILES => 'Files',
+            self::AGE => 'Ageing',
+            self::REGISTER => 'Register',
+            self::INTAKE => 'Intake',
             self::SEARCH_LIST => 'Saved',
             self::ANNOUNCEMENTS => 'Announcements',
             self::SETTINGS => 'Settings',

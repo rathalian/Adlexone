@@ -1583,6 +1583,11 @@ body:has(.sectionbar) .main > .grid > details.card.card--sheet.card--disclosure 
     .record-list__search{ max-width:none; flex-basis:100%; }
 }
 
+.record-sheet__control .text,
+.record-sheet__control .select{
+    width:100%;
+    min-width:10rem;
+}
 .work-toolbar{
     display:flex;
     align-items:center;

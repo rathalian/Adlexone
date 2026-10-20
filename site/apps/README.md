@@ -6,6 +6,16 @@
 |--------|------------|
 | Work / my items | `items.work` |
 | Create item | `items.create` |
+| Counts | `items.counts` |
+| Owners | `items.owners` |
+| Next steps | `items.steps` |
+| Diary | `items.diary` |
+| Parties | `items.parties` |
+| Activity | `items.activity` |
+| Files | `items.files` |
+| Ageing | `items.age` |
+| Register | `items.register` |
+| Intake | `items.intake` |
 | Search | `search.*` |
 | Announcements | `announcements.board` |
 | App settings | `app.settings` |

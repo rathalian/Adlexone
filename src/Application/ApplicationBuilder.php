@@ -33,8 +33,21 @@ final class ApplicationBuilder
      */
     public static function blueprints(): array
     {
-        $work = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
-        $wall = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::ANNOUNCEMENTS, ScreenCatalog::SEARCH_LIST];
+        $plain = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
+        $extra = [
+            ScreenCatalog::COUNTS,
+            ScreenCatalog::OWNERS,
+            ScreenCatalog::STEPS,
+            ScreenCatalog::PARTIES,
+            ScreenCatalog::ACTIVITY,
+            ScreenCatalog::FILES,
+            ScreenCatalog::AGE,
+            ScreenCatalog::REGISTER,
+        ];
+        $work = array_merge($plain, $extra);
+        $wall = array_merge([ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::ANNOUNCEMENTS, ScreenCatalog::SEARCH_LIST], $extra);
+        $diary = [ScreenCatalog::DIARY];
+        $intake = [ScreenCatalog::INTAKE];
         $status = static fn (array $values): array => self::menu('Status', $values);
         $close = static function (string $name, string $status, string $date, string $line): array {
             return self::when($name, Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, $status, [
@@ -110,7 +123,7 @@ final class ApplicationBuilder
                     self::when('Tell the owner someone is on site', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'On site', [self::email('On site: ITEM_TITLE', 'ITEM_TITLE is on site.')]),
                     $close('Finish the repair', 'Done', 'Done on', 'Finished ITEM_TITLE.'),
                 ],
-                $work,
+                array_merge($work, $intake),
                 self::search('On site', 'Repairs where someone is there now.', 'On site')
             ),
             self::BLUEPRINT_COMPLAINTS => self::shape(
@@ -130,7 +143,7 @@ final class ApplicationBuilder
                     self::when('Tell the owner it is with us', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With us', [self::email('With us: ITEM_TITLE', 'ITEM_TITLE is with us.')]),
                     $close('Close the complaint', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
                 ],
-                $wall,
+                array_merge($wall, $diary, $intake),
                 self::search('With us', 'Complaints that are with us.', 'With us')
             ),
             self::BLUEPRINT_COMMITTEE => self::shape(
@@ -170,7 +183,7 @@ final class ApplicationBuilder
                     self::when('Tell the owner the finding was accepted', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Accepted', [self::email('Accepted: ITEM_TITLE', 'ITEM_TITLE has been accepted.')]),
                     $close('Close the finding', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
                 ],
-                $work,
+                array_merge($work, $diary),
                 self::search('In progress', 'Findings being worked on.', 'In progress')
             ),
             self::BLUEPRINT_INCIDENTS => self::shape(
@@ -191,7 +204,7 @@ final class ApplicationBuilder
                     self::when('Note a file was added', Rules::EVENT_ATTACHMENT, '', Rules::OP_ALWAYS, '', [self::logLine('A file was added to ITEM_TITLE.')]),
                     $close('Close the incident', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
                 ],
-                $wall,
+                array_merge($wall, $intake),
                 self::search('Investigating', 'Incidents under investigation.', 'Investigating')
             ),
             self::BLUEPRINT_CANDIDATES => self::shape(
@@ -238,7 +251,7 @@ final class ApplicationBuilder
                 '',
                 [],
                 [],
-                $work,
+                $plain,
                 null
             ),
         ];
@@ -353,10 +366,34 @@ final class ApplicationBuilder
             ScreenCatalog::SEARCH_LIST => 'ic-search',
             ScreenCatalog::ANNOUNCEMENTS => 'ic-announcements',
             ScreenCatalog::SETTINGS => 'ic-settings',
+            ScreenCatalog::COUNTS => 'ic-search',
+            ScreenCatalog::OWNERS => 'ic-my-ticket-searches',
+            ScreenCatalog::STEPS => 'ic-create-ticket',
+            ScreenCatalog::DIARY => 'ic-time',
+            ScreenCatalog::PARTIES => 'ic-knowledgebase',
+            ScreenCatalog::ACTIVITY => 'ic-announcements',
+            ScreenCatalog::FILES => 'ic-new-article',
+            ScreenCatalog::AGE => 'ic-time',
+            ScreenCatalog::REGISTER => 'ic-item-mgmt',
+            ScreenCatalog::INTAKE => 'ic-itemtype-add',
         ];
         $order = 10;
         foreach ($chosen as $capability) {
-            $config = in_array($capability, [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED], true)
+            $config = in_array($capability, [
+                ScreenCatalog::WORK,
+                ScreenCatalog::CREATE,
+                ScreenCatalog::SEARCH_ADVANCED,
+                ScreenCatalog::COUNTS,
+                ScreenCatalog::OWNERS,
+                ScreenCatalog::STEPS,
+                ScreenCatalog::DIARY,
+                ScreenCatalog::PARTIES,
+                ScreenCatalog::ACTIVITY,
+                ScreenCatalog::FILES,
+                ScreenCatalog::AGE,
+                ScreenCatalog::REGISTER,
+                ScreenCatalog::INTAKE,
+            ], true)
                 ? $typeConfig
                 : [];
             ApplicationStore::insertNav(

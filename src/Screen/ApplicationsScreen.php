@@ -5,6 +5,7 @@ namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
+use Adlexone\Screen\RecordScreens;
 use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
@@ -325,6 +326,9 @@ final class ApplicationsScreen
             'Icon' => self::iconSelect('icon', (string) ($link['icon'] ?? ''), true),
             'Item type' => self::itemTypeSelect((string) ($config['item_type_id'] ?? '')),
             'Saved search' => self::savedSearchSelect((string) ($config['search_id'] ?? ''), ApplicationStore::scopeKey($app)),
+        ];
+        $fields += RecordScreens::navFields($capability, $config, ApplicationStore::scopeKey($app));
+        $fields += [
             '' => Form::hidden('application_id', (string) $applicationId)
                 . ($link === null ? '' : Form::hidden('nav_id', (string) $link['nav_id'])),
         ];
@@ -367,8 +371,10 @@ final class ApplicationsScreen
             $icon = '';
         }
         $config = [];
-        if ($catalog[$capability]['config'] === 'item_type') {
+        $kind = (string) ($catalog[$capability]['config'] ?? 'none');
+        if (in_array($kind, ['item_type', 'field', 'activity', 'register', 'intake'], true)) {
             $config['item_type_id'] = trim((string) ($_POST['item_type_id'] ?? ''));
+            $config += RecordScreens::postedConfig($capability, $config['item_type_id'], ApplicationStore::scopeKey($app));
         }
         if ($catalog[$capability]['config'] === 'saved_search') {
             $searchId = trim((string) ($_POST['search_id'] ?? ''));

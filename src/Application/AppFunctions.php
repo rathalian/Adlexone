@@ -8,8 +8,8 @@ use Adlexone\Http\View;
 /**
  * Optional custom screens under site/apps/{pack}/.
  *
- * Prefer the built-in screens (Work, Create, Search, Announcements, Settings)
- * configured in Manage → Navigation or the Builder. Packs are only for rare
+ * Prefer the built-in screens configured in Manage → Navigation or the Builder.
+ * Packs are only for rare
  * installation-specific screens that cannot be expressed as shared config.
  */
 final class AppFunctions

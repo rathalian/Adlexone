@@ -9,7 +9,7 @@ Put **only** installation-specific look-and-feel and app packs here.
 
 Core product code lives outside this folder (`layouts/`, `src/`). To change branding or add a pack, work in `site/` — not by copying layout PHP.
 
-New business applications are created with **Manage → Builder** (`/?manage=builder`), which composes an app from built-in screens (Work, Create, Search, Announcements, Settings). Configure screens in the Builder or under Applications → Navigation — pack PHP under `site/apps/` is optional and only for rare custom screens.
+New business applications are created with **Manage → Builder** (`/?manage=builder`), which composes an app from built-in screens (Work, New, Counts, Owners, Next steps, Diary, Parties, Activity, Files, Ageing, Register, Intake, Saved, Announcements, Settings). Configure screens in the Builder or under Applications → Navigation — pack PHP under `site/apps/` is optional and only for rare custom screens.
 
 ## New theme (skin)
 
