@@ -346,7 +346,7 @@ final class ItemTypesScreen
             'empty' => $unused ? 'Every record type is used by an application.' : 'No record types for this view.',
             'emptyIllustration' => 'empty-types',
             'emptyTitle' => $unused ? 'Every type is in use' : 'No record types yet',
-            'emptyCopy' => $unused ? '' : 'A record type is the shape of the work.',
+            'emptyCopy' => $unused ? '' : 'A record type sets the fields a record uses.',
             'noMatch' => TXT_689,
             'groups' => $groups === [] ? [['rows' => []]] : $groups,
         ]);

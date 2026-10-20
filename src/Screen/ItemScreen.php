@@ -640,8 +640,8 @@ final class ItemScreen
         if (Page::current()->inApplication()) {
             Page::current()->setBody(Blocks::emptyState([
                 'illustration' => 'empty-work',
-                'title' => 'Nothing to add yet',
-                'copy' => 'This application does not have anything new to open.',
+                'title' => 'Nothing to add',
+                'copy' => 'This application has no record type to open.',
             ]));
             return;
         }

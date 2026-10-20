@@ -302,8 +302,8 @@ final class SearchScreen
                     'title' => $heading,
                     'html' => Blocks::emptyState([
                         'illustration' => 'empty-search',
-                        'title' => 'Nothing matched',
-                        'copy' => 'Try another search.',
+                        'title' => 'No records matched',
+                        'copy' => 'Change the search and run it again.',
                         'action' => $again !== ''
                             ? '<a class="btn btn--primary" href="' . Html::e($again) . '">Search again</a>'
                             : '',
@@ -1097,10 +1097,10 @@ final class SearchScreen
                 ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
             ],
             'searchLabel' => TXT_3,
-            'empty' => 'No saved searches yet',
+            'empty' => 'No saved searches',
             'emptyIllustration' => 'empty-saved',
-            'emptyTitle' => 'No saved searches yet',
-            'emptyCopy' => 'Search once, then keep it here.',
+            'emptyTitle' => 'No saved searches',
+            'emptyCopy' => 'Run a search, then save it to this list.',
             'emptyAction' => $emptyAction,
             'toolbar' => $toolbar,
             'groups' => [['rows' => $rows]],

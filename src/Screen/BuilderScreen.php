@@ -35,7 +35,7 @@ final class BuilderScreen
         $section = Blocks::link(BUILDER_URL, 'Builder', 'ic-itemtype-add');
         $section .= Blocks::link('?manage=applications', 'Applications', 'ic-launch');
         RenderNavigation::applySectionNav('Builder', $section);
-        Page::current()->suggestTitle('Design an app');
+        Page::current()->suggestTitle('Create an application');
 
         switch ($option) {
             case 'create':
@@ -100,12 +100,12 @@ final class BuilderScreen
             ScreenCatalog::CREATE => ['hint' => 'Add one', 'icon' => 'ic-itemtype-add'],
             ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-my-ticket-searches'],
             ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announcements'],
-            ScreenCatalog::SETTINGS => ['hint' => 'How this app is set up', 'icon' => 'ic-settings'],
+            ScreenCatalog::SETTINGS => ['hint' => 'How this application is set up', 'icon' => 'ic-settings'],
         ];
         $levelMeta = [
             'use' => ['label' => 'Use application', 'hint' => 'Open the work and add to it'],
             'announce' => ['label' => 'Announcements', 'hint' => 'Post a notice'],
-            'settings' => ['label' => 'Settings', 'hint' => 'Change how the app works'],
+            'settings' => ['label' => 'Settings', 'hint' => 'Change how the application works'],
         ];
 
         $clientBlueprints = [];
@@ -210,10 +210,10 @@ final class BuilderScreen
         }
         $iconsHtml .= '</div>';
 
-        $previewName = trim($nameRaw) !== '' ? trim($nameRaw) : 'Your application';
+        $previewName = trim($nameRaw) !== '' ? trim($nameRaw) : 'New application';
         $previewSlug = trim($slugRaw) !== '' ? ApplicationBuilder::slugify($slugRaw, $nameRaw) : ApplicationBuilder::slugify('', $nameRaw);
         if ($previewSlug === '') {
-            $previewSlug = 'your-app';
+            $previewSlug = 'complaints';
         }
         $previewHint = trim($hintRaw) !== '' ? trim($hintRaw) : (string) $blueprints[$blueprint]['hint'];
         $previewType = trim($recordRaw) !== ''
@@ -261,8 +261,8 @@ final class BuilderScreen
         $html = '<div class="builder" data-builder="' . $payload . '">'
             . '<header class="builder__intro">'
             . $artHtml
-            . '<div><p class="builder__title">Design an app</p>'
-            . '<p class="builder__lead">Pick a starting shape. Screens and fields can change later.</p></div>'
+            . '<div><p class="builder__title">Create an application</p>'
+            . '<p class="builder__lead">Choose a blueprint. The screens and fields can be changed later.</p></div>'
             . '</header>'
             . $errorHtml
             . '<form id="builder-form" class="builder__form builder__panel" method="post" action="' . $h(BUILDER_URL . '&option=create') . '">'
@@ -275,14 +275,14 @@ final class BuilderScreen
             . '<div class="field"><label class="label" for="builder-slug">Link</label>'
             . '<div class="builder__link"><span class="builder__link-prefix">?application=</span>'
             . '<input class="text" id="builder-slug" name="slug" value="' . $h($slugRaw) . '" autocomplete="off" placeholder="complaints" spellcheck="false"></div>'
-            . '<p class="form-help">Follows the name until you change it.</p></div>'
+            . '<p class="form-help">This follows the name until you change it.</p></div>'
             . '<div class="field field--wide"><label class="label" for="builder-hint">Description</label>'
             . '<input class="text" id="builder-hint" name="hint" value="' . $h($hintRaw) . '" autocomplete="off" placeholder="What this application is for"></div>'
             . '<div class="field field--wide"><span class="label" id="builder-icon-label">Icon</span>' . $iconsHtml . '</div>'
             . '</div></section>'
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Blueprint</h2>'
-            . '<p class="form-help">Choosing one sets the board, the fields, and one rule. You can still adjust the screens.</p>'
+            . '<p class="form-help">A blueprint sets the fields, the screens, and one rule. The screens can still be changed.</p>'
             . $blueprintHtml
             . '</section>'
             . '<section class="builder__section">'
@@ -292,9 +292,9 @@ final class BuilderScreen
             . '</section>'
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Record</h2>'
-            . '<div class="field"><label class="label" for="builder-type">What each card is called</label>'
+            . '<div class="field"><label class="label" for="builder-type">Record type name</label>'
             . '<input class="text" id="builder-type" name="record_type_name" value="' . $h($recordRaw) . '" autocomplete="off" placeholder="' . $h((string) ($blueprints[$blueprint]['record'] ?? 'Job')) . '">'
-            . '<p class="form-help">Leave this blank to use the starting shape’s name.</p></div>'
+            . '<p class="form-help">Leave this blank to use the blueprint name.</p></div>'
             . '</section>'
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Who can open it</h2>'
@@ -304,7 +304,7 @@ final class BuilderScreen
             . $levelsHtml
             . '</section>'
             . '<div class="form-actions">'
-            . Form::button('submit', 'submit_button', 'Create this app')
+            . Form::button('submit', 'submit_button', 'Create this application')
             . '</div></form>'
             . '<details class="builder__preview builder__panel" open>'
             . '<summary class="builder__kicker">This application</summary>'

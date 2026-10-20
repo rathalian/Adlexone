@@ -28,13 +28,13 @@ $sqlite = $tmp . '/database/adlexone.sqlite';
 $attachments = $tmp . '/attachments/';
 
 Provisioner::install($install, $config, $sqlite, $attachments, [
-    'site_name' => 'Acme',
-    'public_url' => 'https://acme.example.com',
-    'username' => 'ada',
+    'site_name' => 'Health',
+    'public_url' => 'https://health.example.com',
+    'username' => 'reid',
     'password' => 'correct-horse',
-    'first_name' => 'Ada',
-    'last_name' => 'Lovelace',
-    'email' => 'ada@example.com',
+    'first_name' => 'Alex',
+    'last_name' => 'Reid',
+    'email' => 'records@health.example.com',
 ]);
 
 if (!is_file($sqlite)) {
@@ -59,12 +59,12 @@ $version = (int) $pdo->query('SELECT MAX(version) FROM schema_migrations')->fetc
 if ($version !== 9) {
     $fail('schema version is ' . $version);
 }
-$hash = (string) $pdo->query("SELECT password FROM users WHERE user_name = 'ada'")->fetchColumn();
+$hash = (string) $pdo->query("SELECT password FROM users WHERE user_name = 'reid'")->fetchColumn();
 if (!password_verify('correct-horse', $hash)) {
     $fail('Admin password did not verify');
 }
 $settings = json_decode((string) file_get_contents($config . 'adlexone_settings.json'), true);
-if (!is_array($settings) || ($settings['SET_SITE_NAME'] ?? '') !== 'Acme') {
+if (!is_array($settings) || ($settings['SET_SITE_NAME'] ?? '') !== 'Health') {
     $fail('Site name was not saved');
 }
 $advanced = json_decode((string) file_get_contents($config . 'advanced_settings.json'), true);
@@ -95,9 +95,9 @@ $row = PlatformDb::operatorByName($platform, 'root');
 if ($row === null || !password_verify('operator-secret', (string) $row['password'])) {
     $fail('Operator password did not verify');
 }
-PlatformDb::addStore($platform, 'acme', 'Acme', 'acme.example.com', 'ada@example.com');
-$found = PlatformDb::storeByHost($platform, 'acme.example.com');
-if ($found === null || ($found['slug'] ?? '') !== 'acme') {
+PlatformDb::addStore($platform, 'health', 'Health', 'health.example.com', 'records@health.example.com');
+$found = PlatformDb::storeByHost($platform, 'health.example.com');
+if ($found === null || ($found['slug'] ?? '') !== 'health') {
     $fail('Store was not found by host');
 }
 if (is_file($tmp . '/config/platform.json')) {

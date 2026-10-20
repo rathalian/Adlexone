@@ -144,10 +144,10 @@ final class OperatorScreen
             throw new \RuntimeException('The slug must be lowercase letters, numbers, and hyphens, and it must start and end with a letter or number.');
         }
         if (preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
-            throw new \RuntimeException('Enter the full hostname customers will use, such as acme.example.com.');
+            throw new \RuntimeException('Enter the full hostname customers will use, such as health.example.com.');
         }
         if (strcasecmp($host, $paths['operator_host']) === 0) {
-            throw new \RuntimeException('That hostname is the operator site. Pick a different hostname for the customer.');
+            throw new \RuntimeException('That hostname is the operator site. Use a different hostname for the customer.');
         }
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new \RuntimeException('The admin email does not look valid.');
@@ -264,9 +264,9 @@ final class OperatorScreen
         $html .= '<form method="post" action="" class="login-form">';
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="create_store">';
-        $html .= self::field('Display name', 'label', 'text', '', true, 'Shown on their setup page. Example: Acme.');
-        $html .= self::field('Slug', 'slug', 'text', '', true, 'Folder name. Lowercase letters, numbers, and hyphens. Example: acme.');
-        $html .= self::field('Hostname', 'host', 'text', '', true, 'The address their browser uses. Example: acme.example.com. Point DNS at this server. Do not use the operator hostname.');
+        $html .= self::field('Display name', 'label', 'text', '', true, 'Shown on their setup page. For example, Health.');
+        $html .= self::field('Slug', 'slug', 'text', '', true, 'Folder name. Lowercase letters, numbers, and hyphens. For example, health.');
+        $html .= self::field('Hostname', 'host', 'text', '', true, 'The address their browser uses. For example, health.example.com. Point DNS at this server. Do not use the operator hostname.');
         $html .= self::field('Admin email', 'admin_email', 'email', '', false, 'Stored on the operator list so you know who to contact. Optional.');
         $html .= self::field('Admin username', 'admin_user', 'text', '', false, 'Optional. Leave blank and the customer chooses the first account when they open their hostname.');
         $html .= self::field('Admin password', 'admin_password', 'password', '', false, 'Optional. At least 8 characters, and only if you also set a username. Stored as a hash in their SQLite file.');

@@ -48,7 +48,7 @@ final class HomeScreen
             $manage[] = self::tile(
                 '?manage=builder',
                 'Create application',
-                'Guided builder for a new business app',
+                'Create an application, including its record type, fields, and screens.',
                 'ic-itemtype-add'
             );
         }
@@ -56,7 +56,7 @@ final class HomeScreen
             $manage[] = self::tile(
                 '?manage=applications',
                 'Applications',
-                'Arrange applications and navigation',
+                'Set the order of applications and their navigation.',
                 'ic-launch'
             );
         }
@@ -64,13 +64,13 @@ final class HomeScreen
             $manage[] = self::tile(
                 '?manage=fields',
                 'Fields',
-                'Fields used by your applications',
+                'Fields used across the applications.',
                 'ic-manage-fields'
             );
             $manage[] = self::tile(
                 '?manage=item-types',
                 'Record types',
-                'The records each application keeps',
+                'The record type each application keeps.',
                 'ic-manage-item-types'
             );
         }
@@ -78,7 +78,7 @@ final class HomeScreen
             $manage[] = self::tile(
                 '?manage=rules',
                 'Rules',
-                'What happens when a record changes',
+                'What runs when a record is created or updated.',
                 'ic-manage-actions'
             );
         }
@@ -86,7 +86,7 @@ final class HomeScreen
             $manage[] = self::tile(
                 '?manage=security&option=manage_users',
                 'Security',
-                'Users and groups',
+                'People, groups, and the records they can open.',
                 'ic-manage-users'
             );
         }
@@ -94,14 +94,14 @@ final class HomeScreen
             $manage[] = self::tile(
                 '?manage=settings&option=adlexone_settings',
                 'Settings',
-                'Application setup',
+                'Site name, theme, and related settings.',
                 'ic-system-settings'
             );
         } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
             $manage[] = self::tile(
                 '?manage=settings&option=sign_in_settings',
                 'Settings',
-                'Sign-in and system setup',
+                'Sign-in and system settings.',
                 'ic-system-settings'
             );
         }
@@ -111,7 +111,7 @@ final class HomeScreen
             $intro = View::partialToString('launchpad_intro', [
                 'copy' => defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                     ? (string) SET_HOME_LEAD
-                    : 'The work, arranged the way your team actually does it.',
+                    : 'This site keeps the applications, records, and rules for the work.',
                 'art' => Theme::illustrationHref('empty-apps'),
             ]);
         }
@@ -268,17 +268,17 @@ final class HomeScreen
             $app = (string) ($notice[0]['application'] ?? '');
             if ($subject !== '') {
                 $href = $app !== '' ? '?application=' . rawurlencode($app) : './';
-                $wall = '<p class="desk__wall">On the wall: <a href="' . Html::e($href) . '">' . Html::e($subject) . '</a></p>';
+                $wall = '<p class="desk__wall">Announcement: <a href="' . Html::e($href) . '">' . Html::e($subject) . '</a></p>';
             }
         }
         if ($list === '' && $wall === '') {
-            $list = '<li class="desk__meta">Nothing is waiting on you.</li>';
+            $list = '<li class="desk__meta">Nothing is assigned to you.</li>';
         }
         $art = Theme::illustrationHref('empty-assigned');
 
-        return '<section class="desk" aria-label="Needs you">'
+        return '<section class="desk" aria-label="Assigned to you">'
             . ($art !== '' ? '<img class="desk__art" src="' . Html::e($art) . '" alt="" width="88" height="66">' : '')
-            . '<div><h2 class="desk__title">Needs you</h2><ul class="desk__list">' . $list . '</ul>' . $wall . '</div>'
+            . '<div><h2 class="desk__title">Assigned to you</h2><ul class="desk__list">' . $list . '</ul>' . $wall . '</div>'
             . '</section>';
     }
 

@@ -114,7 +114,7 @@ final class SetupScreen
             'text',
             (string) ($_POST['public_url'] ?? ''),
             false,
-            'Optional. Example: https://acme.example.com. Leave blank and Inlay will use the address in the browser. Set it when the site sits behind a proxy.'
+            'Optional. For example, https://health.example.com. Leave this blank and Inlay uses the address in the browser. Set it when the site sits behind a proxy.'
         );
         $html .= '<button type="submit" class="btn btn--primary login-submit">Create the site</button>';
         $html .= '</form>';

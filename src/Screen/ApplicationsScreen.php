@@ -151,9 +151,9 @@ final class ApplicationsScreen
                 'empty' => 'No applications yet. Use the builder to create one.',
                 'emptyIllustration' => 'empty-apps',
                 'emptyTitle' => 'No applications yet',
-                'emptyCopy' => 'Use the builder to set the first one in place.',
+                'emptyCopy' => 'Use the builder to create the first application.',
                 'toolbar' => '<div class="record-list__tools">'
-                    . Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Expert setup', '', 'btn btn--sm')
+                    . Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Create manually', '', 'btn btn--sm')
                     . '</div>',
                 'groups' => [['rows' => $rows]],
             ]),

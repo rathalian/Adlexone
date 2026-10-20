@@ -22,8 +22,8 @@ if(typeEl){typeEl.placeholder=bp.record||"Job";}
 var slug=(slugEl&&slugEl.value.trim())||"";
 var hint=(hintEl&&hintEl.value.trim())||bp.hint||"";
 var type=(typeEl&&typeEl.value.trim())||bp.record||(name?name+" record":"Record");
-var address=slugify(slug||name)||"your-app";
-text("builder-preview-name",name||"Your application");
+var address=slugify(slug||name)||"complaints";
+text("builder-preview-name",name||"New application");
 text("builder-preview-hint",hint);
 text("builder-preview-url","?application="+address);
 text("builder-preview-type",type);

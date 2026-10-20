@@ -152,7 +152,7 @@ final class AnnouncementsScreen
             $picture = $lead && $art !== ''
                 ? '<img class="notice__art" src="' . Html::e($art) . '" alt="" width="160" height="120">'
                 : '';
-            $kicker = $lead ? 'On the wall' : '';
+            $kicker = $lead ? 'Latest' : '';
             $html .= '<article class="notice' . ($lead ? ' notice--lead' : '') . '">'
                 . $picture
                 . '<div class="notice__copy">'
@@ -166,10 +166,10 @@ final class AnnouncementsScreen
         if ($html === '') {
             $html = Blocks::emptyState([
                 'illustration' => 'notice',
-                'title' => 'Nothing on the wall',
+                'title' => 'No announcements',
                 'copy' => $canManage
-                    ? 'Post a notice for the people who use this.'
-                    : 'When a notice is posted, it will show up here.',
+                    ? 'Post an announcement for the people who use this application.'
+                    : 'Announcements are listed here once they are posted.',
                 'action' => $canManage
                     ? Blocks::link(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary')
                     : '',

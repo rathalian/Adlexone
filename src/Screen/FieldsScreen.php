@@ -403,7 +403,7 @@ final class FieldsScreen
             'empty' => $unused ? 'Every field is used by an application.' : 'No fields for this view.',
             'emptyIllustration' => 'empty-fields',
             'emptyTitle' => $unused ? 'Every field is in use' : 'No fields yet',
-            'emptyCopy' => $unused ? 'Unused fields show up when you ask for them.' : 'Add a field, then use it on a record type.',
+            'emptyCopy' => $unused ? 'Unused fields are listed when you ask for them.' : 'Add a field, then use it on a record type.',
             'noMatch' => TXT_689,
             'groups' => $groups === [] ? [['rows' => []]] : $groups,
         ]);

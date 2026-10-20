@@ -72,7 +72,7 @@ final class HelpText
         $public = $paths['public'] ?? '';
         $platformJson = rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'platform.json';
 
-        $storeExample = rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . 'acme' . DIRECTORY_SEPARATOR;
+        $storeExample = rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . 'health' . DIRECTORY_SEPARATOR;
 
         return self::article('How customer stores are kept apart', [
             self::p('This screen is the operator. It is a separate login in a separate database. It is not a user inside a customer site, and it does not appear in their user list or their backup.'),

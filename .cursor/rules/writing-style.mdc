@@ -1,0 +1,44 @@
+---
+description: Write user-facing text in Adam Hall's voice
+alwaysApply: true
+---
+
+# Writing style
+
+User-facing text is written the way Adam Hall writes: formal Australian English, specific, and direct. A sentence says what the thing is, who it is for, and what happens. It does not sell.
+
+## Voice
+
+- Australian spelling: organisation, specialised, artefact, recognised, favour. Practise is the verb and practice is the noun. Use program, not programme.
+- Complete sentences for anything longer than a label. "No users yet. Add a person when they need access."
+- Name the object. Prefer application in prose. A button can stay short: "Create an application".
+- Operational detail belongs in the sentence: a path, a permission, a next step, a date.
+- Second person or plain description. The product does not speak in the first person.
+
+## Leave out
+
+- Slogans and brochure lines: "the way your team actually does it", "seamless", "unlock", "empower", "delight", "robust", "cutting-edge", "leverage", "show up", "the shape of the work".
+- Exclamation marks, emoji, winks, and ellipses used for tone.
+- Template companies and template people: Acme, Contoso, Contosa, Fabrikam, Northwind, AdventureWorks, Widget, Osteria, Ada Lovelace, ada@example.com.
+
+## Examples
+
+Use a plain organisation, an ordinary surname, and a real place, the way a file note would.
+
+- Organisation: Health. Slug: health. Hostname: health.example.com. Email: records@health.example.com.
+- People: Reid, Nguyen, Walsh, Campbell.
+- Places: Barton, Kingston, Civic, Braddon.
+
+"For example, Health." "For example, health.example.com."
+
+A next step is a note typed on a record: "Follow up the draft." "Call on Thursday." "File the copy."
+
+## Shape
+
+A help paragraph is one or two sentences. An empty state says what is missing, then what to do. A hint under a tile says what that screen is for.
+
+Good: "This site keeps the applications, records, and rules for the work."
+
+Good: "A record type sets the fields a record uses."
+
+Good: "Enter the full hostname customers will use, such as health.example.com."

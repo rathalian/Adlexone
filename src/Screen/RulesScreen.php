@@ -127,7 +127,7 @@ final class RulesScreen
     			'href' => MAN_BASE_URL . '&option=new_rule',
     			'label' => 'Add a rule',
     		],
-    		'empty' => 'No rules yet. Add one, or start an app from Studio, Matters, or House.',
+    		'empty' => 'No rules yet. Add a rule, or create an application from a blueprint.',
     		'emptyIllustration' => 'empty-rules',
     		'emptyTitle' => 'No rules yet',
     		'emptyCopy' => 'A rule runs when a record is created, updated, or gets a note.',

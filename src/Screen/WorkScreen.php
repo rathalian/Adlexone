@@ -84,8 +84,8 @@ final class WorkScreen
         if ($ids === []) {
             $body = Blocks::emptyState([
                 'illustration' => 'empty-work',
-                'title' => 'Nothing here yet',
-                'copy' => 'Add the first one.',
+                'title' => 'No records yet',
+                'copy' => 'Create the first record.',
                 'action' => $new,
             ]);
         } elseif ($shown === []) {
@@ -93,12 +93,12 @@ final class WorkScreen
             if ($focus === 'mine') {
                 $body = Blocks::emptyState([
                     'illustration' => 'empty-assigned',
-                    'title' => 'Nothing assigned to you',
-                    'copy' => 'When a record is yours, it will show up here.',
+                    'title' => 'Nothing is assigned to you',
+                    'copy' => 'Records assigned to you are listed here.',
                     'action' => '<a class="btn btn--sm" href="' . Html::e(self::workHref($base, $view)) . '">Show all</a>',
                 ]);
             } else {
-                $body = $toolbar . '<p class="work-empty">Nothing in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
+                $body = $toolbar . '<p class="work-empty">No records in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
             }
         } elseif ($view === 'board') {
             $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
@@ -362,7 +362,7 @@ final class WorkScreen
             'column' => self::workColumnName($itemTypeId),
             'columns' => $columns,
             'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
-            'empty' => 'Nothing here yet',
+            'empty' => 'No records yet',
             'groups' => [['rows' => $rows]],
         ]);
     }

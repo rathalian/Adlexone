@@ -79,7 +79,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_CLAIMS => self::shape(
                 'Claims',
-                'From notification to settlement.',
+                'A claim from the first notification through to settlement.',
                 'Claim',
                 'ic-servicecentre',
                 'Insurer',
@@ -99,7 +99,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_REPAIRS => self::shape(
                 'Repairs',
-                'Reported, booked, and on site.',
+                'A repair from the report through to completion.',
                 'Repair',
                 'ic-time',
                 'Trade',
@@ -115,7 +115,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_COMPLAINTS => self::shape(
                 'Complaints',
-                'Opened, with us, and closed.',
+                'A complaint from opening through to closure.',
                 'Complaint',
                 'ic-create-ticket',
                 'Channel',
@@ -135,7 +135,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_COMMITTEE => self::shape(
                 'Committee',
-                'In, reading, asking, decided.',
+                'A paper from receipt through to the decision.',
                 'Paper',
                 'ic-subjects',
                 'Amount',
@@ -159,7 +159,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_AUDIT => self::shape(
                 'Audit',
-                'A finding, until it is closed.',
+                'A finding from when it is raised until it is closed.',
                 'Finding',
                 'ic-search',
                 'Rating',
@@ -175,7 +175,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_INCIDENTS => self::shape(
                 'Incidents',
-                'Reported, investigated, and closed.',
+                'An incident from the report through to closure.',
                 'Incident',
                 'ic-announcements',
                 'Kind',
@@ -196,7 +196,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_CANDIDATES => self::shape(
                 'Candidates',
-                'From longlist to placed.',
+                'A candidate from the longlist through to placement.',
                 'Candidate',
                 'ic-my-ticket-searches',
                 'Role',
@@ -212,7 +212,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_CONTRACTS => self::shape(
                 'Contracts',
-                'In, in review, and signed.',
+                'A contract from receipt through to signature.',
                 'Contract',
                 'ic-new-article',
                 'Kind',
@@ -231,7 +231,7 @@ final class ApplicationBuilder
             ),
             self::BLUEPRINT_BLANK => self::shape(
                 'Blank',
-                'A shell and one record. Add fields when you are ready.',
+                'An empty application and one record type. Add fields when you are ready.',
                 '',
                 'ic-launch',
                 '',
@@ -571,30 +571,30 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_MATTERS,
                 'sort' => 10,
                 'cards' => [
-                    ['title' => 'Holm lease', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Holm', 'Kind' => 'Contract', 'Reference' => 'H-1044', 'Next step' => 'Chase the draft', 'Note' => 'They want the break clause out.']],
-                    ['title' => 'Lane dispute', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Lane', 'Kind' => 'Dispute', 'Reference' => 'L-220', 'Next step' => 'Their solicitor']],
-                    ['title' => 'Northwind advice', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Northwind', 'Kind' => 'Advice', 'Reference' => 'N-18', 'Next step' => 'Call on Thursday']],
-                    ['title' => 'Osteria licence', 'fields' => ['Status' => 'Done', 'Client' => 'Osteria', 'Kind' => 'Property', 'Reference' => 'O-7', 'Next step' => 'File the copy', 'Closed on' => '02-10-2026']],
+                    ['title' => 'Reid lease', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Reid', 'Kind' => 'Contract', 'Reference' => 'R-1044', 'Next step' => 'Follow up the draft', 'Note' => 'The break clause is to come out.']],
+                    ['title' => 'Nguyen dispute', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Nguyen', 'Kind' => 'Dispute', 'Reference' => 'N-220', 'Next step' => 'Contact their solicitor']],
+                    ['title' => 'Campbell advice', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Campbell', 'Kind' => 'Advice', 'Reference' => 'C-18', 'Next step' => 'Call on Thursday']],
+                    ['title' => 'Walsh licence', 'fields' => ['Status' => 'Done', 'Client' => 'Walsh', 'Kind' => 'Property', 'Reference' => 'W-7', 'Next step' => 'File the copy', 'Closed on' => '02-10-2026']],
                 ],
             ],
             'conveyancing' => [
                 'blueprint' => self::BLUEPRINT_CONVEYANCING,
                 'sort' => 20,
                 'cards' => [
-                    ['title' => 'Harbour Street sale', 'fields' => ['Status' => 'Enquiries', 'Client' => 'Holm', 'Place' => '14 Harbour Street', 'Side' => 'Sale', 'Reference' => 'C-441', 'Next step' => 'Reply on the boundary']],
-                    ['title' => 'Lane purchase', 'fields' => ['Status' => 'Searches', 'Client' => 'Lane', 'Place' => 'Lane House', 'Side' => 'Purchase', 'Reference' => 'C-442', 'Next step' => 'Chase the local search']],
-                    ['title' => 'Northwind flat', 'fields' => ['Status' => 'Instructed', 'Client' => 'Northwind', 'Place' => '8 Quay', 'Side' => 'Purchase', 'Reference' => 'C-450', 'Next step' => 'Take instructions']],
-                    ['title' => 'Osteria leasehold', 'fields' => ['Status' => 'Exchange', 'Client' => 'Osteria', 'Place' => '2 West Row', 'Side' => 'Sale', 'Reference' => 'C-438', 'Next step' => 'Book exchange']],
+                    ['title' => 'Barton Street sale', 'fields' => ['Status' => 'Enquiries', 'Client' => 'Reid', 'Place' => '14 Barton Street', 'Side' => 'Sale', 'Reference' => 'C-441', 'Next step' => 'Reply on the boundary']],
+                    ['title' => 'Nguyen purchase', 'fields' => ['Status' => 'Searches', 'Client' => 'Nguyen', 'Place' => 'Kingston', 'Side' => 'Purchase', 'Reference' => 'C-442', 'Next step' => 'Follow up the local search']],
+                    ['title' => 'Campbell unit', 'fields' => ['Status' => 'Instructed', 'Client' => 'Campbell', 'Place' => '8 Civic', 'Side' => 'Purchase', 'Reference' => 'C-450', 'Next step' => 'Take instructions']],
+                    ['title' => 'Walsh leasehold', 'fields' => ['Status' => 'Exchange', 'Client' => 'Walsh', 'Place' => '2 Braddon', 'Side' => 'Sale', 'Reference' => 'C-438', 'Next step' => 'Book exchange']],
                 ],
             ],
             'claims' => [
                 'blueprint' => self::BLUEPRINT_CLAIMS,
                 'sort' => 30,
                 'cards' => [
-                    ['title' => 'Holm roof', 'fields' => ['Status' => 'With the insurer', 'Client' => 'Holm', 'Insurer' => 'North cover', 'Kind' => 'Property', 'Reference' => 'CL-19', 'Reserve' => '18000', 'Next step' => 'Send the photos']],
-                    ['title' => 'Lane motor', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Lane', 'Insurer' => 'Harbour mutual', 'Kind' => 'Motor', 'Reference' => 'CL-22', 'Reserve' => '6400', 'Next step' => 'Their engineer\'s report']],
-                    ['title' => 'Quay stock', 'fields' => ['Status' => 'Notified', 'Client' => 'Northwind', 'Insurer' => 'North cover', 'Kind' => 'Liability', 'Reference' => 'CL-30', 'Reserve' => '25000', 'Next step' => 'Open the file']],
-                    ['title' => 'Osteria flood', 'fields' => ['Status' => 'Settled', 'Client' => 'Osteria', 'Insurer' => 'North cover', 'Kind' => 'Property', 'Reference' => 'CL-11', 'Reserve' => '9100', 'Next step' => 'File the settlement', 'Settled on' => '28-09-2026']],
+                    ['title' => 'Reid roof', 'fields' => ['Status' => 'With the insurer', 'Client' => 'Reid', 'Insurer' => 'QBE', 'Kind' => 'Property', 'Reference' => 'CL-19', 'Reserve' => '18000', 'Next step' => 'Send the photos']],
+                    ['title' => 'Nguyen motor', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Nguyen', 'Insurer' => 'Allianz', 'Kind' => 'Motor', 'Reference' => 'CL-22', 'Reserve' => '6400', 'Next step' => 'Waiting on the engineer\'s report']],
+                    ['title' => 'Civic stock', 'fields' => ['Status' => 'Notified', 'Client' => 'Campbell', 'Insurer' => 'QBE', 'Kind' => 'Liability', 'Reference' => 'CL-30', 'Reserve' => '25000', 'Next step' => 'Open the file']],
+                    ['title' => 'Walsh flood', 'fields' => ['Status' => 'Settled', 'Client' => 'Walsh', 'Insurer' => 'QBE', 'Kind' => 'Property', 'Reference' => 'CL-11', 'Reserve' => '9100', 'Next step' => 'File the settlement', 'Settled on' => '28-09-2026']],
                 ],
             ],
             'repairs' => [
@@ -603,7 +603,7 @@ final class ApplicationBuilder
                 'cards' => [
                     ['title' => 'Boiler, flat 4', 'fields' => ['Status' => 'On site', 'Place' => 'Flat 4', 'Trade' => 'Plumbing', 'Reported by' => 'Porter', 'Next step' => 'Keys from the porter', 'Urgent' => 'Yes']],
                     ['title' => 'West stair light', 'fields' => ['Status' => 'Booked', 'Place' => 'West stair', 'Trade' => 'Electrical', 'Reported by' => 'Office', 'Next step' => 'Thursday morning']],
-                    ['title' => 'Gate latch', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Trade' => 'Joinery', 'Reported by' => 'Holm', 'Next step' => 'Visit the site']],
+                    ['title' => 'Gate latch', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Trade' => 'Joinery', 'Reported by' => 'Reid', 'Next step' => 'Visit the site']],
                     ['title' => 'Roof, block C', 'fields' => ['Status' => 'Done', 'Place' => 'Block C', 'Trade' => 'Roof', 'Reported by' => 'Estate', 'Next step' => 'File the invoice', 'Done on' => '11-10-2026']],
                 ],
             ],
@@ -611,10 +611,10 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_COMPLAINTS,
                 'sort' => 50,
                 'cards' => [
-                    ['title' => 'Missed appointment', 'fields' => ['Status' => 'With us', 'Client' => 'Holm', 'Channel' => 'Phone', 'Reference' => 'CO-12', 'Next step' => 'Call them back', 'Response due' => '01-12-2026']],
-                    ['title' => 'Charge on the account', 'fields' => ['Status' => 'Their response', 'Client' => 'Lane', 'Channel' => 'Letter', 'Reference' => 'CO-9', 'Next step' => 'Wait for the letter', 'Response due' => '18-11-2026']],
-                    ['title' => 'Website form', 'fields' => ['Status' => 'Opened', 'Client' => 'Northwind', 'Channel' => 'Web', 'Reference' => 'CO-14', 'Next step' => 'Acknowledge today', 'Response due' => '14-12-2026']],
-                    ['title' => 'Late refund', 'fields' => ['Status' => 'Closed', 'Client' => 'Osteria', 'Channel' => 'Email', 'Reference' => 'CO-4', 'Next step' => 'File the reply', 'Closed on' => '20-09-2026']],
+                    ['title' => 'Missed appointment', 'fields' => ['Status' => 'With us', 'Client' => 'Reid', 'Channel' => 'Phone', 'Reference' => 'CO-12', 'Next step' => 'Call them back', 'Response due' => '01-12-2026']],
+                    ['title' => 'Charge on the account', 'fields' => ['Status' => 'Their response', 'Client' => 'Nguyen', 'Channel' => 'Letter', 'Reference' => 'CO-9', 'Next step' => 'Wait for the letter', 'Response due' => '18-11-2026']],
+                    ['title' => 'Website form', 'fields' => ['Status' => 'Opened', 'Client' => 'Campbell', 'Channel' => 'Web', 'Reference' => 'CO-14', 'Next step' => 'Acknowledge today', 'Response due' => '14-12-2026']],
+                    ['title' => 'Late refund', 'fields' => ['Status' => 'Closed', 'Client' => 'Walsh', 'Channel' => 'Email', 'Reference' => 'CO-4', 'Next step' => 'File the reply', 'Closed on' => '20-09-2026']],
                 ],
                 'notice' => [
                     'subject' => 'Eight weeks',
@@ -625,10 +625,10 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_COMMITTEE,
                 'sort' => 60,
                 'cards' => [
-                    ['title' => 'Harbour fund', 'fields' => ['Status' => 'Asking', 'Applicant' => 'Harbour trust', 'Kind' => 'Grant', 'Amount' => '40000', 'Next step' => 'Ask for the budget']],
-                    ['title' => 'Lane bursary', 'fields' => ['Status' => 'Reading', 'Applicant' => 'Lane school', 'Kind' => 'Award', 'Amount' => '8000', 'Next step' => 'Read the statement']],
-                    ['title' => 'Northwind facility', 'fields' => ['Status' => 'In', 'Applicant' => 'Northwind', 'Kind' => 'Credit', 'Amount' => '120000', 'Next step' => 'Check the security']],
-                    ['title' => 'Osteria award', 'fields' => ['Status' => 'Decided', 'Applicant' => 'Osteria', 'Kind' => 'Award', 'Amount' => '5000', 'Next step' => 'Write the letter', 'Decided on' => '03-10-2026']],
+                    ['title' => 'Barton fund', 'fields' => ['Status' => 'Asking', 'Applicant' => 'Barton trust', 'Kind' => 'Grant', 'Amount' => '40000', 'Next step' => 'Ask for the budget']],
+                    ['title' => 'Kingston bursary', 'fields' => ['Status' => 'Reading', 'Applicant' => 'Kingston school', 'Kind' => 'Award', 'Amount' => '8000', 'Next step' => 'Read the statement']],
+                    ['title' => 'Campbell facility', 'fields' => ['Status' => 'In', 'Applicant' => 'Campbell', 'Kind' => 'Credit', 'Amount' => '120000', 'Next step' => 'Check the security']],
+                    ['title' => 'Walsh award', 'fields' => ['Status' => 'Decided', 'Applicant' => 'Walsh', 'Kind' => 'Award', 'Amount' => '5000', 'Next step' => 'Write the letter', 'Decided on' => '03-10-2026']],
                 ],
                 'notice' => [
                     'subject' => 'Thursday',
@@ -650,7 +650,7 @@ final class ApplicationBuilder
                 'sort' => 80,
                 'cards' => [
                     ['title' => 'Slip, west stair', 'fields' => ['Status' => 'Investigating', 'Place' => 'West stair', 'Kind' => 'Injury', 'Reported by' => 'Porter', 'Next step' => 'Speak to the witness']],
-                    ['title' => 'Near miss, yard', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Kind' => 'Near miss', 'Reported by' => 'Holm', 'Next step' => 'Write it up']],
+                    ['title' => 'Near miss, yard', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Kind' => 'Near miss', 'Reported by' => 'Reid', 'Next step' => 'Write the note']],
                     ['title' => 'Flood, store', 'fields' => ['Status' => 'Actions', 'Place' => 'Store', 'Kind' => 'Damage', 'Reported by' => 'Estate', 'Next step' => 'Dry the stock']],
                     ['title' => 'Cut, kitchen', 'fields' => ['Status' => 'Closed', 'Place' => 'Kitchen', 'Kind' => 'Injury', 'Reported by' => 'Chef', 'Next step' => 'File the note', 'Closed on' => '07-10-2026']],
                 ],
@@ -663,20 +663,20 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_CANDIDATES,
                 'sort' => 90,
                 'cards' => [
-                    ['title' => 'A. Holm', 'fields' => ['Status' => 'Shortlist', 'Client' => 'Northwind', 'Role' => 'Finance lead', 'Next step' => 'Arrange the meeting']],
-                    ['title' => 'J. Lane', 'fields' => ['Status' => 'Longlist', 'Client' => 'Northwind', 'Role' => 'Finance lead', 'Next step' => 'Read the brief']],
-                    ['title' => 'M. Osteria', 'fields' => ['Status' => 'Met', 'Client' => 'Harbour', 'Role' => 'Operations', 'Next step' => 'Their note is due']],
-                    ['title' => 'S. Quay', 'fields' => ['Status' => 'Offer', 'Client' => 'Lane', 'Role' => 'Counsel', 'Next step' => 'Wait on the offer']],
+                    ['title' => 'A. Reid', 'fields' => ['Status' => 'Shortlist', 'Client' => 'Campbell', 'Role' => 'Finance lead', 'Next step' => 'Arrange the meeting']],
+                    ['title' => 'J. Nguyen', 'fields' => ['Status' => 'Longlist', 'Client' => 'Campbell', 'Role' => 'Finance lead', 'Next step' => 'Read the brief']],
+                    ['title' => 'M. Walsh', 'fields' => ['Status' => 'Met', 'Client' => 'Barton', 'Role' => 'Operations', 'Next step' => 'Their note is due']],
+                    ['title' => 'S. Campbell', 'fields' => ['Status' => 'Offer', 'Client' => 'Nguyen', 'Role' => 'Counsel', 'Next step' => 'Wait on the offer']],
                 ],
             ],
             'contracts' => [
                 'blueprint' => self::BLUEPRINT_CONTRACTS,
                 'sort' => 100,
                 'cards' => [
-                    ['title' => 'Holm services', 'fields' => ['Status' => 'Review', 'Client' => 'Holm', 'Kind' => 'Customer', 'Reference' => 'K-100', 'Next step' => 'Mark the liability cap']],
-                    ['title' => 'Lane supply', 'fields' => ['Status' => 'With the business', 'Client' => 'Lane', 'Kind' => 'Supplier', 'Reference' => 'K-88', 'Next step' => 'They have the draft']],
-                    ['title' => 'Northwind NDA', 'fields' => ['Status' => 'In', 'Client' => 'Northwind', 'Kind' => 'NDA', 'Reference' => 'K-110', 'Next step' => 'Read it']],
-                    ['title' => 'Osteria employment', 'fields' => ['Status' => 'Signed', 'Client' => 'Osteria', 'Kind' => 'Employment', 'Reference' => 'K-74', 'Next step' => 'File the copy', 'Signed on' => '15-09-2026']],
+                    ['title' => 'Reid services', 'fields' => ['Status' => 'Review', 'Client' => 'Reid', 'Kind' => 'Customer', 'Reference' => 'K-100', 'Next step' => 'Mark the liability cap']],
+                    ['title' => 'Nguyen supply', 'fields' => ['Status' => 'With the business', 'Client' => 'Nguyen', 'Kind' => 'Supplier', 'Reference' => 'K-88', 'Next step' => 'They have the draft']],
+                    ['title' => 'Campbell NDA', 'fields' => ['Status' => 'In', 'Client' => 'Campbell', 'Kind' => 'NDA', 'Reference' => 'K-110', 'Next step' => 'Read it']],
+                    ['title' => 'Walsh employment', 'fields' => ['Status' => 'Signed', 'Client' => 'Walsh', 'Kind' => 'Employment', 'Reference' => 'K-74', 'Next step' => 'File the copy', 'Signed on' => '15-09-2026']],
                 ],
             ],
         ];

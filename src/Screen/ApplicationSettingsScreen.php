@@ -407,7 +407,7 @@ final class ApplicationSettingsScreen
                 . '<div>To ' . self::ruleSelect($prefix . '[recipient]', Rules::recipients(), (string) ($step['recipient'] ?? Rules::TO_OWNER), 'rule-recipient') . '</div>'
                 . '<div class="rule-recipient-user">Person ' . self::ruleSelect($prefix . '[user_id]', $people, (string) (int) ($step['user_id'] ?? 0)) . '</div>'
                 . '<div class="rule-recipient-group">Group ' . self::ruleSelect($prefix . '[group_id]', $groups, (string) (int) ($step['group_id'] ?? 0)) . '</div>'
-                . '<div class="rule-recipient-address">Address ' . self::ruleText($prefix . '[address]', (string) ($step['address'] ?? ''), 'name@example.com') . '</div>'
+                . '<div class="rule-recipient-address">Address ' . self::ruleText($prefix . '[address]', (string) ($step['address'] ?? ''), 'records@health.example.com') . '</div>'
                 . '<div>Subject ' . self::ruleText($prefix . '[subject]', (string) ($step['subject'] ?? ''), 'ITEM_TITLE') . '</div>'
                 . '<div>Message ' . self::ruleArea($prefix . '[body]', (string) ($step['body'] ?? '')) . '</div>'
                 . '</div>';

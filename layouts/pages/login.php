@@ -12,7 +12,7 @@ use Adlexone\Theme\Theme;
  */
 $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
     ? (string) SET_HOME_LEAD
-    : 'The work, arranged the way your team actually does it.';
+    : 'This site keeps the applications, records, and rules for the work.';
 ?>
 <!doctype html>
 <html lang="en">
@@ -87,7 +87,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                             <?php elseif ($showOauth): ?>
                                 Sign in with OAuth using your organisation account.
                             <?php else: ?>
-                                Choose how you want to sign in to Inlay.
+                                Choose how to sign in.
                             <?php endif; ?>
                         </p>
 

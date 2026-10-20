@@ -108,7 +108,7 @@ final class SiteSettingsScreen
                 $settings = array_merge($existing, $posted);
                 $settings['SET_DEFAULT_THEME'] = defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'inlay-stone';
                 $settings['SET_DEFAULT_LANGUAGE'] = defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English';
-                $settings['SET_HOME_LEAD'] = trim((string) ($posted['SET_HOME_LEAD'] ?? $existing['SET_HOME_LEAD'] ?? 'Create the records, rules, and screens your organisation works with every day.'));
+                $settings['SET_HOME_LEAD'] = trim((string) ($posted['SET_HOME_LEAD'] ?? $existing['SET_HOME_LEAD'] ?? 'This site keeps the applications, records, and rules for the work.'));
                 SharedMethods::saveSettingsToJson($path, $settings);
                 break;
             case 'advanced_settings' :
@@ -218,7 +218,7 @@ final class SiteSettingsScreen
             $groupValues[] = $row['group_id'];
             $groupLabels[] = $row['group_name'];
         }
-        $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'The work, arranged the way your team actually does it.';
+        $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'This site keeps the applications, records, and rules for the work.';
         $fields = [
             'Records per page' => Form::text('SET_ITEMS_PAGE', SET_ITEMS_PAGE),
             'Date format' => Form::select(
@@ -229,7 +229,7 @@ final class SiteSettingsScreen
             ),
             'Home application' => Form::select('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION),
             'Group for new accounts' => Form::select('USER_REG_ACTION', $groupValues, $groupLabels, USER_REG_ACTION),
-            'Login sentence' => Form::textarea('SET_HOME_LEAD', $homeLead, '3'),
+            'Sign-in sentence' => Form::textarea('SET_HOME_LEAD', $homeLead, '3'),
         ];
         Page::current()->setBody(Form::form(
             'Site',

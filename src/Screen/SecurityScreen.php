@@ -414,8 +414,8 @@ final class SecurityScreen
             'primary' => ['href' => SEC_BASE_URL . '&option=new_user', 'label' => 'Add person'],
             'empty' => TXT_115,
             'emptyIllustration' => 'empty-people',
-            'emptyTitle' => 'No one here yet',
-            'emptyCopy' => 'Add the people who use this.',
+            'emptyTitle' => 'No users yet',
+            'emptyCopy' => 'Add a person when they need access.',
             'noMatch' => TXT_689,
             'groups' => [['rows' => $rows]],
         ]);
@@ -437,7 +437,7 @@ final class SecurityScreen
             'empty' => TXT_115,
             'emptyIllustration' => 'empty-people',
             'emptyTitle' => 'No groups yet',
-            'emptyCopy' => 'A group is how you share a record.',
+            'emptyCopy' => 'A group is the set of people who share a record.',
             'noMatch' => TXT_689,
             'groups' => [['rows' => $rows]],
         ]);
