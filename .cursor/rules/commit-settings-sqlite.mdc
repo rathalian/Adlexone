@@ -1,13 +1,13 @@
 ---
-description: Always include live settings and SQLite DB in commits and pushes
+description: Live config, attachments, and SQLite stay on main
 alwaysApply: true
 ---
 
-# Commit settings and SQLite
+# Live data stays on main
 
-When committing or pushing, **always stage and include**:
+`config/*.json`, `storage/attachments/`, and `storage/database/adlexone.sqlite` are Adam's live data. They belong to the **main** checkout.
 
-- `config/adlexone_settings.json` (and other live `config/*.json` that are tracked)
-- `storage/database/adlexone.sqlite`
-
-Do not leave these unstaged as “local only.” Adam wants the live settings and database in git so environments stay in sync.
+- On **main**, stage and commit those tracked files with related work so other environments stay in sync.
+- On any other branch, do not stage, commit, or replace them. A test must not carry its own copy of the database, settings, or attachments.
+- Test from a linked worktree. Boot uses the main checkout's config, attachments, and SQLite, so the test writes into the data already on main.
+- Do not `git checkout` another branch in the main working tree. That would swap the live files for the branch snapshot.

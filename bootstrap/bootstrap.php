@@ -39,13 +39,17 @@ use Adlexone\Http\Router;
 use Adlexone\support\RenderViews;
 use Adlexone\support\SharedMethods;
 /**
- * Define system paths and constants
+ * Define system paths and constants.
+ * Code under test stays in this checkout. Live config, attachments, and
+ * SQLite stay in the main checkout — see bootstrap/live_data.php.
  */
+require_once __DIR__ . '/live_data.php';
 $baseDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR;
+$dataDir = adlexone_live_data_directory(rtrim($baseDir, '/\\')) . DIRECTORY_SEPARATOR;
 define('SET_INSTALL_PATH', $baseDir);
-define('SET_CONFIGURATION_PATH', $baseDir . 'config' . DIRECTORY_SEPARATOR);
-define('SET_ATTACHMENTS_PATH', $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
-define('DSN', 'sqlite:' . $baseDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
+define('SET_CONFIGURATION_PATH', $dataDir . 'config' . DIRECTORY_SEPARATOR);
+define('SET_ATTACHMENTS_PATH', $dataDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
+define('DSN', 'sqlite:' . $dataDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
 
 // Shared platform schema (app packs must not own tables).
 \Adlexone\Database\SchemaMigrator::migrate();
