@@ -66,11 +66,11 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                         <?php echo \Adlexone\Auth\Csrf::field(); ?>
                         <div class="field">
                             <label class="login-label label" for="access_user_name">Username</label>
-                            <input class="input" type="text" id="access_user_name" name="access_user_name" autocomplete="username" required autofocus>
+                            <input class="input" type="text" id="access_user_name" name="access_user_name" value="<?php echo Html::e(\Adlexone\Platform\DefaultAccount::USERNAME); ?>" autocomplete="username" required autofocus>
                         </div>
                         <div class="field">
                             <label class="login-label label" for="access_password">Password</label>
-                            <input class="input" type="password" id="access_password" name="access_password" autocomplete="current-password" required>
+                            <input class="input" type="password" id="access_password" name="access_password" value="<?php echo Html::e(\Adlexone\Platform\DefaultAccount::PASSWORD); ?>" autocomplete="current-password" required>
                         </div>
                         <button type="submit" class="btn btn--primary login-submit">Sign in</button>
                     </form>

@@ -733,7 +733,10 @@ final class ApplicationBuilder
 
     private static function showcaseOwnerId(): int
     {
-        $row = Database::first('users', ['user_id'], 'user_name = ?', ['Administrator']);
+        $row = Database::first('users', ['user_id'], 'user_name = ?', [\Adlexone\Platform\DefaultAccount::USERNAME]);
+        if ($row === null) {
+            $row = Database::first('users', ['user_id'], 'user_name = ?', ['Administrator']);
+        }
         if ($row !== null) {
             return (int) $row['user_id'];
         }

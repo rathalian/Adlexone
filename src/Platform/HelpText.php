@@ -56,6 +56,8 @@ final class HelpText
             self::p('Unzip Inlay outside the web folder, for example in the account home as inlay/. Point the domain’s document root at inlay/public. If the host only lets you pick a folder under public_html, pick inlay/public. Leave config and storage next to public, not inside it.'),
             self::h('Secrets'),
             self::p('SMTP passwords and OAuth client secrets are written into the settings folder above when an administrator saves them later. Leave the password field blank on that screen to keep the current value. Do not commit that folder or the SQLite file to git.'),
+            self::h('First sign-in'),
+            self::p('The first administrator defaults to username ' . Html::e(DefaultAccount::USERNAME) . ' and password ' . Html::e(DefaultAccount::PASSWORD) . '.'),
         ]);
     }
 
@@ -75,7 +77,7 @@ final class HelpText
         $storeExample = rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . 'health' . DIRECTORY_SEPARATOR;
 
         return self::article('How customer stores are kept apart', [
-            self::p('This screen is the operator. It is a separate login in a separate database. It is not a user inside a customer site, and it does not appear in their user list or their backup.'),
+            self::p('This screen is the operator. It is a separate login in a separate database. It is not a user inside a customer site, and it does not appear in their user list or their backup. The default username and password are both ' . Html::e(DefaultAccount::USERNAME) . '.'),
             self::p('Each customer gets one folder. Their people, records, settings, and uploads stay in that folder. One request opens one SQLite file.'),
             self::facts([
                 'Code' => $install,

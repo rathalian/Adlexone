@@ -155,8 +155,8 @@ final class OperatorScreen
         if (($username === '') !== ($password === '')) {
             throw new \RuntimeException('To create the first admin now, enter both a username and a password. Leave both blank and the customer completes setup on their own hostname.');
         }
-        if ($password !== '' && strlen($password) < 8) {
-            throw new \RuntimeException('The admin password must be at least 8 characters.');
+        if ($password !== '') {
+            DefaultAccount::assertPassword($password, 'admin password');
         }
         if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $username) !== 1 && $username !== '') {
             throw new \RuntimeException('The admin username must be 2–40 characters: letters, numbers, dots, underscores, or hyphens.');
@@ -200,9 +200,7 @@ final class OperatorScreen
         if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $username) !== 1) {
             throw new \RuntimeException('The operator username must be 2–40 characters: letters, numbers, dots, underscores, or hyphens.');
         }
-        if (strlen($password) < 8) {
-            throw new \RuntimeException('Use a password of at least 8 characters.');
-        }
+        DefaultAccount::assertPassword($password);
         if (!hash_equals($password, $confirm)) {
             throw new \RuntimeException('The two passwords do not match.');
         }
@@ -268,8 +266,22 @@ final class OperatorScreen
         $html .= self::field('Slug', 'slug', 'text', '', true, 'Folder name. Lowercase letters, numbers, and hyphens. For example, health.');
         $html .= self::field('Hostname', 'host', 'text', '', true, 'The address their browser uses. For example, health.example.com. Point DNS at this server. Do not use the operator hostname.');
         $html .= self::field('Admin email', 'admin_email', 'email', '', false, 'Stored on the operator list so you know who to contact. Optional.');
-        $html .= self::field('Admin username', 'admin_user', 'text', '', false, 'Optional. Leave blank and the customer chooses the first account when they open their hostname.');
-        $html .= self::field('Admin password', 'admin_password', 'password', '', false, 'Optional. At least 8 characters, and only if you also set a username. Stored as a hash in their SQLite file.');
+        $html .= self::field(
+            'Admin username',
+            'admin_user',
+            'text',
+            DefaultAccount::USERNAME,
+            false,
+            'The customer application login. Leave username and password blank and they choose the first account on their hostname.'
+        );
+        $html .= self::field(
+            'Admin password',
+            'admin_password',
+            'password',
+            DefaultAccount::PASSWORD,
+            false,
+            'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in their SQLite file.'
+        );
         $html .= '<button type="submit" class="btn btn--primary login-submit">Create the store</button>';
         $html .= '</form>';
 
@@ -325,9 +337,29 @@ final class OperatorScreen
         $html = '<form method="post" action="" class="login-form">';
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="' . Html::e($action) . '">';
-        $html .= self::field('Operator username', 'user_name', 'text', '', true, 'Only you use this. It is not created inside customer sites.');
-        $html .= self::field('Password', 'password', 'password', '', true, 'At least 8 characters. Stored as a hash in the operator database.');
-        $html .= self::field('Confirm password', 'password_confirm', 'password', '', true);
+        $html .= self::field(
+            'Operator username',
+            'user_name',
+            'text',
+            DefaultAccount::postedUsername($_POST['user_name'] ?? null),
+            true,
+            'Only you use this. It is not created inside customer sites. The default is ' . DefaultAccount::USERNAME . '.'
+        );
+        $html .= self::field(
+            'Password',
+            'password',
+            'password',
+            DefaultAccount::postedPassword($_POST['password'] ?? null),
+            true,
+            'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in the operator database.'
+        );
+        $html .= self::field(
+            'Confirm password',
+            'password_confirm',
+            'password',
+            DefaultAccount::postedPassword($_POST['password_confirm'] ?? null),
+            true
+        );
         $html .= '<button type="submit" class="btn btn--primary login-submit">' . Html::e($button) . '</button>';
         $html .= '</form>';
 
@@ -339,8 +371,8 @@ final class OperatorScreen
         $html = '<form method="post" action="" class="login-form">';
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="login">';
-        $html .= self::field('Username', 'user_name', 'text', '', true);
-        $html .= self::field('Password', 'password', 'password', '', true);
+        $html .= self::field('Username', 'user_name', 'text', DefaultAccount::USERNAME, true);
+        $html .= self::field('Password', 'password', 'password', DefaultAccount::PASSWORD, true);
         $html .= '<button type="submit" class="btn btn--primary login-submit">Sign in</button>';
         $html .= '</form>';
 

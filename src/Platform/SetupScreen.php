@@ -72,9 +72,7 @@ final class SetupScreen
         if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $username) !== 1) {
             throw new \RuntimeException('The username must be 2–40 characters: letters, numbers, dots, underscores, or hyphens.');
         }
-        if (strlen($password) < 8) {
-            throw new \RuntimeException('Use a password of at least 8 characters.');
-        }
+        DefaultAccount::assertPassword($password);
         if (!hash_equals($password, $confirm)) {
             throw new \RuntimeException('The two passwords do not match.');
         }
@@ -105,9 +103,29 @@ final class SetupScreen
         $html .= self::field('Your name', 'first_name', 'text', (string) ($_POST['first_name'] ?? ''), false);
         $html .= self::field('Last name', 'last_name', 'text', (string) ($_POST['last_name'] ?? ''), false);
         $html .= self::field('Email', 'email', 'email', (string) ($_POST['email'] ?? ''), false);
-        $html .= self::field('Username', 'user_name', 'text', (string) ($_POST['user_name'] ?? ''), true, 'This is the first administrator. The account can sign in and manage the site.');
-        $html .= self::field('Password', 'password', 'password', '', true, 'At least 8 characters. It is stored as a hash in the SQLite file, not in the settings JSON.');
-        $html .= self::field('Confirm password', 'password_confirm', 'password', '', true);
+        $html .= self::field(
+            'Username',
+            'user_name',
+            'text',
+            DefaultAccount::postedUsername($_POST['user_name'] ?? null),
+            true,
+            'The first administrator. The default is ' . DefaultAccount::USERNAME . '.'
+        );
+        $html .= self::field(
+            'Password',
+            'password',
+            'password',
+            DefaultAccount::postedPassword($_POST['password'] ?? null),
+            true,
+            'The default is ' . DefaultAccount::PASSWORD . '. It is stored as a hash in the SQLite file, not in the settings JSON.'
+        );
+        $html .= self::field(
+            'Confirm password',
+            'password_confirm',
+            'password',
+            DefaultAccount::postedPassword($_POST['password_confirm'] ?? null),
+            true
+        );
         $html .= self::field(
             'Public URL',
             'public_url',
