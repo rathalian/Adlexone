@@ -562,7 +562,12 @@ final class ApplicationBuilder
         $blueprints = self::blueprints();
         foreach (self::showcase() as $slug => $spec) {
             $mark = (string) ($blueprints[$spec['blueprint']]['mark'] ?? '');
-            if (self::slugExists($slug) && $mark !== '' && !self::applicationHasMark($slug, $mark)) {
+            if (
+                self::slugExists($slug)
+                && $mark !== ''
+                && !self::recordTypeWasChosen($slug)
+                && !self::applicationHasMark($slug, $mark)
+            ) {
                 self::dropSlug($slug);
             }
         }
@@ -1047,6 +1052,21 @@ final class ApplicationBuilder
     private static function slugExists(string $slug): bool
     {
         return $slug !== '' && Database::first('applications', ['application_id'], 'slug = ?', [$slug]) !== null;
+    }
+
+    /**
+     * The details page has chosen this application's record type.
+     * The showcase installer leaves that choice in place.
+     */
+    private static function recordTypeWasChosen(string $slug): bool
+    {
+        $row = Database::first('applications', ['settings_json'], 'slug = ?', [$slug]);
+        if ($row === null) {
+            return false;
+        }
+        $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
+
+        return is_array($settings) && (string) ($settings['record_type_chosen'] ?? '') === '1';
     }
 
     private static function applicationHasMark(string $slug, string $mark): bool

@@ -77,12 +77,7 @@ final class RecordScreens
             $fallback = ApplicationSettings::defaultItemTypeId($slug);
             $typeId = ctype_digit($fallback) ? (int) $fallback : 0;
         }
-        $fields = RecordQuery::fields($typeId);
         $html = [];
-        if (in_array($capability, [ScreenCatalog::COUNTS, ScreenCatalog::DIARY, ScreenCatalog::PARTIES, ScreenCatalog::STEPS, ScreenCatalog::AGE], true)) {
-            $html['Field'] = self::fieldSelect($fields, (int) ($config['field_id'] ?? 0))
-                . '<p class="form-help">Automatic uses Status, a due date, the party, or Next step. Save the screen first if this list is empty.</p>';
-        }
         if (in_array($capability, [ScreenCatalog::DIARY, ScreenCatalog::STEPS, ScreenCatalog::AGE], true)) {
             $html['Open statuses'] = Form::text('open_statuses', implode(', ', RecordQuery::strings($config['open_statuses'] ?? [])))
                 . '<p class="form-help">Leave blank to keep every status except the last one. Separate values with commas.</p>';
@@ -92,10 +87,6 @@ final class RecordScreens
                 . '<p class="form-help">How many days of log lines to show. Blank is 30.</p>';
             $roles = Rules::logRoles();
             $html['Log lines'] = Form::select('role_id', array_map('strval', array_keys($roles)), array_values($roles), (string) ($config['role_id'] ?? '0'));
-        }
-        if (in_array($capability, [ScreenCatalog::REGISTER, ScreenCatalog::INTAKE], true)) {
-            $html['Fields'] = self::fieldChecks($fields, RecordQuery::ints($config['field_ids'] ?? []))
-                . '<p class="form-help">Leave them all blank and the screen chooses the usual fields. Required fields stay on Intake.</p>';
         }
         if ($capability === ScreenCatalog::INTAKE) {
             $status = WorkScreen::workStatusField($typeId);
@@ -122,17 +113,7 @@ final class RecordScreens
             $fallback = ApplicationSettings::defaultItemTypeId($slug);
             $typeId = ctype_digit($fallback) ? (int) $fallback : 0;
         }
-        $known = [];
-        foreach (RecordQuery::fields($typeId) as $field) {
-            $known[$field['id']] = $field;
-        }
         $config = [];
-        if (in_array($capability, [ScreenCatalog::COUNTS, ScreenCatalog::DIARY, ScreenCatalog::PARTIES, ScreenCatalog::STEPS, ScreenCatalog::AGE], true)) {
-            $fieldId = (int) ($_POST['field_id'] ?? 0);
-            if ($fieldId > 0 && isset($known[$fieldId])) {
-                $config['field_id'] = (string) $fieldId;
-            }
-        }
         if (in_array($capability, [ScreenCatalog::DIARY, ScreenCatalog::STEPS, ScreenCatalog::AGE], true)) {
             $open = RecordQuery::strings((string) ($_POST['open_statuses'] ?? ''));
             if ($open !== []) {
@@ -147,21 +128,6 @@ final class RecordScreens
             $role = (int) ($_POST['role_id'] ?? 0);
             if ($role > 0 && array_key_exists($role, Rules::logRoles())) {
                 $config['role_id'] = (string) $role;
-            }
-        }
-        if (in_array($capability, [ScreenCatalog::REGISTER, ScreenCatalog::INTAKE], true)) {
-            $posted = $_POST['field_ids'] ?? [];
-            $ids = [];
-            if (is_array($posted)) {
-                foreach ($posted as $id) {
-                    $id = (int) $id;
-                    if (isset($known[$id])) {
-                        $ids[] = $id;
-                    }
-                }
-            }
-            if ($ids !== []) {
-                $config['field_ids'] = $ids;
             }
         }
         if ($capability === ScreenCatalog::INTAKE) {
@@ -186,7 +152,7 @@ final class RecordScreens
         }
         $field = RecordQuery::chosen($loaded['fields'], $config, 'menu');
         if ($field === null) {
-            self::missing('Add a menu field, or choose one on this link.');
+            self::missing('Add a menu field on the record type.');
             return;
         }
         $focus = (string) ($_GET['focus'] ?? '');
@@ -321,7 +287,7 @@ final class RecordScreens
         }
         $field = RecordQuery::chosen($loaded['fields'], $config, 'step');
         if ($field === null || !in_array($field['type'], [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA], true)) {
-            self::missing('Choose a text field for the next step on this link.');
+            self::missing('Add a text field for the next step on the record type.');
             return;
         }
         $open = self::openSet($loaded, $config);
@@ -412,7 +378,7 @@ final class RecordScreens
         }
         $field = RecordQuery::chosen($loaded['fields'], $config, 'date');
         if ($field === null || !in_array($field['type'], [FieldTypes::DATE, FieldTypes::DATETIME], true)) {
-            self::missing('Add a date field, or choose one on this link.');
+            self::missing('Add a date field on the record type.');
             return;
         }
         $open = self::openSet($loaded, $config);
@@ -468,7 +434,7 @@ final class RecordScreens
         }
         $field = RecordQuery::chosen($loaded['fields'], $config, 'party');
         if ($field === null) {
-            self::missing('Add a text field for the party, or choose one on this link.');
+            self::missing('Add a text field for the party on the record type.');
             return;
         }
         $values = RecordQuery::values($loaded['ids'], $field['id']);
@@ -1305,41 +1271,6 @@ final class RecordScreens
     {
         header('Location: ' . self::base());
         exit;
-    }
-
-    /**
-     * @param list<array{id: int, label: string, type: string}> $fields
-     */
-    private static function fieldSelect(array $fields, int $selected): string
-    {
-        $values = [''];
-        $labels = ['Automatic'];
-        foreach ($fields as $field) {
-            $values[] = (string) $field['id'];
-            $labels[] = $field['label'] . ' (' . FieldTypes::label($field['type']) . ')';
-        }
-
-        return Form::select('field_id', $values, $labels, $selected > 0 ? (string) $selected : '');
-    }
-
-    /**
-     * @param list<array{id: int, label: string, type: string}> $fields
-     * @param list<int> $selected
-     */
-    private static function fieldChecks(array $fields, array $selected): string
-    {
-        if ($fields === []) {
-            return '<p class="form-help">Save the record type first. The fields on that type are listed here.</p>';
-        }
-        $html = '<div class="group-security-list">';
-        foreach ($fields as $field) {
-            $id = (string) $field['id'];
-            $html .= '<div class="group-security-item">'
-                . Form::checkbox('field_ids[]', $id, in_array($field['id'], $selected, true) ? $id : '', $field['label'] . ' (' . FieldTypes::label($field['type']) . ')')
-                . '</div>';
-        }
-
-        return $html . '</div>';
     }
 
     /**

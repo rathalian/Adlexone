@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
-use Adlexone\Auth\Permission;
 use Adlexone\Screen\RecordScreens;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
@@ -356,11 +355,6 @@ final class Capabilities
             $href = \Adlexone\Http\Router::applicationUrl((string) $app['slug'], (int) $link['nav_id']);
             $icon = self::icon((string) $link['capability'], (string) $link['icon']);
             $html .= Blocks::link($href, (string) $link['label'], $icon);
-        }
-        if (Access::can(Permission::ADMIN_ITEMS)) {
-            $scope = rawurlencode((string) $app['slug']);
-            $html .= Blocks::link('?manage=fields&application=' . $scope, 'Fields', 'ic-manage-fields');
-            $html .= Blocks::link('?manage=item-types&application=' . $scope, 'Record types', 'ic-manage-item-types');
         }
         RenderNavigation::applySectionNav((string) $app['name'], $html);
     }

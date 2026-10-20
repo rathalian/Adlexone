@@ -196,6 +196,47 @@ final class ApplicationStore
         ], 'application_id = ?', [$id]);
     }
 
+    /**
+     * The record type chosen on the application details page.
+     * Screens that keep a record type use this one.
+     */
+    public static function assignRecordType(int $applicationId, string $typeId): void
+    {
+        self::ensureReady();
+        $app = self::find($applicationId);
+        if ($app === null) {
+            return;
+        }
+        $typeId = trim($typeId);
+        $settings = is_array($app['settings']) ? $app['settings'] : [];
+        $settings['default_item_type_id'] = $typeId;
+        $settings['record_type_chosen'] = '1';
+        ApplicationSettings::put((string) $app['slug'], $settings);
+
+        $catalog = Capabilities::catalog();
+        foreach (self::navigation($applicationId) as $link) {
+            $capability = (string) $link['capability'];
+            $kind = (string) ($catalog[ScreenCatalog::resolve($capability)]['config'] ?? 'none');
+            if (!in_array($kind, ['item_type', 'field', 'activity', 'register', 'intake'], true)) {
+                continue;
+            }
+            $config = is_array($link['config']) ? $link['config'] : [];
+            if ($typeId === '') {
+                unset($config['item_type_id']);
+            } else {
+                $config['item_type_id'] = $typeId;
+            }
+            self::updateNav(
+                (int) $link['nav_id'],
+                (string) $link['label'],
+                $capability,
+                (string) $link['permission'],
+                (string) $link['icon'],
+                $config
+            );
+        }
+    }
+
     public static function deleteApplication(int $id): void
     {
         self::ensureReady();

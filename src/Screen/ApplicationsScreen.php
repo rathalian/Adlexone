@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
 use Adlexone\Screen\RecordScreens;
@@ -186,10 +187,15 @@ final class ApplicationsScreen
         }
 
         $permission = (string) ($app['permission'] ?? Permission::APP_ACCESS);
+        $recordType = '';
+        if (is_array($app['settings'] ?? null)) {
+            $recordType = trim((string) ($app['settings']['default_item_type_id'] ?? ''));
+        }
         $fields = [
             'Name' => Form::text('name', Html::e((string) ($app['name'] ?? ''))),
             'Slug' => Form::text('slug', Html::e((string) ($app['slug'] ?? '')), 'complaints'),
             'Description' => Form::text('hint', Html::e((string) ($app['hint'] ?? ''))),
+            'Record type' => self::recordTypeSelect($recordType),
             'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-launch')),
             'Who can open it' => self::permissionSelect('permission', $permission, false),
             'Menu' => Form::checkbox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'Show in the Applications menu'),
@@ -210,6 +216,11 @@ final class ApplicationsScreen
         $slug = self::slugify((string) ($_POST['slug'] ?? ''), $name);
         $permission = (string) ($_POST['permission'] ?? '');
         $icon = (string) ($_POST['icon'] ?? 'ic-launch');
+        $recordType = self::postedRecordType();
+        if ($recordType === false) {
+            View::respond('Choose a record type from the list.', Blocks::link(APPLICATIONS_MANAGE_URL . ($id > 0 ? '&option=edit&application_id=' . $id : '&option=new'), 'Back', 'URL'));
+            return;
+        }
         if ($name === '' || $slug === '' || !isset(Permission::catalog()[$permission]) || !in_array($icon, Capabilities::icons(), true)) {
             View::respond('Enter a name and choose who can open the application.', Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
             return;
@@ -237,6 +248,7 @@ final class ApplicationsScreen
                 $fields['permission'] = Permission::appUse($slug);
             }
             ApplicationStore::updateApplication($id, $fields);
+            ApplicationStore::assignRecordType($id, $recordType);
             header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id);
             exit;
         }
@@ -246,6 +258,10 @@ final class ApplicationsScreen
         }
         $fields['sort_order'] = $max + 10;
         $fields['entry_mode'] = 'shell';
+        $fields['settings_json'] = json_encode([
+            'default_item_type_id' => $recordType,
+            'record_type_chosen' => '1',
+        ], JSON_UNESCAPED_SLASHES);
         $newId = ApplicationStore::insertApplication($fields);
         header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $newId);
         exit;
@@ -324,7 +340,6 @@ final class ApplicationsScreen
             'Screen' => Form::select('capability', $keys, $labels, $capability),
             'Who can see it' => self::permissionSelect('permission', (string) ($link['permission'] ?? ''), true),
             'Icon' => self::iconSelect('icon', (string) ($link['icon'] ?? ''), true),
-            'Item type' => self::itemTypeSelect((string) ($config['item_type_id'] ?? '')),
             'Saved search' => self::savedSearchSelect((string) ($config['search_id'] ?? ''), ApplicationStore::scopeKey($app)),
         ];
         $fields += RecordScreens::navFields($capability, $config, ApplicationStore::scopeKey($app));
@@ -344,6 +359,7 @@ final class ApplicationsScreen
     public static function saveNav(int $navId): void
     {
         $applicationId = (int) ($_POST['application_id'] ?? 0);
+        $existing = null;
         if ($navId > 0) {
             $existing = ApplicationStore::findNav($navId);
             if ($existing === null) {
@@ -373,8 +389,17 @@ final class ApplicationsScreen
         $config = [];
         $kind = (string) ($catalog[$capability]['config'] ?? 'none');
         if (in_array($kind, ['item_type', 'field', 'activity', 'register', 'intake'], true)) {
-            $config['item_type_id'] = trim((string) ($_POST['item_type_id'] ?? ''));
-            $config += RecordScreens::postedConfig($capability, $config['item_type_id'], ApplicationStore::scopeKey($app));
+            $typeId = ApplicationSettings::defaultItemTypeId((string) $app['slug']);
+            if ($typeId !== '') {
+                $config['item_type_id'] = $typeId;
+            }
+            $config += RecordScreens::postedConfig($capability, $typeId, ApplicationStore::scopeKey($app));
+        }
+        $previous = is_array($existing) && is_array($existing['config'] ?? null) ? $existing['config'] : [];
+        foreach (['field_id', 'field_ids'] as $key) {
+            if (array_key_exists($key, $previous) && !array_key_exists($key, $config)) {
+                $config[$key] = $previous[$key];
+            }
         }
         if ($catalog[$capability]['config'] === 'saved_search') {
             $searchId = trim((string) ($_POST['search_id'] ?? ''));
@@ -436,16 +461,34 @@ final class ApplicationsScreen
         return $html . '</div>';
     }
 
-    public static function itemTypeSelect(string $selected): string
+    public static function recordTypeSelect(string $selected): string
     {
         $values = [''];
-        $labels = ['All item types'];
-        $rows = Database::select('item_types', ['item_type_id', 'item_type_name'], 'ORDER BY item_type_name ASC');
-        foreach ($rows as $row) {
+        $labels = ['None'];
+        foreach (Database::select('item_types', ['item_type_id', 'item_type_name'], '', [], 'item_type_name ASC') as $row) {
             $values[] = (string) $row['item_type_id'];
-            $labels[] = Html::e((string) $row['item_type_name']);
+            $labels[] = (string) $row['item_type_name'];
         }
-        return Form::select('item_type_id', $values, $labels, $selected);
+
+        return Form::select('default_item_type_id', $values, $labels, $selected)
+            . '<p class="form-help">Records in this application use this record type.</p>';
+    }
+
+    /**
+     * @return string|false Empty string when none is chosen. False when the posted id is not a record type.
+     */
+    public static function postedRecordType(): string|false
+    {
+        $typeId = trim((string) ($_POST['default_item_type_id'] ?? ''));
+        if ($typeId === '') {
+            return '';
+        }
+        if (!ctype_digit($typeId)) {
+            return false;
+        }
+        $row = Database::first('item_types', ['item_type_id'], 'item_type_id = ?', [(int) $typeId]);
+
+        return $row === null ? false : $typeId;
     }
 
     public static function savedSearchSelect(string $selected, string $scope): string
