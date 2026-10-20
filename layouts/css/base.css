@@ -1437,15 +1437,15 @@ body:has(.sectionbar) .main > .grid > details.card.card--sheet.card--disclosure 
 .record-list__meta{ margin-top:2px; color:var(--placeholder); font-size:12.5px; line-height:1.35; }
 .record-list__name{ display:flex; align-items:center; gap:10px; min-width:0; }
 .record-list__title{ min-width:0; }
-.record-list tbody tr:nth-child(-n+6){ animation:row-in .32s ease both; }
+.record-list tbody tr:nth-child(-n+6){ animation:row-in .32s ease; }
 .record-list tbody tr:nth-child(2){ animation-delay:.03s; }
 .record-list tbody tr:nth-child(3){ animation-delay:.06s; }
 .record-list tbody tr:nth-child(4){ animation-delay:.09s; }
 .record-list tbody tr:nth-child(5){ animation-delay:.12s; }
 .record-list tbody tr:nth-child(6){ animation-delay:.15s; }
 @keyframes row-in{
-    from{ opacity:0; transform:translateY(4px); }
-    to{ opacity:1; transform:none; }
+    from{ opacity:0; }
+    to{ opacity:1; }
 }
 .mark{
     display:inline-grid; place-items:center; flex:0 0 auto;
