@@ -267,17 +267,267 @@ final class ItemScreen
     }
 
     /**
-     * A closed section on a record. Fields inside still submit.
+     * Access, files, and notes as buttons. Each opens a dialog.
+     * A new record keeps the controls in the create form. An existing record saves each one on its own.
+     *
+     * @param list<int> $selectedGroups
+     * @return array{lead: string, inside: string, after: string, multipart: bool}
      */
-    private static function sheetFold(string $title, string $body, string $meta, bool $open = false): string
+    private static function recordTools(int $itemId, int $itemTypeId, int $itemRole, array $selectedGroups, string $draftNote = ''): array
     {
-        return '<details class="sheet-fold"' . ($open ? ' open' : '') . '>'
-            . '<summary class="sheet-fold__summary">'
-            . '<span class="sheet-fold__title">' . Html::e($title) . '</span>'
-            . ($meta !== '' ? '<span class="sheet-fold__meta">' . Html::e($meta) . '</span>' : '')
-            . '</summary>'
-            . '<div class="sheet-fold__body">' . $body . '</div>'
-            . '</details>';
+        $existing = $itemId > 0;
+        $canEdit = $itemRole < 4;
+        $buttons = '';
+        $inside = '';
+        $after = '';
+        $multipart = false;
+        $place = static function (string $dialog, bool $embed) use (&$inside, &$after): void {
+            if ($embed) {
+                $inside .= $dialog;
+            } else {
+                $after .= $dialog;
+            }
+        };
+
+        $shared = count($selectedGroups);
+        $accessMeta = self::countLabel($shared, 'group', 'Not shared');
+        if ($canEdit) {
+            $accessBody = self::itemGroupPicker($selectedGroups);
+        } else {
+            $names = self::groupNames($selectedGroups);
+            $accessBody = '<div class="readonly-value">' . Html::e($names === '' ? 'Not shared.' : $names) . '</div>';
+            if ($names === '') {
+                $accessMeta = 'Not shared';
+            }
+        }
+        $buttons .= self::recordToolButton('access', 'Access', $accessMeta);
+        $embedAccess = !$existing && $canEdit;
+        if ($existing && $canEdit) {
+            $accessDialog = self::recordDialog('access', 'Access', $accessBody, [
+                'action' => MAN_BASE_URL . '&option=update_item',
+                'submit' => 'Save access',
+                'hidden' => Form::hidden('item_id', (string) $itemId)
+                    . Form::hidden('item_type_id', (string) $itemTypeId)
+                    . Form::hidden('groups_only', '1'),
+            ]);
+        } else {
+            $accessDialog = self::recordDialog(
+                'access',
+                'Access',
+                $accessBody,
+                null,
+                $embedAccess ? 'Saved when you create the record.' : '',
+                $embedAccess
+            );
+        }
+        $place($accessDialog, $embedAccess);
+
+        if ($canEdit && ADD_ATTACHMENTS == 'yes') {
+            $fileCount = ($existing && SET_ATTACHMENTS === 'yes')
+                ? Database::count('item_attachments', 'item_id = ?', [$itemId])
+                : 0;
+            $list = '';
+            if ($existing) {
+                $list = $fileCount > 0
+                    ? self::attachmentLines((string) $itemId)
+                    : '<p class="record-list__empty">No files yet.</p>';
+            }
+            $buttons .= self::recordToolButton('files', 'Files', self::countLabel($fileCount, 'file', 'None'));
+            $sizeNote = 'Maximum size is ' . (int) SET_MAX_ATTACHMENT . ' MB.';
+            if ($existing) {
+                $filesDialog = self::recordDialog('files', 'Files', self::filesBody($list, true), [
+                    'action' => MAN_BASE_URL . '&option=add_attachment&item_id=' . $itemId,
+                    'enctype' => 'multipart/form-data',
+                    'submit' => 'Add file',
+                ], $sizeNote);
+                $place($filesDialog, false);
+            } else {
+                $multipart = true;
+                $filesDialog = self::recordDialog(
+                    'files',
+                    'Files',
+                    self::filesBody($list, true),
+                    null,
+                    'Saved when you create the record. ' . $sizeNote,
+                    true
+                );
+                $place($filesDialog, true);
+            }
+        } elseif ($existing && SET_ATTACHMENTS === 'yes') {
+            $fileCount = Database::count('item_attachments', 'item_id = ?', [$itemId]);
+            if ($fileCount > 0) {
+                $buttons .= self::recordToolButton('files', 'Files', self::countLabel($fileCount, 'file', 'None'));
+                $place(self::recordDialog('files', 'Files', self::attachmentLines((string) $itemId), null), false);
+            }
+        }
+
+        if (SET_LOG_ENTRY === 'yes') {
+            $entries = '';
+            $noteMeta = 'None';
+            $visible = false;
+            if ($existing) {
+                $entries = self::logEntriesHtml((string) $itemId, '', false);
+                $visible = !str_contains($entries, 'class="record-list__empty"');
+                if (!$visible) {
+                    $entries = '<p class="record-list__empty">No notes yet.</p>';
+                }
+                $noteCount = Database::count('core_log', 'item_id = ?', [$itemId]);
+                if ($noteCount === 1) {
+                    $latest = Database::first(
+                        'core_log',
+                        ['log_text'],
+                        'item_id = ? ORDER BY log_item_sequence DESC',
+                        [$itemId]
+                    );
+                    $text = trim((string) preg_replace('/\s+/', ' ', (string) ($latest['log_text'] ?? '')));
+                    $noteMeta = ($text !== '' && mb_strlen($text) <= 42) ? $text : '1 note';
+                } elseif ($noteCount > 1) {
+                    $noteMeta = $noteCount . ' notes';
+                }
+            } else {
+                $noteText = trim((string) preg_replace('/\s+/', ' ', $draftNote));
+                $noteMeta = $noteText === '' ? 'None' : (mb_strlen($noteText) <= 42 ? $noteText : '1 note');
+            }
+            if ($canEdit || ($existing && $visible)) {
+                $buttons .= self::recordToolButton('notes', 'Notes', $noteMeta);
+                $embedNotes = !$existing && $canEdit;
+                if ($existing && $canEdit) {
+                    $notesDialog = self::recordDialog('notes', 'Notes', self::notesBody($entries, '', true), [
+                        'action' => MAN_BASE_URL . '&option=add_log_entry',
+                        'submit' => 'Add note',
+                        'hidden' => Form::hidden('item_id', (string) $itemId),
+                    ]);
+                } else {
+                    $notesDialog = self::recordDialog(
+                        'notes',
+                        'Notes',
+                        self::notesBody($existing ? $entries : '', $draftNote, $canEdit),
+                        null,
+                        $embedNotes ? 'Saved when you create the record.' : '',
+                        $embedNotes
+                    );
+                }
+                $place($notesDialog, $embedNotes);
+            }
+        }
+
+        $lead = $buttons === ''
+            ? ''
+            : '<div class="record-tools" role="group" aria-label="Access, files, and notes">' . $buttons . '</div>';
+
+        return [
+            'lead' => $lead,
+            'inside' => $inside,
+            'after' => $after,
+            'multipart' => $multipart,
+        ];
+    }
+
+    private static function recordToolButton(string $id, string $title, string $meta): string
+    {
+        $dialogId = 'sheet-pop-' . $id;
+
+        return '<button type="button" class="record-tool" data-sheet-pop aria-haspopup="dialog" aria-controls="' . Html::e($dialogId) . '">'
+            . '<span class="record-tool__title">' . Html::e($title) . '</span>'
+            . '<span class="record-tool__meta" data-meta="' . Html::e($meta) . '">' . Html::e($meta) . '</span>'
+            . '</button>';
+    }
+
+    /**
+     * @param array{action: string, submit: string, hidden?: string, enctype?: string}|null $form
+     */
+    private static function recordDialog(string $id, string $title, string $body, ?array $form, string $note = '', bool $done = false): string
+    {
+        $dialogId = 'sheet-pop-' . $id;
+        $titleId = $dialogId . '-title';
+        $close = '<button type="button" class="btn btn--quiet btn--sm sheet-pop__close" data-sheet-pop-close>Close</button>';
+        $head = '<div class="sheet-pop__head"><h2 class="sheet-pop__title" id="' . Html::e($titleId) . '">'
+            . Html::e($title) . '</h2>' . $close . '</div>';
+        $noteHtml = $note !== '' ? '<p class="field-note sheet-pop__note">' . Html::e($note) . '</p>' : '';
+        $inner = $head . '<div class="sheet-pop__body">' . $body . $noteHtml . '</div>';
+        if ($form !== null) {
+            $enctype = (string) ($form['enctype'] ?? '');
+            $inner .= '<div class="sheet-pop__actions">' . Form::button('submit', 'submit_button', (string) $form['submit']) . '</div>';
+            $inner = '<form class="sheet-pop__panel" method="post" action="' . Html::e((string) $form['action']) . '"'
+                . ($enctype !== '' ? ' enctype="' . Html::e($enctype) . '"' : '')
+                . '>'
+                . \Adlexone\Auth\Csrf::field()
+                . (string) ($form['hidden'] ?? '')
+                . $inner
+                . '</form>';
+        } else {
+            if ($done) {
+                $inner .= '<div class="sheet-pop__actions"><button type="button" class="btn btn--primary" data-sheet-pop-close>Done</button></div>';
+            }
+            $inner = '<div class="sheet-pop__panel">' . $inner . '</div>';
+        }
+
+        return '<dialog class="sheet-pop" id="' . Html::e($dialogId) . '" aria-labelledby="' . Html::e($titleId) . '">'
+            . $inner
+            . '</dialog>';
+    }
+
+    private static function filesBody(string $list, bool $canWrite): string
+    {
+        $html = $list;
+        if ($canWrite) {
+            $file = Form::file('attachment', (string) ((int) SET_MAX_ATTACHMENT * 1000000));
+            $file = preg_replace('/<input name="attachment"/', '<input id="sheet-file" name="attachment"', $file, 1) ?? $file;
+            $html .= '<label class="label" for="sheet-file">File</label>' . $file;
+        }
+
+        return $html;
+    }
+
+    private static function notesBody(string $entries, string $draft, bool $canWrite): string
+    {
+        $html = $entries;
+        if ($canWrite) {
+            $area = Form::textarea('log_entry', $draft, '4');
+            $area = preg_replace('/<textarea\b/', '<textarea id="sheet-note"', $area, 1) ?? $area;
+            $html .= '<label class="label" for="sheet-note">Add a note</label>' . $area . Form::hidden('role_id', '5');
+        }
+
+        return $html;
+    }
+
+    private static function attachmentDisplayName(string $stored): string
+    {
+        $label = preg_replace('/^[A-Za-z0-9]+_/', '', $stored, 1);
+        if (!is_string($label) || $label === '') {
+            return $stored;
+        }
+
+        return $label;
+    }
+
+    private static function attachmentLines(string $itemID): string
+    {
+        $canDelete = (int) ($_SESSION['access_role_id'] ?? 5) <= 2;
+        $rows = Database::select('item_attachments', ['*'], 'item_id = ?', [(int) $itemID], 'create_date DESC');
+        if ($rows === []) {
+            return '<p class="record-list__empty">No files yet.</p>';
+        }
+        $html = '<ul class="file-lines">';
+        foreach ($rows as $row) {
+            $stored = (string) ($row['file_name'] ?? '');
+            $label = self::attachmentDisplayName($stored);
+            $href = MAN_BASE_URL . '&option=download_attachment&id=' . (int) ($row['id'] ?? 0);
+            $bytes = (int) ($row['file_size'] ?? 0);
+            $size = $bytes < 1000 ? $bytes . ' bytes' : (string) round($bytes / 1000) . ' KB';
+            $meta = trim((string) ($row['file_type'] ?? ''))
+                . ' · ' . $size
+                . ' · ' . date((string) SET_DATE_FORMAT, (int) ($row['create_date'] ?? 0));
+            $html .= '<li class="file-lines__item"><a class="record-link" href="' . Html::e($href) . '">' . Html::e($label) . '</a>'
+                . '<span class="file-lines__meta">' . Html::e($meta) . '</span>';
+            if ($canDelete) {
+                $delete = MAN_BASE_URL . '&option=delete_attachment&item_id=' . rawurlencode($itemID) . '&id=' . (int) ($row['id'] ?? 0);
+                $html .= '<a class="btn btn--sm btn--danger" href="' . Html::e($delete) . '"' . Form::confirmData((string) TXT_400) . '>Remove</a>';
+            }
+            $html .= '</li>';
+        }
+
+        return $html . '</ul>';
     }
 
     private static function countLabel(int $count, string $noun, string $none): string
@@ -949,47 +1199,14 @@ final class ItemScreen
         $formOptions = [];
         if ($inApplication) {
             $redisplay = isset($values['user_security']);
-            $folds = '';
-            $shared = count($selectedGroups);
-            if ($itemRole < 4) {
-                $folds .= self::sheetFold(
-                    'Access',
-                    self::itemGroupPicker($selectedGroups),
-                    self::countLabel($shared, 'group', 'Not shared'),
-                    $redisplay
-                );
-            } else {
-                $names = self::groupNames($selectedGroups);
-                $folds .= self::sheetFold(
-                    'Access',
-                    '<div class="readonly-value">' . Html::e($names === '' ? 'Not shared.' : $names) . '</div>',
-                    $names === '' ? 'Not shared' : self::countLabel($shared, 'group', 'Not shared'),
-                    $redisplay
-                );
-            }
-            if ($itemRole < 4 && ADD_ATTACHMENTS == 'yes') {
-                $folds .= self::sheetFold(
-                    (string) TXT_393,
-                    Form::file('attachment', (string) (SET_MAX_ATTACHMENT * 1000000)),
-                    'None',
-                    $redisplay
-                );
+            $draftNote = $redisplay ? (string) ($values['log_entry'] ?? '') : '';
+            $tools = self::recordTools(0, (int) $itemTypeID, (int) $itemRole, $selectedGroups, $draftNote);
+            if ($tools['multipart']) {
                 $formOptions['enctype'] = 'multipart/form-data';
             }
-            if ($itemRole < 4 && SET_LOG_ENTRY === 'yes') {
-                $noteValue = $redisplay ? (string) ($values['log_entry'] ?? '') : '';
-                $noteText = trim((string) preg_replace('/\s+/', ' ', $noteValue));
-                $noteMeta = $noteText === '' ? 'None' : (mb_strlen($noteText) <= 42 ? $noteText : '1 note');
-                $folds .= self::sheetFold(
-                    'Notes',
-                    Form::textarea('log_entry', $noteValue, '3') . Form::hidden('role_id', '5'),
-                    $noteMeta,
-                    $redisplay
-                );
-            }
-            if ($folds !== '') {
-                $fields[] = '<div class="sheet-folds">' . $folds . '</div>';
-            }
+            $formOptions['lead'] = $tools['lead'];
+            $formOptions['inside'] = $tools['inside'];
+            $formOptions['after'] = $tools['after'];
             $formOptions['record'] = true;
             $formOptions['kicker'] = $itemTypeName;
             $status = WorkScreen::workStatusField((int) $itemTypeID);
@@ -1390,79 +1607,15 @@ final class ItemScreen
                     $selectedGroups = (is_array($values) && isset($values['groups_posted']))
                         ? GroupMembership::idsFromPost($values)
                         : $itemGroupIds;
-                    $redisplay = is_array($values) && isset($values['item_id']);
-                    $folds = '';
-                    $shared = count($selectedGroups);
-                    if ($itemRole < 4) {
-                        $folds .= self::sheetFold(
-                            'Access',
-                            self::itemGroupPicker($selectedGroups),
-                            self::countLabel($shared, 'group', 'Not shared'),
-                            $redisplay
-                        );
-                    } else {
-                        $names = self::groupNames($selectedGroups);
-                        $folds .= self::sheetFold(
-                            'Access',
-                            '<div class="readonly-value">' . Html::e($names === '' ? 'Not shared.' : $names) . '</div>',
-                            $names === '' ? 'Not shared' : self::countLabel($shared, 'group', 'Not shared'),
-                            $redisplay
-                        );
-                    }
-                    if ($itemRole < 4 && ADD_ATTACHMENTS == 'yes') {
-                        $fileCount = (SET_ATTACHMENTS === 'yes')
-                            ? Database::count('item_attachments', 'item_id = ?', [(int) $itemID])
-                            : 0;
-                        $files = $fileCount > 0 ? self::attachmentListHtml((string) $itemID, '') : '';
-                        $folds .= self::sheetFold(
-                            (string) TXT_393,
-                            Form::file('attachment', (string) (SET_MAX_ATTACHMENT * 1000000)) . $files,
-                            self::countLabel($fileCount, 'file', 'None'),
-                            $redisplay
-                        );
-                        $formOptions['enctype'] = 'multipart/form-data';
-                    } elseif (SET_ATTACHMENTS === 'yes' && Database::exists('item_attachments', 'item_id = ?', [(int) $itemID])) {
-                        $fileCount = Database::count('item_attachments', 'item_id = ?', [(int) $itemID]);
-                        $folds .= self::sheetFold(
-                            'Attachments',
-                            self::attachmentListHtml((string) $itemID, ''),
-                            self::countLabel($fileCount, 'file', 'None'),
-                            $redisplay
-                        );
-                    }
-                    if (SET_LOG_ENTRY === 'yes') {
-                        $entries = self::logEntriesHtml((string) $itemID, '', false);
-                        if (str_contains($entries, 'class="record-list__empty"')) {
-                            $entries = '';
-                        }
-                        $noteCount = Database::count('core_log', 'item_id = ?', [(int) $itemID]);
-                        $noteMeta = 'None';
-                        if ($noteCount === 1) {
-                            $latest = Database::first(
-                                'core_log',
-                                ['log_text'],
-                                'item_id = ? ORDER BY log_item_sequence DESC',
-                                [(int) $itemID]
-                            );
-                            $text = trim((string) preg_replace('/\s+/', ' ', (string) ($latest['log_text'] ?? '')));
-                            $noteMeta = ($text !== '' && mb_strlen($text) <= 42) ? $text : '1 note';
-                        } elseif ($noteCount > 1) {
-                            $noteMeta = $noteCount . ' notes';
-                        }
-                        if ($itemRole < 4) {
-                            $folds .= self::sheetFold(
-                                'Notes',
-                                $entries . Form::textarea('log_entry', '', '3') . Form::hidden('role_id', '5'),
-                                $noteMeta,
-                                $redisplay
-                            );
-                        } elseif ($entries !== '') {
-                            $folds .= self::sheetFold('Notes', $entries, $noteMeta, $redisplay);
-                        }
-                    }
-                    if ($folds !== '') {
-                        $itemField[] = '<div class="sheet-folds">' . $folds . '</div>';
-                    }
+                    $tools = self::recordTools(
+                        (int) $itemID,
+                        (int) ($itemFields['item_type_id'] ?? 0),
+                        (int) $itemRole,
+                        $selectedGroups
+                    );
+                    $formOptions['lead'] = $tools['lead'];
+                    $formOptions['inside'] = $tools['inside'];
+                    $formOptions['after'] = $tools['after'];
                     $formOptions['record'] = true;
                     $formOptions['kicker'] = $itemTypeName;
                     $ownerId = (int) ($itemFields['user_security'] ?? 0);
@@ -1774,7 +1927,7 @@ final class ItemScreen
                 if (isset($_POST['group_security'])) {
                     self::syncItemGroupsFromSecurity((int) $itemID, (string) $_POST['group_security']);
                 }
-                if (!self::returnToItem($itemID, (string) TXT_320)) {
+                if (!self::returnToItem($itemID, 'Access saved.', 'access')) {
                     View::respond(TXT_320, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID, TXT_353, 'URL'));
                 }
                 return;
@@ -1893,7 +2046,7 @@ final class ItemScreen
             Actions::executeAction($itemID, 'update_item_log_entry', false);
         }
         if ($showInformation == true) {
-            if (self::returnToItem($itemID, (string) TXT_248)) {
+            if (self::returnToItem($itemID, (string) TXT_248, 'notes')) {
                 return;
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
@@ -1906,7 +2059,7 @@ final class ItemScreen
     /**
      * Application records stay on the item. Returns true after sending the browser there.
      */
-    private static function returnToItem($itemID, string $notice = ''): bool
+    private static function returnToItem($itemID, string $notice = '', string $sheet = ''): bool
     {
         if (!Page::current()->inApplication()) {
             return false;
@@ -1914,7 +2067,11 @@ final class ItemScreen
         if (trim($notice) !== '') {
             View::flash($notice);
         }
-        header('Location: ' . MAN_BASE_URL . '&item=' . rawurlencode((string) $itemID));
+        $url = MAN_BASE_URL . '&item=' . rawurlencode((string) $itemID);
+        if (in_array($sheet, ['access', 'files', 'notes'], true)) {
+            $url .= '&sheet=' . $sheet;
+        }
+        header('Location: ' . $url);
         exit;
     }
 
@@ -2224,7 +2381,7 @@ final class ItemScreen
         }
 
         if ($showAttachments) {
-            if (self::returnToItem($itemID, 'File added')) {
+            if (self::returnToItem($itemID, 'File added', 'files')) {
                 return;
             }
             self::showAttachments($itemID);
@@ -2248,7 +2405,7 @@ final class ItemScreen
                 ];
             }
             $rows[] = [
-                'name' => str_replace('_', ' ', substr((string)$row['file_name'], 11)),
+                'name' => self::attachmentDisplayName((string) $row['file_name']),
                 'href' => MAN_BASE_URL . '&option=download_attachment&id=' . $row['id'],
                 'cells' => [
                     'type' => (string)$row['file_type'],
@@ -2314,7 +2471,7 @@ final class ItemScreen
         if (preg_match('#^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$#', $type) !== 1) {
             $type = 'application/octet-stream';
         }
-        $label = preg_replace('/^[A-Za-z0-9]+_/', '', $stored, 1) ?? $stored;
+        $label = self::attachmentDisplayName($stored);
         $label = str_replace(["\r", "\n", '"'], '', $label);
         if ($label === '') {
             $label = 'download';
@@ -2350,7 +2507,7 @@ final class ItemScreen
             }
         }
         Database::delete('item_attachments', 'id = ?', [$id]);
-        if (self::returnToItem($itemID, 'File removed')) {
+        if (self::returnToItem($itemID, 'File removed', 'files')) {
             return;
         }
         self::showAttachments($itemID);

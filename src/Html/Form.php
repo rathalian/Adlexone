@@ -13,7 +13,7 @@ final class Form
     /**
      * @param array<string, string> $fields label => control HTML
      * @param list<string> $buttons
-     * @param array{method?: string, name?: string, id?: string, enctype?: string, kicker?: string, badge?: string, mark?: string, facts?: list<string>, record?: bool, disclosure?: bool} $options
+     * @param array{method?: string, name?: string, id?: string, enctype?: string, kicker?: string, badge?: string, mark?: string, facts?: list<string>, record?: bool, disclosure?: bool, lead?: string, inside?: string, after?: string} $options
      */
     public static function form(string $title, string $action, array $fields, array $buttons, array $options = []): string
     {
@@ -25,7 +25,9 @@ final class Form
             (string) ($options['enctype'] ?? 'application/x-www-form-urlencoded')
         );
         $html .= self::fields($fields);
+        $html .= (string) ($options['inside'] ?? '');
         $html .= self::close($buttons);
+        $html = (string) ($options['lead'] ?? '') . $html . (string) ($options['after'] ?? '');
 
         $block = [
             'title' => $title,

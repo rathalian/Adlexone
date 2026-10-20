@@ -520,3 +520,65 @@
         if (event.persisted) document.querySelectorAll('form[data-submitting]').forEach(settle);
     });
 })();
+
+/* Record tools: Access, Files, and Notes open as dialogs. */
+(() => {
+    const asDialog = (node) => (node instanceof HTMLDialogElement ? node : null);
+    const open = (dialog) => {
+        if (!dialog || dialog.open) return;
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+    };
+    const metaOf = (dialog) => document.querySelector('[aria-controls="' + CSS.escape(dialog.id) + '"] .record-tool__meta');
+    const syncMeta = (dialog) => {
+        const meta = metaOf(dialog);
+        if (!meta) return;
+        const stored = meta.getAttribute('data-meta') || '';
+        if (dialog.id === 'sheet-pop-files') {
+            const input = dialog.querySelector('input[type="file"]');
+            const file = input && input.files && input.files[0];
+            meta.textContent = file ? file.name : stored;
+        }
+        if (dialog.id === 'sheet-pop-notes') {
+            const area = dialog.querySelector('textarea[name="log_entry"]');
+            const text = area ? area.value.replace(/\s+/g, ' ').trim() : '';
+            meta.textContent = text === '' ? stored : (text.length <= 42 ? text : '1 note');
+        }
+        if (dialog.id === 'sheet-pop-access' && !dialog.querySelector('form')) {
+            const boxes = dialog.querySelectorAll('input[type="checkbox"]');
+            if (!boxes.length) return;
+            const checked = dialog.querySelectorAll('input[type="checkbox"]:checked').length;
+            meta.textContent = checked === 0 ? 'Not shared' : (checked === 1 ? '1 group' : checked + ' groups');
+        }
+    };
+
+    document.querySelectorAll('[data-sheet-pop]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const dialog = asDialog(document.getElementById(button.getAttribute('aria-controls') || ''));
+            if (dialog) open(dialog);
+        });
+    });
+    document.querySelectorAll('[data-sheet-pop-close]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const dialog = asDialog(button.closest('dialog'));
+            if (dialog) dialog.close();
+        });
+    });
+    document.querySelectorAll('dialog.sheet-pop').forEach((dialog) => {
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) dialog.close();
+        });
+        dialog.addEventListener('input', () => syncMeta(dialog));
+        dialog.addEventListener('change', () => syncMeta(dialog));
+        dialog.addEventListener('close', () => syncMeta(dialog));
+    });
+
+    const sheet = new URLSearchParams(location.search).get('sheet');
+    if (sheet === 'access' || sheet === 'files' || sheet === 'notes') {
+        const dialog = asDialog(document.getElementById('sheet-pop-' + sheet));
+        if (dialog) open(dialog);
+        const url = new URL(location.href);
+        url.searchParams.delete('sheet');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+})();

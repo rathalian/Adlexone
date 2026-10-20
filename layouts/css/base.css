@@ -1730,26 +1730,38 @@ body:has(.sectionbar) .main > .grid > details.card.card--sheet.card--disclosure 
     .launch-tile:hover{ transform:none; }
 }
 
-.sheet-folds{ display:flex; flex-direction:column; gap:8px; }
-.sheet-fold{
+.record-tools{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:0 0 22px;
+}
+.record-tool{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    flex:1 1 9.5rem;
+    min-width:0;
+    min-height:44px;
+    padding:8px 12px;
     border:1px solid var(--border);
     border-radius:10px;
     background:color-mix(in srgb, var(--stone, #f4f1ea) 65%, var(--panel));
-}
-.sheet-fold__summary{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    min-height:44px;
-    padding:10px 14px;
-    cursor:pointer;
-    list-style:none;
-    font-weight:700;
     color:var(--ink);
+    font:inherit;
+    font-weight:700;
+    text-align:left;
+    cursor:pointer;
 }
-.sheet-fold__summary::-webkit-details-marker{ display:none; }
-.sheet-fold__title{ min-width:0; }
-.sheet-fold__meta{
+.record-tool:hover{
+    border-color:color-mix(in srgb, var(--brand) 45%, var(--border));
+}
+.record-tool:focus-visible{
+    outline:2px solid var(--ring);
+    outline-offset:2px;
+}
+.record-tool__title{ flex:none; }
+.record-tool__meta{
     margin-left:auto;
     min-width:0;
     overflow:hidden;
@@ -1758,28 +1770,86 @@ body:has(.sectionbar) .main > .grid > details.card.card--sheet.card--disclosure 
     color:var(--placeholder);
     font-size:13px;
     font-weight:600;
-    text-align:right;
 }
-.sheet-fold__summary::after{
-    content:"";
-    width:8px;
-    height:8px;
-    border-right:2px solid currentColor;
-    border-bottom:2px solid currentColor;
-    transform:rotate(45deg);
-    margin-top:-4px;
-    opacity:.45;
-    flex:none;
+.sheet-pop{
+    width:min(40rem, calc(100vw - 24px));
+    max-height:min(36rem, calc(100dvh - 24px));
+    margin:auto;
+    padding:0;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--panel);
+    color:var(--ink);
+    box-shadow:0 24px 60px color-mix(in srgb, var(--ink) 22%, transparent);
 }
-.sheet-fold[open] > .sheet-fold__summary::after{
-    transform:rotate(-135deg);
-    margin-top:4px;
+.sheet-pop:not([open]){ display:none; }
+.sheet-pop::backdrop{
+    background:color-mix(in srgb, var(--ink) 42%, transparent);
 }
-.sheet-fold__body{ padding:2px 14px 14px; }
-.sheet-fold__summary:focus-visible{
-    outline:2px solid var(--ring);
-    outline-offset:-2px;
-    border-radius:10px;
+.sheet-pop__panel{
+    display:flex;
+    flex-direction:column;
+    max-height:min(36rem, calc(100dvh - 24px));
+    margin:0;
+}
+.sheet-pop__head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:16px 18px 0;
+}
+.sheet-pop__title{
+    margin:0;
+    font-size:1.15rem;
+    font-weight:700;
+    letter-spacing:-0.02em;
+}
+.sheet-pop__close{ margin-left:auto; }
+.sheet-pop__body{
+    overflow:auto;
+    padding:14px 18px 4px;
+}
+.sheet-pop__body > .label{ display:block; margin:12px 0 8px; }
+.sheet-pop__note{ margin:10px 0 0; }
+.sheet-pop__actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:14px 18px 16px;
+}
+.sheet-pop__body .group-security-list:has(> .group-security-item){
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:8px 16px;
+}
+.file-lines{
+    list-style:none;
+    margin:0 0 4px;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.file-lines__item{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px 12px;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fff;
+}
+.file-lines__item .record-link{ flex:1 1 8rem; min-width:0; }
+.file-lines__meta{
+    color:var(--placeholder);
+    font-size:12.5px;
+}
+.file-lines__item .btn{ margin-left:auto; }
+@media (max-width:640px){
+    .sheet-pop__body .group-security-list:has(> .group-security-item){
+        grid-template-columns:minmax(0, 1fr);
+    }
 }
 .form-grid{
     display:grid;
