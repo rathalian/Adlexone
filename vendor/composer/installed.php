@@ -3,7 +3,7 @@
         'name' => 'adlexone/adlexone',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '3c9b4c57364c94cd70eab101b9ee4c811bd8bad7',
+        'reference' => '5e368024f7468798b9e161da5fff80a281a98476',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'adlexone/adlexone' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '3c9b4c57364c94cd70eab101b9ee4c811bd8bad7',
+            'reference' => '5e368024f7468798b9e161da5fff80a281a98476',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
