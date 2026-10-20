@@ -161,15 +161,20 @@ final class FieldsScreen
 
         $fields[TXT_86] = Form::text('custom_field_name', @$fieldValues['custom_field_name']);
         $fields[TXT_210] = Form::text('default_value', @$fieldValues['default_value']);
-        $fieldTypes = array(FieldTypes::TEXT_BOX, 'password', FieldTypes::TEXT_AREA, FieldTypes::MENU, 'hidden', 'URL', 'dynamicURL', 'workerField', 'workerFieldMenu');
+        $fieldTypes = FieldTypes::choices();
         $fieldNames = array_map(static fn (string $type): string => FieldTypes::label($type), $fieldTypes);
         $fields[TXT_65] = Form::select('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
         $fields[TXT_477] = Form::text('data', @$fieldValues['data']);
-        // Javascript field validation setup
         $fields[TXT_505] = Form::select('required', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['required']);
-        $validationTypes = array(NULL, 'numeric', 'string', 'alphanumeric', 'date', 'time', 'datetime', 'ip', 'email');
-        $validationNames = array(TXT_525, TXT_507, TXT_508, TXT_509, TXT_510, TXT_511, TXT_512, TXT_513, TXT_514);
-        $fields[TXT_506] = Form::select('validation_type', $validationTypes, $validationNames, @$fieldValues['validation_type']);
+        $storedType = FieldTypes::normalise((string) (@$fieldValues['field_type'] ?? ''));
+        $validationSelected = FieldTypes::impliedValidation($storedType);
+        if ($validationSelected === '') {
+            $validationSelected = FieldTypes::normaliseKind((string) (@$fieldValues['validation_type'] ?? ''));
+        }
+        $validationTypes = array('', 'numeric', 'string', 'alphanumeric', 'date', 'time', 'datetime', 'ip', 'email', 'url');
+        $validationNames = array(TXT_525, TXT_507, TXT_508, TXT_509, TXT_510, TXT_511, TXT_512, TXT_513, TXT_514, 'Web address');
+        $fields[TXT_506] = Form::select('validation_type', $validationTypes, $validationNames, $validationSelected)
+            . '<p class="field-note">Date, time, email, number, and link fields check the value themselves. Use this for a text field that still needs a format.</p>';
         $fields[TXT_90] = Form::select('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
         $fields[''] = Form::hidden('custom_field_id', $customFieldID);
         $jsFieldNameArray = "['custom_field_name']";
@@ -274,6 +279,7 @@ final class FieldsScreen
             $columnArray = $_POST;
             unset($columnArray['custom_field_id']);
             $columnArray['data'] = html_entity_decode((string) ($columnArray['data'] ?? ''), ENT_COMPAT, 'UTF-8');
+            $columnArray = self::normaliseFieldPayload($columnArray);
             $id = Database::insert('custom_fields', $columnArray);
             Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
             // Field values live in item_field_values — items schema is not altered.
@@ -510,6 +516,7 @@ final class FieldsScreen
         $columnArray = $_POST;
         // Handle data column special characters
         $columnArray['data'] = html_entity_decode($columnArray['data'], ENT_COMPAT, 'UTF-8');
+        $columnArray = self::normaliseFieldPayload($columnArray);
         // Set condition
         $condition = "WHERE custom_field_id = '$customFieldID'";
         // Update form field values into row
@@ -543,5 +550,22 @@ final class FieldsScreen
         \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
         View::respond($name . ' ' . TXT_47, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function normaliseFieldPayload(array $payload): array
+    {
+        $type = FieldTypes::normalise((string) ($payload['field_type'] ?? FieldTypes::TEXT_BOX));
+        $payload['field_type'] = $type;
+        $implied = FieldTypes::impliedValidation($type);
+        if ($implied !== '') {
+            $payload['validation_type'] = $implied;
+        } else {
+            $payload['validation_type'] = FieldTypes::normaliseKind((string) ($payload['validation_type'] ?? ''));
+        }
+        return $payload;
     }
 }

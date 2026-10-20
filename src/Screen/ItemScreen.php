@@ -9,7 +9,9 @@ use Adlexone\support\Database;
 use Adlexone\support\Actions;
 use Adlexone\support\AttachmentUpload;
 use Adlexone\Html\FieldControl;
+use Adlexone\support\FieldCheck;
 use Adlexone\support\FieldTypes;
+use Adlexone\support\FieldValidation;
 use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
@@ -25,6 +27,9 @@ use Adlexone\Html\Html;
  */
 final class ItemScreen
 {
+    /** @var array<string, string> */
+    private static array $formErrors = [];
+
     private static function sheetFieldLabel(string $name): string
     {
         $plain = WorkScreen::plainFieldName($name);
@@ -33,6 +38,33 @@ final class ItemScreen
         }
 
         return ucfirst($plain);
+    }
+
+    /**
+     * @param array<string, mixed> $post
+     * @return array<string, string>
+     */
+    private static function postedFieldErrors(array $post): array
+    {
+        $errors = [];
+        if (trim((string) ($post['item_title'] ?? '')) === '') {
+            $errors['item_title'] = defined('TXT_476') ? (string) TXT_476 : 'Enter a name.';
+        }
+        return $errors + FieldValidation::postedErrors($post, (int) ($post['item_type_id'] ?? 0));
+    }
+
+    /**
+     * @param array<string, mixed> $formOptions
+     * @return array<string, mixed>
+     */
+    private static function withFormErrors(array $formOptions): array
+    {
+        if (self::$formErrors === []) {
+            return $formOptions;
+        }
+        $formOptions['errors'] = array_values(self::$formErrors);
+        $formOptions['error_title'] = defined('TXT_468') ? (string) TXT_468 : 'Check the form';
+        return $formOptions;
     }
 
     public static function open(): void
@@ -1040,12 +1072,7 @@ final class ItemScreen
         $columnArray = array('custom_field_id');
         $condition = "WHERE item_type_id = '" . $itemTypeID . "' ORDER BY custom_field_order ASC";
         $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
-        $JSValidation = array();
-        $dtFormat = (SET_DATE_FORMAT == "d-m-Y, h:i A") ? ",DMY" : ",MDY";
-        $JSValidation[0] = 'onclick="javascript:return fieldCheck(\'' . TXT_468 . '\',';
-        $JSValidation[6] = '])"';
-        $jsValFields = 0;
-        $sep = 0;
+        $fieldCheck = new FieldCheck();
         foreach ($customFieldResult as $customFields) {
             $columnArray = array('*');
             $condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
@@ -1077,64 +1104,7 @@ final class ItemScreen
                 $subMenuFilter = @$itemTypeFields['custom_field_' . $row['custom_field_id']];
             }
 
-            // Add the Javascript validation back into the system
-            if (($row['required'] == 'Yes' || ($row['validation_type'] != NULL && strtoupper($row['validation_type']) != 'NULL'))) {
-                if ($row['validation_type'] != NULL && strtoupper($row['validation_type']) != 'NULL') {
-                    if ($row['validation_type'] == "date") {
-                        $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . $dtFormat . "'" : $JSValidation[1] . ",'" . $row['validation_type'] . $dtFormat . "'";
-                    } else {
-                        if ($row['validation_type'] == "time") {
-                            $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . ",HHMMSS'" : $JSValidation[1] . ",'" . $row['validation_type'] . ",HHMMSS'";
-                        } else {
-                            if ($row['validation_type'] == "datetime") {
-                                $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . $dtFormat . ",HHMMSS'" : $JSValidation[1] . ",'" . $row['validation_type'] . $dtFormat . ",HHMMSS'";
-                            } else {
-                                $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . "'" : $JSValidation[1] . ",'" . $row['validation_type'] . "'";
-                            }
-                        }
-                    }
-                } else {
-                    $JSValidation[1] = (@$JSValidation[1] == '') ? "[''" : $JSValidation[1] . ",''";
-                }
-                $JSValidation[2] = (@$JSValidation[2] == '') ? "],['" . $prepend . $row['custom_field_id'] . "'" : $JSValidation[2] . ",'" . $prepend . $row['custom_field_id'] . "'";
-                $jsValFields++;
-                if ($row['required'] == 'Yes') {
-                    $JSValidation[4] = (@$JSValidation[4] == '') ? "],['" . TXT_517 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[4] . ",'" . TXT_517 . " (" . $row['custom_field_name'] . ")'";
-                    $JSValidation[5] = (@$JSValidation[5] == '') ? "],[true" : $JSValidation[5] . ",true";
-                } else {
-                    $JSValidation[4] = (@$JSValidation[4] == '') ? "],[''" : $JSValidation[4] . ",''";
-                    $JSValidation[5] = (@$JSValidation[5] == '') ? "],[false" : $JSValidation[5] . ",false";
-                }
-
-                switch ($row['validation_type']) {
-                    case 'numeric' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_516 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_516 . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'string' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_518 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_518 . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'alphanumeric' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_519 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_519 . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'date' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . str_replace('#1', substr($dtFormat, 1), TXT_520) . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . str_replace('#1', substr($dtFormat, 1), TXT_520) . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'time' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_521 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_521 . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'dateTime' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . str_replace('#1', substr($dtFormat, 1), TXT_522) . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . str_replace('#1', substr($dtFormat, 1), TXT_522) . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'ip' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_523 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_523 . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    case 'email' :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_524 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_524 . " (" . $row['custom_field_name'] . ")'";
-                        break;
-                    default :
-                        $JSValidation[3] = (@$JSValidation[3] == '') ? "],[''" : $JSValidation[3] . ",''";
-                }
-            }
+            $fieldCheck->add($row, $prepend . $row['custom_field_id']);
             switch ($row['field_type']) {
                 case FieldTypes::TEXT_BOX:
                 case 'password':
@@ -1233,45 +1203,8 @@ final class ItemScreen
             $fields[TXT_393] = Form::file('attachment', SET_MAX_ATTACHMENT * 1000000);
             $formOptions['enctype'] = 'multipart/form-data';
         }
-        //Javascript field validation
-        if (@$JSValidation[2] == "") {
-            $jsFieldNameArray = ",['item_title']";
-        } else {
-            $jsFieldNameArray = $JSValidation[2] . ",'item_title'";
-        }
-
-        if (@$JSValidation[1] == "") {
-            if ($jsValFields == 0) {
-                $jsTestTypeArray = "['']";
-            } else {
-                $jsTestTypeArray = "[" . str_repeat("'',", $jsValFields) . "''";
-            }
-        } else {
-            $jsTestTypeArray = $JSValidation[1] . ",''";
-        }
-        if (@$JSValidation[3] == "" || @$JSValidation[3] == ",") {
-            if ($jsValFields == 0) {
-                $jsErrorMsgArray = ",['']";
-            } else {
-                $jsErrorMsgArray = "],[" . str_repeat("'',", $jsValFields) . "''";
-            }
-        } else {
-            $jsErrorMsgArray = $JSValidation[3] . ",''";
-        }
-
-        if (@$JSValidation[4] == "") {
-            $jsRequiredMsgArray = ",['" . TXT_476 . "']";
-        } else {
-            $jsRequiredMsgArray = $JSValidation[4] . ",'" . TXT_476 . "'";
-        }
-
-        if (@$JSValidation[5] == "") {
-            $jsRequiredArray = ",[true";
-        } else {
-            $jsRequiredArray = $JSValidation[5] . ",true";
-        }
-
-        $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
+        $javascript = $fieldCheck->withTitle()->onclick();
+        $formOptions = self::withFormErrors($formOptions);
         $buttons[] = Form::button('submit', 'submit_button', TXT_57, $javascript);
         $createHeading = $inApplication
             ? 'New ' . $itemTypeName
@@ -1411,12 +1344,7 @@ final class ItemScreen
                 $columnArray = array('custom_field_id');
                 $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
                 $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
-                $JSValidation = array();
-                $dtFormat = (SET_DATE_FORMAT == "d-m-Y, h:i A") ? ",DMY" : ",MDY";
-                $JSValidation[0] = 'onclick="javascript:return fieldCheck(\'' . TXT_468 . '\',';
-                $JSValidation[6] = '])"';
-                $jsValFields = 0;
-                $sep = 0;
+                $fieldCheck = new FieldCheck();
                 foreach ($customFieldResult as $customFields) {
                     $columnArray = array('*');
                     $condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
@@ -1448,74 +1376,14 @@ final class ItemScreen
                         $menuValue = @$values['custom_field_' . $row['custom_field_id']];
                     }
 
-                    // Add the Javascript validation back into the system
-                    if (($row['required'] == 'Yes' || $row['validation_type'] != NULL)) {
-
-                        if ($row['validation_type'] != NULL) {
-                            if ($row['validation_type'] == "date") {
-                                $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . $dtFormat . "'" : $JSValidation[1] . ",'" . $row['validation_type'] . $dtFormat . "'";
-                            } else {
-                                if ($row['validation_type'] == "time") {
-                                    $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . ",HHMMSS'" : $JSValidation[1] . ",'" . $row['validation_type'] . ",HHMMSS'";
-                                } else {
-                                    if ($row['validation_type'] == "datetime") {
-                                        $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . $dtFormat . ",HHMMSS'" : $JSValidation[1] . ",'" . $row['validation_type'] . ",HHMMSS'";
-                                    } else {
-                                        $JSValidation[1] = (@$JSValidation[1] == '') ? "['" . $row['validation_type'] . "'" : $JSValidation[1] . ",'" . $row['validation_type'] . "'";
-                                    }
-                                }
-                            }
-                        } else {
-                            $JSValidation[1] = (@$JSValidation[1] == '') ? "[''" : $JSValidation[1] . ",''";
-                        }
-
-                        $JSValidation[2] = (@$JSValidation[2] == '') ? "],['" . $prepend . $row['custom_field_id'] . "'" : $JSValidation[2] . ",'" . $prepend . $row['custom_field_id'] . "'";
-                        $jsValFields++;
-
-                        if ($row['required'] == 'Yes') {
-                            $JSValidation[4] = (@$JSValidation[4] == '') ? "],['" . TXT_517 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[4] . ",'" . TXT_517 . " (" . $row['custom_field_name'] . ")'";
-                            $JSValidation[5] = (@$JSValidation[5] == '') ? "],[true" : $JSValidation[5] . ",true";
-                        } else {
-                            $JSValidation[4] = (@$JSValidation[4] == '') ? "],[''," : $JSValidation[4] . ",''";
-                            $JSValidation[5] = (@$JSValidation[5] == '') ? "],[false" : $JSValidation[5] . ",false";
-                        }
-
-                        switch ($row['validation_type']) {
-                            case 'numeric' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_516 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_516 . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'string' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_518 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_518 . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'alphanumeric' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_519 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_519 . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'date' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . str_replace('#1', substr($dtFormat, 1), TXT_520) . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . str_replace('#1', substr($dtFormat, 1), TXT_520) . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'time' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_521 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_521 . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'dateTime' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . str_replace('#1', substr($dtFormat, 1), TXT_522) . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . str_replace('#1', substr($dtFormat, 1), TXT_522) . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'ip' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_523 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_523 . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            case 'email' :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],['" . TXT_524 . " (" . $row['custom_field_name'] . ")'" : $JSValidation[3] . ",'" . TXT_524 . " (" . $row['custom_field_name'] . ")'";
-                                break;
-                            default :
-                                $JSValidation[3] = (@$JSValidation[3] == '') ? "],[''" : $JSValidation[3] . ",''";
-                        }
-                    }
+                    $fieldCheck->add($row, $prepend . $row['custom_field_id']);
 
                     if (($itemRole >= 4) and ($row['field_type'] != 'fieldSeparator')) {//Users and viewers can read only so we override the field type
+                        $hiddenValue = $value;
                         if ($row['field_type'] != FieldTypes::TEXT_AREA) {
-                            $hiddenValue = $value;
+                            $value = FieldValidation::display($row, $value);
                             $fieldType = 'text';
                         } else {
-                            $hiddenValue = $value;
                             $value = str_replace("\n", "<br />", $value);
                             $value = '<br />' . $value . '<br /><br />';
                             $fieldType = 'text';
@@ -1565,7 +1433,7 @@ final class ItemScreen
                                 $http = (!stristr($value, 'http') and !stristr($value, 'https')) ? 'http://' : '';
                                 $url = ' ' . Blocks::link($http . $value, TXT_480, 'URL', SET_IMAGE_PATH . 'hyperlink.png', '', '_blank');
                             }
-                            $itemField[$row['custom_field_name']] = Form::text('custom_field_' . $row['custom_field_id'], $value) . @$url;
+                            $itemField[$row['custom_field_name']] = Form::url('custom_field_' . $row['custom_field_id'], $value) . @$url;
                             break;
                         case 'dynamicURL' :
                             if ($value != '') {
@@ -1652,45 +1520,8 @@ final class ItemScreen
                     }
                 }
 
-                // Same client-side check as the new-record form.
-                if (@$JSValidation[2] == "") {
-                    $jsFieldNameArray = ",['item_title']";
-                } else {
-                    $jsFieldNameArray = $JSValidation[2] . ",'item_title'";
-                }
-
-                if (@$JSValidation[1] == "") {
-                    if ($jsValFields == 0) {
-                        $jsTestTypeArray = "['']";
-                    } else {
-                        $jsTestTypeArray = "[" . str_repeat("'',", $jsValFields) . "''";
-                    }
-                } else {
-                    $jsTestTypeArray = $JSValidation[1] . ",''";
-                }
-                if (@$JSValidation[3] == "" || @$JSValidation[3] == ",") {
-                    if ($jsValFields == 0) {
-                        $jsErrorMsgArray = ",['']";
-                    } else {
-                        $jsErrorMsgArray = "],[" . str_repeat("'',", $jsValFields) . "''";
-                    }
-                } else {
-                    $jsErrorMsgArray = $JSValidation[3] . ",''";
-                }
-
-                if (@$JSValidation[4] == "") {
-                    $jsRequiredMsgArray = ",['" . TXT_476 . "']";
-                } else {
-                    $jsRequiredMsgArray = $JSValidation[4] . ",'" . TXT_476 . "'";
-                }
-
-                if (@$JSValidation[5] == "") {
-                    $jsRequiredArray = ",[true";
-                } else {
-                    $jsRequiredArray = $JSValidation[5] . ",true";
-                }
-
-                $javascript = (isset($JSValidation[0])) ? $JSValidation[0] . $jsTestTypeArray . $jsFieldNameArray . $jsErrorMsgArray . $jsRequiredMsgArray . $jsRequiredArray . $JSValidation[6] : '';
+                $javascript = $fieldCheck->withTitle()->onclick();
+                $formOptions = self::withFormErrors($formOptions);
                 $buttons = [];
                 if ($_SESSION['access_role_id'] <= 4) {
                     $buttons[] = Form::button('submit', 'submit_button', TXT_56, $javascript);
@@ -1772,6 +1603,11 @@ final class ItemScreen
             // Reload form setting values based on posted form values, triggered from javascript submits
             self::showItemAdd($_POST['item_type_id'], $_POST);
         } else {
+            self::$formErrors = self::postedFieldErrors($_POST);
+            if (self::$formErrors !== []) {
+                self::showItemAdd($_POST['item_type_id'], $_POST);
+                return;
+            }
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') != '') {
                 // Item row must exist before attachment metadata references it.
             }
@@ -1907,6 +1743,11 @@ final class ItemScreen
             // Reload form setting values based on posted form values, triggered from javascript submits
             self::showItem($_POST['item_id'], $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
         } else {
+            self::$formErrors = self::postedFieldErrors($_POST);
+            if (self::$formErrors !== []) {
+                self::showItem($_POST['item_id'], $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
+                return;
+            }
             // Remove unwanted posted information
             unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id'], $_POST['_csrf'], $_POST['MAX_FILE_SIZE']);
             MenuOptions::collapseRequest($_POST);

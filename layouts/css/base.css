@@ -440,6 +440,12 @@ body:has(.sectionbar) .main > .grid > .card > .card-title{ display:none; }
 .input::placeholder,.textarea::placeholder{ color:var(--placeholder); }
 .textarea{ min-height:120px; resize:vertical; }
 .input:hover,.textarea:hover,.select:hover{ border-color: color-mix(in srgb, var(--brand) 55%, var(--field-border)); }
+input[type="date"].input,
+input[type="time"].input,
+input[type="datetime-local"].input{
+    color-scheme: light;
+    min-width: 12rem;
+}
 .input:focus,.textarea:focus,.select:focus{
     outline:2px solid transparent; outline-offset:2px;
     border-color:var(--brand); box-shadow:0 0 0 3px var(--ring); background-color:#fff;

@@ -105,6 +105,8 @@ final class PrintScreen
     			if ($row['field_type'] == FieldTypes::TEXT_AREA){
     				$value = str_replace("\n", "<br />", $value);
     				$value = '<br />'.$value.'<br /><br />';
+    			} else {
+    				$value = \Adlexone\support\FieldValidation::display($row, $value);
     			}
     			$itemField[$row['custom_field_name']] = $value;
 

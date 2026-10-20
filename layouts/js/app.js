@@ -283,17 +283,40 @@
 (() => {
     const trim = (value) => (value || '').trim();
 
+    const validIsoDate = (value) => {
+        const match = trim(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return false;
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+    };
+
     const validDate = (value, format) => {
-        if (format !== 'DMY' && format !== 'MDY') return true;
+        if (validIsoDate(value)) return true;
+        const order = format === 'MDY' ? 'MDY' : 'DMY';
         const parts = trim(value).split(/[/-]/);
         if (parts.length !== 3 || parts.some((part) => !/^\d{1,4}$/.test(part))) return false;
         const [first, second, third] = parts.map(Number);
         let year = third;
         if (parts[2].length <= 2) year += year > 50 ? 1900 : 2000;
-        const month = format === 'DMY' ? second : first;
-        const day = format === 'DMY' ? first : second;
+        const month = order === 'DMY' ? second : first;
+        const day = order === 'DMY' ? first : second;
         const date = new Date(year, month - 1, day);
         return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+    };
+
+    const validUrl = (value) => {
+        const text = trim(value);
+        if (!text) return false;
+        try {
+            const href = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `http://${text}`;
+            const parsed = new URL(href);
+            return parsed.hostname.includes('.');
+        } catch (e) {
+            return false;
+        }
     };
 
     const validTime = (value) => {
@@ -320,11 +343,16 @@
             case 'date': return !validDate(value, options[0]);
             case 'time': return !validTime(value);
             case 'datetime': {
+                if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trim(value))) {
+                    const [day, time] = trim(value).split('T');
+                    return !validIsoDate(day) || !validTime(time);
+                }
                 const [day = '', time = ''] = trim(value).split(/\s+/);
                 return !validDate(day, options[0]) || !validTime(time);
             }
             case 'ip': return !validIp(value);
             case 'email': return !validEmail(value);
+            case 'url': return !validUrl(value);
             case 'regexp':
                 try { return !new RegExp(options.join(',')).test(value); } catch (e) { return false; }
             default: return false;

@@ -15,7 +15,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 9;
+    private const VERSION = 10;
 
     private static bool $done = false;
 
@@ -77,6 +77,11 @@ final class SchemaMigrator
         if ($current < 9) {
             self::applyV9();
             self::mark(9);
+            $current = 9;
+        }
+        if ($current < 10) {
+            self::applyV10();
+            self::mark(10);
         }
     }
 
@@ -705,6 +710,42 @@ final class SchemaMigrator
     private static function applyV9(): void
     {
         \Adlexone\Application\ApplicationBuilder::removeInstalledApplications();
+    }
+
+    /**
+     * Retype known date and number fields created as free text.
+     */
+    private static function applyV10(): void
+    {
+        if (!Database::tableExists('custom_fields')) {
+            return;
+        }
+        $dates = [
+            'Closed on', 'Completed on', 'Settled on', 'Done on', 'Response due',
+            'Decided on', 'Due', 'Placed on', 'Signed on',
+        ];
+        foreach (Database::select('custom_fields', ['custom_field_id', 'custom_field_name', 'field_type']) as $row) {
+            $name = (string) ($row['custom_field_name'] ?? '');
+            $base = trim(preg_replace('/\s+\([^)]+\)\s*$/', '', $name) ?? $name);
+            $type = \Adlexone\support\FieldTypes::normalise((string) ($row['field_type'] ?? ''));
+            $id = (int) $row['custom_field_id'];
+            if (in_array($base, $dates, true) && $type === \Adlexone\support\FieldTypes::TEXT_BOX) {
+                Database::update(
+                    'custom_fields',
+                    ['field_type' => \Adlexone\support\FieldTypes::DATE, 'validation_type' => 'date'],
+                    'custom_field_id = ?',
+                    [$id]
+                );
+            }
+            if (in_array($base, ['Amount', 'Reserve'], true) && $type === \Adlexone\support\FieldTypes::TEXT_BOX) {
+                Database::update(
+                    'custom_fields',
+                    ['field_type' => \Adlexone\support\FieldTypes::NUMBER, 'validation_type' => 'numeric'],
+                    'custom_field_id = ?',
+                    [$id]
+                );
+            }
+        }
     }
 
     private static function migrateActionPackages(): void

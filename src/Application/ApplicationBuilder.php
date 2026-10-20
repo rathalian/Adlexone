@@ -52,7 +52,7 @@ final class ApplicationBuilder
                 'ic-knowledgebase',
                 'Kind',
                 'Stamps the closed date when a matter is done.',
-                [$status(['Waiting on us', 'Waiting on them', 'Done']), self::text('Client'), self::menu('Kind', ['Contract', 'Dispute', 'Advice', 'Property']), self::text('Reference'), self::text('Next step'), self::note(), self::text('Closed on')],
+                [$status(['Waiting on us', 'Waiting on them', 'Done']), self::text('Client'), self::menu('Kind', ['Contract', 'Dispute', 'Advice', 'Property']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Closed on')],
                 [
                     self::when('Note that a matter was opened', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Opened ITEM_TITLE.')]),
                     self::when('Tell the owner a matter is waiting on us', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Waiting on us', [self::email('Waiting on us: ITEM_TITLE', 'ITEM_TITLE is waiting on us.')]),
@@ -68,7 +68,7 @@ final class ApplicationBuilder
                 'ic-item-mgmt',
                 'Side',
                 'Stamps the completed date when a transaction completes.',
-                [$status(['Instructed', 'Searches', 'Enquiries', 'Exchange', 'Complete']), self::text('Client'), self::text('Place'), self::menu('Side', ['Sale', 'Purchase']), self::text('Reference'), self::text('Next step'), self::note(), self::text('Completed on')],
+                [$status(['Instructed', 'Searches', 'Enquiries', 'Exchange', 'Complete']), self::text('Client'), self::text('Place'), self::menu('Side', ['Sale', 'Purchase']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Completed on')],
                 [
                     self::when('Note the instruction', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Instructed ITEM_TITLE.')]),
                     self::when('Tell the owner enquiries have started', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Enquiries', [self::email('Enquiries: ITEM_TITLE', 'ITEM_TITLE is in enquiries.')]),
@@ -84,7 +84,7 @@ final class ApplicationBuilder
                 'ic-servicecentre',
                 'Insurer',
                 'Stamps the settled date and writes the log when a claim is settled.',
-                [$status(['Notified', 'With the insurer', 'Waiting on them', 'Settled']), self::text('Client'), self::text('Insurer'), self::menu('Kind', ['Property', 'Motor', 'Liability', 'Travel']), self::text('Reference'), self::text('Reserve'), self::text('Next step'), self::note(), self::text('Settled on')],
+                [$status(['Notified', 'With the insurer', 'Waiting on them', 'Settled']), self::text('Client'), self::text('Insurer'), self::menu('Kind', ['Property', 'Motor', 'Liability', 'Travel']), self::text('Reference'), self::number('Reserve'), self::text('Next step'), self::note(), self::date('Settled on')],
                 [
                     self::when('Note the notification', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Notified ITEM_TITLE.')]),
                     self::when('Tell the owner the claim is with the insurer', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the insurer', [
@@ -104,7 +104,7 @@ final class ApplicationBuilder
                 'ic-time',
                 'Trade',
                 'Emails the owner when a repair is on site.',
-                [$status(['Reported', 'Booked', 'On site', 'Done']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::text('Done on')],
+                [$status(['Reported', 'Booked', 'On site', 'Done']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::date('Done on')],
                 [
                     self::when('Note the report', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Reported ITEM_TITLE.')]),
                     self::when('Tell the owner someone is on site', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'On site', [self::email('On site: ITEM_TITLE', 'ITEM_TITLE is on site.')]),
@@ -120,7 +120,7 @@ final class ApplicationBuilder
                 'ic-create-ticket',
                 'Channel',
                 'Posts a notice when a complaint is opened, and stamps the closed date.',
-                [$status(['Opened', 'With us', 'Their response', 'Closed']), self::text('Client'), self::menu('Channel', ['Letter', 'Phone', 'Email', 'Web']), self::text('Reference'), self::text('Next step'), self::note(), self::text('Response due'), self::text('Closed on')],
+                [$status(['Opened', 'With us', 'Their response', 'Closed']), self::text('Client'), self::menu('Channel', ['Letter', 'Phone', 'Email', 'Web']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Response due'), self::date('Closed on')],
                 [
                     self::when('Open the complaint', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::logLine('Opened ITEM_TITLE.'),
@@ -140,7 +140,7 @@ final class ApplicationBuilder
                 'ic-subjects',
                 'Amount',
                 'Stamps the decided date and posts a notice when a paper is decided.',
-                [$status(['In', 'Reading', 'Asking', 'Decided']), self::text('Applicant'), self::menu('Kind', ['Grant', 'Credit', 'Award']), self::text('Amount'), self::text('Next step'), self::note(), self::text('Decided on')],
+                [$status(['In', 'Reading', 'Asking', 'Decided']), self::text('Applicant'), self::menu('Kind', ['Grant', 'Credit', 'Award']), self::number('Amount'), self::text('Next step'), self::note(), self::date('Decided on')],
                 [
                     self::when('Note the paper arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Received ITEM_TITLE.')]),
                     self::when('Tell the owner more is being asked', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Asking', [
@@ -164,7 +164,7 @@ final class ApplicationBuilder
                 'ic-search',
                 'Rating',
                 'Emails the owner when a finding is accepted.',
-                [$status(['Raised', 'Accepted', 'In progress', 'Closed']), self::text('Place'), self::menu('Rating', ['High', 'Medium', 'Low']), self::text('Next step'), self::note(), self::text('Due'), self::text('Closed on')],
+                [$status(['Raised', 'Accepted', 'In progress', 'Closed']), self::text('Place'), self::menu('Rating', ['High', 'Medium', 'Low']), self::text('Next step'), self::note(), self::date('Due'), self::date('Closed on')],
                 [
                     self::when('Note the finding', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Raised ITEM_TITLE.')]),
                     self::when('Tell the owner the finding was accepted', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Accepted', [self::email('Accepted: ITEM_TITLE', 'ITEM_TITLE has been accepted.')]),
@@ -180,7 +180,7 @@ final class ApplicationBuilder
                 'ic-announcements',
                 'Kind',
                 'Posts a notice when an incident is reported.',
-                [$status(['Reported', 'Investigating', 'Actions', 'Closed']), self::text('Place'), self::menu('Kind', ['Injury', 'Near miss', 'Damage', 'Environment']), self::text('Reported by'), self::text('Next step'), self::note(), self::text('Closed on')],
+                [$status(['Reported', 'Investigating', 'Actions', 'Closed']), self::text('Place'), self::menu('Kind', ['Injury', 'Near miss', 'Damage', 'Environment']), self::text('Reported by'), self::text('Next step'), self::note(), self::date('Closed on')],
                 [
                     self::when('Report the incident', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::email('Reported: ITEM_TITLE', 'ITEM_TITLE has been reported.'),
@@ -201,7 +201,7 @@ final class ApplicationBuilder
                 'ic-my-ticket-searches',
                 'Role',
                 'Emails the owner when a candidate reaches the shortlist.',
-                [$status(['Longlist', 'Shortlist', 'Met', 'Offer', 'Placed']), self::text('Client'), self::text('Role'), self::text('Next step'), self::note(), self::text('Placed on')],
+                [$status(['Longlist', 'Shortlist', 'Met', 'Offer', 'Placed']), self::text('Client'), self::text('Role'), self::text('Next step'), self::note(), self::date('Placed on')],
                 [
                     self::when('Note the candidate', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Added ITEM_TITLE to the longlist.')]),
                     self::when('Tell the owner they are on the shortlist', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Shortlist', [self::email('Shortlist: ITEM_TITLE', 'ITEM_TITLE is on the shortlist.')]),
@@ -217,7 +217,7 @@ final class ApplicationBuilder
                 'ic-new-article',
                 'Kind',
                 'Hands a contract back to the person who opened it, and stamps the signed date.',
-                [$status(['In', 'Review', 'With the business', 'Signed']), self::text('Client'), self::menu('Kind', ['Customer', 'Supplier', 'Employment', 'NDA']), self::text('Reference'), self::text('Next step'), self::note(), self::text('Signed on')],
+                [$status(['In', 'Review', 'With the business', 'Signed']), self::text('Client'), self::menu('Kind', ['Customer', 'Supplier', 'Employment', 'NDA']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Signed on')],
                 [
                     self::when('Note the contract arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Received ITEM_TITLE for review.')]),
                     self::when('Hand it back to the person who opened it', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the business', [
@@ -425,7 +425,7 @@ final class ApplicationBuilder
                 'enabled' => 'Yes',
                 'field_reference' => 0,
                 'data' => '',
-                'validation_type' => '',
+                'validation_type' => FieldTypes::impliedValidation($type),
                 'required' => 'No',
             ]);
             Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
@@ -790,6 +790,22 @@ final class ApplicationBuilder
     private static function text(string $name): array
     {
         return ['name' => $name, 'type' => FieldTypes::TEXT_BOX];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function date(string $name): array
+    {
+        return ['name' => $name, 'type' => FieldTypes::DATE];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function number(string $name): array
+    {
+        return ['name' => $name, 'type' => FieldTypes::NUMBER];
     }
 
     /**

@@ -1499,15 +1499,7 @@ final class Rules
 
     public static function today(): string
     {
-        $format = 'd-m-Y';
-        if (defined('SET_DATE_FORMAT')) {
-            $head = trim(explode(',', (string) SET_DATE_FORMAT)[0]);
-            if ($head !== '') {
-                $format = $head;
-            }
-        }
-
-        return date($format);
+        return \Adlexone\support\FieldValidation::today();
     }
 
     /**
