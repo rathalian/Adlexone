@@ -4,5 +4,11 @@
     "dockerfile": "Dockerfile"
   },
   "install": "composer install --no-interaction --prefer-dist",
-  "start": "bash .cursor/prepare-runtime.sh"
+  "start": "bash .cursor/prepare-runtime.sh",
+  "ports": [
+    {
+      "name": "Inlay",
+      "port": 8000
+    }
+  ]
 }
