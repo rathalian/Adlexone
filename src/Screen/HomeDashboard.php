@@ -269,10 +269,20 @@ final class HomeDashboard
             return '';
         }
         $list = implode(',', array_map('intval', $typeIds));
+        $visible = '';
+        $visibleLog = '';
+        if ((int) ($_SESSION['access_role_id'] ?? 5) > 2) {
+            $ids = \Adlexone\Screen\WorkScreen::applicationAccessibleItemIds();
+            if ($ids === []) {
+                return '';
+            }
+            $visible = ' AND item_id IN (' . implode(',', array_map('intval', $ids)) . ')';
+            $visibleLog = ' AND i.item_id IN (' . implode(',', array_map('intval', $ids)) . ')';
+        }
         $events = [];
         $lines = Database::rows(
             'SELECT l.item_id, l.log_text, CAST(l.create_date AS INTEGER) AS at, l.security_id, i.item_type_id FROM core_log l '
-            . 'JOIN items i ON i.item_id = l.item_id WHERE i.item_type_id IN (' . $list . ') '
+            . 'JOIN items i ON i.item_id = l.item_id WHERE i.item_type_id IN (' . $list . ')' . $visibleLog . ' '
             . 'ORDER BY CAST(l.create_date AS INTEGER) DESC LIMIT 12'
         );
         $names = RecordQuery::userNames(array_map(static fn (array $row): int => (int) ($row['security_id'] ?? 0), $lines));
@@ -292,7 +302,7 @@ final class HomeDashboard
             ];
         }
         $created = Database::rows(
-            'SELECT item_id, item_title, item_type_id, create_date, creator_security FROM items WHERE item_type_id IN (' . $list . ') ORDER BY create_date DESC LIMIT 8'
+            'SELECT item_id, item_title, item_type_id, create_date, creator_security FROM items WHERE item_type_id IN (' . $list . ')' . $visible . ' ORDER BY create_date DESC LIMIT 8'
         );
         $creators = RecordQuery::userNames(array_map(static fn (array $row): int => (int) ($row['creator_security'] ?? 0), $created));
         foreach ($created as $row) {

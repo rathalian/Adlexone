@@ -301,7 +301,8 @@ final class MenuOptions
             Database::update(
                 'custom_field_menu_values',
                 ['menu_value' => $newValue],
-                "WHERE menu_value_id = '" . $id . "' AND custom_field_id = '" . $fieldId . "'"
+                'WHERE menu_value_id = ? AND custom_field_id = ?',
+                [(int) $id, (int) $fieldId]
             );
             if (!in_array($newValue, $oldValues, true)) {
                 self::renameStoredItems($fieldId, $previous, $newValue);
@@ -327,7 +328,8 @@ final class MenuOptions
             Database::update(
                 'custom_field_menu_values',
                 ['parent_menu_value_id' => $parentId],
-                "WHERE menu_value_id = '" . $id . "' AND custom_field_id = '" . $fieldId . "'"
+                'WHERE menu_value_id = ? AND custom_field_id = ?',
+                [(int) $id, (int) $fieldId]
             );
         }
         unset(self::$nodeCache[$fieldId]);
@@ -378,7 +380,8 @@ final class MenuOptions
             Database::update(
                 'custom_field_menu_values',
                 ['sub_menu_values' => ''],
-                "WHERE menu_value_id = '" . $parentId . "'"
+                'WHERE menu_value_id = ?',
+                [(int) $parentId]
             );
         }
     }

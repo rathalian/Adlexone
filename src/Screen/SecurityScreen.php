@@ -190,7 +190,7 @@ final class SecurityScreen
     {
 
         if ($userID === '') {
-            $fieldValues = $values;
+            $fieldValues = is_array($values) ? $values : [];
         } else {
             $fieldValues = Database::first('users', '*', 'user_id = ?', [(int) $userID]);
             if ($fieldValues === null) {
@@ -933,12 +933,37 @@ final class SecurityScreen
     public static function deleteGroup($groupID = '')
     {
         $groupID = (int) $groupID;
+        $back = Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL');
+        $group = Database::first('groups', ['group_name'], 'group_id = ?', [$groupID]);
+        if ($group === null) {
+            View::respond('That group was not found.', $back);
+            return;
+        }
+        if (self::systemAdminsRemaining(0, $groupID) === 0) {
+            View::respond('This group holds the only system administrator access. Give that access to another group or person before deleting it.', $back);
+            return;
+        }
         Database::delete('groups', 'group_id = ?', [$groupID]);
         Database::delete('user_groups', 'group_id = ?', [$groupID]);
         Database::delete('item_groups', 'group_id = ?', [$groupID]);
         Database::delete('item_type_groups', 'group_id = ?', [$groupID]);
         Access::setGroupPermissions($groupID, []);
-        self::showGroups();
+        View::respond('Group deleted.', $back);
+    }
+
+    /**
+     * How many people would still hold system administrator access after one
+     * person or one group is removed.
+     */
+    private static function systemAdminsRemaining(int $exceptUser, int $exceptGroup): int
+    {
+        $rows = Database::rows(
+            'SELECT COUNT(*) AS n FROM users WHERE user_id <> ? AND (role = 0 OR user_id IN ('
+            . 'SELECT ug.user_id FROM user_groups ug INNER JOIN group_permissions gp ON gp.group_id = ug.group_id '
+            . 'WHERE gp.permission = ? AND ug.group_id <> ?))',
+            [$exceptUser, Permission::ADMIN_SYSTEM, $exceptGroup]
+        );
+        return (int) ($rows[0]['n'] ?? 0);
     }
 
     /**
@@ -955,10 +980,19 @@ final class SecurityScreen
             View::respond('You cannot delete the account you are signed in with.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
             return;
         }
+        $back = Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL');
+        if (!Database::exists('users', 'user_id = ?', [$userID])) {
+            View::respond('That person was not found.', $back);
+            return;
+        }
+        if (self::systemAdminsRemaining($userID, 0) === 0) {
+            View::respond('This person is the only system administrator. Give that access to someone else before deleting the account.', $back);
+            return;
+        }
         Database::delete('users', 'user_id = ?', [$userID]);
         Database::delete('user_identities', 'user_id = ?', [$userID]);
         \Adlexone\Data\GroupMembership::setUserGroups($userID, []);
-        self::showUsers();
+        View::respond('Person deleted.', $back);
     }
 
     /**

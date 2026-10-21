@@ -149,7 +149,7 @@ final class FieldsScreen
     {
         if ($customFieldID == '') {
             $formAction = '?manage=fields&option=add_custom_field';
-            $fieldValues = $values;
+            $fieldValues = is_array($values) ? $values : [];
             $title = 'Add field';
         } else {
             $fieldValues = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);

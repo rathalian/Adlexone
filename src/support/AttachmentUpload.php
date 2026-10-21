@@ -16,6 +16,17 @@ class AttachmentUpload
      */
     public static function uploadItemAttachment($maximumSize, $inputName, $time, $uploadDirectory)
     {
+        if (!isset($_FILES[$inputName]) || !is_array($_FILES[$inputName]) || ($_FILES[$inputName]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            View::respond('No file was chosen. Go back and choose a file to upload.');
+            Page::current()->send();
+            exit;
+        }
+        $maximum = (int) $maximumSize * 1000000;
+        if ($maximum > 0 && (int) ($_FILES[$inputName]['size'] ?? 0) > $maximum) {
+            View::respond('The file is larger than the maximum attachment size of ' . (int) $maximumSize . ' MB.');
+            Page::current()->send();
+            exit;
+        }
         $original = basename((string) ($_FILES[$inputName]['name'] ?? ''));
         $ext = strtolower((string) pathinfo($original, PATHINFO_EXTENSION));
         $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?? '';
@@ -33,7 +44,12 @@ class AttachmentUpload
         $base = substr($base, 0, 80);
         $storedName = bin2hex(random_bytes(8)) . '_' . $base . ($ext !== '' ? '.' . $ext : '');
         $uploadfile = $uploadDirectory . $storedName;
-        if ($_FILES[$inputName]['error'] == 0) {
+        if ($_FILES[$inputName]['error'] === UPLOAD_ERR_OK) {
+            if (!is_dir($uploadDirectory) && !@mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
+                View::respond('The attachments folder ' . $uploadDirectory . ' does not exist and could not be created.');
+                Page::current()->send();
+                exit;
+            }
             $result = move_uploaded_file($_FILES[$inputName]['tmp_name'], $uploadfile);
             if (!$result) {
                 View::respond('There is a problem moving the uploaded file to ' . $uploadDirectory . '.  Please check the directory exists and permissions are set as per the install documentation.');
@@ -61,9 +77,10 @@ class AttachmentUpload
                     View::respond('You did not upload anything. Please go back and select a file to upload.');
                     Page::current()->send();
                     exit;
-                case '5':
-                    View::respond('The file is 0 kilobytes in length. Is it an empty file?');
-                    break;
+                default:
+                    View::respond('The file could not be uploaded. The server has no usable temporary folder or cannot write to disk.');
+                    Page::current()->send();
+                    exit;
             }
         }
         $_FILES[$inputName]['time_name'] = $storedName;

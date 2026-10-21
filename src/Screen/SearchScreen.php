@@ -1308,7 +1308,7 @@ final class SearchScreen
                 $i++;
             }
         } elseif ($filter != '' and $filter != '0') {
-            $condition = "WHERE item_type_id = '$filter'";
+            $condition = 'WHERE item_type_id = ' . (int) $filter;
         } else {
             $condition = '';
         }

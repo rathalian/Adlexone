@@ -18,6 +18,101 @@ use Adlexone\Html\Html;
 final class SiteSettingsScreen
 {
     /** @var list<string> */
+    private const DATE_FORMATS = ['d-m-Y, h:i A', 'm-d-Y, h:i A', 'd.m.Y H:i'];
+
+    /**
+     * @param list<string> $problems
+     */
+    private static function reject(array $problems, string $option): void
+    {
+        View::respond(
+            implode(' ', $problems),
+            Blocks::link('?manage=settings&option=' . $option, TXT_55, 'URL')
+        );
+    }
+
+    /**
+     * Values the home application list offers.
+     *
+     * @return list<string>
+     */
+    private static function homeValues(): array
+    {
+        $names = ['Home'];
+        $values = ['home}-{Home'];
+        ApplicationStore::mergeHomeChoices($values, $names);
+        return array_map('strval', $values);
+    }
+
+    /**
+     * Checks one posted advanced setting. Returns the value to store, or null
+     * with a message in $problem.
+     */
+    private static function advancedValue(string $key, string $value, ?string &$problem): ?string
+    {
+        $value = trim($value);
+        $problem = null;
+        $whole = static fn (int $min, int $max): bool => preg_match('/^\d{1,5}$/', $value) === 1
+            && (int) $value >= $min && (int) $value <= $max;
+        switch ($key) {
+            case 'SET_CUSTOM_FIELDS_IN_SEARCH':
+                if (in_array($value, ['2', '5', '10', '15'], true)) {
+                    return $value;
+                }
+                $problem = 'Choose how many search fields to include from the list.';
+                return null;
+            case 'SET_OWNER_MENU':
+                if (preg_match('/^[0-5]$/', $value) === 1) {
+                    return $value;
+                }
+                $problem = 'Choose the role shown on a record from the list.';
+                return null;
+            case 'SET_FORM_FIELD_HEIGHT':
+                if ($whole(1, 50)) {
+                    return (string) (int) $value;
+                }
+                $problem = 'Enter the note height as a whole number from 1 to 50.';
+                return null;
+            case 'SET_SECURE_TYPE':
+            case 'SET_LOG_ENTRY':
+            case 'SET_ATTACHMENTS':
+            case 'ADD_ATTACHMENTS':
+                if (in_array($value, ['yes', 'no'], true)) {
+                    return $value;
+                }
+                $problem = 'Choose Yes or No for each record option.';
+                return null;
+            case 'SET_MAX_ATTACHMENT':
+                if ($whole(1, 1000)) {
+                    return (string) (int) $value;
+                }
+                $problem = 'Enter the largest file size as a whole number of megabytes from 1 to 1000.';
+                return null;
+            case 'SET_DEFAULT_ITEM_TYPE':
+                if (ctype_digit($value) && Database::exists('item_types', 'item_type_id = ?', [(int) $value])) {
+                    return $value;
+                }
+                $problem = 'Choose one of the listed record types as the default.';
+                return null;
+            case 'SET_DEBUG_MODE':
+            case 'SET_SHOW_SQL':
+                if (in_array($value, ['Yes', 'No'], true)) {
+                    return $value;
+                }
+                $problem = 'Choose Yes or No for debugging and for showing SQL.';
+                return null;
+            case 'SET_ERROR_REPORTING_LEVEL':
+                if (in_array($value, ['6135', '6143'], true)) {
+                    return $value;
+                }
+                $problem = 'Choose a PHP error reporting level from the list.';
+                return null;
+        }
+        $problem = '';
+        return null;
+    }
+
+    /** @var list<string> */
     private const ENGINE_KEYS = [
         'SET_CUSTOM_FIELDS_IN_SEARCH',
         'SET_OWNER_MENU',
@@ -103,12 +198,54 @@ final class SiteSettingsScreen
                 if (!is_array($existing)) {
                     $existing = [];
                 }
+                $problems = [];
+                $settings = $existing;
                 $posted = $_POST;
-                unset($posted['submit_button']);
-                $settings = array_merge($existing, $posted);
+                if (array_key_exists('SET_ITEMS_PAGE', $posted)) {
+                    $perPage = trim((string) $posted['SET_ITEMS_PAGE']);
+                    if (preg_match('/^\d{1,3}$/', $perPage) !== 1 || (int) $perPage < 1 || (int) $perPage > 500) {
+                        $problems[] = 'Enter records per page as a whole number from 1 to 500.';
+                    } else {
+                        $settings['SET_ITEMS_PAGE'] = (string) (int) $perPage;
+                    }
+                }
+                if (array_key_exists('SET_DATE_FORMAT', $posted)) {
+                    if (!in_array((string) $posted['SET_DATE_FORMAT'], self::DATE_FORMATS, true)) {
+                        $problems[] = 'Choose one of the listed date formats.';
+                    } else {
+                        $settings['SET_DATE_FORMAT'] = (string) $posted['SET_DATE_FORMAT'];
+                    }
+                }
+                if (array_key_exists('SET_DEFAULT_APPLICATION', $posted)) {
+                    if (!in_array((string) $posted['SET_DEFAULT_APPLICATION'], self::homeValues(), true)) {
+                        $problems[] = 'Choose one of the listed home applications.';
+                    } else {
+                        $settings['SET_DEFAULT_APPLICATION'] = (string) $posted['SET_DEFAULT_APPLICATION'];
+                    }
+                }
+                if (array_key_exists('USER_REG_ACTION', $posted)) {
+                    $group = (string) $posted['USER_REG_ACTION'];
+                    if ($group !== 'None' && !(ctype_digit($group) && Database::exists('groups', 'group_id = ?', [(int) $group]))) {
+                        $problems[] = 'Choose one of the listed groups for new accounts.';
+                    } else {
+                        $settings['USER_REG_ACTION'] = $group;
+                    }
+                }
+                if (array_key_exists('SET_HOME_LEAD', $posted)) {
+                    $lead = trim((string) $posted['SET_HOME_LEAD']);
+                    if (mb_strlen($lead) > 300) {
+                        $problems[] = 'Keep the sign-in sentence to 300 characters or fewer.';
+                    } else {
+                        $settings['SET_HOME_LEAD'] = $lead;
+                    }
+                }
+                if ($problems !== []) {
+                    self::reject($problems, 'adlexone_settings');
+                    break;
+                }
                 $settings['SET_DEFAULT_THEME'] = defined('SET_DEFAULT_THEME') ? SET_DEFAULT_THEME : 'inlay-stone';
                 $settings['SET_DEFAULT_LANGUAGE'] = defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English';
-                $settings['SET_HOME_LEAD'] = trim((string) ($posted['SET_HOME_LEAD'] ?? $existing['SET_HOME_LEAD'] ?? 'This site keeps the applications, records, and rules for the work.'));
+                $settings['SET_HOME_LEAD'] = (string) ($settings['SET_HOME_LEAD'] ?? 'This site keeps the applications, records, and rules for the work.');
                 SharedMethods::saveSettingsToJson($path, $settings);
                 break;
             case 'advanced_settings' :
@@ -171,6 +308,28 @@ final class SiteSettingsScreen
                 $connections = ($issuer !== '' || $clientId !== '' || $clientSecret !== '')
                     ? array_merge([$connection], $rest)
                     : $rest;
+                $problems = [];
+                if (preg_match('/^[A-Za-z0-9._-]{1,40}$/', $id) !== 1) {
+                    $problems[] = 'The connection identifier may only use letters, numbers, dots, underscores, and hyphens.';
+                }
+                if ($issuer !== '' && !preg_match('#^https?://[^\s/]+(/\S*)?$#i', $issuer)) {
+                    $problems[] = 'Enter the issuer URL as a full address, such as https://login.example.com.';
+                }
+                $oauthOn = $yes('AUTH_OAUTH_ENABLED') === 'Yes';
+                $oauthReady = $issuer !== '' && $clientId !== '';
+                if ($oauthOn && !$oauthReady) {
+                    $problems[] = 'Enter the issuer URL and client ID before turning on identity provider sign-in.';
+                }
+                if ($yes('AUTH_OAUTH_AUTO_REDIRECT') === 'Yes' && !$oauthOn) {
+                    $problems[] = 'Turn on identity provider sign-in before sending people straight to it.';
+                }
+                if ($yes('AUTH_LOCAL_ENABLED', 'Yes') === 'No' && !($oauthOn && $oauthReady)) {
+                    $problems[] = 'Keep username and password sign-in on until an identity provider is set up. Turning both off would lock everyone out.';
+                }
+                if ($problems !== []) {
+                    self::reject($problems, 'sign_in_settings');
+                    break;
+                }
                 $settings = [
                     'AUTH_LOCAL_ENABLED' => $yes('AUTH_LOCAL_ENABLED', 'Yes'),
                     'AUTH_LOCAL_ALLOW_REGISTRATION' => defined('AUTH_LOCAL_ALLOW_REGISTRATION') ? (string) AUTH_LOCAL_ALLOW_REGISTRATION : 'No',
@@ -194,10 +353,23 @@ final class SiteSettingsScreen
                 if ($smtpPassword === '' && defined('SET_SMTP_PASSWORD')) {
                     $smtpPassword = (string) SET_SMTP_PASSWORD;
                 }
+                $smtpHost = trim((string) ($_POST['SET_SMTP_HOST'] ?? ''));
+                $smtpPort = trim((string) ($_POST['SET_SMTP_PORT'] ?? ''));
+                $problems = [];
+                if ($smtpHost !== '' && preg_match('/^[A-Za-z0-9._:-]{1,255}$/', $smtpHost) !== 1) {
+                    $problems[] = 'Enter the mail server as a host name, such as mail.example.com.';
+                }
+                if ($smtpPort !== '' && (preg_match('/^\d{1,5}$/', $smtpPort) !== 1 || (int) $smtpPort < 1 || (int) $smtpPort > 65535)) {
+                    $problems[] = 'Enter the mail port as a number from 1 to 65535.';
+                }
+                if ($problems !== []) {
+                    self::reject($problems, 'email_settings');
+                    break;
+                }
                 SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'email_settings.json', [
-                    'SET_SMTP_HOST' => $_POST['SET_SMTP_HOST'] ?? '',
-                    'SET_SMTP_PORT' => $_POST['SET_SMTP_PORT'] ?? '',
-                    'SET_SMTP_USER' => $_POST['SET_SMTP_USER'] ?? '',
+                    'SET_SMTP_HOST' => $smtpHost,
+                    'SET_SMTP_PORT' => $smtpPort,
+                    'SET_SMTP_USER' => trim((string) ($_POST['SET_SMTP_USER'] ?? '')),
                     'SET_SMTP_PASSWORD' => $smtpPassword,
                 ]);
                 break;
@@ -280,15 +452,30 @@ final class SiteSettingsScreen
      */
     private static function saveAdvanced(array $posted): void
     {
-        unset($posted['submit_button'], $posted['reset'], $posted['_csrf']);
         $engine = [];
         $advanced = [];
+        $problems = [];
         foreach ($posted as $key => $value) {
-            if (in_array((string) $key, self::ENGINE_KEYS, true)) {
-                $engine[$key] = $value;
-            } else {
-                $advanced[$key] = $value;
+            $key = (string) $key;
+            if (!is_scalar($value)) {
+                continue;
             }
+            $clean = self::advancedValue($key, (string) $value, $problem);
+            if ($clean === null) {
+                if ($problem !== '') {
+                    $problems[$problem] = $problem;
+                }
+                continue;
+            }
+            if (in_array($key, self::ENGINE_KEYS, true)) {
+                $engine[$key] = $clean;
+            } else {
+                $advanced[$key] = $clean;
+            }
+        }
+        if ($problems !== []) {
+            self::reject(array_values($problems), 'advanced_settings');
+            return;
         }
         if ($engine !== []) {
             $path = SET_CONFIGURATION_PATH . 'adlexone_settings.json';
@@ -348,9 +535,7 @@ final class SiteSettingsScreen
             $value = strtolower(trim((string) constant($name)));
             return in_array($value, ['1', 'true', 'yes', 'on'], true) ? 'Yes' : 'No';
         };
-        $esc = static function (string $value): string {
-            return Html::e($value);
-        };
+        $esc = static fn (string $value): string => $value;
 
         $rows = [];
         if (defined('AUTH_OAUTH_CONNECTIONS_JSON')) {

@@ -139,6 +139,10 @@ final class ItemScreen
 
 
 
+        if (!self::authoriseItemOption((string) ($_GET['option'] ?? ''))) {
+            return;
+        }
+
         /**
          * Logic to render the appropriate template or call wrapper functions
          * Option is captured from the value selected via a hyperlink
@@ -233,6 +237,78 @@ final class ItemScreen
                 self::showMyItems($_SESSION['access_user_id']);
         }
     }
+    /**
+     * Item options that name an existing item, with the weakest role number
+     * (largest value) that may use them.
+     */
+    private const ITEM_OPTION_ROLES = [
+        'show_item' => 5,
+        'show_attachments' => 5,
+        'download_attachment' => 5,
+        'log_entry' => 4,
+        'add_log_entry' => 4,
+        'add_attachment' => 4,
+        'update_item' => 4,
+        'change_security' => 3,
+        'update_security' => 3,
+        'delete_attachment' => 2,
+        'delete_log' => 2,
+        'delete_item' => 2,
+        'transform_item' => 2,
+    ];
+
+    /**
+     * Stops an item option when the item is missing, hidden from the signed-in
+     * person, or needs a stronger role on that item than they hold.
+     */
+    private static function authoriseItemOption(string $option): bool
+    {
+        $needed = self::ITEM_OPTION_ROLES[$option] ?? null;
+        if ($needed === null || $option === 'show_item') {
+            return true;
+        }
+        if ($option === 'download_attachment' || $option === 'delete_attachment') {
+            $attachment = Database::first('item_attachments', ['item_id'], 'id = ?', [(int) ($_GET['id'] ?? 0)]);
+            $itemId = $attachment === null ? 0 : (int) $attachment['item_id'];
+        } elseif (in_array($option, ['add_log_entry', 'update_item', 'transform_item'], true)) {
+            $itemId = (int) ($_POST['item_id'] ?? 0);
+        } else {
+            $itemId = (int) ($_GET['item_id'] ?? 0);
+        }
+        if ($itemId <= 0 || !Database::exists('items', 'item_id = ?', [$itemId])) {
+            View::respond(TXT_616);
+            return false;
+        }
+        if (!self::userCanAccessItem($itemId) || self::itemRole($itemId) > $needed) {
+            Access::deny();
+        }
+        return true;
+    }
+
+    /**
+     * The signed-in person's role on one item: the strongest group role, an
+     * administrator role, or manager when they own the item.
+     */
+    public static function itemRole(int $itemId): int
+    {
+        $sessionRole = (int) ($_SESSION['access_role_id'] ?? 5);
+        if ($sessionRole <= 2) {
+            return $sessionRole;
+        }
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        $role = 5;
+        foreach (array_intersect(GroupMembership::userGroupIds($userId), GroupMembership::itemGroupIds($itemId)) as $groupId) {
+            $group = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
+            if ($group !== null) {
+                $role = min($role, (int) $group['role']);
+            }
+        }
+        if (Database::exists('items', 'item_id = ? AND user_security = ?', [$itemId, $userId])) {
+            $role = min($role, 3);
+        }
+        return $role;
+    }
+
     /**
      * Whether this item type may be used in the current application shell.
      */
@@ -664,46 +740,6 @@ final class ItemScreen
     }
 
     /**
-     *
-     * This routine will double check that the ID's are for knowledgebase items and if they are update
-     * the database to say that they have been returned
-     *
-     * @param $knowledgeIds
-     * @return none
-     */
-    public static function updateKnowledgeCount($knowledgeIds): void
-    {
-
-        foreach ($knowledgeIds as $values) {
-            if (substr($values, -1) == '*') {
-                $values = substr($values, 0, -1);
-                $validId = false;
-                if (Database::exists('items', 'WHERE item_id =' . $values . ' AND item_type_id = ' . APP_COUNT_ITEM_TYPE)) {
-                    $validId = true;
-                }
-            } else {
-                $validId = True;
-            }
-            $event_id = (isset($_GET['event_id'])) ? $_GET['event_id'] : '';
-            $selectionCriteria = 'WHERE item_id =' . $values . ' AND event_id = "' . $event_id . '"';
-            if ($validId == True) {
-                if (Database::exists('system_log', $selectionCriteria)) {
-                    $sql = 'UPDATE ' . 'system_log SET event_counter = event_counter + 1 ' . $selectionCriteria;
-                } else {
-                    unset($columnArray);
-                    $columnArray['item_id'] = $values;
-                    $columnArray['create_date'] = time();
-                    $columnArray['event_counter'] = 1;
-                    $columnArray['event_id'] = $event_id;
-                    Database::insert('system_log', $columnArray);
-                    unset($columnArray);
-                }
-
-            }
-        }
-    }
-
-    /**
      * Shows a list of items defined by item id, filtered by specific item where applicable
      *
      * @param integer $itemIDArray Item ID array
@@ -717,7 +753,7 @@ final class ItemScreen
         $columnArray = array('item_id', 'create_date', 'item_type_id', 'item_title');
         // Override item id list if a specific id has been requested
         if ($itemID != '') {
-            $condition = "WHERE item_id = '$itemID'";
+            $condition = 'WHERE item_id = ' . (int) $itemID;
         } else {
             $condition = "WHERE ";
             $i = 0;
@@ -1039,7 +1075,7 @@ final class ItemScreen
         if (!isset($values['user_security'])) {
             // Setup item type information for display and later use when the item is first created
             $columnArray = array('*');
-            $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
+            $condition = 'WHERE item_type_id = ' . (int) $itemTypeID;
             $itemTypeFields = Database::first('item_types', $columnArray, $condition);
             if (!is_array($itemTypeFields)) {
                 $itemTypeFields = [];
@@ -1054,7 +1090,7 @@ final class ItemScreen
 
         // Get item type name
         $columnArray = array('item_type_name');
-        $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
+        $condition = 'WHERE item_type_id = ' . (int) $itemTypeID;
         $row = Database::first('item_types', $columnArray, $condition);
         if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
             $picker = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
@@ -1145,7 +1181,7 @@ final class ItemScreen
         }
         $fields[$inApplication ? 'Name' : Wording::get('LA_84', 'TXT_84')] = Form::text('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
         $columnArray = array('custom_field_id');
-        $condition = "WHERE item_type_id = '" . $itemTypeID . "' ORDER BY custom_field_order ASC";
+        $condition = 'WHERE item_type_id = ' . (int) $itemTypeID . ' ORDER BY custom_field_order ASC';
         $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
         $fieldCheck = new FieldCheck();
         foreach ($customFieldResult as $customFields) {
@@ -1296,7 +1332,7 @@ final class ItemScreen
     public static function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no')
     {
         //Check to see if the item exists
-        $sql = "SELECT item_id FROM items WHERE item_id='" . $itemID . "'";
+        $sql = 'SELECT item_id FROM items WHERE item_id = ' . (int) $itemID;
             $result = Database::rows($sql);
         if (count($result) == 0) {
            View::respond(TXT_616);
@@ -1305,24 +1341,16 @@ final class ItemScreen
             if ($i > 0) {//The user is allowed to access the task
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-                // Load item values or use posted field values
-                if (!isset($values['item_id'])) {
-                    // Setup item  information for display
-                    $columnArray = array('*');
-                    $condition = "WHERE item_id = '" . $itemID . "'";
-                    $itemFields = Database::first('items', $columnArray, $condition);
-                    $itemFields = ItemFields::hydrate($itemFields ?? []);
-                    // Build item table
-                } else {
-                    // Use passed in values.  Only occurs when user comes back to incomplete form
-                    // as original item type is pass in from item type selection page is no more
+                // Load the stored item, then lay posted values over it when the form is reloaded part-way
+                $itemFields = ItemFields::hydrate(Database::first('items', ['*'], 'item_id = ?', [(int) $itemID]) ?? []);
+                if (isset($values['item_id'])) {
                     foreach ($values as $key => $value) {
-                        $itemFields[$key] = stripslashes($value);
+                        $itemFields[$key] = is_string($value) ? stripslashes($value) : $value;
                     }
                 }
                 // Get item type name
                 $columnArray = array('item_type_name');
-                $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "'";
+                $condition = 'WHERE item_type_id = ' . (int) $itemFields['item_type_id'];
                 $row = Database::first('item_types', $columnArray, $condition);
                 $itemTypeName = $row['item_type_name'];
                 $inApplication = Page::current()->inApplication();
@@ -1350,11 +1378,11 @@ final class ItemScreen
                     $itemField[Wording::get('LA_269', 'TXT_269')] = Form::select('user_security', $filterdUserIDArray, $filteredUserArray, $itemFields['user_security']);
                 } else {
                     $columnArray = array('user_name');
-                    $condition = "WHERE user_id = '" . $itemFields['creator_security'] . "'";
+                    $condition = 'WHERE user_id = ' . (int) $itemFields['creator_security'];
                     $row = Database::first('users', $columnArray, $condition);
                     $itemField[TXT_551] = Form::hidden('creator_security', $itemFields['creator_security']) . $row['user_name'];
                     $columnArray = array('user_name');
-                    $condition = "WHERE user_id = '" . $itemFields['user_security'] . "'";
+                    $condition = 'WHERE user_id = ' . (int) $itemFields['user_security'];
                     $row = Database::first('users', $columnArray, $condition);
                     $itemField[TXT_269] = Form::hidden('user_security', $itemFields['user_security']) . $row['user_name'];
                 }
@@ -1417,7 +1445,7 @@ final class ItemScreen
                 }
                 // Setup custom field display
                 $columnArray = array('custom_field_id');
-                $condition = "WHERE item_type_id = '" . $itemFields['item_type_id'] . "' ORDER BY custom_field_order ASC";
+                $condition = 'WHERE item_type_id = ' . (int) $itemFields['item_type_id'] . ' ORDER BY custom_field_order ASC';
                 $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
                 $fieldCheck = new FieldCheck();
                 foreach ($customFieldResult as $customFields) {
@@ -1649,7 +1677,7 @@ final class ItemScreen
                 }
 
                 if ($itemID != '' && defined('APP_COUNT_ITEM_TYPE') && $itemFields['item_type_id'] == APP_COUNT_ITEM_TYPE) {
-                    updateKnoweldgeCount(array($itemID));
+                    SearchScreen::updateKnoweldgeCount(array($itemID));
                 }
 
                 if ($itemRole < 4) {
@@ -1667,6 +1695,53 @@ final class ItemScreen
         }
     }
 
+    private static function personExists($id): bool
+    {
+        return is_numeric($id) && Database::exists('users', 'user_id = ?', [(int) $id]);
+    }
+
+    /**
+     * The items columns a person may set when creating an item.
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private static function newItemColumns(array $post): array
+    {
+        $me = (int) ($_SESSION['access_user_id'] ?? 0);
+        $owner = $post['user_security'] ?? '';
+        $canAssign = (int) ($_SESSION['access_role_id'] ?? 5) < 4;
+        return [
+            'item_type_id' => (int) ($post['item_type_id'] ?? 0),
+            'item_title' => trim((string) ($post['item_title'] ?? '')),
+            'creator_security' => $me,
+            'user_security' => ($canAssign && self::personExists($owner)) ? (int) $owner : $me,
+        ];
+    }
+
+    /**
+     * The items columns a person may change on an existing item.
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private static function itemUpdateColumns(int $itemId, array $post): array
+    {
+        $columns = [];
+        $role = self::itemRole($itemId);
+        if ($role < 4 && array_key_exists('item_title', $post)) {
+            $columns['item_title'] = trim((string) $post['item_title']);
+        }
+        if ($role < 4 && !Page::current()->inApplication()) {
+            foreach (['creator_security', 'user_security'] as $key) {
+                if (isset($post[$key]) && self::personExists($post[$key])) {
+                    $columns[$key] = (int) $post[$key];
+                }
+            }
+        }
+        return $columns;
+    }
+
     /**
      * Takes information posted from the new item page and adds the item to the database then renders a succcess page
      * @return Rendered HTML response
@@ -1676,6 +1751,10 @@ final class ItemScreen
         // Return to the form if dynamic actions are still occurring, such as sub buildSelectDropdown selection etc
         if (!isset($_POST['item_type_id'])) {
             // halt adding the item as we may have shortcutted here
+            View::respond(TXT_535);
+            return;
+        }
+        if (!Database::exists('item_types', 'item_type_id = ?', [(int) $_POST['item_type_id']])) {
             View::respond(TXT_535);
             return;
         }
@@ -1714,9 +1793,8 @@ final class ItemScreen
                     $dbArray[$key] = $value;
                 }
             }
-            $insertArray = array_merge($array, $dbArray);
-            $fieldPayload = $insertArray;
-            $insertArray = ItemFields::withoutFieldColumns($insertArray);
+            $fieldPayload = array_merge($array, $dbArray);
+            $insertArray = $array + self::newItemColumns($fieldPayload);
             $itemId = Database::insert('items', $insertArray);
             ItemFields::saveFromArray($itemId, $fieldPayload);
             GroupMembership::setItemGroups($itemId, $groupIds);
@@ -1748,7 +1826,7 @@ final class ItemScreen
             case 'transform' :
                 //Alter existing item to new item type (retains old field data if required)
                 $columnArray['item_type_id'] = $targetItemTypeID;
-                $condition = "WHERE item_id = '" . $itemID . "'";
+                $condition = 'WHERE item_id = ' . (int) $itemID;
                 Database::update('items', $columnArray, $condition);
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
@@ -1759,7 +1837,7 @@ final class ItemScreen
                 //Copies existing data to new item
                 //Get existing data
                 $columnArray = array('*');
-                $condition = "WHERE item_id = '" . $itemID . "'";
+                $condition = 'WHERE item_id = ' . (int) $itemID;
                 $row = Database::first('items', $columnArray, $condition);
                 $row = ItemFields::hydrate($row ?? []);
                 //Create new item based on existing data
@@ -1777,7 +1855,7 @@ final class ItemScreen
                 $newItemColumnArray['item_id'] = $newId;
                 //Copy log entries
                 $logColumnArray = array('*');
-                $condition = "WHERE item_id = '" . $itemID . "'";
+                $condition = 'WHERE item_id = ' . (int) $itemID;
                 foreach (Database::select('core_log', $logColumnArray, $condition) as $row) {
                     //Create new log entries based on existing data
                     foreach ($row as $key => $value) {
@@ -1791,7 +1869,7 @@ final class ItemScreen
                 }
                 //Copy attachment entries
                 $attachmentColumnArray = array('*');
-                $condition = "WHERE item_id = '" . $itemID . "'";
+                $condition = 'WHERE item_id = ' . (int) $itemID;
                 foreach (Database::select('item_attachments', $attachmentColumnArray, $condition) as $row) {
                     //Create new attachment entries based on existing data
                     foreach ($row as $key => $value) {
@@ -1871,9 +1949,11 @@ final class ItemScreen
                 }
             }
             // Update system fields, they are the only remaining POST variables
-            $condition = "WHERE item_id='$itemID'";
             $fieldPayload = $_POST;
-            Database::update('items', ItemFields::withoutFieldColumns($_POST), $condition);
+            $itemColumns = self::itemUpdateColumns((int) $itemID, $fieldPayload);
+            if ($itemColumns !== []) {
+                Database::update('items', $itemColumns, 'item_id = ?', [(int) $itemID]);
+            }
             ItemFields::saveFromArray((int) $itemID, $fieldPayload);
             if (isset($fieldPayload['group_security'])) {
                 self::syncItemGroupsFromSecurity((int) $itemID, (string) $fieldPayload['group_security']);
@@ -1881,7 +1961,7 @@ final class ItemScreen
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') !== '') {
                 self::addAttachment($itemID, false, true);
             }
-            $message = ($_POST['item_title'] != '') ? TXT_263 : TXT_272;
+            $message = (trim((string) ($_POST['item_title'] ?? '')) !== '') ? TXT_263 : TXT_272;
             if (self::returnToItem($itemID, (string) $message)) {
                 return;
             }
@@ -1909,7 +1989,7 @@ final class ItemScreen
             . '<div class="field-picker-type">' . Html::e(TXT_470) . '</div></div>';
 
         $columnArray = array('*');
-        $condition = "WHERE item_id = '" . $itemID . "'";
+        $condition = 'WHERE item_id = ' . (int) $itemID;
         $result = Database::select('items', $columnArray, $condition);
         $hidden = '';
         foreach ($result as $row) {
@@ -1941,7 +2021,7 @@ final class ItemScreen
         // Remove unwanted form variables
         unset($_POST['submit_button'], $_POST['reset']);
         // Get new log sequence (id is AUTOINCREMENT)
-        $condition = "WHERE item_id='$itemID'";
+        $condition = 'WHERE item_id = ' . (int) $itemID;
         $SequenceID = Database::newID('core_log', 'log_item_sequence', $condition);
         // Add log entry
         $columnArray['item_id'] = $itemID;
@@ -1962,7 +2042,7 @@ final class ItemScreen
         // Insert into log table
         Database::insert('core_log', $columnArray);
         // Update entry in item table
-        $condition = "WHERE item_id = '$itemID'";
+        $condition = 'WHERE item_id = ' . (int) $itemID;
         $itemColumnArray['core_log_updated'] = $columnArray['create_date'];
         Database::update('items', $itemColumnArray, $condition);
         if ($executeAction == true) {
@@ -2189,7 +2269,7 @@ final class ItemScreen
     public static function deleteLog($itemID, $logItemSequence)
     {
         // Setup log sql and execute query
-        $condition = "WHERE item_id='" . $itemID . "' AND log_item_sequence='" . $logItemSequence . "'";
+        $condition = 'WHERE item_id = ' . (int) $itemID . ' AND log_item_sequence = ' . (int) $logItemSequence;
         Database::delete('core_log', $condition);
         self::showLogEntry($itemID);
     }
@@ -2292,7 +2372,7 @@ final class ItemScreen
 
         if (($columnArray['file_size'] > 0) && ($executeAction == true)) {
             if (!isset($_POST['creator_security'])) {
-                $sql = "SELECT * from items WHERE item_id = '" . $itemID . "'";
+                $sql = 'SELECT * FROM items WHERE item_id = ' . (int) $itemID;
                             $result = Database::rows($sql);
                 $row = $result[0] ?? null;
                 foreach ($row as $key => $value) {
@@ -2315,7 +2395,7 @@ final class ItemScreen
     private static function attachmentListHtml(string $itemID, string $empty): string
     {
         $canDelete = $_SESSION['access_role_id'] <= 2;
-        $sql = "SELECT * FROM item_attachments WHERE item_id = '$itemID'";
+        $sql = 'SELECT * FROM item_attachments WHERE item_id = ' . (int) $itemID;
         $result = Database::rows($sql);
         $rows = [];
         foreach ($result as $row) {
@@ -2440,9 +2520,9 @@ final class ItemScreen
     public static function deleteItem($itemID)
     {
         $itemID = (int) $itemID;
-        Database::run("DELETE FROM items WHERE item_id = '$itemID'");
-        Database::run("DELETE FROM core_log WHERE item_id = '$itemID'");
-        Database::run("DELETE FROM item_attachments WHERE item_id = '$itemID'");
+        Database::run('DELETE FROM items WHERE item_id = ' . (int) $itemID);
+        Database::run('DELETE FROM core_log WHERE item_id = ' . (int) $itemID);
+        Database::run('DELETE FROM item_attachments WHERE item_id = ' . (int) $itemID);
         ItemFields::deleteForItem($itemID);
         GroupMembership::setItemGroups($itemID, []);
         if (Page::current()->inApplication()) {

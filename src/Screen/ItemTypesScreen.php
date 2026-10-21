@@ -115,7 +115,7 @@ final class ItemTypesScreen
         $action = $isNew ? '?manage=item-types&option=add_item_type' : '?manage=item-types&option=update_item_type';
         // Load field values
         if ($isNew) {
-            $fieldValues = $values;
+            $fieldValues = is_array($values) ? $values : [];
         } else {
             $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'enabled'];
             $fieldValues = Database::first('item_types', $columnArray, 'item_type_id = ?', [(int) $itemTypeID]);

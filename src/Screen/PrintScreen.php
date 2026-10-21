@@ -8,6 +8,7 @@ use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
+use Adlexone\Http\View;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -41,6 +42,10 @@ final class PrintScreen
     public static function printItem($itemID)
     {
     	$itemID = (int) $itemID;
+    	if (!Database::exists('items', 'item_id = ?', [$itemID])) {
+    		View::respond(TXT_616);
+    		return;
+    	}
 
     	$i = 0;
     	if ($_SESSION['access_role_id'] <=2){//Admin, Inlay Admin, Global Inlay Admin have access

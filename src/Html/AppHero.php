@@ -41,7 +41,9 @@ final class AppHero
         if ($itemId > 0 || $section !== '') {
             $crumbs .= '<a href="' . Html::e($base) . '">' . Html::e((string) $app['name']) . '</a>';
             if ($itemId > 0) {
-                $title = Database::first('items', ['item_title'], 'item_id = ?', [$itemId]);
+                $title = \Adlexone\Screen\ItemScreen::userCanAccessItem($itemId)
+                    ? Database::first('items', ['item_title'], 'item_id = ?', [$itemId])
+                    : null;
                 $name = trim((string) ($title['item_title'] ?? ''));
                 $crumbs .= '<span class="crumbs__sep">' . Charts::icon('ic-chevron-right') . '</span>'
                     . '<span aria-current="page">' . Html::e($name !== '' ? $name : 'Record ' . $itemId) . '</span>';
