@@ -63,6 +63,10 @@ $hash = (string) $pdo->query("SELECT password FROM users WHERE user_name = 'reid
 if (!password_verify('correct-horse', $hash)) {
     $fail('Admin password did not verify');
 }
+$adminTheme = (string) $pdo->query("SELECT theme FROM users WHERE user_name = 'reid'")->fetchColumn();
+if ($adminTheme !== '') {
+    $fail('The first administrator should follow the site theme, not store one: ' . $adminTheme);
+}
 $settings = json_decode((string) file_get_contents($config . 'adlexone_settings.json'), true);
 if (!is_array($settings) || ($settings['SET_SITE_NAME'] ?? '') !== 'Health') {
     $fail('Site name was not saved');

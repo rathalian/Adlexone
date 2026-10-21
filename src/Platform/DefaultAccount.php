@@ -21,6 +21,22 @@ final class DefaultAccount
         return self::PASSWORD;
     }
 
+    /**
+     * True while the default administrator still signs in with the default password.
+     * The sign-in page pre-fills the form only in that state.
+     */
+    public static function stillInUse(): bool
+    {
+        try {
+            $row = \Adlexone\support\Database::first('users', ['password'], 'user_name = ?', [self::USERNAME]);
+        } catch (\Throwable) {
+            return false;
+        }
+        $hash = (string) ($row['password'] ?? '');
+
+        return $hash !== '' && password_verify(self::PASSWORD, $hash);
+    }
+
     public static function postedUsername(?string $posted): string
     {
         $posted = trim((string) $posted);

@@ -35,8 +35,9 @@ try {
 }
 
 $login = (string) file_get_contents(dirname(__DIR__) . '/layouts/pages/login.php');
-$check(str_contains($login, 'DefaultAccount::USERNAME'), 'application login uses the default username');
-$check(str_contains($login, 'DefaultAccount::PASSWORD'), 'application login uses the default password');
+$check(str_contains($login, 'DefaultAccount::stillInUse()'), 'application login pre-fills only while the default account is unchanged');
+$check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::USERNAME)'), 'application login pre-fills the default username conditionally');
+$check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::PASSWORD)'), 'application login pre-fills the default password conditionally');
 
 if ($failed > 0) {
     fwrite(STDERR, $failed . " checks failed\n");

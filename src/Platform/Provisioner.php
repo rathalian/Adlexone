@@ -219,7 +219,7 @@ final class Provisioner
             $admin['first_name'],
             $admin['last_name'],
             $admin['email'],
-            'inlay-blue',
+            '',
             'active',
             'English',
             0,
