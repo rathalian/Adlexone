@@ -64,10 +64,10 @@ final class PrintScreen
     		// Set the creator and owner values
     		$columnArray = array('user_name');
     		$row = Database::first('users', $columnArray, 'user_id = ?', [$itemFields['creator_security']]);
-    		$itemField[TXT_551] = $row['user_name'];
+    		$itemField[TXT_551] = Html::e((string) ($row['user_name'] ?? ''));
     		$columnArray = array('user_name');
     		$row = Database::first('users', $columnArray, 'user_id = ?', [$itemFields['user_security']]);
-    		$itemField[TXT_269] = $row['user_name'];
+    		$itemField[TXT_269] = Html::e((string) ($row['user_name'] ?? ''));
     		// Create group membership list
     		$groupArray = \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemFields['item_id']);
     		$columnArray = array ('group_id', 'group_name');
@@ -86,8 +86,8 @@ final class PrintScreen
     			}
     			$i++;
     		} // while
-    		$itemField[TXT_270] = $groupMembership;
-    		$itemField[TXT_84] = $itemFields['item_title'];
+    		$itemField[TXT_270] = Html::e($groupMembership);
+    		$itemField[TXT_84] = Html::e((string) $itemFields['item_title']);
     		// Setup custom field display
     		$columnArray = array ('custom_field_id');
     		foreach (Database::select('item_type_custom_fields', $columnArray, 'item_type_id = ?', [$itemFields['item_type_id']], 'custom_field_order ASC') as $customFields) {
@@ -103,10 +103,9 @@ final class PrintScreen
     			// Override database value if values have already been selected
     			$value = @$itemFields['custom_field_' . $row['custom_field_id']];
     			if ($row['field_type'] == FieldTypes::TEXT_AREA){
-    				$value = str_replace("\n", "<br />", $value);
-    				$value = '<br />'.$value.'<br /><br />';
+    				$value = '<br />' . nl2br(Html::e((string) $value), true) . '<br /><br />';
     			} else {
-    				$value = \Adlexone\support\FieldValidation::display($row, $value);
+    				$value = Html::e(\Adlexone\support\FieldValidation::display($row, $value));
     			}
     			$itemField[$row['custom_field_name']] = $value;
 

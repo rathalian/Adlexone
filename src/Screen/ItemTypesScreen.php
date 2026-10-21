@@ -118,8 +118,11 @@ final class ItemTypesScreen
             $fieldValues = $values;
         } else {
             $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'enabled'];
-            $condition = "WHERE item_type_id = '$itemTypeID'";
-            $fieldValues = Database::first('item_types', $columnArray, $condition);
+            $fieldValues = Database::first('item_types', $columnArray, 'item_type_id = ?', [(int) $itemTypeID]);
+            if ($fieldValues === null) {
+                View::respond(TXT_115, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+                return;
+            }
         }
 
         $fields = [];
@@ -171,8 +174,7 @@ final class ItemTypesScreen
             $customFieldSortArray = [];
         } else {
             $columnArray = ['custom_field_id', 'custom_field_order'];
-            $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-            $result = Database::select('item_type_custom_fields', $columnArray, $condition);
+            $result = Database::select('item_type_custom_fields', $columnArray, 'item_type_id = ?', [(int) $itemTypeID]);
             $customFieldArray = [];
             $customFieldSortArray = [];
             if (count($result) != 0) {
@@ -252,32 +254,45 @@ final class ItemTypesScreen
      */
     public static function addItemType()
     {
-        // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset'], $_POST['item_type_id']);
-        // Check for duplicate and error handling
-        $columnArray = array('item_type_name');
-        $condition = "WHERE item_type_name = '" . $_POST['item_type_name'] . "'";
-        $result = Database::select('item_types', $columnArray, $condition);
-        if (count($result) == 0) {
-            // Set new id via AUTOINCREMENT
-            $selectedFields = self::selectedCustomFieldsFromPost();
-            $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
-            self::stripItemTypeFormFields();
-            $columnArray = $_POST;
-            unset($columnArray['group_security'], $columnArray['item_type_id']);
-            $typeId = Database::insert('item_types', $columnArray);
-            foreach ($selectedFields as $fieldId => $order) {
-                Database::insert('item_type_custom_fields', [
-                    'item_type_id' => $typeId,
-                    'custom_field_id' => $fieldId,
-                    'custom_field_order' => $order,
-                ]);
-            }
-            \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
-            View::respond($_POST['item_type_name'] . ' ' . TXT_162, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+        $columns = self::postedTypeColumns();
+        $back = Blocks::link(ITEM_TYPES_BASE_URL . '&option=new_item_type', TXT_363);
+        if ($columns['item_type_name'] === '') {
+            View::respond('Enter a record type name.', $back);
             return;
         }
-        View::respond($_POST['item_type_name'] . ' ' . TXT_163, Blocks::link(ITEM_TYPES_BASE_URL . '&option=new_item_type', TXT_363));
+        if (Database::exists('item_types', 'LOWER(item_type_name) = LOWER(?)', [$columns['item_type_name']])) {
+            View::respond($columns['item_type_name'] . ' ' . TXT_163, $back);
+            return;
+        }
+        $selectedFields = self::selectedCustomFieldsFromPost();
+        $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
+        $typeId = Database::insert('item_types', $columns);
+        foreach ($selectedFields as $fieldId => $order) {
+            Database::insert('item_type_custom_fields', [
+                'item_type_id' => $typeId,
+                'custom_field_id' => (int) $fieldId,
+                'custom_field_order' => (int) $order,
+            ]);
+        }
+        \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
+        View::respond($columns['item_type_name'] . ' ' . TXT_162, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+    }
+
+    /**
+     * Posted values for the columns the record type form owns.
+     *
+     * @return array{item_type_name: string, user_security: string, enabled: string}
+     */
+    private static function postedTypeColumns(): array
+    {
+        $text = static fn (string $key): string => is_scalar($_POST[$key] ?? null) ? trim((string) $_POST[$key]) : '';
+        $owner = $text('user_security');
+
+        return [
+            'item_type_name' => $text('item_type_name'),
+            'user_security' => ctype_digit($owner) ? $owner : '',
+            'enabled' => $text('enabled') === 'No' ? 'No' : 'Yes',
+        ];
     }
 
     /**
@@ -392,30 +407,34 @@ final class ItemTypesScreen
      */
     public static function updateItemType($itemTypeID)
     {
-        // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset']);
+        $itemTypeID = (int) $itemTypeID;
+        $back = Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362);
+        if (!Database::exists('item_types', 'item_type_id = ?', [$itemTypeID])) {
+            View::respond(TXT_115, $back);
+            return;
+        }
+        $columns = self::postedTypeColumns();
+        if ($columns['item_type_name'] === '') {
+            View::respond('Enter a record type name.', $back);
+            return;
+        }
+        if (Database::exists('item_types', 'LOWER(item_type_name) = LOWER(?) AND item_type_id <> ?', [$columns['item_type_name'], $itemTypeID])) {
+            View::respond($columns['item_type_name'] . ' ' . TXT_163, $back);
+            return;
+        }
         $selectedFields = self::selectedCustomFieldsFromPost();
         $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
-        self::stripItemTypeFormFields();
-        // Remove all existing custom field table entries and then re add changed selection
-        $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-        Database::delete('item_type_custom_fields', $condition);
+        Database::delete('item_type_custom_fields', 'item_type_id = ?', [$itemTypeID]);
         foreach ($selectedFields as $fieldId => $order) {
-            $customFieldArray = [
+            Database::insert('item_type_custom_fields', [
                 'item_type_id' => $itemTypeID,
-                'custom_field_id' => $fieldId,
-                'custom_field_order' => $order,
-            ];
-            Database::insert('item_type_custom_fields', $customFieldArray);
+                'custom_field_id' => (int) $fieldId,
+                'custom_field_order' => (int) $order,
+            ]);
         }
-        $columnArray = $_POST;
-        unset($columnArray['group_security']);
-        // Set condition
-        $condition = "WHERE item_type_id = '$itemTypeID'";
-        // Update form field values into row
-        Database::update('item_types', $columnArray, $condition);
-        \Adlexone\Data\GroupMembership::setItemTypeGroups((int) $itemTypeID, $ids);
-        View::respond($_POST['item_type_name'] . ' ' . TXT_164, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+        Database::update('item_types', $columns, 'item_type_id = ?', [$itemTypeID]);
+        \Adlexone\Data\GroupMembership::setItemTypeGroups($itemTypeID, $ids);
+        View::respond($columns['item_type_name'] . ' ' . TXT_164, $back);
     }
 
     /**
@@ -484,9 +503,9 @@ final class ItemTypesScreen
             return;
         }
 
-        $condition = "WHERE item_type_id = '" . $itemTypeID . "'";
-        Database::delete('item_type_custom_fields', $condition);
-        Database::delete('item_types', $condition);
+        Database::delete('item_type_custom_fields', 'item_type_id = ?', [(int) $itemTypeID]);
+        Database::delete('item_type_groups', 'item_type_id = ?', [(int) $itemTypeID]);
+        Database::delete('item_types', 'item_type_id = ?', [(int) $itemTypeID]);
         View::respond($name . ' ' . TXT_47, $back);
     }
 }

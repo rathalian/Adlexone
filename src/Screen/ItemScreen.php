@@ -1501,7 +1501,11 @@ final class ItemScreen
                             break;
 
                         case FieldTypes::CHECK_BOX :
-                            $itemField[$row['custom_field_name']] = Form::checkbox('custom_field_' . $row['custom_field_id'], $value, $row['custom_field_id']);
+                            $itemField[$row['custom_field_name']] = Form::checkbox(
+                                'custom_field_' . $row['custom_field_id'],
+                                (string) $row['custom_field_id'],
+                                ((string) $value !== '' && (string) $value !== '0') ? (string) $row['custom_field_id'] : ''
+                            );
                             break;
                         case 'URL' :
                             if ($value != '') {

@@ -86,6 +86,7 @@ final class SearchScreen
                     $allowed = self::applicationSearchTypeIds();
                     $itemTypes = $allowed !== [] ? implode(',', $allowed) : '';
                 }
+                $itemTypes = preg_replace('/[^0-9,]/', '', (string) $itemTypes) ?? '';
                 $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
                 self::showAdvancedItemSearch($filter);
                 break;
@@ -152,7 +153,11 @@ final class SearchScreen
     {
         $allowed = self::applicationSearchTypeIds();
         if ($allowed === []) {
-            return $filter;
+            if (is_array($filter)) {
+                return array_values(array_map('intval', $filter));
+            }
+
+            return preg_replace('/[^0-9]/', '', (string) $filter) ?? '';
         }
         if (is_array($filter)) {
             $ids = array_values(array_filter(array_map('intval', $filter), static fn (int $id): bool => in_array($id, $allowed, true)));
@@ -180,17 +185,17 @@ final class SearchScreen
             if (substr($values, -1) == '*') {
                 $values = substr($values, 0, -1);
                 $validId = false;
-                if (Database::exists('items', 'WHERE item_id =' . $values . ' AND item_type_id = ' . APP_COUNT_ITEM_TYPE)) {
+                if (Database::exists('items', 'item_id = ? AND item_type_id = ?', [(int) $values, (int) APP_COUNT_ITEM_TYPE])) {
                     $validId = true;
                 }
             } else {
                 $validId = True;
             }
-            $event_id = (isset($_GET['event_id'])) ? $_GET['event_id'] : '';
-            $selectionCriteria = 'WHERE item_id =' . $values . ' AND event_id = "' . $event_id . '"';
+            $values = (int) $values;
+            $event_id = isset($_GET['event_id']) && is_scalar($_GET['event_id']) ? (string) $_GET['event_id'] : '';
             if ($validId == True) {
-                if (Database::exists('system_log', $selectionCriteria)) {
-                    $sql = 'UPDATE ' . 'system_log SET event_counter = event_counter + 1 ' . $selectionCriteria;
+                if (Database::exists('system_log', 'item_id = ? AND event_id = ?', [$values, $event_id])) {
+                    Database::run('UPDATE system_log SET event_counter = event_counter + 1 WHERE item_id = ? AND event_id = ?', [$values, $event_id]);
                 } else {
                     unset($columnArray);
                     $columnArray['item_id'] = $values;
@@ -816,21 +821,102 @@ final class SearchScreen
         $_POST['disp_create_date'] = "disp_create_date";
         $_POST['disp_item_type_id'] = "disp_item_type_id";
         $sql = "";
-        switch ($_POST['search_type']) {
+        $value = is_scalar($_POST['search_value'] ?? null) ? (string) $_POST['search_value'] : '';
+        switch ((string) ($_POST['search_type'] ?? '')) {
             case 'item_id':
-                $_POST['item_id'] = $_POST['search_value'];
+                $_POST['item_id'] = ctype_digit($value) ? $value : '0';
                 $_POST['id_operator'] = '=';
                 break;
             case 'item_title':
-                $_POST['item_title'] = '%' . $_POST['search_value'] . '%';
+                $_POST['item_title'] = $value;
                 $_POST['item_title_operator'] = 'LIKE';
                 break;
             case 'log_entries':
                 $sql = 'SELECT ' . 'items.item_id, item_title, ' . 'items.create_date, item_type_id FROM ' .
                     'items JOIN ' . 'core_log ON ' . 'items.item_id = ' .
-                    "core_log.item_id WHERE log_text LIKE '%%" . $_POST['search_value'] . "%%'";
+                    "core_log.item_id WHERE log_text LIKE '%" . Database::escape($value) . "%'";
+                break;
+            default:
+                View::respond(TXT_548);
+                return;
         }
+        $_POST['search'] = $_POST['search'] ?? 'quick_search';
         self::searchResults($sql);
+    }
+
+    /**
+     * A comparison operator from a posted value, limited to the ones the search form offers.
+     */
+    private static function operator(mixed $posted, string $fallback = '='): string
+    {
+        $op = strtoupper(trim(html_entity_decode(is_scalar($posted) ? (string) $posted : '', ENT_COMPAT, 'UTF-8')));
+
+        return in_array($op, ['=', '<>', '!=', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE'], true) ? $op : $fallback;
+    }
+
+    /**
+     * AND or OR between two search conditions.
+     */
+    private static function joiner(mixed $posted): string
+    {
+        return strtoupper(trim(is_scalar($posted) ? (string) $posted : '')) === 'OR' ? 'OR' : 'AND';
+    }
+
+    /**
+     * A user id, or the signed-in user's id for the "me" choice in the search form.
+     */
+    private static function personId(string $posted): int
+    {
+        return $posted === 'session_user' ? (int) ($_SESSION['access_user_id'] ?? 0) : (int) $posted;
+    }
+
+    private static function dateColumn(mixed $posted): string
+    {
+        return in_array($posted, ['create_date', 'core_log_updated'], true) ? (string) $posted : 'create_date';
+    }
+
+    private static function postedText(string $key): string
+    {
+        return is_scalar($_POST[$key] ?? null) ? (string) $_POST[$key] : '';
+    }
+
+    private static function literal(string $value): string
+    {
+        return "'" . Database::escape($value) . "'";
+    }
+
+    /**
+     * Seconds since the epoch for a posted date, or null when it is not a date.
+     */
+    private static function postedTime(string $key): ?int
+    {
+        $text = trim(self::postedText($key));
+        if ($text === '') {
+            return null;
+        }
+        $parsed = date_parse($text);
+        if (($parsed['error_count'] ?? 1) > 0 || !is_int($parsed['year'] ?? false) || !is_int($parsed['month'] ?? false) || !is_int($parsed['day'] ?? false)) {
+            return null;
+        }
+
+        return mktime(
+            (int) ($parsed['hour'] ?? 0),
+            (int) ($parsed['minute'] ?? 0),
+            (int) ($parsed['second'] ?? 0),
+            $parsed['month'],
+            $parsed['day'],
+            $parsed['year']
+        );
+    }
+
+    /**
+     * An ORDER BY column from a posted value, or an empty string when it is not a plain column name.
+     */
+    private static function sortColumn(string $posted): string
+    {
+        $posted = trim($posted);
+
+        return preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', $posted) === 1 ? $posted : '';
     }
 
     /**
@@ -843,13 +929,8 @@ final class SearchScreen
 
         // Handling accessing the page from option=show_search_results with no POSTed data
         if (empty($_POST['search']) and empty($_POST['new_favourite']) and @$_POST['item_type_id'] == '' and empty($_POST['search_type'])) {
-            // Error messagae
-            if (($_POST['search_type'] == 'quick_search' || $_POST['search_type'] = 'show_search_results') && $_POST['sess'] != '') {
-                $_POST['search'] = 'log_entries';
-            } else {
-                View::respond(TXT_548);
-                return;
-            }
+            View::respond(TXT_548);
+            return;
         }
 
         // Handle item id filtering
@@ -877,79 +958,78 @@ final class SearchScreen
             }
             // Item ID
             if (!empty($_POST['item_id'])) {
-                if ($_POST['id_operator'] == '=') {
-                    $condition .= $andOr . " item_id = '" . $_POST['item_id'] . "' ";
+                $itemIdText = self::postedText('item_id');
+                if (self::operator($_POST['id_operator'] ?? '=') === '=') {
+                    $condition .= $andOr . " item_id = " . (ctype_digit($itemIdText) ? $itemIdText : '0') . " ";
                 } else {
-                    $condition .= $andOr . " item_id LIKE '%" . $_POST['item_id'] . "%' ";
+                    $condition .= $andOr . " item_id LIKE " . self::literal('%' . Database::escapeLike($itemIdText) . '%') . " ESCAPE '\\' ";
                 }
-                $andOr = @$_POST['id_andor'];
+                $andOr = self::joiner($_POST['id_andor'] ?? '');
             }
             // Hour Range
             if (!empty($_POST['hour_range'])) {
-              $condition .= $andOr . " " . $_POST['hour_type'] . " " . html_entity_decode($_POST['hour_range_operator'], ENT_COMPAT, 'UTF-8') . " " . (time() - intval($_POST['hour_range'] * 60 * 60)) . " ";
-              $andOr = $_POST['hour_range_andor'];
+                $hours = (int) self::postedText('hour_range');
+                $condition .= $andOr . " " . self::dateColumn($_POST['hour_type'] ?? '') . " " . self::operator($_POST['hour_range_operator'] ?? '', '<=') . " " . (time() - $hours * 60 * 60) . " ";
+                $andOr = self::joiner($_POST['hour_range_andor'] ?? '');
             }
-            // Date Created 1
-            if (!empty($_POST['date_1'])) {
-                $date1Array = date_parse($_POST['date_1']);
-                $time = mktime($date1Array['hour'], $date1Array['minute'], $date1Array['second'], $date1Array['month'], $date1Array['day'], $date1Array['year']);
-                $condition .= $andOr . " " . $_POST['date_type_1'] . " " . html_entity_decode($_POST['date_operator_1'], ENT_COMPAT, 'UTF-8') . " '" . $time . "' ";
-                $andOr = $_POST['date_andor_1'];
-            }
-            // Date Created 2
-            if (!empty($_POST['date_2'])) {
-                $date2Array = date_parse($_POST['date_2']);
-                $time = mktime($date2Array['hour'], $date2Array['minute'], $date2Array['second'], $date2Array['month'], $date2Array['day'], $date2Array['year']);
-                $condition .= $andOr . " " . $_POST['date_type_2'] . " " . html_entity_decode($_POST['date_operator_2'], ENT_COMPAT, 'UTF-8') . " '" . $time . "' ";
-                $andOr = $_POST['date_andor_2'];
+            // Date Created 1 and 2
+            foreach (['1', '2'] as $n) {
+                $time = self::postedTime('date_' . $n);
+                if ($time !== null) {
+                    $condition .= $andOr . " " . self::dateColumn($_POST['date_type_' . $n] ?? '') . " " . self::operator($_POST['date_operator_' . $n] ?? '', '>=') . " " . $time . " ";
+                    $andOr = self::joiner($_POST['date_andor_' . $n] ?? '');
+                }
             }
             // Creator User
             if (!empty($_POST['creator_security'])) {
-                $condition .= $andOr . " creator_security " . html_entity_decode($_POST['security_creators_operator'], ENT_COMPAT, 'UTF-8') . " '" . $_POST['creator_security'] . "' ";
-                $andOr = $_POST['security_creators_andor'];
+                $condition .= $andOr . " creator_security " . self::operator($_POST['security_creators_operator'] ?? '') . " " . self::personId(self::postedText('creator_security')) . " ";
+                $andOr = self::joiner($_POST['security_creators_andor'] ?? '');
             }
             // Security User
             if (!empty($_POST['user_security'])) {
-                $condition .= $andOr . " user_security " . html_entity_decode($_POST['security_users_operator'], ENT_COMPAT, 'UTF-8') . " '" . $_POST['user_security'] . "' ";
-                $andOr = $_POST['security_users_andor'];
+                $condition .= $andOr . " user_security " . self::operator($_POST['security_users_operator'] ?? '') . " " . self::personId(self::postedText('user_security')) . " ";
+                $andOr = self::joiner($_POST['security_users_andor'] ?? '');
             }
             // Security Group
             if (!empty($_POST['security_groups'])) {
-                $groupId = (int) $_POST['security_groups'];
-                if (html_entity_decode($_POST['security_groups_operator'], ENT_COMPAT, 'UTF-8') == '=') {
+                $groupId = (int) self::postedText('security_groups');
+                if (self::operator($_POST['security_groups_operator'] ?? '') === '=') {
                     $condition .= $andOr . " item_id IN (SELECT item_id FROM item_groups WHERE group_id = " . $groupId . ") ";
                 } else {
                     $condition .= $andOr . " item_id NOT IN (SELECT item_id FROM item_groups WHERE group_id = " . $groupId . ") ";
                 }
-                $andOr = $_POST['security_groups_andor'];
+                $andOr = self::joiner($_POST['security_groups_andor'] ?? '');
             }
             // Item Title
             if (!empty($_POST['item_title'])) {
-                if ($_POST['item_title_operator'] == '=') {
-                    $condition .= $andOr . " item_title = '" . $_POST['item_title'] . "' ";
+                $titleText = self::postedText('item_title');
+                if (self::operator($_POST['item_title_operator'] ?? 'LIKE', 'LIKE') === '=') {
+                    $condition .= $andOr . " item_title = " . self::literal($titleText) . " ";
                 } else {
-                    $condition .= $andOr . " item_title LIKE '%" . $_POST['item_title'] . "%' ";
+                    $condition .= $andOr . " item_title LIKE " . self::literal('%' . Database::escapeLike($titleText) . '%') . " ESCAPE '\\' ";
                 }
-                $andOr = @$_POST['title_andor'];
+                $andOr = self::joiner($_POST['title_andor'] ?? '');
             }
 
             // Custom Fields
             $i = 0;
-            while ($i < @$_POST['custom_field_count']) {
-                if (!empty($_POST['custom_field_value_' . $i]) or $_POST['custom_field_value_' . $i] != '') {
-                    $fieldId = (int) $_POST['custom_field_' . $i];
-                    $op = html_entity_decode($_POST['custom_field_operator_' . $i], ENT_COMPAT, 'UTF-8');
-                    $val = (string) $_POST['custom_field_value_' . $i];
+            $customFieldCount = min(50, max(0, (int) self::postedText('custom_field_count')));
+            while ($i < $customFieldCount) {
+                if (self::postedText('custom_field_value_' . $i) !== '') {
+                    $fieldId = (int) self::postedText('custom_field_' . $i);
+                    $op = self::operator($_POST['custom_field_operator_' . $i] ?? '');
+                    $val = self::postedText('custom_field_value_' . $i);
                     $condition .= $andOr . ' ' . \Adlexone\Data\ItemFields::matchSql($fieldId, $op, $val) . ' ';
-                    $andOr = $_POST['custom_field_andor_' . $i];
+                    $andOr = self::joiner($_POST['custom_field_andor_' . $i] ?? '');
                 }
                 $i++;
             }
             $columnArray = array('item_id', 'item_type_id', 'item_title');
+            $itemColumns = Database::columns('items');
             foreach ($_POST as $key => $value) {
-                if (substr($key, 0, 4) == "disp" && $value !== '') {
-                    $col = substr($key, 5);
-                    if ($col !== '' && !preg_match('/^custom_field_\d+$/', $col) && !in_array($col, $columnArray, true)) {
+                if (substr((string) $key, 0, 4) == "disp" && $value !== '') {
+                    $col = substr((string) $key, 5);
+                    if ($col !== '' && in_array($col, $itemColumns, true) && !in_array($col, $columnArray, true)) {
                         $columnArray[] = $col;
                     }
                 }
@@ -982,17 +1062,19 @@ final class SearchScreen
             }
         }
 
-        if (isset($_POST['sortOrder'])) {
-            $newsort = substr($_POST['sort_field'], 5) . " ";
+        $sortColumn = self::sortColumn(substr(self::postedText('sort_field'), 5));
+        if (isset($_POST['sortOrder']) && $sortColumn !== '') {
+            $newsort = $sortColumn . " ";
             $newsort .= ($_POST['sortOrder'] == "descending") ? "DESC" : "";
             $sql .= " ORDER BY " . $newsort;
         } else {
             $newsort = "";
-            if (isset($_POST['currsort']) && trim($_POST['currsort'] != "")) {
-                if (trim($_POST['currsort']) == trim(substr($currsort, 0, strpos($currsort, " ")))) {
-                    $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $_POST['currsort'] . " ";
+            $postedSort = self::sortColumn(self::postedText('currsort'));
+            if ($postedSort !== '' && isset($currsort)) {
+                if ($postedSort == trim(substr($currsort, 0, (int) strpos($currsort, " ")))) {
+                    $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $postedSort . " ";
                 } else {
-                    $newsort = (strpos($currsort, "DESC") == 0) ? $_POST['currsort'] . " DESC " : $_POST['currsort'] . " ";
+                    $newsort = (strpos($currsort, "DESC") == 0) ? $postedSort . " DESC " : $postedSort . " ";
                 }
                 $sql = str_replace("ORDER BY " . $currsort, "ORDER BY " . $newsort, $sql);
             } else {
@@ -1031,13 +1113,15 @@ final class SearchScreen
     public static function showSavedSearches($userID, $application = '')
     {
         if ($_SESSION['access_role_id'] <= '1') {
-            $applicationClause = ($application != '') ? " WHERE application = '" . $application . "'" : "";
+            $applicationClause = ($application != '') ? " WHERE application = ?" : "";
+            $params = ($application != '') ? [$application] : [];
             $sql = "SELECT * FROM saved_searches $applicationClause ORDER BY search_name ASC";
         } else {
-            $applicationClause = ($application != '') ? " AND application = '" . $application . "'" : "";
-            $sql = "SELECT * FROM saved_searches WHERE (user = '$userID' OR user = 'all') $applicationClause ORDER BY search_name ASC";
+            $applicationClause = ($application != '') ? " AND application = ?" : "";
+            $params = array_merge([(string) $userID], ($application != '') ? [$application] : []);
+            $sql = "SELECT * FROM saved_searches WHERE (user = ? OR user = 'all') $applicationClause ORDER BY search_name ASC";
         }
-            $result = Database::rows($sql);
+        $result = Database::rows($sql, $params);
         $base = \Adlexone\Http\Router::continueUrl('search');
         $rows = [];
         if (count($result) > 0) {
@@ -1116,13 +1200,13 @@ final class SearchScreen
     public static function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescription, $application, $security, array $criteria = [])
     {
         // Check for duplicate and respond with a return message if exists
-        $sql = "SELECT user FROM saved_searches WHERE search_name = '$searchName' AND user = '$userID'";
-            $result = Database::rows($sql);
+        $searchName = trim((string) $searchName);
+        $result = Database::rows('SELECT user FROM saved_searches WHERE search_name = ? AND user = ?', [$searchName, (string) $userID]);
         if (count($result) > 0) {
             View::respond(TXT_311, Blocks::link('javascript: history.go(-1)', TXT_306, 'URL'));
             return;
         }
-        if ($searchName == '') {
+        if ($searchName === '') {
             View::respond(TXT_367, Blocks::link('javascript: history.go(-1)', TXT_306, 'URL'));
             return;
         }
@@ -1151,15 +1235,19 @@ final class SearchScreen
         unset($_SESSION['item_search_sql']);
 
         // Show item search based based on stored sql
+        $searchID = (int) $searchID;
         if (@$_GET['global'] == true) {
-            $sql = "SELECT * FROM saved_searches WHERE search_id = '$searchID' AND user = 'all'";
+            $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND user = 'all'", [$searchID]);
         } elseif ($_SESSION['access_role_id'] <= 2) {
-            $sql = "SELECT * FROM saved_searches WHERE search_id = '$searchID'";
+            $result = Database::rows('SELECT * FROM saved_searches WHERE search_id = ?', [$searchID]);
         } else {
-            $sql = "SELECT * FROM saved_searches WHERE search_id = '$searchID' AND (user = 'system' OR user = 'all' OR user = '$userID')";
+            $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND (user = 'system' OR user = 'all' OR user = ?)", [$searchID, (string) $userID]);
         }
-            $result = Database::rows($sql);
         $row = $result[0] ?? null;
+        if ($row === null) {
+            View::respond(TXT_115, Blocks::link(\Adlexone\Http\Router::continueUrl('search') . '&option=show_saved_searches', TXT_313));
+            return;
+        }
 
         if ($rss == false) {
             // Set title constant for language alias in showitems function
@@ -1183,8 +1271,7 @@ final class SearchScreen
             ob_clean();
             $itemArray = Database::rows(\Adlexone\Data\SavedSearch::resolveSql($row));
             foreach ($itemArray as $id) {
-                $sql = "SELECT item_id, item_title FROM items WHERE item_id = '$id'";
-                            $result = Database::rows($sql);
+                $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
                 $row = $result[0] ?? null;
                 $linkArray[] = Blocks::link('?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['item_id'], '', 'URL');
                 $titleArray[] = $row['item_title'];
@@ -1196,12 +1283,12 @@ final class SearchScreen
     public static function deleteSavedSearch($searchID, $userID, $scope)
     {
         // Delete favourite search
+        $searchID = (int) $searchID;
         if ($scope == 'global' and $_SESSION['access_role_id'] <= 1) {
-            $sql = "DELETE FROM saved_searches WHERE search_id = '$searchID'";
+            Database::delete('saved_searches', 'search_id = ?', [$searchID]);
         } else {
-            $sql = "DELETE FROM saved_searches WHERE search_id = '$searchID' AND user = '$userID'";
+            Database::delete('saved_searches', 'search_id = ? AND user = ?', [$searchID, (string) $userID]);
         }
-        Database::run($sql);
         self::showSavedSearches($userID);
     }
 
@@ -1280,11 +1367,11 @@ final class SearchScreen
             if (is_array($itemTypeID)) {
                 $condition = "WHERE ";
                 foreach ($itemTypeID as $value) {
-                    $condition .= "item_type_id = " . $value . " OR ";
+                    $condition .= "item_type_id = " . (int) $value . " OR ";
                 }
                 $condition = substr($condition, 0, -4);
             } else {
-                $condition = "WHERE item_type_id = $itemTypeID";
+                $condition = "WHERE item_type_id = " . (int) $itemTypeID;
             }
             $result = Database::select('item_type_custom_fields', $columnArray, $condition);
             $i = 0;
@@ -1424,7 +1511,7 @@ final class SearchScreen
         $operatorDisplayValues = array(TXT_81, TXT_112, TXT_318);
         $andOrValues = array('AND', 'OR');
         $andOrDisplayValues = array(TXT_109, TXT_110);
-        $eventId = (isset($_GET['event_id'])) ? '&event_id=' . $_GET['event_id'] : '';
+        $eventId = (isset($_GET['event_id']) && is_scalar($_GET['event_id'])) ? '&event_id=' . rawurlencode((string) $_GET['event_id']) : '';
 
         $fields = [];
         $allowedTypes = self::applicationSearchTypeIds();
@@ -1554,8 +1641,7 @@ final class SearchScreen
     {
         $id = (int) $id;
         $columnArray = ['search_name', 'saved_search_sql'];
-        $condition = "WHERE search_id = '" . $id . "'";
-        $row = Database::first('saved_searches', $columnArray, $condition);
+        $row = Database::first('saved_searches', $columnArray, 'search_id = ?', [$id]);
 
         if (!$row) {
             // No record found — show a friendly message
@@ -1581,15 +1667,24 @@ final class SearchScreen
 
     public static function updateSavedSearch($id)
     {
-        $sql = html_entity_decode($_POST['saved_search_sql'], ENT_COMPAT, 'UTF-8');
+        $id = (int) $id;
+        if (!Database::exists('saved_searches', 'search_id = ?', [$id])) {
+            View::respond(TXT_115);
+            return;
+        }
+        $sql = html_entity_decode(self::postedText('saved_search_sql'), ENT_COMPAT, 'UTF-8');
+        $name = trim(html_entity_decode(self::postedText('search_name'), ENT_COMPAT, 'UTF-8'));
+        if ($name === '') {
+            View::respond(TXT_367);
+            return;
+        }
         $columnArray['saved_search_sql'] = $sql;
-        $columnArray['search_name'] = html_entity_decode($_POST['search_name'], ENT_COMPAT, 'UTF-8');
+        $columnArray['search_name'] = $name;
         $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode([
             'version' => 1,
             'legacy_sql' => $sql,
         ]);
-        $condition = "WHERE search_id = '" . $id . "'";
-        Database::update('saved_searches', $columnArray, $condition);
+        Database::update('saved_searches', $columnArray, 'search_id = ?', [$id]);
         // Success messagae
         View::respond(TXT_628,TXT_629);
     }

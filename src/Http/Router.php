@@ -322,6 +322,10 @@ final class Router
             View::respond('This page is not here.');
             return;
         }
+        if (self::changesData() && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+            View::respond('This change did not run because it was not sent from a page form. Go back and use the button on the page.');
+            return;
+        }
         if (
             ($canonical === self::ITEMS || $canonical === self::SEARCH)
             && (!Page::current()->inApplication())
@@ -334,6 +338,16 @@ final class Router
             Request::set('controller', $canonical);
         }
         $handler();
+    }
+
+    /**
+     * Options that write data are accepted only on a form submission, so a link or an image cannot trigger them.
+     */
+    private static function changesData(): bool
+    {
+        $option = Request::query('option');
+
+        return preg_match('/^(add|update|delete|move)_[a-z_]+$/', $option) === 1;
     }
 
     private static function handler(string $canonical): ?callable

@@ -152,9 +152,11 @@ final class FieldsScreen
             $fieldValues = $values;
             $title = 'Add field';
         } else {
-            $columnArray = array('*');
-            $condition = "WHERE custom_field_id = '$customFieldID'";
-            $fieldValues = Database::first('custom_fields', $columnArray, $condition);
+            $fieldValues = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
+            if ($fieldValues === null) {
+                View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+                return;
+            }
             $formAction = '?manage=fields&option=update_custom_field';
             $title = 'Edit field';
         }
@@ -268,25 +270,41 @@ final class FieldsScreen
      */
     public static function addCustomField()
     {
-        // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset'], $_POST['custom_field_id']);
-        // Check for duplicate and error handling
-        $columnArray = array('custom_field_name');
-        $condition = "WHERE custom_field_name = '" . $_POST['custom_field_name'] . "'";
-        $result = Database::select('custom_fields', $columnArray, $condition);
-        if (count($result) == 0) {
-            // Insert form field values into row (AUTOINCREMENT custom_field_id)
-            $columnArray = $_POST;
-            unset($columnArray['custom_field_id']);
-            $columnArray['data'] = html_entity_decode((string) ($columnArray['data'] ?? ''), ENT_COMPAT, 'UTF-8');
-            $columnArray = self::normaliseFieldPayload($columnArray);
-            $id = Database::insert('custom_fields', $columnArray);
-            Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
-            // Field values live in item_field_values — items schema is not altered.
-            View::respond($_POST['custom_field_name'] . ' ' . TXT_162, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+        $columns = self::postedFieldColumns();
+        $back = Blocks::link(FIELDS_BASE_URL . '&option=new_custom_field', TXT_362);
+        if ($columns['custom_field_name'] === '') {
+            View::respond('Enter a field name.', $back);
             return;
         }
-        View::respond($_POST['custom_field_name'] . ' ' . TXT_163, Blocks::link(FIELDS_BASE_URL . '&option=new_custom_field', TXT_362));
+        if (Database::exists('custom_fields', 'LOWER(custom_field_name) = LOWER(?)', [$columns['custom_field_name']])) {
+            View::respond($columns['custom_field_name'] . ' ' . TXT_163, $back);
+            return;
+        }
+        $id = Database::insert('custom_fields', $columns);
+        Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
+        View::respond($columns['custom_field_name'] . ' ' . TXT_162, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+    }
+
+    /**
+     * Posted values for the columns a field form owns.
+     *
+     * @return array<string, mixed>
+     */
+    private static function postedFieldColumns(): array
+    {
+        $text = static fn (string $key): string => is_scalar($_POST[$key] ?? null) ? trim((string) $_POST[$key]) : '';
+        $yesNo = static fn (string $value, string $fallback): string => in_array($value, ['Yes', 'No'], true) ? $value : $fallback;
+        $type = $text('field_type');
+
+        return self::normaliseFieldPayload([
+            'custom_field_name' => $text('custom_field_name'),
+            'field_type' => in_array($type, FieldTypes::choices(), true) ? $type : FieldTypes::TEXT_BOX,
+            'default_value' => $text('default_value'),
+            'data' => html_entity_decode($text('data'), ENT_COMPAT, 'UTF-8'),
+            'validation_type' => $text('validation_type'),
+            'required' => $yesNo($text('required'), 'No'),
+            'enabled' => $yesNo($text('enabled'), 'Yes'),
+        ]);
     }
 
     /**
@@ -472,13 +490,13 @@ final class FieldsScreen
             return;
         }
 
-        $columnArray = array('*');
-        if ($_POST['operator'] == '=') {
-            $condition = "WHERE " . $_POST['type'] . " = '" . $_POST['criteria'] . "' ORDER BY enabled DESC, " . $_POST['type'] . " ASC";
-        } elseif ($_POST['operator'] == 'LIKE') {
-            $condition = "WHERE " . $_POST['type'] . " LIKE '%" . $_POST['criteria'] . "%' ORDER BY enabled DESC, " . $_POST['type'] . " ASC";
+        $column = $table === 'custom_fields' ? 'custom_field_name' : 'item_type_name';
+        $criteria = (string) ($_POST['criteria'] ?? '');
+        if (($_POST['operator'] ?? '') === '=') {
+            $result = Database::select($table, '*', $column . ' = ?', [$criteria], 'enabled DESC, ' . $column . ' ASC');
+        } else {
+            $result = Database::select($table, '*', $column . " LIKE ? ESCAPE '\\'", ['%' . Database::escapeLike($criteria) . '%'], 'enabled DESC, ' . $column . ' ASC');
         }
-        $result = Database::select($table, $columnArray, $condition);
         if ($table !== 'custom_fields') {
             header('Location: ?manage=item-types');
             exit;
@@ -510,18 +528,23 @@ final class FieldsScreen
      */
     public static function updateCustomField($customFieldID)
     {
-        // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset']);
-        // Build insert array
-        $columnArray = $_POST;
-        // Handle data column special characters
-        $columnArray['data'] = html_entity_decode($columnArray['data'], ENT_COMPAT, 'UTF-8');
-        $columnArray = self::normaliseFieldPayload($columnArray);
-        // Set condition
-        $condition = "WHERE custom_field_id = '$customFieldID'";
-        // Update form field values into row
-        Database::update('custom_fields', $columnArray, $condition);
-        View::respond($_POST['custom_field_name'] . ' ' . TXT_164, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+        $customFieldID = (int) $customFieldID;
+        $back = Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362);
+        if (!Database::exists('custom_fields', 'custom_field_id = ?', [$customFieldID])) {
+            View::respond(TXT_115, $back);
+            return;
+        }
+        $columns = self::postedFieldColumns();
+        if ($columns['custom_field_name'] === '') {
+            View::respond('Enter a field name.', $back);
+            return;
+        }
+        if (Database::exists('custom_fields', 'LOWER(custom_field_name) = LOWER(?) AND custom_field_id <> ?', [$columns['custom_field_name'], $customFieldID])) {
+            View::respond($columns['custom_field_name'] . ' ' . TXT_163, $back);
+            return;
+        }
+        Database::update('custom_fields', $columns, 'custom_field_id = ?', [$customFieldID]);
+        View::respond($columns['custom_field_name'] . ' ' . TXT_164, $back);
     }
 
     /**
@@ -535,7 +558,7 @@ final class FieldsScreen
             return;
         }
 
-        $row = Database::first('custom_fields', '*', "WHERE custom_field_id = '" . $customFieldID . "'");
+        $row = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
         if (!$row) {
             View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
             return;
@@ -543,10 +566,10 @@ final class FieldsScreen
 
         $name = (string)$row['custom_field_name'];
         $type = (string)$row['field_type'];
-        $condition = "WHERE custom_field_id = '" . $customFieldID . "'";
-        Database::delete('custom_field_menu_values', $condition);
-        Database::delete('item_type_custom_fields', $condition);
-        Database::delete('custom_fields', $condition);
+        $params = [(int) $customFieldID];
+        Database::delete('custom_field_menu_values', 'custom_field_id = ?', $params);
+        Database::delete('item_type_custom_fields', 'custom_field_id = ?', $params);
+        Database::delete('custom_fields', 'custom_field_id = ?', $params);
         \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
         View::respond($name . ' ' . TXT_47, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));

@@ -193,6 +193,9 @@ final class SavedSearch
             return '';
         }
         $op = html_entity_decode($op, ENT_COMPAT, 'UTF-8');
+        if ($value === 'session_user' && in_array($field, ['creator_security', 'user_security'], true)) {
+            $value = (string) (int) ($_SESSION['access_user_id'] ?? 0);
+        }
         $escaped = Database::escape($value);
         return match (strtoupper($op)) {
             'LIKE' => "{$field} LIKE '%{$escaped}%'",

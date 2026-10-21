@@ -244,6 +244,30 @@
         });
     });
 
+    /* Links that change data (option=add_, update_, delete_, move_) are sent as a POST with the page token. */
+    const postLink = (link) => {
+        let option = '';
+        try {
+            option = new URL(link.getAttribute('href'), location.href).searchParams.get('option') || '';
+        } catch (e) {
+            return false;
+        }
+        if (!/^(add|update|delete|move)_[a-z_]+$/.test(option)) return false;
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = link.href;
+        form.hidden = true;
+        const token = document.createElement('input');
+        token.type = 'hidden';
+        token.name = '_csrf';
+        token.value = meta ? meta.content : '';
+        form.appendChild(token);
+        document.body.appendChild(form);
+        form.submit();
+        return true;
+    };
+
     document.addEventListener('click', (event) => {
         const confirmNode = event.target.closest('[data-confirm]');
         if (confirmNode) {
@@ -253,6 +277,12 @@
                 event.stopPropagation();
                 return;
             }
+        }
+        const link = event.target.closest('a[href]');
+        if (link && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && postLink(link)) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
         }
         if (event.target.closest('.rowmenu')) return;
         document.querySelectorAll('[data-record-list] details.rowmenu[open]').forEach((menu) => {

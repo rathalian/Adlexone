@@ -14,6 +14,7 @@ use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
 use Adlexone\Html\Html;
+use Adlexone\Platform\DefaultAccount;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -106,7 +107,7 @@ final class SecurityScreen
                 break;
             case 'admin_modify_user' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::showUser($_GET['user_id'], '', true);
+                self::showUser((string) ($_GET['user_id'] ?? ''), '', true);
                 break;
             case 'modify_user' :
                 Access::require(\Adlexone\Auth\Permission::APP_ACCESS);
@@ -125,11 +126,11 @@ final class SecurityScreen
                 break;
             case 'update_user' :
                 Access::require(\Adlexone\Auth\Permission::APP_ACCESS);
-                self::updateUser($_POST['user_id']);
+                self::updateUser($_POST['user_id'] ?? 0);
                 break;
             case 'delete_user' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::deleteUser($_GET['user_id']);
+                self::deleteUser($_GET['user_id'] ?? 0);
                 break;
             case 'add_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
@@ -138,25 +139,25 @@ final class SecurityScreen
             case 'modify_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 // Removes leading VBL_ from any session variables (used for form value persistence)
-                self::showGroup($_GET['group_id'], FormState::keys($_SESSION, 'remove'));
+                self::showGroup((string) ($_GET['group_id'] ?? ''), FormState::keys($_SESSION, 'remove'));
                 // Unset session variables starting with VBL_
                 $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'modify_group_membership' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::showGroupMembership($_GET['user_id']);
+                self::showGroupMembership($_GET['user_id'] ?? 0);
                 break;
             case 'update_group_membership' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::updateGroupMembership($_GET['user_id']);
+                self::updateGroupMembership($_GET['user_id'] ?? 0);
                 break;
             case 'update_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::updateGroup($_POST['group_id']);
+                self::updateGroup($_POST['group_id'] ?? 0);
                 break;
             case 'delete_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::deleteGroup($_GET['group_id']);
+                self::deleteGroup($_GET['group_id'] ?? 0);
                 break;
             default :
                 if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
@@ -188,7 +189,15 @@ final class SecurityScreen
     public static function showUser($userID = '', $values = [], $adminEdit = true)
     {
 
-            $fieldValues = $userID === '' ? $values : (Database::first('users', '*', 'user_id = ?', [$userID]) ?? []);
+        if ($userID === '') {
+            $fieldValues = $values;
+        } else {
+            $fieldValues = Database::first('users', '*', 'user_id = ?', [(int) $userID]);
+            if ($fieldValues === null) {
+                View::respond('That person was not found.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+                return;
+            }
+        }
 
         $option = $userID === '' ? 'add_user' : 'update_user';
 
@@ -231,13 +240,6 @@ final class SecurityScreen
         }
 
         $fields[TXT_171] = Form::text('phone', @$fieldValues['phone']);
-        $fields[TXT_172] = Form::textarea('address', @$fieldValues['address'], SET_FORM_FIELD_HEIGHT);
-        $fields[TXT_173] = Form::text('city', @$fieldValues['city']);
-        $fields[TXT_174] = Form::text('state_province', @$fieldValues['state_province']);
-        $fields[TXT_175] = Form::text('zip_postal', @$fieldValues['zip_postal']);
-        $fields[TXT_176] = Form::text('country', @$fieldValues['country']);
-        $fields[TXT_177] = Form::text('website', @$fieldValues['website']);
-        $fields[TXT_178] = Form::textarea('other', @$fieldValues['other'], SET_FORM_FIELD_HEIGHT);
 
         $userPreferences = [];
         if ($adminEdit) {
@@ -314,8 +316,11 @@ final class SecurityScreen
             $selectedPermissions = [];
         } else {
             $columnArray = array('group_id', 'group_name', 'description', 'role');
-            $condition = "WHERE group_id = '$groupID'";
-            $fieldValues = Database::first('groups', $columnArray, $condition);
+            $fieldValues = Database::first('groups', $columnArray, 'group_id = ?', [(int) $groupID]);
+            if ($fieldValues === null) {
+                View::respond('That group was not found.', Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+                return;
+            }
             $action = SEC_BASE_URL . '&option=update_group';
             $selectedPermissions = \Adlexone\Auth\Access::permissionsForGroup((int) $groupID);
         }
@@ -565,149 +570,251 @@ final class SecurityScreen
     }
 
     /**
-     * Adds user to database
+     * Columns a person may change on their own profile.
+     *
+     * @var list<string>
      */
-    /**
-                 * Adds a new user to the database after checking for duplicates.
-                 *
-                 * This function checks if a user with the given username already exists in the database.
-                 * If no duplicate is found, it creates a new user with the provided data, including
-                 * hashed password, home controller details, and settings. The user data is then inserted
-                 * into the database. If a duplicate is found, an error message is displayed.
-                 *
-                 * @return void
-                 */
-                public static function addUser()
-                {
-                    // Check for duplicate user name
-                    $userName = $_POST['user_name'] ?? '';
-                    $sql = "SELECT user_name FROM users WHERE user_name = '$userName'";
-                                    $result = Database::rows($sql);
-
-                    if (count($result) == 0) {
-                        // Prepare user data
-                        $password = password_hash((string) ($_POST['password_ftype'] ?? ''), PASSWORD_DEFAULT);
-
-                        // Extract home controller details
-                        $controllerArray = explode('}-{', $_POST['home_controller'] ?? '');
-                        $homeController = $controllerArray[0] ?? '';
-                        $homeControllerName = $controllerArray[1] ?? '';
-
-                        // Determine settings based on 'show_hide' input
-                        $settings = ($_POST['show_hide'] ?? '') === "Yes" ? "{SHOW-HIDE=TRUE}" : "{SHOW-HIDE=FALSE}";
-
-                        // Build insert array with user data
-                        $insertData = [
-                            'user_name' => $userName,
-                            'password' => $password,
-                            'home_controller' => $homeController,
-                            'home_controller_name' => $homeControllerName,
-                            'settings' => $settings,
-                        ] + $_POST;
-
-                        // Remove unnecessary fields from the insert data
-                        unset($insertData['password_confirm'], $insertData['password_ftype'], $insertData['submit_button'], $insertData['reset'], $insertData['user_id'], $insertData['home_controller'], $insertData['show_hide']);
-
-                        // Insert user data into the database
-                        $userId = Database::insert('users', $insertData);
-
-                        // Show group membership for the newly added user
-                        self::showGroupMembership($userId);
-                    } else {
-                        // Render duplicate user message
-                        View::respond(
-                            $userName . ' ' . TXT_163,
-                            Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL')
-                        );
-                        return;
-                    }
-                }
+    private const PROFILE_COLUMNS = [
+        'first_name', 'last_name', 'email', 'phone', 'language',
+        'show_header', 'show_graphics',
+    ];
 
     /**
-             * Updates user information in the database.
-             *
-             * This function updates the details of a user identified by their user ID. It handles
-             * the extraction of home controller details, prevents unauthorized role modifications,
-             * updates user settings, and processes the provided form data to update the database.
-             * After the update, it renders a success message.
-             *
-             * @param string $userID The ID of the user to be updated.
-             */
-            public static function updateUser($userID)
-            {
-                // Extract home controller details from the POST data
-                [$homeController, $homeControllerName] = explode('}-{', $_POST['home_controller']);
-                $controllerFileArray = ['home_controller' => $homeController];
-                $controllerNameArray = ['home_controller_name' => $homeControllerName];
+     * Columns only an administrator may change.
+     *
+     * @var list<string>
+     */
+    private const ADMIN_COLUMNS = ['user_name', 'theme', 'role', 'lastactive'];
 
-                // Define the condition for the database update query
-                $condition = "WHERE user_id = '$userID'";
+    /**
+     * Columns of the users table taken from the posted form.
+     *
+     * @return array<string, mixed>
+     */
+    private static function postedUserColumns(bool $admin): array
+    {
+        $allowed = $admin ? array_merge(self::PROFILE_COLUMNS, self::ADMIN_COLUMNS) : self::PROFILE_COLUMNS;
+        $columns = [];
+        foreach ($allowed as $name) {
+            if (!isset($_POST[$name]) || !is_scalar($_POST[$name])) {
+                continue;
+            }
+            $columns[$name] = trim((string) $_POST[$name]);
+        }
+        if (isset($columns['role'])) {
+            $role = (int) $columns['role'];
+            $min = Access::can(Permission::ADMIN_SYSTEM) ? 0 : 1;
+            $columns['role'] = max($min, min(5, $role));
+        }
+        if (isset($columns['lastactive']) && !in_array($columns['lastactive'], ['active', 'inactive'], true)) {
+            unset($columns['lastactive']);
+        }
+        if (isset($columns['show_header']) && !in_array($columns['show_header'], ['Yes', 'No'], true)) {
+            unset($columns['show_header']);
+        }
+        if (isset($columns['show_graphics']) && !in_array($columns['show_graphics'], ['Yes', 'No'], true)) {
+            unset($columns['show_graphics']);
+        }
+        if (isset($columns['language'])) {
+            $language = basename($columns['language']);
+            if (!is_file(SET_INSTALL_PATH . 'translations/' . $language . '.lang.php')) {
+                unset($columns['language']);
+            } else {
+                $columns['language'] = $language;
+            }
+        }
+        if (isset($columns['theme'])) {
+            $theme = \Adlexone\Theme\Theme::canonicalize($columns['theme']);
+            if (isset(\Adlexone\Theme\Theme::installed()[$theme])) {
+                $columns['theme'] = $theme;
+            } else {
+                unset($columns['theme']);
+            }
+        }
 
-                // Prevent role modification for users with insufficient access rights
-                if (!\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
-                    unset($_POST['role']);
-                }
+        return $columns;
+    }
 
-                // Fetch the current settings for the user from the database
-                $row = Database::first('users', ['settings'], 'user_id = ?', [$userID]);
-                $currentSettings = (string) ($row['settings'] ?? '');
+    /**
+     * @return array{0: string, 1: string} home controller and its display name
+     */
+    private static function postedHomeController(): array
+    {
+        $posted = $_POST['home_controller'] ?? '';
+        $parts = explode('}-{', is_string($posted) ? $posted : '', 2);
 
-                // Update the 'show_hide' setting based on the POST data
-                $showHide = ($_POST['show_hide'] ?? '') === "Yes" ? "{SHOW-HIDE=TRUE}" : "{SHOW-HIDE=FALSE}";
-                $controllerFileArray['settings'] = str_replace(
-                    ["{SHOW-HIDE=TRUE}", "{SHOW-HIDE=FALSE}"],
-                    $showHide,
-                    $currentSettings
-                );
+        return [trim($parts[0]), trim($parts[1] ?? '')];
+    }
 
-                // Remove the 'show_hide' field from the POST data
-                unset($_POST['show_hide']);
+    private static function userSettings(string $current = ''): string
+    {
+        $flag = ($_POST['show_hide'] ?? '') === 'Yes' ? '{SHOW-HIDE=TRUE}' : '{SHOW-HIDE=FALSE}';
+        if ($current === '') {
+            return $flag;
+        }
+        $replaced = str_replace(['{SHOW-HIDE=TRUE}', '{SHOW-HIDE=FALSE}'], $flag, $current, $count);
 
-                // Prepare the password for update if provided
-                $password = [];
-                if (!empty($_POST['password_ftype'])) {
-                    $password['password'] = password_hash((string) $_POST['password_ftype'], PASSWORD_DEFAULT);
-                }
+        return $count > 0 ? $replaced : $current . $flag;
+    }
 
-                // Remove unnecessary fields from the POST data
-                unset($_POST['password_ftype'], $_POST['submit_button'], $_POST['reset'], $_POST['user_id'], $_POST['home_controller']);
+    /**
+     * Adds a person after checking the username, password, and email.
+     */
+    public static function addUser()
+    {
+        $userName = trim((string) ($_POST['user_name'] ?? ''));
+        $password = (string) ($_POST['password_ftype'] ?? '');
+        $confirm = (string) ($_POST['password_confirm'] ?? '');
+        $email = trim((string) ($_POST['email'] ?? ''));
+        $back = Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL');
 
-                // Merge all data into a single array for the update
-                $columnArray = array_merge($password, $_POST, $controllerFileArray, $controllerNameArray);
+        if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $userName) !== 1) {
+            View::respond('Enter a username of 2 to 40 characters: letters, numbers, dots, underscores, or hyphens.', $back);
+            return;
+        }
+        try {
+            DefaultAccount::assertPassword($password);
+        } catch (\RuntimeException $e) {
+            View::respond($e->getMessage(), $back);
+            return;
+        }
+        if (!hash_equals($password, $confirm)) {
+            View::respond('The two passwords do not match.', $back);
+            return;
+        }
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            View::respond('The email address does not look valid.', $back);
+            return;
+        }
+        if (Database::exists('users', 'LOWER(user_name) = LOWER(?)', [$userName])) {
+            View::respond($userName . ' ' . TXT_163, Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL'));
+            return;
+        }
 
-                // Execute the update query in the database
-                Database::update('users', $columnArray, $condition);
+        [$homeController, $homeControllerName] = self::postedHomeController();
+        $insertData = self::postedUserColumns(true);
+        $insertData['user_name'] = $userName;
+        $insertData['password'] = password_hash($password, PASSWORD_DEFAULT);
+        $insertData['home_controller'] = $homeController;
+        $insertData['home_controller_name'] = $homeControllerName;
+        $insertData['settings'] = self::userSettings();
+        if (!isset($insertData['role'])) {
+            $insertData['role'] = 5;
+        }
+        $userId = Database::insert('users', $insertData);
+        self::showGroupMembership($userId);
+    }
 
-                // Render a success message after the update
-                View::respond(
-                    ($_POST['user_name'] ?? '') . ' ' . TXT_164,
-                    Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL')
-                );
+    /**
+     * Updates a person. Without the security permission the person can change only their own profile.
+     *
+     * @param mixed $userID The posted user id, ignored unless the signed-in person manages security.
+     */
+    public static function updateUser($userID)
+    {
+        $admin = Access::can(Permission::ADMIN_SECURITY);
+        $userID = $admin ? (int) $userID : (int) ($_SESSION['access_user_id'] ?? 0);
+        $current = Database::first('users', ['user_id', 'user_name', 'settings', 'role'], 'user_id = ?', [$userID]);
+        $list = Blocks::link(
+            SEC_BASE_URL . ($admin ? '&option=manage_users' : '&option=modify_user'),
+            $admin ? TXT_160 : 'Return to your profile',
+            'URL'
+        );
+        if ($current === null) {
+            View::respond('That person was not found.', $list);
+            return;
+        }
+
+        $columns = self::postedUserColumns($admin);
+        if ((int) ($current['role'] ?? 5) === 0 && !Access::can(Permission::ADMIN_SYSTEM)) {
+            unset($columns['role'], $columns['lastactive'], $columns['user_name']);
+        }
+
+        if (isset($columns['user_name'])) {
+            if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $columns['user_name']) !== 1) {
+                View::respond('Enter a username of 2 to 40 characters: letters, numbers, dots, underscores, or hyphens.', $list);
                 return;
             }
+            if (Database::exists('users', 'LOWER(user_name) = LOWER(?) AND user_id <> ?', [$columns['user_name'], $userID])) {
+                View::respond($columns['user_name'] . ' ' . TXT_163, $list);
+                return;
+            }
+        }
+        if (($columns['email'] ?? '') !== '' && filter_var($columns['email'], FILTER_VALIDATE_EMAIL) === false) {
+            View::respond('The email address does not look valid.', $list);
+            return;
+        }
+        if ($userID === (int) ($_SESSION['access_user_id'] ?? 0) && ($columns['lastactive'] ?? '') === 'inactive') {
+            View::respond('You cannot make your own account inactive.', $list);
+            return;
+        }
+        $password = (string) ($_POST['password_ftype'] ?? '');
+        if ($password !== '') {
+            try {
+                DefaultAccount::assertPassword($password);
+            } catch (\RuntimeException $e) {
+                View::respond($e->getMessage(), $list);
+                return;
+            }
+            $columns['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
+        if (isset($_POST['home_controller'])) {
+            [$columns['home_controller'], $columns['home_controller_name']] = self::postedHomeController();
+        }
+        if (isset($_POST['show_hide'])) {
+            $columns['settings'] = self::userSettings((string) ($current['settings'] ?? ''));
+        }
+
+        if ($columns !== []) {
+            Database::update('users', $columns, 'user_id = ?', [$userID]);
+        }
+
+        View::respond(
+            (string) ($columns['user_name'] ?? $current['user_name'] ?? '') . ' ' . TXT_164,
+            $list
+        );
+    }
+
+    /**
+     * @return array{group_name: string, description: string, role: int}
+     */
+    private static function postedGroupColumns(): array
+    {
+        return [
+            'group_name' => trim((string) ($_POST['group_name'] ?? '')),
+            'description' => trim((string) ($_POST['description'] ?? '')),
+            'role' => max(1, min(5, (int) ($_POST['role'] ?? 5))),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function postedPermissions(): array
+    {
+        $posted = $_POST['permissions'] ?? [];
+
+        return is_array($posted) ? array_values(array_filter($posted, 'is_string')) : [];
+    }
 
     /**
      * Add group to database
      */
     public static function addGroup()
     {
-        // Check for duplicate and error handling
-        $columnArray = array('group_name');
-        $condition = "WHERE group_name = '" . $_POST['group_name'] . "'";
-        $result = Database::select('groups', $columnArray, $condition);
-        if (count($result) == 0) {
-            $permissions = $_POST['permissions'] ?? [];
-            // Remove unwanted POST variables
-            unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id'], $_POST['permissions'], $_POST['_csrf']);
-            // Build insert array
-            $columnArray = $_POST;
-            // Insert form field values into row
-            $groupId = Database::insert('groups', $columnArray);
-            \Adlexone\Auth\Access::setGroupPermissions((int) $groupId, is_array($permissions) ? $permissions : []);
-            View::respond($_POST['group_name'] . ' ' . TXT_162, Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+        $columns = self::postedGroupColumns();
+        if ($columns['group_name'] === '') {
+            View::respond('Enter a group name.', Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
             return;
         }
-        View::respond($_POST['group_name'] . ' ' . TXT_198, Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
+        if (Database::exists('groups', 'LOWER(group_name) = LOWER(?)', [$columns['group_name']])) {
+            View::respond($columns['group_name'] . ' ' . TXT_198, Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
+            return;
+        }
+        $groupId = Database::insert('groups', $columns);
+        Access::setGroupPermissions($groupId, self::postedPermissions());
+        View::respond($columns['group_name'] . ' ' . TXT_162, Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
     }
 
     /**
@@ -717,17 +824,24 @@ final class SecurityScreen
      */
     public static function updateGroup($groupID)
     {
-        $permissions = $_POST['permissions'] ?? [];
-        // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset'], $_POST['permissions'], $_POST['_csrf']);
-        // Build insert array
-        $columnArray = $_POST;
-        // Set condition
-        $condition = "WHERE group_id = '$groupID'";
-        // Updates form field values into row
-        Database::update('groups', $columnArray, $condition);
-        \Adlexone\Auth\Access::setGroupPermissions((int) $groupID, is_array($permissions) ? $permissions : []);
-        View::respond($_POST['group_name'] . ' ' . TXT_164, Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+        $groupID = (int) $groupID;
+        $list = Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL');
+        if (!Database::exists('groups', 'group_id = ?', [$groupID])) {
+            View::respond('That group was not found.', $list);
+            return;
+        }
+        $columns = self::postedGroupColumns();
+        if ($columns['group_name'] === '') {
+            View::respond('Enter a group name.', $list);
+            return;
+        }
+        if (Database::exists('groups', 'LOWER(group_name) = LOWER(?) AND group_id <> ?', [$columns['group_name'], $groupID])) {
+            View::respond($columns['group_name'] . ' ' . TXT_198, $list);
+            return;
+        }
+        Database::update('groups', $columns, 'group_id = ?', [$groupID]);
+        Access::setGroupPermissions($groupID, self::postedPermissions());
+        View::respond($columns['group_name'] . ' ' . TXT_164, $list);
     }
 
     /**
@@ -750,6 +864,10 @@ final class SecurityScreen
     public static function updateGroupMembership($userID)
     {
         $userID = (int) $userID;
+        if (!Database::exists('users', 'user_id = ?', [$userID])) {
+            View::respond('That person was not found.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+            return;
+        }
 
         \Adlexone\Data\GroupMembership::setUserGroups(
             (int) $userID,
@@ -773,25 +891,18 @@ final class SecurityScreen
      */
     public static function showUserGroupResults()
     {
-        // Determine the table to query based on the search type
-        if ($_POST['type'] == 'group_name') {
-            $table = 'groups'; // Query the groups table for group-related searches
-        } else {
-            $table = 'users'; // Query the users table for user-related searches
+        $type = (string) ($_POST['type'] ?? '');
+        $table = $type === 'group_name' ? 'groups' : 'users';
+        $allowed = $table === 'groups' ? ['group_name', 'description'] : ['user_name', 'first_name', 'last_name', 'email'];
+        if (!in_array($type, $allowed, true)) {
+            $type = $allowed[0];
         }
-
-        // Define the columns to select and the condition for the query
-        $columnArray = array('*'); // Select all columns
-        if ($_POST['operator'] == '=') {
-            // Exact match condition
-            $condition = "WHERE " . $_POST['type'] . " = '" . $_POST['criteria'] . "'";
+        $criteria = (string) ($_POST['criteria'] ?? '');
+        if (($_POST['operator'] ?? '') === '=') {
+            $result = Database::select($table, '*', $type . ' = ?', [$criteria]);
         } else {
-            // Partial match condition using LIKE
-            $condition = "WHERE " . $_POST['type'] . " LIKE '%" . $_POST['criteria'] . "%'";
+            $result = Database::select($table, '*', $type . " LIKE ? ESCAPE '\\'", ['%' . Database::escapeLike($criteria) . '%']);
         }
-
-        // Execute the SQL query
-        $result = Database::select($table, $columnArray, $condition);
 
         $rows = [];
         $isUsers = $table === 'users';
@@ -822,28 +933,31 @@ final class SecurityScreen
     public static function deleteGroup($groupID = '')
     {
         $groupID = (int) $groupID;
-        Database::run("DELETE FROM groups WHERE group_id='" . $groupID . "'");
+        Database::delete('groups', 'group_id = ?', [$groupID]);
         Database::delete('user_groups', 'group_id = ?', [$groupID]);
         Database::delete('item_groups', 'group_id = ?', [$groupID]);
         Database::delete('item_type_groups', 'group_id = ?', [$groupID]);
-        \Adlexone\Auth\Access::setGroupPermissions($groupID, []);
+        Access::setGroupPermissions($groupID, []);
         self::showGroups();
     }
 
     /**
      * deleteUser()
      *
-     * Deletes the selected user. Controller logic: delete_user, delete_user_checked
+     * Deletes the selected user. Controller logic: delete_user
      *
      * @param mixed $userID Users ID
-     * @param boolean $checked If true the user is deleted
      */
     public static function deleteUser($userID = '')
     {
-
-        $sql = "DELETE FROM users WHERE user_id='" . $userID . "'";
-        Database::run($sql);
-        \Adlexone\Data\GroupMembership::setUserGroups((int) $userID, []);
+        $userID = (int) $userID;
+        if ($userID === (int) ($_SESSION['access_user_id'] ?? 0)) {
+            View::respond('You cannot delete the account you are signed in with.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+            return;
+        }
+        Database::delete('users', 'user_id = ?', [$userID]);
+        Database::delete('user_identities', 'user_id = ?', [$userID]);
+        \Adlexone\Data\GroupMembership::setUserGroups($userID, []);
         self::showUsers();
     }
 

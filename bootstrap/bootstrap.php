@@ -36,6 +36,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
  */
 use Adlexone\Http\Page;
 use Adlexone\Http\PublicBaseUrl;
+use Adlexone\Http\Request;
 use Adlexone\Http\Router;
 use Adlexone\Platform\OperatorScreen;
 use Adlexone\Platform\Runtime;
@@ -131,7 +132,11 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
     if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
         \Adlexone\Auth\Csrf::enforceOrDeny();
+        // Screens write the posted fields to table columns, so the token must not reach them.
+        unset($_POST[\Adlexone\Auth\Csrf::FIELD]);
     }
+
+    Request::normaliseNumbers();
 
     // A stored home such as application:service-centre still arrives as controller.
     $requestedController = (string) ($_GET['controller'] ?? '');

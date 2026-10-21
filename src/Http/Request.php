@@ -41,6 +41,32 @@ final class Request
     }
 
     /**
+     * Parameters that always hold a record number. Older screens place them straight into SQL,
+     * so anything that is not a plain whole number is dropped before a screen reads it.
+     *
+     * @var list<string>
+     */
+    private const NUMBER_KEYS = [
+        'item_id', 'item_type_id', 'user_id', 'group_id', 'custom_field_id', 'menu_value_id',
+        'parent_menu_value_id', 'log_item_sequence', 'id', 'nav_id', 'rule_id', 'application_id',
+        'search_id', 'pageset', 'default_item_type',
+    ];
+
+    public static function normaliseNumbers(): void
+    {
+        foreach ([&$_GET, &$_POST] as &$source) {
+            foreach (self::NUMBER_KEYS as $key) {
+                if (!array_key_exists($key, $source)) {
+                    continue;
+                }
+                $value = $source[$key];
+                $source[$key] = is_string($value) && preg_match('/^\d{1,18}$/', $value) === 1 ? $value : '';
+            }
+        }
+        unset($source);
+    }
+
+    /**
      * Fold the older parameter names into the ones the screens read. Safe to repeat.
      */
     public static function prepare(): void
