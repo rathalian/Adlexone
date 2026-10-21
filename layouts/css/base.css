@@ -542,6 +542,23 @@ input[type="datetime-local"].input{
     background:var(--form-surface, #fff);
 }
 .group-security-item .record-list__meta{ margin:0 0 0 1.5rem; }
+.perm-apps{ display:flex; flex-direction:column; gap:8px; flex:1 1 100%; min-width:0; }
+.perm-app{
+    display:grid;
+    grid-template-columns:minmax(9rem, 14rem) minmax(0, 1fr);
+    gap:8px 20px;
+    align-items:center;
+    padding:10px 12px;
+    border:1px solid color-mix(in srgb, var(--form-border, #c5d0da) 85%, transparent);
+    border-radius:8px;
+    background:var(--form-surface, #fff);
+}
+.perm-app__name{ margin:0; font-size:14px; font-weight:600; color:var(--ink); }
+.perm-app__levels{ display:flex; flex-wrap:wrap; gap:8px 18px; }
+.perm-app__levels .checkbox{ display:flex; align-items:flex-start; gap:8px; }
+@container sheet (max-width: 40rem){
+    .perm-app{ grid-template-columns:minmax(0, 1fr); }
+}
 .field-picker{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .field-picker .label{ margin-bottom:0; }
 .field-picker-list{
@@ -2111,7 +2128,7 @@ a.btn{ text-decoration:none; }
     }
 }
 .form-grid > :not(.field),
-.form-grid > .field:has(textarea, table, .field-picker, .field-stack, .group-security-list, .menu-editor-wrap, .mlm-fields, .criteria-row, .cf-row, .is-inline, .readonly-value, .field-note, input[type="file"]),
+.form-grid > .field:has(textarea, table, .field-picker, .field-stack, .group-security-list, .perm-apps, .menu-editor-wrap, .mlm-fields, .criteria-row, .cf-row, .is-inline, .readonly-value, .field-note, input[type="file"]),
 .form-grid > .field.field--wide{
     grid-column:1 / -1;
 }

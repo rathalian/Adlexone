@@ -113,7 +113,7 @@ final class BuilderScreen
             ScreenCatalog::SETTINGS => ['hint' => 'How this application is set up', 'icon' => 'ic-settings'],
         ];
         $levelMeta = [
-            'use' => ['label' => 'Use application', 'hint' => 'Open the work and add to it'],
+            'use' => ['label' => 'Open', 'hint' => 'Open the work and add to it'],
             'announce' => ['label' => 'Announcements', 'hint' => 'Post a notice'],
             'settings' => ['label' => 'Settings', 'hint' => 'Change how the application works'],
         ];

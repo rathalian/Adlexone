@@ -343,7 +343,12 @@ final class ApplicationsScreen
         $fields = [
             'Label' => Form::text('label', Html::e((string) ($link['label'] ?? ''))),
             'Screen' => Form::select('capability', $keys, $labels, $capability),
-            'Who can see it' => self::permissionSelect('permission', (string) ($link['permission'] ?? ''), true),
+            'Who can see it' => self::permissionSelect(
+                'permission',
+                (string) ($link['permission'] ?? ''),
+                (string) $app['name'],
+                (string) $app['slug']
+            ),
             'Icon' => self::iconSelect('icon', (string) ($link['icon'] ?? ''), true),
             'Saved search' => self::savedSearchSelect((string) ($config['search_id'] ?? ''), ApplicationStore::scopeKey($app)),
         ];
@@ -474,19 +479,49 @@ final class ApplicationsScreen
         return array_values(array_unique($ids));
     }
 
-    public static function permissionSelect(string $name, string $selected, bool $allowEmpty): string
+    public static function permissionSelect(string $name, string $selected, string $applicationName, string $slug): string
     {
-        $values = [];
-        $labels = [];
-        if ($allowEmpty) {
-            $values[] = '';
-            $labels[] = 'Anyone who can open the application';
+        $applicationName = trim($applicationName);
+        if ($applicationName === '') {
+            $applicationName = 'Application';
         }
-        foreach (Permission::catalog() as $key => $meta) {
-            $values[] = $key;
-            $labels[] = (string) $meta['label'];
+        $appOptions = $slug === '' ? [] : [
+            Permission::appUse($slug) => 'Open',
+            Permission::appAnnounce($slug) => 'Announcements',
+            Permission::appSettings($slug) => 'Settings',
+        ];
+        $siteOptions = Permission::siteChoices();
+        $known = $appOptions + $siteOptions;
+
+        $html = Html::open('select', ['name' => $name, 'class' => 'select']);
+        $html .= self::permissionOption('', 'Anyone who can open the application', $selected);
+        if ($appOptions !== []) {
+            $html .= Html::open('optgroup', ['label' => $applicationName]);
+            foreach ($appOptions as $value => $label) {
+                $html .= self::permissionOption($value, $label, $selected);
+            }
+            $html .= '</optgroup>';
         }
-        return Form::select($name, $values, $labels, $selected);
+        $html .= Html::open('optgroup', ['label' => 'Site']);
+        foreach ($siteOptions as $value => $label) {
+            $html .= self::permissionOption($value, $label, $selected);
+        }
+        $html .= '</optgroup>';
+        if ($selected !== '' && !isset($known[$selected])) {
+            $catalog = Permission::catalog();
+            $label = isset($catalog[$selected]) ? (string) $catalog[$selected]['label'] : $selected;
+            $html .= self::permissionOption($selected, $label, $selected);
+        }
+
+        return $html . '</select>';
+    }
+
+    private static function permissionOption(string $value, string $label, string $selected): string
+    {
+        return Html::tag('option', [
+            'value' => $value,
+            'selected' => $value === $selected ? true : null,
+        ], Html::e($label));
     }
 
     public static function iconSelect(string $name, string $selected, bool $allowEmpty = false): string

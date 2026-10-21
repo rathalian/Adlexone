@@ -51,15 +51,15 @@ final class Permission
     {
         return [
             self::ADMIN_SYSTEM => [
-                'label' => 'System configuration (sign-in, advanced settings, and outbound email)',
+                'label' => 'Sign-in, email, and advanced settings',
                 'legacy_max_role' => 0,
             ],
             self::ADMIN_SETTINGS => [
-                'label' => 'Application settings',
+                'label' => 'Applications and site settings',
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_SECURITY => [
-                'label' => 'Users and groups',
+                'label' => 'People and groups',
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_ACTIONS => [
@@ -67,7 +67,7 @@ final class Permission
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_ITEMS => [
-                'label' => 'Item types and fields',
+                'label' => 'Fields and record types',
                 'legacy_max_role' => 1,
             ],
             self::APP_ACCESS => [
@@ -78,9 +78,74 @@ final class Permission
     }
 
     /**
+     * Site permissions a group can be given.
+     * Signing in is granted to every person, so that permission is not listed.
+     *
+     * @return array<string, string>
+     */
+    public static function siteChoices(): array
+    {
+        $out = [];
+        foreach (self::baseCatalog() as $key => $meta) {
+            if ($key === self::APP_ACCESS) {
+                continue;
+            }
+            $out[$key] = (string) $meta['label'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * One row per application, with the three permission keys that belong to it.
+     *
+     * @return list<array{name: string, slug: string, open: string, announce: string, settings: string}>
+     */
+    public static function applicationChoices(): array
+    {
+        $out = [];
+        foreach (self::applicationRows() as $app) {
+            $out[] = [
+                'name' => $app['name'],
+                'slug' => $app['slug'],
+                'open' => self::appUse($app['slug']),
+                'announce' => self::appAnnounce($app['slug']),
+                'settings' => self::appSettings($app['slug']),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * @return array<string, array{label: string, legacy_max_role: int}>
      */
     private static function applicationCatalog(): array
+    {
+        $out = [];
+        foreach (self::applicationRows() as $app) {
+            // legacy_max_role 4 bridges shared item engines still gated by role numbers.
+            $out[self::appUse($app['slug'])] = [
+                'label' => 'Open: ' . $app['name'],
+                'legacy_max_role' => 4,
+            ];
+            $out[self::appAnnounce($app['slug'])] = [
+                'label' => 'Announcements: ' . $app['name'],
+                'legacy_max_role' => 2,
+            ];
+            $out[self::appSettings($app['slug'])] = [
+                'label' => 'Settings: ' . $app['name'],
+                'legacy_max_role' => 1,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array{slug: string, name: string}>
+     */
+    private static function applicationRows(): array
     {
         if (!Database::tableExists('applications')) {
             return [];
@@ -91,21 +156,10 @@ final class Permission
             if ($slug === '') {
                 continue;
             }
-            $name = (string) $app['name'];
-            // legacy_max_role 4 bridges shared item engines still gated by role numbers.
-            $out[self::appUse($slug)] = [
-                'label' => 'Use application: ' . $name,
-                'legacy_max_role' => 4,
-            ];
-            $out[self::appAnnounce($slug)] = [
-                'label' => 'Manage announcements: ' . $name,
-                'legacy_max_role' => 2,
-            ];
-            $out[self::appSettings($slug)] = [
-                'label' => 'Application settings: ' . $name,
-                'legacy_max_role' => 1,
-            ];
+            $name = trim((string) $app['name']);
+            $out[] = ['slug' => $slug, 'name' => $name !== '' ? $name : $slug];
         }
+
         return $out;
     }
 

@@ -8,6 +8,7 @@ use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\support\FormState;
@@ -327,7 +328,8 @@ final class SecurityScreen
                 . Form::select('role', $roleIDs, $roleNames, $fieldValues['role'] ?? '')
                 . '<p class="form-help">' . Html::e(TXT_697) . '</p>'
                 . '</div>',
-            TXT_696 => self::buildGroupPermissionsField($selectedPermissions),
+            'Site permissions' => self::sitePermissionsField($selectedPermissions),
+            'Application permissions' => self::applicationPermissionsField($selectedPermissions),
         ];
         $fields[] = Form::hidden('group_id', $fieldValues['group_id'] ?? '');
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
@@ -349,21 +351,50 @@ final class SecurityScreen
     /**
      * @param list<string> $selected
      */
-    public static function buildGroupPermissionsField(array $selected): string
+    private static function sitePermissionsField(array $selected): string
     {
         $html = '<div class="group-security-list">';
-        foreach (\Adlexone\Auth\Permission::catalog() as $key => $meta) {
+        foreach (Permission::siteChoices() as $key => $label) {
             $checked = in_array($key, $selected, true) ? $key : '';
             $html .= '<div class="group-security-item">'
-                . Form::checkbox(
-                    'permissions[]',
-                    $key,
-                    $checked,
-                    (string) $meta['label']
-                )
+                . Form::checkbox('permissions[]', $key, $checked, $label)
                 . '</div>';
         }
         $html .= '</div>';
+        $html .= '<p class="form-help">These apply to the whole site.</p>';
+
+        return $html;
+    }
+
+    /**
+     * @param list<string> $selected
+     */
+    private static function applicationPermissionsField(array $selected): string
+    {
+        $apps = Permission::applicationChoices();
+        if ($apps === []) {
+            return '<p class="form-help">No applications yet. Create one from Design, then choose who can open it here.</p>';
+        }
+        $levels = [
+            'open' => 'Open',
+            'announce' => 'Announcements',
+            'settings' => 'Settings',
+        ];
+        $html = '<div class="perm-apps">';
+        foreach ($apps as $app) {
+            $html .= '<div class="perm-app">'
+                . '<p class="perm-app__name">' . Html::e($app['name']) . '</p>'
+                . '<div class="perm-app__levels">';
+            foreach ($levels as $level => $label) {
+                $key = $app[$level];
+                $checked = in_array($key, $selected, true) ? $key : '';
+                $html .= Form::checkbox('permissions[]', $key, $checked, $label);
+            }
+            $html .= '</div></div>';
+        }
+        $html .= '</div>';
+        $html .= '<p class="form-help">Open lets this group use that application. Announcements and Settings are extra.</p>';
+
         return $html;
     }
 
@@ -668,7 +699,7 @@ final class SecurityScreen
         if (count($result) == 0) {
             $permissions = $_POST['permissions'] ?? [];
             // Remove unwanted POST variables
-            unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id'], $_POST['permissions']);
+            unset ($_POST['submit_button'], $_POST['reset'], $_POST['group_id'], $_POST['permissions'], $_POST['_csrf']);
             // Build insert array
             $columnArray = $_POST;
             // Insert form field values into row
@@ -689,7 +720,7 @@ final class SecurityScreen
     {
         $permissions = $_POST['permissions'] ?? [];
         // Remove unwanted POST variables
-        unset ($_POST['submit_button'], $_POST['reset'], $_POST['permissions']);
+        unset ($_POST['submit_button'], $_POST['reset'], $_POST['permissions'], $_POST['_csrf']);
         // Build insert array
         $columnArray = $_POST;
         // Set condition
