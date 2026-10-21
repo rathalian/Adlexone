@@ -487,7 +487,6 @@ final class ApplicationsScreen
         }
         $appOptions = $slug === '' ? [] : [
             Permission::appUse($slug) => 'Open',
-            Permission::appAnnounce($slug) => 'Announcements',
             Permission::appSettings($slug) => 'Settings',
         ];
         $siteOptions = Permission::siteChoices();

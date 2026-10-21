@@ -377,7 +377,6 @@ final class SecurityScreen
         }
         $levels = [
             'open' => 'Open',
-            'announce' => 'Announcements',
             'settings' => 'Settings',
         ];
         $html = '<div class="perm-apps">';
@@ -393,7 +392,7 @@ final class SecurityScreen
             $html .= '</div></div>';
         }
         $html .= '</div>';
-        $html .= '<p class="form-help">Open lets this group use that application. Announcements and Settings are extra.</p>';
+        $html .= '<p class="form-help">Open lets this group use that application. Settings lets them change how it works.</p>';
 
         return $html;
     }

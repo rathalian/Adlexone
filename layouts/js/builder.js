@@ -47,7 +47,7 @@ if(facts&&access&&access.parentNode){facts.insertBefore(ruleRow,access.parentNod
 text("builder-preview-rule",bp.rule);ruleRow.hidden=false;}else if(ruleRow){ruleRow.hidden=true;}
 var groups=[];form.querySelectorAll("input[name=\"groups[]\"]:checked").forEach(function(input){var label=input.closest("label");var node=label&&label.querySelector(".builder__choice-label");groups.push(node?node.textContent:"");});
 var levels=[];form.querySelectorAll("input[name=\"perm_levels[]\"]:checked").forEach(function(input){var label=input.closest("label");var node=label&&label.querySelector(".builder__choice-label");levels.push(node?node.textContent:"");});
-text("builder-preview-access",(groups.filter(Boolean).join(", ")||"Administrators")+" · "+(levels.filter(Boolean).join(", ")||"Use, announcements, and settings"));
+text("builder-preview-access",(groups.filter(Boolean).join(", ")||"Administrators")+" · "+(levels.filter(Boolean).join(", ")||"Open and settings"));
 }
 if(nameEl)nameEl.addEventListener("input",function(){if(!slugDirty&&slugEl)slugEl.value=slugify(nameEl.value);render();});
 if(slugEl)slugEl.addEventListener("input",function(){slugDirty=slugEl.value.trim()!=="";if(!slugDirty&&nameEl)slugEl.value=slugify(nameEl.value);render();});

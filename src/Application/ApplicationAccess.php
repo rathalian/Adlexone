@@ -33,13 +33,16 @@ final class ApplicationAccess
         );
     }
 
+    /**
+     * Post, edit, and delete notices. Opening the application includes this.
+     */
     public static function canAnnounce(): bool
     {
         $slug = self::slug();
         if ($slug === '') {
             return Access::can(Permission::ADMIN_SETTINGS);
         }
-        return Access::can(Permission::appAnnounce($slug), Permission::ADMIN_SETTINGS);
+        return Access::can(Permission::appUse($slug), Permission::ADMIN_SETTINGS);
     }
 
     public static function canSettings(): bool

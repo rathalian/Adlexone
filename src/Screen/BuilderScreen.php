@@ -114,7 +114,6 @@ final class BuilderScreen
         ];
         $levelMeta = [
             'use' => ['label' => 'Open', 'hint' => 'Open the work and add to it'],
-            'announce' => ['label' => 'Announcements', 'hint' => 'Post a notice'],
             'settings' => ['label' => 'Settings', 'hint' => 'Change how the application works'],
         ];
 
@@ -192,7 +191,7 @@ final class BuilderScreen
         $groupsHtml .= '</div>';
 
         $postedLevels = $_POST['perm_levels'] ?? null;
-        $selectedLevels = is_array($postedLevels) ? $postedLevels : ['use', 'announce', 'settings'];
+        $selectedLevels = is_array($postedLevels) ? $postedLevels : ['use', 'settings'];
         $levelsHtml = '<div class="builder__choices">';
         $selectedLevelLabels = [];
         foreach ($levelMeta as $level => $meta) {
@@ -250,7 +249,7 @@ final class BuilderScreen
         }
         $accessLine = ($selectedGroupNames === [] ? 'Administrators' : implode(', ', $selectedGroupNames))
             . ' · '
-            . ($selectedLevelLabels === [] ? 'Use, announcements, and settings' : implode(', ', $selectedLevelLabels));
+            . ($selectedLevelLabels === [] ? 'Open and settings' : implode(', ', $selectedLevelLabels));
         $rule = $clientBlueprints[$blueprint]['rule'];
         $ruleRow = $rule === ''
             ? ''

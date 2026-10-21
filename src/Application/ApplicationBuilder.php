@@ -260,7 +260,7 @@ final class ApplicationBuilder
     /**
      * @param list<string>|null $screens Built-in screen ids; null = blueprint default
      * @param list<int> $groupIds groups to receive app permissions (empty = admins + creator)
-     * @param list<string> $permLevels use|announce|settings
+     * @param list<string> $permLevels use|settings
      * @return array{application_id: int, slug: string, item_type_id: int}
      */
     public static function create(

@@ -8,8 +8,8 @@ use Adlexone\support\Database;
 /**
  * Named permissions used for authorization.
  *
- * Application-scoped keys (app.{slug}.use|announce|settings) are generated
- * from the applications registry so Manage Security can assign them in the UI.
+ * Application-scoped keys (app.{slug}.use|settings) are generated
+ * from the applications registry so a group can be given them.
  */
 final class Permission
 {
@@ -24,11 +24,6 @@ final class Permission
     public static function appUse(string $slug): string
     {
         return 'app.' . self::safeSlug($slug) . '.use';
-    }
-
-    public static function appAnnounce(string $slug): string
-    {
-        return 'app.' . self::safeSlug($slug) . '.announce';
     }
 
     public static function appSettings(string $slug): string
@@ -97,9 +92,9 @@ final class Permission
     }
 
     /**
-     * One row per application, with the three permission keys that belong to it.
+     * One row per application, with the permission keys that belong to it.
      *
-     * @return list<array{name: string, slug: string, open: string, announce: string, settings: string}>
+     * @return list<array{name: string, slug: string, open: string, settings: string}>
      */
     public static function applicationChoices(): array
     {
@@ -109,7 +104,6 @@ final class Permission
                 'name' => $app['name'],
                 'slug' => $app['slug'],
                 'open' => self::appUse($app['slug']),
-                'announce' => self::appAnnounce($app['slug']),
                 'settings' => self::appSettings($app['slug']),
             ];
         }
@@ -128,10 +122,6 @@ final class Permission
             $out[self::appUse($app['slug'])] = [
                 'label' => 'Open: ' . $app['name'],
                 'legacy_max_role' => 4,
-            ];
-            $out[self::appAnnounce($app['slug'])] = [
-                'label' => 'Announcements: ' . $app['name'],
-                'legacy_max_role' => 2,
             ];
             $out[self::appSettings($app['slug'])] = [
                 'label' => 'Settings: ' . $app['name'],
@@ -168,7 +158,7 @@ final class Permission
      * When $groupIds is empty, Administrator groups + the current user's groups are used.
      *
      * @param list<int> $groupIds
-     * @param list<string> $levels subset of use|announce|settings (default all)
+     * @param list<string> $levels subset of use|settings (default both). Older packages may still say announce.
      * @return list<int> group ids that received grants
      */
     public static function grantAppToGroups(string $slug, array $groupIds = [], array $levels = []): array
@@ -176,7 +166,6 @@ final class Permission
         Access::ensureReady();
         $levelMap = [
             'use' => self::appUse($slug),
-            'announce' => self::appAnnounce($slug),
             'settings' => self::appSettings($slug),
         ];
         if ($levels === []) {
@@ -267,7 +256,7 @@ final class Permission
     public static function revokeApp(string $slug): void
     {
         Access::ensureReady();
-        foreach ([self::appUse($slug), self::appAnnounce($slug), self::appSettings($slug)] as $permission) {
+        foreach ([self::appUse($slug), self::appSettings($slug)] as $permission) {
             Database::delete('group_permissions', 'permission = ?', [$permission]);
         }
     }
@@ -282,7 +271,6 @@ final class Permission
         Access::ensureReady();
         $map = [
             self::appUse($oldSlug) => self::appUse($newSlug),
-            self::appAnnounce($oldSlug) => self::appAnnounce($newSlug),
             self::appSettings($oldSlug) => self::appSettings($newSlug),
         ];
         foreach ($map as $from => $to) {
@@ -298,7 +286,6 @@ final class Permission
         Access::ensureReady();
         $levelMap = [
             self::appUse($slug) => 'use',
-            self::appAnnounce($slug) => 'announce',
             self::appSettings($slug) => 'settings',
         ];
         $byGroup = [];
@@ -341,7 +328,7 @@ final class Permission
                 continue;
             }
             $gid = (int) $group['group_id'];
-            $levels = is_array($grant['levels'] ?? null) ? $grant['levels'] : ['use', 'announce', 'settings'];
+            $levels = is_array($grant['levels'] ?? null) ? $grant['levels'] : ['use', 'settings'];
             self::grantAppToGroups($slug, [$gid], array_map('strval', $levels));
             $allGroups[] = $gid;
         }

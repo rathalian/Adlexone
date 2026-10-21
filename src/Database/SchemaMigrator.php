@@ -15,7 +15,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 10;
+    private const VERSION = 11;
 
     private static bool $done = false;
 
@@ -82,6 +82,11 @@ final class SchemaMigrator
         if ($current < 10) {
             self::applyV10();
             self::mark(10);
+            $current = 10;
+        }
+        if ($current < 11) {
+            self::applyV11();
+            self::mark(11);
         }
     }
 
@@ -745,6 +750,25 @@ final class SchemaMigrator
                     [$id]
                 );
             }
+        }
+    }
+
+    /**
+     * Announcements are part of opening an application, not a separate permission.
+     */
+    private static function applyV11(): void
+    {
+        $where = "permission GLOB 'app.*.announce' OR permission = 'servicecentre.announce'";
+        if (Database::tableExists('group_permissions')) {
+            Database::delete('group_permissions', $where);
+        }
+        if (Database::tableExists('application_nav') && Database::columnExists('application_nav', 'permission')) {
+            Database::run('UPDATE application_nav SET permission = \'\' WHERE ' . $where);
+        }
+        if (Database::tableExists('applications') && Database::columnExists('applications', 'permission')) {
+            Database::run(
+                "UPDATE applications SET permission = replace(permission, '.announce', '.use') WHERE permission GLOB 'app.*.announce'"
+            );
         }
     }
 
