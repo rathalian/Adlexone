@@ -19,38 +19,38 @@ final class RenderNavigation
 
     public static function itemSettingsURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=fields', TXT_53, 'ic-manage-fields'), Permission::ADMIN_ITEMS);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=item-types', TXT_50, 'ic-manage-item-types'), Permission::ADMIN_ITEMS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=fields', TXT_53, 'ic-fields'), Permission::ADMIN_ITEMS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=item-types', TXT_50, 'ic-layers'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=security&option=manage_users', TXT_40, 'ic-manage-users'), Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=security&option=manage_groups', TXT_35, 'ic-manage-groups'), Permission::ADMIN_SECURITY);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=security&option=manage_users', TXT_40, 'ic-users'), Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=security&option=manage_groups', TXT_35, 'ic-users-round'), Permission::ADMIN_SECURITY);
 
         return $html;
     }
 
     public static function rulesURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=rules', 'Rules', 'ic-manage-actions'), Permission::ADMIN_ACTIONS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=rules', 'Rules', 'ic-zap'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }
 
     public static function systemSettingsURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-adlexone-settings'), Permission::ADMIN_SETTINGS);
+        $html = Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-sliders'), Permission::ADMIN_SETTINGS);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'ic-system-settings'), Permission::ADMIN_SETTINGS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'ic-palette'), Permission::ADMIN_SETTINGS);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-ldap'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-lock'), Permission::ADMIN_SYSTEM);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=email_settings', TXT_565,'ic-inbound-email'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=email_settings', TXT_565,'ic-mail'), Permission::ADMIN_SYSTEM);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=advanced_settings', TXT_130, 'ic-advanced'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=advanced_settings', TXT_130, 'ic-settings2'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }
@@ -326,7 +326,7 @@ final class RenderNavigation
      * Put a controller's links in the top navigation card and drop the left sidebar.
      * Call this once at the top of a controller, before the page is rendered.
      */
-    public static function applySectionNav(string $label, string $linksHtml): void
+    public static function applySectionNav(string $label, string $linksHtml, string $hero = ''): void
     {
         $page = Page::current();
         if ($page->hasSectionNav()) {
@@ -334,7 +334,8 @@ final class RenderNavigation
         }
         $page->suggestEyebrow($label);
         $built = self::build([$label => $linksHtml]);
-        $page->setSectionNav(self::sectionNav($built[$label] ?? [], $label));
+        $page->setAppHero($hero);
+        $page->setSectionNav(self::sectionNav($built[$label] ?? [], $label, $hero === ''));
     }
 
     /**
@@ -342,14 +343,16 @@ final class RenderNavigation
      *
      * @param array<int, array{label: ?string, html: ?string, href: string, target: ?string, rel: ?string}> $links
      */
-    public static function sectionNav(array $links, string $label): string
+    public static function sectionNav(array $links, string $label, bool $named = true): string
     {
         if ($links === []) {
             return '';
         }
 
-        $html = '<div class="sectionbar">';
-        $html .= '<p class="sectionbar__name">' . self::sectionMark() . Html::e($label) . '</p>';
+        $html = '<div class="sectionbar' . ($named ? '' : ' sectionbar--tabs') . '">';
+        if ($named) {
+            $html .= '<p class="sectionbar__name">' . self::sectionMark() . Html::e($label) . '</p>';
+        }
         $html .= '<nav class="sectionnav" aria-label="' . Html::e($label) . '">';
         foreach ($links as $lnk) {
             $href = (string)($lnk['href'] ?? '#');

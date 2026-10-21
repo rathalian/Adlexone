@@ -31,6 +31,7 @@ final class ApplicationStore
         self::renameServiceCentreAnnouncements();
         self::renameContactCentreCapabilities();
         self::migrateBuiltInScreenIds();
+        self::refreshIcons();
     }
 
     public static function ensureSchema(): void
@@ -147,7 +148,7 @@ final class ApplicationStore
             'slug' => $fields['slug'],
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
-            'icon' => $fields['icon'] ?? 'ic-launch',
+            'icon' => $fields['icon'] ?? 'ic-grid',
             'permission' => $fields['permission'],
             'enabled' => (int) ($fields['enabled'] ?? 1),
             'sort_order' => (int) ($fields['sort_order'] ?? 0),
@@ -190,7 +191,7 @@ final class ApplicationStore
             'slug' => $newSlug,
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
-            'icon' => $fields['icon'] ?? 'ic-launch',
+            'icon' => $fields['icon'] ?? 'ic-grid',
             'permission' => $fields['permission'],
             'enabled' => (int) ($fields['enabled'] ?? 0),
         ], 'application_id = ?', [$id]);
@@ -534,6 +535,68 @@ final class ApplicationStore
         }
         foreach (ScreenCatalog::ALIASES as $from => $to) {
             Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
+        }
+    }
+
+    /**
+     * Applications and screen links stored an older icon id. A link that kept the
+     * old default for its screen goes back to the screen's own icon. Anything else
+     * moves to the nearest current icon.
+     */
+    private static function refreshIcons(): void
+    {
+        $renamed = Capabilities::renamedIcons();
+        if (self::tableExists('application_nav')) {
+            $defaults = [
+                'items.work' => ['ic-subjects', 'ic-search'],
+                'items.create' => ['ic-itemtype-add'],
+                'search.quick' => ['ic-quick-search'],
+                'search.advanced' => ['ic-search'],
+                'search.saved' => ['ic-search'],
+                'search.saved_list' => ['ic-search', 'ic-my-ticket-searches'],
+                'announcements.board' => ['ic-announcements'],
+                'app.settings' => ['ic-settings'],
+                'items.counts' => ['ic-search'],
+                'items.owners' => ['ic-my-ticket-searches'],
+                'items.steps' => ['ic-create-ticket'],
+                'items.diary' => ['ic-time'],
+                'items.parties' => ['ic-knowledgebase'],
+                'items.activity' => ['ic-announcements'],
+                'items.files' => ['ic-new-article'],
+                'items.age' => ['ic-time'],
+                'items.register' => ['ic-item-mgmt'],
+                'items.intake' => ['ic-itemtype-add'],
+            ];
+            foreach ($defaults as $capability => $old) {
+                $marks = implode(',', array_fill(0, count($old), '?'));
+                Database::run(
+                    "UPDATE application_nav SET icon = '' WHERE capability = ? AND icon IN ($marks)",
+                    array_merge([$capability], $old)
+                );
+            }
+            foreach ($renamed as $old => $new) {
+                Database::run('UPDATE application_nav SET icon = ? WHERE icon = ?', [$new, $old]);
+            }
+        }
+        if (self::tableExists('applications')) {
+            $showcase = [
+                'matters' => ['ic-knowledgebase', 'ic-briefcase'],
+                'conveyancing' => ['ic-item-mgmt', 'ic-home'],
+                'claims' => ['ic-servicecentre', 'ic-shield'],
+                'repairs' => ['ic-time', 'ic-wrench'],
+                'complaints' => ['ic-create-ticket', 'ic-complaint'],
+                'committee' => ['ic-subjects', 'ic-landmark'],
+                'audit' => ['ic-search', 'ic-audit'],
+                'incidents' => ['ic-announcements', 'ic-alert'],
+                'candidates' => ['ic-my-ticket-searches', 'ic-user'],
+                'contracts' => ['ic-new-article', 'ic-contract'],
+            ];
+            foreach ($showcase as $slug => [$old, $new]) {
+                Database::run('UPDATE applications SET icon = ? WHERE slug = ? AND icon = ?', [$new, $slug, $old]);
+            }
+            foreach ($renamed as $old => $new) {
+                Database::run('UPDATE applications SET icon = ? WHERE icon = ?', [$new, $old]);
+            }
         }
     }
 

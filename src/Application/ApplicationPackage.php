@@ -306,7 +306,7 @@ final class ApplicationPackage
             'slug' => $slug,
             'name' => $name,
             'hint' => (string) ($appMeta['hint'] ?? ''),
-            'icon' => (string) ($appMeta['icon'] ?? 'ic-launch'),
+            'icon' => (string) ($appMeta['icon'] ?? 'ic-grid'),
             'permission' => $usePerm,
             'enabled' => 1,
             'sort_order' => $max + 10,

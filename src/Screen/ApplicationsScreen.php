@@ -29,12 +29,12 @@ final class ApplicationsScreen
         define('APPLICATIONS_MANAGE_URL', '?manage=applications');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-launch');
+        $section = Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-grid');
         if (in_array($option, ['edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav'], true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
-                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-settings');
-                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-manage-fields');
+                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-sliders');
+                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
             }
         }
         RenderNavigation::applySectionNav('Applications', $section);
@@ -195,7 +195,7 @@ final class ApplicationsScreen
             'Slug' => Form::text('slug', Html::e((string) ($app['slug'] ?? '')), 'complaints'),
             'Description' => Form::text('hint', Html::e((string) ($app['hint'] ?? ''))),
             'Record type' => self::recordTypeSelect($recordType),
-            'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-launch')),
+            'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-grid')),
             'Who can open it' => self::groupAccessField((string) ($app['slug'] ?? '')),
             'Menu' => Form::checkbox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'Show in the Applications menu'),
         ];
@@ -213,7 +213,7 @@ final class ApplicationsScreen
     {
         $name = trim((string) ($_POST['name'] ?? ''));
         $slug = self::slugify((string) ($_POST['slug'] ?? ''), $name);
-        $icon = (string) ($_POST['icon'] ?? 'ic-launch');
+        $icon = (string) ($_POST['icon'] ?? 'ic-grid');
         $recordType = self::postedRecordType();
         $groupIds = self::postedGroupIds();
         if ($recordType === false) {
@@ -525,8 +525,9 @@ final class ApplicationsScreen
 
     public static function iconSelect(string $name, string $selected, bool $allowEmpty = false): string
     {
+        $selected = Capabilities::renamedIcons()[$selected] ?? $selected;
         if ($selected === '' && !$allowEmpty) {
-            $selected = 'ic-launch';
+            $selected = 'ic-grid';
         }
         $sprite = Html::e(\Adlexone\Theme\Theme::spriteHref());
         $html = '<div class="builder__icons" role="radiogroup">';
@@ -534,7 +535,7 @@ final class ApplicationsScreen
             $active = $selected === '' ? ' is-selected' : '';
             $html .= '<label class="builder__icon' . $active . '" title="Use the screen icon">'
                 . '<input type="radio" name="' . Html::e($name) . '" value=""' . ($selected === '' ? ' checked' : '') . '>'
-                . '<span class="builder__icon-mark" aria-hidden="true"><svg class="icon"><use href="' . $sprite . '#ic-launch"></use></svg></span>'
+                . '<span class="builder__icon-mark" aria-hidden="true"><svg class="icon"><use href="' . $sprite . '#ic-grid"></use></svg></span>'
                 . '<span class="builder__icon-name">Screen</span>'
                 . '</label>';
         }

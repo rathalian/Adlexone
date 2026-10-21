@@ -187,9 +187,11 @@
         const empty = root.querySelector('.record-list__nomatch');
         const total = root.querySelectorAll('tr[data-search]').length;
         const q = (input.value || '').trim().toLowerCase();
+        const chip = root.getAttribute('data-chip') || '';
         let shown = 0;
         root.querySelectorAll('tr[data-search]').forEach((row) => {
-            const hit = q === '' || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
+            const hit = (q === '' || (row.getAttribute('data-search') || '').indexOf(q) !== -1)
+                && (chip === '' || (row.getAttribute('data-stand') || '') === chip);
             row.hidden = !hit;
             if (hit) shown += 1;
         });
@@ -199,7 +201,7 @@
             const badge = group.querySelector('.record-list__badge');
             if (badge) badge.textContent = String(visible);
         });
-        if (count) count.textContent = q === '' ? String(total) : (shown + ' / ' + total);
+        if (count) count.textContent = q === '' && chip === '' ? String(total) : (shown + ' / ' + total);
         if (empty) empty.hidden = shown !== 0;
     };
 

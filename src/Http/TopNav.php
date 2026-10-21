@@ -63,17 +63,17 @@ final class TopNav
         };
 
         if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-            $add('Builder', '?manage=builder', 'ic-itemtype-add', 'manage_builder');
+            $add('Builder', '?manage=builder', 'ic-plus', 'manage_builder');
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $add('Applications', '?manage=applications', 'ic-launch', 'manage_applications');
+            $add('Applications', '?manage=applications', 'ic-grid', 'manage_applications');
         }
         if (Access::can(Permission::ADMIN_ITEMS)) {
-            $add('Fields', '?manage=fields', 'ic-manage-fields', 'manage_fields');
-            $add('Record types', '?manage=item-types', 'ic-manage-item-types', 'manage_item_types');
+            $add('Fields', '?manage=fields', 'ic-fields', 'manage_fields');
+            $add('Record types', '?manage=item-types', 'ic-layers', 'manage_item_types');
         }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
-            $add('Rules', '?manage=rules', 'ic-manage-actions', 'manage_actions');
+            $add('Rules', '?manage=rules', 'ic-zap', 'manage_actions');
         }
 
         return $items;
@@ -95,17 +95,17 @@ final class TopNav
         }
 
         $links = [
-            ['label' => 'My profile', 'href' => '?manage=security&option=modify_user', 'icon' => 'ic-manage-users'],
-            ['label' => 'Theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-system-settings'],
+            ['label' => 'My profile', 'href' => '?manage=security&option=modify_user', 'icon' => 'ic-user'],
+            ['label' => 'Theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-palette'],
         ];
         if (Access::can(Permission::ADMIN_SECURITY)) {
-            $links[] = ['label' => 'People', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-manage-users'];
-            $links[] = ['label' => 'Groups', 'href' => '?manage=security&option=manage_groups', 'icon' => 'ic-manage-groups'];
+            $links[] = ['label' => 'People', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-users'];
+            $links[] = ['label' => 'Groups', 'href' => '?manage=security&option=manage_groups', 'icon' => 'ic-users-round'];
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-settings'];
+            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-sliders'];
         } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
-            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=sign_in_settings', 'icon' => 'ic-settings'];
+            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=sign_in_settings', 'icon' => 'ic-sliders'];
         }
 
         return [

@@ -120,6 +120,15 @@ final class Theme
         return self::layoutUrl('css/base.css') . ($v > 0 ? '?v=' . $v : '');
     }
 
+    public static function layoutCssHref(string $name): string
+    {
+        $name = preg_replace('/[^A-Za-z0-9_-]+/', '', $name) ?? '';
+        $fs = self::layoutFs() . 'css' . DIRECTORY_SEPARATOR . $name . '.css';
+        $v = is_file($fs) ? (int) @filemtime($fs) : 0;
+
+        return self::layoutUrl('css/' . $name . '.css') . ($v > 0 ? '?v=' . $v : '');
+    }
+
     public static function cssHref(string $theme = ''): string
     {
         $theme = self::canonicalize($theme !== '' ? $theme : self::name());

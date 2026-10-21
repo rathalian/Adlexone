@@ -13,6 +13,7 @@ use Adlexone\Screen\HomeScreen;
 use Adlexone\Screen\ItemScreen;
 use Adlexone\Screen\ItemTypesScreen;
 use Adlexone\Screen\LoginScreen;
+use Adlexone\Screen\PaletteScreen;
 use Adlexone\Screen\PrintScreen;
 use Adlexone\Screen\SearchScreen;
 use Adlexone\Screen\SecurityScreen;
@@ -340,6 +341,7 @@ final class Router
         return match ($canonical) {
             'login' => [LoginScreen::class, 'open'],
             'home' => [HomeScreen::class, 'open'],
+            'palette' => [PaletteScreen::class, 'open'],
             'full_page_view' => [PrintScreen::class, 'open'],
             'application' => [ApplicationScreen::class, 'open'],
             'manage_applications' => [ApplicationsScreen::class, 'open'],

@@ -40,24 +40,24 @@ final class Capabilities
         ];
 
         return [
-            ScreenCatalog::WORK => $frame('Work', 'ic-subjects', 'item_type'),
-            ScreenCatalog::CREATE => $frame('New', 'ic-itemtype-add', 'item_type'),
-            ScreenCatalog::SEARCH_QUICK => $frame('Quick search', 'ic-quick-search', 'none'),
+            ScreenCatalog::WORK => $frame('Work', 'ic-work', 'item_type'),
+            ScreenCatalog::CREATE => $frame('New', 'ic-plus', 'item_type'),
+            ScreenCatalog::SEARCH_QUICK => $frame('Quick search', 'ic-zoom', 'none'),
             ScreenCatalog::SEARCH_ADVANCED => $frame('Search', 'ic-search', 'item_type'),
-            ScreenCatalog::SEARCH_SAVED => $frame('Saved search', 'ic-search', 'saved_search'),
-            ScreenCatalog::SEARCH_LIST => $frame('Saved', 'ic-search', 'none'),
-            ScreenCatalog::ANNOUNCEMENTS => $frame('Announcements', 'ic-announcements', 'none'),
-            ScreenCatalog::SETTINGS => $frame('Settings', 'ic-settings', 'none'),
-            ScreenCatalog::COUNTS => $frame('Counts', 'ic-search', 'field'),
-            ScreenCatalog::OWNERS => $frame('Owners', 'ic-my-ticket-searches', 'item_type'),
-            ScreenCatalog::STEPS => $frame('Next steps', 'ic-create-ticket', 'field'),
-            ScreenCatalog::DIARY => $frame('Diary', 'ic-time', 'field'),
-            ScreenCatalog::PARTIES => $frame('Parties', 'ic-knowledgebase', 'field'),
-            ScreenCatalog::ACTIVITY => $frame('Activity', 'ic-announcements', 'activity'),
-            ScreenCatalog::FILES => $frame('Files', 'ic-new-article', 'item_type'),
-            ScreenCatalog::AGE => $frame('Ageing', 'ic-time', 'field'),
-            ScreenCatalog::REGISTER => $frame('Register', 'ic-item-mgmt', 'register'),
-            ScreenCatalog::INTAKE => $frame('Intake', 'ic-itemtype-add', 'intake'),
+            ScreenCatalog::SEARCH_SAVED => $frame('Saved search', 'ic-saved', 'saved_search'),
+            ScreenCatalog::SEARCH_LIST => $frame('Saved', 'ic-saved', 'none'),
+            ScreenCatalog::ANNOUNCEMENTS => $frame('Announcements', 'ic-announce', 'none'),
+            ScreenCatalog::SETTINGS => $frame('Settings', 'ic-sliders', 'none'),
+            ScreenCatalog::COUNTS => $frame('Counts', 'ic-counts', 'field'),
+            ScreenCatalog::OWNERS => $frame('Owners', 'ic-owners', 'item_type'),
+            ScreenCatalog::STEPS => $frame('Next steps', 'ic-steps', 'field'),
+            ScreenCatalog::DIARY => $frame('Diary', 'ic-diary', 'field'),
+            ScreenCatalog::PARTIES => $frame('Parties', 'ic-parties', 'field'),
+            ScreenCatalog::ACTIVITY => $frame('Activity', 'ic-activity', 'activity'),
+            ScreenCatalog::FILES => $frame('Files', 'ic-files', 'item_type'),
+            ScreenCatalog::AGE => $frame('Ageing', 'ic-ageing', 'field'),
+            ScreenCatalog::REGISTER => $frame('Register', 'ic-register', 'register'),
+            ScreenCatalog::INTAKE => $frame('Intake', 'ic-intake', 'intake'),
         ];
     }
 
@@ -95,59 +95,109 @@ final class Capabilities
     }
 
     /**
+     * Icons offered when choosing one for an application or a screen link.
+     *
+     * @return array<string, string> icon id => label
+     */
+    public static function iconChoices(): array
+    {
+        return [
+            'ic-grid' => 'General',
+            'ic-briefcase' => 'Matters',
+            'ic-home' => 'Property',
+            'ic-shield' => 'Cover',
+            'ic-wrench' => 'Repairs',
+            'ic-complaint' => 'Complaints',
+            'ic-landmark' => 'Committee',
+            'ic-audit' => 'Audit',
+            'ic-alert' => 'Incidents',
+            'ic-user' => 'People',
+            'ic-contract' => 'Contracts',
+            'ic-headset' => 'Service',
+            'ic-book' => 'Knowledge',
+            'ic-scale' => 'Legal',
+            'ic-building' => 'Premises',
+            'ic-heart' => 'Care',
+            'ic-truck' => 'Transport',
+            'ic-graduation' => 'Training',
+            'ic-wallet' => 'Finance',
+            'ic-flag' => 'Projects',
+            'ic-globe' => 'Web',
+            'ic-bell' => 'Alerts',
+            'ic-work' => 'Work',
+            'ic-plus' => 'New',
+            'ic-counts' => 'Counts',
+            'ic-owners' => 'Owners',
+            'ic-steps' => 'Next steps',
+            'ic-diary' => 'Diary',
+            'ic-parties' => 'Parties',
+            'ic-activity' => 'Activity',
+            'ic-files' => 'Files',
+            'ic-ageing' => 'Ageing',
+            'ic-register' => 'Register',
+            'ic-intake' => 'Intake',
+            'ic-saved' => 'Saved',
+            'ic-announce' => 'News',
+            'ic-search' => 'Search',
+            'ic-zoom' => 'Quick find',
+            'ic-sliders' => 'Settings',
+            'ic-clock' => 'Time',
+        ];
+    }
+
+    /**
+     * Older icon ids still stored on applications and links. Each one draws the
+     * nearest current icon, so a stored value keeps working.
+     *
+     * @return array<string, string> older id => current id
+     */
+    public static function renamedIcons(): array
+    {
+        return [
+            'ic-launch' => 'ic-grid',
+            'ic-servicecentre' => 'ic-headset',
+            'ic-knowledgebase' => 'ic-book',
+            'ic-time' => 'ic-clock',
+            'ic-announcements' => 'ic-announce',
+            'ic-create-ticket' => 'ic-plus',
+            'ic-itemtype-add' => 'ic-plus',
+            'ic-quick-search' => 'ic-zoom',
+            'ic-my-ticket-searches' => 'ic-owners',
+            'ic-new-article' => 'ic-files',
+            'ic-article-search' => 'ic-search',
+            'ic-settings' => 'ic-sliders',
+            'ic-item-mgmt' => 'ic-register',
+            'ic-subjects' => 'ic-work',
+            'ic-manage-fields' => 'ic-register',
+        ];
+    }
+
+    /**
      * @return list<string>
      */
     public static function icons(): array
     {
-        return [
-            'ic-launch',
-            'ic-servicecentre',
-            'ic-knowledgebase',
-            'ic-search',
-            'ic-time',
-            'ic-announcements',
-            'ic-create-ticket',
-            'ic-itemtype-add',
-            'ic-quick-search',
-            'ic-my-ticket-searches',
-            'ic-new-article',
-            'ic-article-search',
-            'ic-settings',
-            'ic-item-mgmt',
-            'ic-subjects',
-            'ic-manage-fields',
-        ];
+        return array_keys(self::iconChoices());
     }
 
     public static function iconLabel(string $icon): string
     {
-        return [
-            'ic-launch' => 'Launch',
-            'ic-servicecentre' => 'Service',
-            'ic-knowledgebase' => 'Knowledge',
-            'ic-search' => 'Search',
-            'ic-time' => 'Time',
-            'ic-announcements' => 'News',
-            'ic-create-ticket' => 'New',
-            'ic-itemtype-add' => 'Add',
-            'ic-quick-search' => 'Quick find',
-            'ic-my-ticket-searches' => 'My work',
-            'ic-new-article' => 'Article',
-            'ic-article-search' => 'Find article',
-            'ic-settings' => 'Settings',
-            'ic-item-mgmt' => 'Records',
-            'ic-manage-fields' => 'Fields',
-        ][$icon] ?? $icon;
+        $icon = self::renamedIcons()[$icon] ?? $icon;
+
+        return self::iconChoices()[$icon] ?? $icon;
     }
 
     public static function icon(string $capability, string $chosen = ''): string
     {
+        $chosen = self::renamedIcons()[$chosen] ?? $chosen;
         if ($chosen !== '' && in_array($chosen, self::icons(), true)) {
             return $chosen;
         }
         $capability = ScreenCatalog::resolve($capability);
-        $icon = self::catalog()[$capability]['icon'] ?? 'ic-launch';
-        return in_array($icon, self::icons(), true) ? $icon : 'ic-launch';
+        $icon = self::catalog()[$capability]['icon'] ?? 'ic-grid';
+        $icon = self::renamedIcons()[$icon] ?? $icon;
+
+        return in_array($icon, self::icons(), true) ? $icon : 'ic-grid';
     }
 
     /**
@@ -348,6 +398,8 @@ final class Capabilities
     public static function sectionNavigation(array $app, array $links): void
     {
         $html = '';
+        $createHref = '';
+        $section = '';
         foreach ($links as $link) {
             if (!self::linkVisible($link)) {
                 continue;
@@ -355,8 +407,15 @@ final class Capabilities
             $href = \Adlexone\Http\Router::applicationUrl((string) $app['slug'], (int) $link['nav_id']);
             $icon = self::icon((string) $link['capability'], (string) $link['icon']);
             $html .= Blocks::link($href, (string) $link['label'], $icon);
+            if ($createHref === '' && ScreenCatalog::resolve((string) $link['capability']) === ScreenCatalog::CREATE) {
+                $createHref = $href;
+            }
+            if ((int) $link['nav_id'] === \Adlexone\Http\Page::current()->navId()) {
+                $section = (string) $link['label'];
+            }
         }
-        RenderNavigation::applySectionNav((string) $app['name'], $html);
+        $hero = \Adlexone\Html\AppHero::render($app, $createHref, $section, (int) ($_GET['item'] ?? 0));
+        RenderNavigation::applySectionNav((string) $app['name'], $html, $hero);
     }
 
     /**

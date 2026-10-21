@@ -7,7 +7,8 @@ use Adlexone\Theme\Theme;
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo Html::e($title); ?></title>
-    <meta name="color-scheme" content="light">
+    <script>(function(){try{var m=localStorage.getItem('inlay.mode');if(m!=='light'&&m!=='dark'){m=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-mode',m);}catch(e){}})();</script>
     <link rel="icon" href="<?php echo Html::e(Theme::faviconHref()); ?>" type="image/svg+xml">
     <link rel="stylesheet" href="<?php echo Html::e(Theme::baseCssHref()); ?>">
+    <link rel="stylesheet" href="<?php echo Html::e(Theme::layoutCssHref('uplift')); ?>">
     <link rel="stylesheet" href="<?php echo Html::e(Theme::cssHref()); ?>">

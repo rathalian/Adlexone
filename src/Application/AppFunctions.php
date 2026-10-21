@@ -99,7 +99,7 @@ final class AppFunctions
         self::$registry[$id] = [
             'label' => (string) $meta['label'],
             'origin' => (string) ($meta['origin'] ?? self::$currentOrigin),
-            'icon' => (string) ($meta['icon'] ?? 'ic-launch'),
+            'icon' => (string) ($meta['icon'] ?? 'ic-grid'),
             'config' => (string) ($meta['config'] ?? 'none'),
             'default_option' => (string) ($meta['default_option'] ?? ''),
             'open' => $meta['open'],

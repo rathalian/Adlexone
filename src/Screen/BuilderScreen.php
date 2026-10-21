@@ -32,8 +32,8 @@ final class BuilderScreen
         define('BUILDER_URL', '?manage=builder');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = Blocks::link(BUILDER_URL, 'Builder', 'ic-itemtype-add');
-        $section .= Blocks::link('?manage=applications', 'Applications', 'ic-launch');
+        $section = Blocks::link(BUILDER_URL, 'Builder', 'ic-plus');
+        $section .= Blocks::link('?manage=applications', 'Applications', 'ic-grid');
         RenderNavigation::applySectionNav('Builder', $section);
         Page::current()->suggestTitle('Create an application');
 
@@ -57,17 +57,18 @@ final class BuilderScreen
         $slugRaw = (string) ($_POST['slug'] ?? '');
         $hintRaw = (string) ($_POST['hint'] ?? '');
         $recordRaw = (string) ($_POST['record_type_name'] ?? '');
-        $icon = (string) ($_POST['icon'] ?? 'ic-launch');
+        $icon = (string) ($_POST['icon'] ?? 'ic-grid');
         $blueprint = (string) ($_POST['blueprint'] ?? ApplicationBuilder::BLUEPRINT_MATTERS);
         $blueprints = ApplicationBuilder::blueprints();
         if (!isset($blueprints[$blueprint])) {
             $blueprint = ApplicationBuilder::BLUEPRINT_MATTERS;
         }
         if (($_POST['icon'] ?? '') === '') {
-            $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-launch');
+            $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-grid');
         }
+        $icon = Capabilities::renamedIcons()[$icon] ?? $icon;
         if (!in_array($icon, Capabilities::icons(), true)) {
-            $icon = 'ic-launch';
+            $icon = 'ic-grid';
         }
 
         $postedScreens = $_POST['screens'] ?? null;
@@ -76,41 +77,22 @@ final class BuilderScreen
         $sprite = $h(\Adlexone\Theme\Theme::spriteHref());
         $art = \Adlexone\Theme\Theme::illustrationHref('empty-builder');
 
-        $iconLabels = [
-            'ic-launch' => 'Launch',
-            'ic-servicecentre' => 'Service',
-            'ic-knowledgebase' => 'Knowledge',
-            'ic-search' => 'Search',
-            'ic-subjects' => 'List',
-            'ic-time' => 'Time',
-            'ic-announcements' => 'News',
-            'ic-create-ticket' => 'New',
-            'ic-itemtype-add' => 'Add',
-            'ic-quick-search' => 'Quick find',
-            'ic-my-ticket-searches' => 'My work',
-            'ic-new-article' => 'Article',
-            'ic-article-search' => 'Find article',
-            'ic-settings' => 'Settings',
-            'ic-item-mgmt' => 'Records',
-            'ic-manage-fields' => 'Fields',
-        ];
-
         $screenMeta = [
-            ScreenCatalog::WORK => ['hint' => 'List or board', 'icon' => 'ic-subjects'],
-            ScreenCatalog::CREATE => ['hint' => 'Add one', 'icon' => 'ic-itemtype-add'],
-            ScreenCatalog::COUNTS => ['hint' => 'How many in each status', 'icon' => 'ic-search'],
-            ScreenCatalog::OWNERS => ['hint' => 'Who has the work', 'icon' => 'ic-my-ticket-searches'],
-            ScreenCatalog::STEPS => ['hint' => 'The next action', 'icon' => 'ic-create-ticket'],
-            ScreenCatalog::DIARY => ['hint' => 'Due dates', 'icon' => 'ic-time'],
-            ScreenCatalog::PARTIES => ['hint' => 'Grouped by a name', 'icon' => 'ic-knowledgebase'],
-            ScreenCatalog::ACTIVITY => ['hint' => 'Recent log lines', 'icon' => 'ic-announcements'],
-            ScreenCatalog::FILES => ['hint' => 'Files on the records', 'icon' => 'ic-new-article'],
-            ScreenCatalog::AGE => ['hint' => 'How long they have been open', 'icon' => 'ic-time'],
-            ScreenCatalog::REGISTER => ['hint' => 'The records in columns', 'icon' => 'ic-item-mgmt'],
-            ScreenCatalog::INTAKE => ['hint' => 'A short report form', 'icon' => 'ic-itemtype-add'],
-            ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-my-ticket-searches'],
-            ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announcements'],
-            ScreenCatalog::SETTINGS => ['hint' => 'How this application is set up', 'icon' => 'ic-settings'],
+            ScreenCatalog::WORK => ['hint' => 'List or board', 'icon' => 'ic-work'],
+            ScreenCatalog::CREATE => ['hint' => 'Add one', 'icon' => 'ic-plus'],
+            ScreenCatalog::COUNTS => ['hint' => 'How many in each status', 'icon' => 'ic-counts'],
+            ScreenCatalog::OWNERS => ['hint' => 'Who has the work', 'icon' => 'ic-owners'],
+            ScreenCatalog::STEPS => ['hint' => 'The next action', 'icon' => 'ic-steps'],
+            ScreenCatalog::DIARY => ['hint' => 'Due dates', 'icon' => 'ic-diary'],
+            ScreenCatalog::PARTIES => ['hint' => 'Grouped by a name', 'icon' => 'ic-parties'],
+            ScreenCatalog::ACTIVITY => ['hint' => 'Recent log lines', 'icon' => 'ic-activity'],
+            ScreenCatalog::FILES => ['hint' => 'Files on the records', 'icon' => 'ic-files'],
+            ScreenCatalog::AGE => ['hint' => 'How long they have been open', 'icon' => 'ic-ageing'],
+            ScreenCatalog::REGISTER => ['hint' => 'The records in columns', 'icon' => 'ic-register'],
+            ScreenCatalog::INTAKE => ['hint' => 'A short report form', 'icon' => 'ic-intake'],
+            ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-saved'],
+            ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announce'],
+            ScreenCatalog::SETTINGS => ['hint' => 'How this application is set up', 'icon' => 'ic-sliders'],
         ];
         $levelMeta = [
             'use' => ['label' => 'Open', 'hint' => 'Open the work and add to it'],
@@ -142,7 +124,7 @@ final class BuilderScreen
             $clientBlueprints[$key] = [
                 'hint' => (string) $meta['hint'],
                 'record' => (string) ($meta['record'] ?? ''),
-                'icon' => (string) ($meta['icon'] ?? 'ic-launch'),
+                'icon' => (string) ($meta['icon'] ?? 'ic-grid'),
                 'screens' => array_values($meta['screens']),
                 'fields' => $clientFields,
                 'rule' => (string) ($meta['rule'] ?? ''),
@@ -159,7 +141,7 @@ final class BuilderScreen
 
         $screensHtml = '<div class="builder__choices">';
         foreach (ScreenCatalog::builderScreens() as $cap => $label) {
-            $meta = $screenMeta[$cap] ?? ['hint' => '', 'icon' => 'ic-launch'];
+            $meta = $screenMeta[$cap] ?? ['hint' => '', 'icon' => 'ic-grid'];
             $checked = in_array($cap, $selectedScreens, true) ? ' checked' : '';
             $active = $checked !== '' ? ' is-selected' : '';
             $screensHtml .= '<label class="builder__choice' . $active . '">'
@@ -210,7 +192,7 @@ final class BuilderScreen
         $iconsHtml = '<div class="builder__icons" role="radiogroup" aria-labelledby="builder-icon-label">';
         foreach (Capabilities::icons() as $iconId) {
             $active = $iconId === $icon ? ' is-selected' : '';
-            $label = $iconLabels[$iconId] ?? $iconId;
+            $label = Capabilities::iconLabel($iconId);
             $iconsHtml .= '<label class="builder__icon' . $active . '" title="' . $h($label) . '">'
                 . '<input type="radio" name="icon" value="' . $h($iconId) . '"' . ($iconId === $icon ? ' checked' : '') . '>'
                 . '<span class="builder__icon-mark" aria-hidden="true"><svg class="icon"><use href="' . $sprite . '#' . $h($iconId) . '"></use></svg></span>'
@@ -367,7 +349,7 @@ final class BuilderScreen
                 (string) ($_POST['name'] ?? ''),
                 (string) ($_POST['slug'] ?? ''),
                 (string) ($_POST['hint'] ?? ''),
-                (string) ($_POST['icon'] ?? 'ic-launch'),
+                (string) ($_POST['icon'] ?? 'ic-grid'),
                 (string) ($_POST['blueprint'] ?? ''),
                 (string) ($_POST['record_type_name'] ?? ''),
                 array_map('strval', $screens),

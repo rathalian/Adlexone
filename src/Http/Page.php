@@ -25,6 +25,7 @@ final class Page
     private ?string $title = null;
     private ?string $eyebrow = null;
     private ?string $sectionNav = null;
+    private string $appHero = '';
     private ?string $navLabel = null;
     private string $navOption = '';
     private ?string $body = null;
@@ -92,6 +93,17 @@ final class Page
     public function setSectionNav(string $html): void
     {
         $this->sectionNav = $html;
+    }
+
+    /** Banner shown above the section tabs when a screen belongs to an application. */
+    public function appHero(): string
+    {
+        return $this->appHero;
+    }
+
+    public function setAppHero(string $html): void
+    {
+        $this->appHero = $html;
     }
 
     public function hasNavLabel(): bool

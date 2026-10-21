@@ -1,4 +1,5 @@
 <?php
+use Adlexone\Html\Accent;
 use Adlexone\Html\Html;
 use Adlexone\Http\View;
 use Adlexone\Theme\Theme;
@@ -17,11 +18,12 @@ $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
 <head>
 <?php View::partial('head', ['title' => $page->documentTitle()]); ?>
 </head>
-<body>
+<body<?php echo $page->inApplication() ? ' style="' . Html::e(Accent::style(Accent::forSlug($page->applicationSlug()))) . '"' : ''; ?>>
     <div class="brandbar appbar">
 <?php View::partial('top_nav', ['nav' => $nav]); ?>
-    <?php echo $sectionNav; ?>
 </div>
+<?php echo $page->appHero(); ?>
+<?php echo $sectionNav; ?>
 
 <?php if ($sectionNav !== '' && $heading !== ''): ?>
 <h1 class="pagehead__title pagehead__title--sr"><?php echo Html::e($heading); ?></h1>
@@ -42,7 +44,9 @@ $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
 </div>
 
 <?php View::partial('footer'); ?>
+<?php View::partial('palette'); ?>
 <script src="<?php echo Html::e(Theme::jsHref()); ?>" defer></script>
+<script src="<?php echo Html::e(Theme::jsHref('uplift')); ?>" defer></script>
 <?php foreach ($page->scripts() as $script): ?>
 <script src="<?php echo Html::e(Theme::jsHref($script)); ?>" defer></script>
 <?php endforeach; ?>

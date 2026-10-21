@@ -20,6 +20,13 @@ $account = $nav['account'];
         </a>
 
         <nav class="topnav" aria-label="Top">
+            <?php if ($account !== null): ?>
+            <button class="topnav__search" type="button" data-palette-open aria-label="Search and commands">
+                <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-search"></use></svg>
+                <span class="topnav__search-label">Search</span>
+                <kbd class="kbd" data-shortcut>Ctrl K</kbd>
+            </button>
+            <?php endif; ?>
             <?php if ($apps['mode'] === 'link'): ?>
             <a class="topnav__link" href="<?php echo Html::e($apps['items'][0]['href']); ?>">
                 <span><?php echo Html::e($apps['items'][0]['label']); ?></span>
@@ -31,6 +38,10 @@ $account = $nav['account'];
             <?php View::partial('menu', ['id' => 'menu-design', 'label' => 'Design', 'items' => $nav['design']]); ?>
             <?php endif; ?>
             <?php if ($account !== null): ?>
+            <button class="topnav__icon" type="button" data-mode-toggle aria-label="Switch between light and dark" title="Switch between light and dark">
+                <svg class="icon icon--sun" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-sun"></use></svg>
+                <svg class="icon icon--moon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-moon"></use></svg>
+            </button>
             <div class="menu menu--account" data-menu>
                 <button class="menu__button account__button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-account">
                     <span class="account__mark" aria-hidden="true"><?php echo Html::e($account['initials']); ?></span>

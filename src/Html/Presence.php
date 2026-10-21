@@ -59,7 +59,29 @@ final class Presence
             return '';
         }
 
-        return '<span class="mark" title="' . Html::e($name) . '">' . Html::e($initials) . '</span>';
+        return '<span class="mark" style="--h:' . Accent::hue($name) . '" title="' . Html::e($name) . '">' . Html::e($initials) . '</span>';
+    }
+
+    /**
+     * Overlapping initials for a few people, with a count for the rest.
+     *
+     * @param list<string> $names
+     */
+    public static function stack(array $names, int $limit = 4): string
+    {
+        $names = array_values(array_unique(array_filter(array_map('trim', $names), static fn (string $name): bool => $name !== '')));
+        if ($names === []) {
+            return '';
+        }
+        $html = '';
+        foreach (array_slice($names, 0, $limit) as $name) {
+            $html .= self::mark($name);
+        }
+        if (count($names) > $limit) {
+            $html .= '<span class="mark mark--more">+' . (count($names) - $limit) . '</span>';
+        }
+
+        return '<span class="markstack">' . $html . '</span>';
     }
 
     public static function pill(string $label, string $tone = ''): string
