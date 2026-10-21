@@ -32,9 +32,7 @@ final class BuilderScreen
         define('BUILDER_URL', '?manage=builder');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = Blocks::link(BUILDER_URL, 'Builder', 'ic-plus');
-        $section .= Blocks::link('?manage=applications', 'Applications', 'ic-grid');
-        RenderNavigation::applySectionNav('Builder', $section);
+        RenderNavigation::applySectionNav('Design', RenderNavigation::designURLs());
         Page::current()->suggestTitle('Create an application');
 
         switch ($option) {

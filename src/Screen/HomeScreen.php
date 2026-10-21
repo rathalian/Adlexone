@@ -29,7 +29,7 @@ final class HomeScreen
         if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
             $manage[] = self::tile(
                 '?manage=builder',
-                'Create application',
+                'Create an application',
                 'Create an application, including its record type, fields, and screens.',
                 'ic-plus'
             );

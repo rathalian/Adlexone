@@ -50,7 +50,7 @@ final class TopNav
     }
 
     /** @return list<array{label: string, href: string, icon: string, current: bool}> */
-    private static function designItems(): array
+    public static function designItems(): array
     {
         $items = [];
         $add = static function (string $label, string $href, string $icon, string $controller) use (&$items): void {
@@ -63,7 +63,7 @@ final class TopNav
         };
 
         if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-            $add('Builder', '?manage=builder', 'ic-plus', 'manage_builder');
+            $add('Create an application', '?manage=builder', 'ic-plus', 'manage_builder');
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
             $add('Applications', '?manage=applications', 'ic-grid', 'manage_applications');

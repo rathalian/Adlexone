@@ -10,6 +10,7 @@ use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
+use Adlexone\support\RenderNavigation;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -24,6 +25,8 @@ final class RulesScreen
 
 
         Access::require(Permission::ADMIN_ACTIONS);
+        Page::current()->setNavOption('__section__');
+        RenderNavigation::applySectionNav('Design', RenderNavigation::designURLs());
 
         $slug = trim((string) ($_GET['app'] ?? $_POST['app'] ?? ''));
         $option = (string) ($_GET['option'] ?? '');

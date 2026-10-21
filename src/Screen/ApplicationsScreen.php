@@ -29,7 +29,7 @@ final class ApplicationsScreen
         define('APPLICATIONS_MANAGE_URL', '?manage=applications');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'ic-grid');
+        $section = RenderNavigation::designURLs();
         if (in_array($option, ['edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav'], true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
@@ -37,7 +37,7 @@ final class ApplicationsScreen
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
             }
         }
-        RenderNavigation::applySectionNav('Applications', $section);
+        RenderNavigation::applySectionNav('Design', $section);
         Page::current()->suggestTitle('Applications');
 
         switch ($option) {
@@ -149,7 +149,7 @@ final class ApplicationsScreen
                     ['key' => 'menu', 'label' => 'Menu'],
                 ],
                 'searchLabel' => 'Search',
-                'primary' => ['href' => '?manage=builder', 'label' => 'Create with builder'],
+                'primary' => ['href' => '?manage=builder', 'label' => 'Create an application'],
                 'empty' => 'No applications yet. Use the builder to create one.',
                 'emptyIllustration' => 'empty-apps',
                 'emptyTitle' => 'No applications yet',

@@ -17,6 +17,19 @@ use Adlexone\Html\Html;
 final class RenderNavigation
 {
 
+    /**
+     * The Design area: the same destinations as the Design menu in the top bar.
+     */
+    public static function designURLs(): string
+    {
+        $html = '';
+        foreach (\Adlexone\Http\TopNav::designItems() as $item) {
+            $html .= Blocks::link($item['href'], $item['label'], $item['icon']);
+        }
+
+        return $html;
+    }
+
     public static function itemSettingsURLs()
     {
         $html = Access::outputIfAllowed(Blocks::link('?manage=fields', TXT_53, 'ic-fields'), Permission::ADMIN_ITEMS);
@@ -398,6 +411,8 @@ final class RenderNavigation
         return str_contains($href, 'option=show_item_types')
             || str_contains($href, 'option=show_saved_searches')
             || str_contains($href, 'option=show_announcements')
+            || str_contains($href, 'option=edit&application_id=')
+            || str_contains($href, 'option=nav&application_id=')
             || str_contains($href, '&option=settings')
             || str_contains($href, 'option=knowledgebase_settings');
     }
