@@ -45,6 +45,17 @@
         });
     });
 
+    /* Lists that fold on a phone: the button opens the rows marked is-extra */
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-fold-toggle]');
+        if (!button) return;
+        const holder = button.closest('[data-fold]');
+        if (!holder) return;
+        const open = holder.classList.toggle('is-open');
+        button.setAttribute('aria-expanded', String(open));
+        button.textContent = open ? button.getAttribute('data-less') : button.getAttribute('data-more');
+    });
+
     /* Thin bar across the top while the next page loads */
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a[href]');
@@ -137,29 +148,32 @@
         panel.innerHTML = '';
         more.hidden = true;
         nav.style.overflow = 'visible';
-        const room = bar.clientWidth - (bar.querySelector('.sectionbar__name')?.offsetWidth || 0) - 120;
-        let used = 0;
+        const style = window.getComputedStyle(bar);
+        const inner = bar.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const name = bar.querySelector('.sectionbar__name');
+        const nameWidth = name && name.offsetWidth < inner * 0.9 ? name.offsetWidth + 16 : 0;
+        const room = inner - nameWidth;
+        const moreWidth = 88;
+        const widths = links.map((link) => link.offsetWidth + 2);
+        const current = links.findIndex((link) => link.getAttribute('aria-current') === 'page');
+        const fits = (cut) => {
+            let used = cut < links.length ? moreWidth : 0;
+            widths.forEach((width, index) => {
+                if (index < cut || index === current) used += width;
+            });
+            return used <= room;
+        };
         let cut = links.length;
-        links.forEach((link, index) => {
-            used += link.offsetWidth + 2;
-            if (used > room && cut === links.length) cut = index;
-        });
+        while (cut > 0 && !fits(cut)) cut -= 1;
         if (cut < links.length) {
-            const current = links.findIndex((link) => link.getAttribute('aria-current') === 'page');
-            if (current >= cut) cut = Math.max(1, cut - 1);
             links.forEach((link, index) => {
-                const inMore = index >= cut || (index === current && current >= cut);
-                if (!inMore) return;
+                if (index < cut || index === current) return;
                 link.hidden = true;
                 const copy = link.cloneNode(true);
                 copy.hidden = false;
                 copy.classList.add('sectionmore__item');
                 panel.appendChild(copy);
             });
-            if (current >= cut) {
-                links[current].hidden = false;
-                panel.querySelector('[aria-current="page"]')?.remove();
-            }
             more.hidden = panel.children.length === 0;
         }
         nav.style.overflow = '';

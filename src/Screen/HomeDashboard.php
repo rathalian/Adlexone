@@ -22,6 +22,9 @@ final class HomeDashboard
 {
     private const WEEKS = 8;
 
+    /** Rows kept visible on a phone before a list folds. */
+    private const PREVIEW = 3;
+
     /**
      * @param list<array<string, mixed>> $menu items from ApplicationStore::menuItems()
      * @param list<array{href: string, title: string, hint: string, icon: string}> $manage
@@ -60,13 +63,14 @@ final class HomeDashboard
 
         $html = '<div class="home">'
             . self::hero(count($apps), $records, $assigned['total'])
+            . self::status(count($apps), $records, $series)
             . self::kpis(count($apps), $records, $assigned['total'], $series)
             . self::notice($apps)
             . self::checklist()
             . $intro
             . self::applications($apps);
 
-        $columns = self::assignedPanel($assigned['items']) . self::activityPanel($typeIds, $typeToApp, $apps);
+        $columns = self::assignedPanel($assigned['items'], $assigned['total']) . self::activityPanel($typeIds, $typeToApp, $apps);
         if ($columns !== '') {
             $html .= '<div class="home__split">' . $columns . '</div>';
         }
@@ -129,6 +133,20 @@ final class HomeDashboard
     }
 
     /**
+     * One line that stands in for the figures on a phone.
+     *
+     * @param list<int> $series
+     */
+    private static function status(int $apps, int $records, array $series): string
+    {
+        $month = array_sum(array_slice($series, -4));
+
+        return '<p class="home__status">' . Html::e(
+            self::plural($apps, 'application') . ', ' . self::plural($records, 'record') . ', ' . $month . ' added in four weeks'
+        ) . '</p>';
+    }
+
+    /**
      * @param list<int> $series
      */
     private static function kpis(int $apps, int $records, int $assigned, array $series): string
@@ -137,8 +155,8 @@ final class HomeDashboard
         $month = array_sum(array_slice($series, -4));
 
         return Charts::kpis([
-            ['label' => 'Applications', 'value' => (string) $apps, 'note' => 'Open to you', 'icon' => 'ic-grid', 'tone' => 'brand'],
-            ['label' => 'Records', 'value' => (string) $records, 'note' => 'In your applications', 'icon' => 'ic-files', 'tone' => 'info', 'trend' => $series],
+            ['label' => 'Applications', 'value' => (string) $apps, 'note' => 'Open to you', 'icon' => 'ic-grid', 'tone' => 'neutral'],
+            ['label' => 'Records', 'value' => (string) $records, 'note' => 'In your applications', 'icon' => 'ic-files', 'tone' => 'brand', 'trend' => $series],
             ['label' => 'Assigned to you', 'value' => (string) $assigned, 'note' => $assigned === 0 ? 'Nothing waiting' : 'Waiting on you', 'icon' => 'ic-user-check', 'tone' => $assigned > 0 ? 'warning' : 'success'],
             ['label' => 'Added in four weeks', 'value' => (string) $month, 'note' => self::plural($recent, 'record') . ' this week', 'icon' => 'ic-trend-up', 'tone' => 'success'],
         ]);
@@ -188,18 +206,27 @@ final class HomeDashboard
         }
         $percent = (int) round($done / count($steps) * 100);
         $list = '';
+        $next = false;
+        $hidden = 0;
         foreach ($steps as [$title, $copy, $href, $complete]) {
-            $list .= '<li class="checklist__step' . ($complete ? ' is-done' : '') . '">'
+            $extra = $complete || $next;
+            if (!$complete) {
+                $next = true;
+            }
+            $hidden += $extra ? 1 : 0;
+            $list .= '<li class="checklist__step' . ($complete ? ' is-done' : '') . ($extra ? ' is-extra' : '') . '">'
                 . '<span class="checklist__tick">' . Charts::icon('ic-check') . '</span>'
                 . '<span class="checklist__text"><a href="' . Html::e($href) . '">' . Html::e($title) . '</a><small>' . Html::e($copy) . '</small></span></li>';
         }
 
-        return '<section class="checklist" data-dismissible="setup" aria-label="Set up this site">'
+        return '<section class="checklist" data-dismissible="setup" data-fold aria-label="Set up this site">'
             . '<header class="checklist__head"><div><h2 class="checklist__title">Set up this site</h2>'
             . '<p class="checklist__lead">' . $done . ' of ' . count($steps) . ' steps are done.</p></div>'
             . '<div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . $percent . '"><span style="--w:' . $percent . '%"></span></div>'
             . '<button type="button" class="iconbtn" data-dismiss aria-label="Hide this checklist">' . Charts::icon('ic-x') . '</button></header>'
-            . '<ol class="checklist__steps">' . $list . '</ol></section>';
+            . '<ol class="checklist__steps">' . $list . '</ol>'
+            . self::foldButton('Show all steps', 'Show the next step only', $hidden)
+            . '</section>';
     }
 
     /**
@@ -229,7 +256,7 @@ final class HomeDashboard
                 . '</a>';
         }
 
-        return '<section class="home__section" aria-label="Applications">'
+        return '<section class="home__section home__section--apps" aria-label="Applications">'
             . '<div class="home__heading"><h2>Applications</h2></div>'
             . '<div class="appgrid">' . $cards . '</div></section>';
     }
@@ -237,7 +264,7 @@ final class HomeDashboard
     /**
      * @param list<array{item_id: int, title: string, app: int, when: int}> $items
      */
-    private static function assignedPanel(array $items): string
+    private static function assignedPanel(array $items, int $total): string
     {
         $art = Theme::illustrationHref('empty-assigned');
         if ($items === []) {
@@ -246,16 +273,17 @@ final class HomeDashboard
                 . '<p>Nothing is assigned to you. Records you own are listed here.</p></div>';
         } else {
             $body = '<ul class="rows">';
-            foreach ($items as $item) {
-                $body .= '<li><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
+            foreach ($items as $index => $item) {
+                $body .= '<li' . ($index >= self::PREVIEW ? ' class="is-extra"' : '') . '><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
                     . '<span class="rows__dot"></span><span class="rows__main"><span class="rows__title">' . Html::e($item['title']) . '</span>'
                     . '<span class="rows__meta">' . Html::e($item['app']) . '</span></span>'
                     . '<span class="rows__when">' . Html::e(Presence::ago($item['when'])) . '</span></a></li>';
             }
-            $body .= '</ul>';
+            $body .= '</ul>' . self::foldButton('Show ' . (count($items) - self::PREVIEW) . ' more', 'Show fewer', count($items) - self::PREVIEW);
         }
+        $count = $total > 0 ? '<span class="panel__count">' . $total . '</span>' : '';
 
-        return '<section class="panel" aria-label="Assigned to you"><header class="panel__head"><h2>Assigned to you</h2></header>' . $body . '</section>';
+        return '<section class="panel panel--assigned" data-fold aria-label="Assigned to you"><header class="panel__head"><h2>Assigned to you</h2>' . $count . '</header>' . $body . '</section>';
     }
 
     /**
@@ -322,8 +350,12 @@ final class HomeDashboard
         }
         usort($events, static fn (array $left, array $right): int => $right['when'] <=> $left['when']);
 
-        return '<section class="panel" aria-label="Recent activity"><header class="panel__head"><h2>Recent activity</h2></header>'
-            . Timeline::render(array_slice($events, 0, 7), 'No activity yet. Changes to records are listed here.') . '</section>';
+        $shown = array_slice($events, 0, 7);
+        $more = max(0, count($shown) - self::PREVIEW);
+
+        return '<section class="panel panel--activity" data-fold aria-label="Recent activity"><header class="panel__head"><h2>Recent activity</h2></header>'
+            . Timeline::render($shown, 'No activity yet. Changes to records are listed here.', self::PREVIEW)
+            . ($more > 0 ? self::foldButton('Show ' . $more . ' more', 'Show fewer', $more) : '') . '</section>';
     }
 
     /**
@@ -341,8 +373,9 @@ final class HomeDashboard
                 . '<span class="toolchip__text"><strong>' . Html::e($tile['title']) . '</strong><small>' . Html::e($tile['hint']) . '</small></span></a>';
         }
 
-        return '<section class="home__section" aria-label="Design"><div class="home__heading"><h2>Design</h2></div>'
-            . '<div class="toolgrid">' . $tiles . '</div></section>';
+        return '<section class="home__section home__section--design" data-fold aria-label="Design">'
+            . '<div class="home__heading"><h2>Design</h2>' . self::foldButton('Show', 'Hide', 1, 'foldbtn--inline') . '</div>'
+            . '<div class="toolgrid is-extra">' . $tiles . '</div></section>';
     }
 
     /**
@@ -457,6 +490,19 @@ final class HomeDashboard
         }
 
         return ['total' => $total, 'items' => $items];
+    }
+
+    /**
+     * A control that only shows on a phone. It opens the rows marked is-extra.
+     */
+    private static function foldButton(string $more, string $less, int $hidden, string $class = ''): string
+    {
+        if ($hidden <= 0) {
+            return '';
+        }
+
+        return '<button type="button" class="foldbtn' . ($class !== '' ? ' ' . $class : '') . '" data-fold-toggle aria-expanded="false"'
+            . ' data-more="' . Html::e($more) . '" data-less="' . Html::e($less) . '">' . Html::e($more) . '</button>';
     }
 
     private static function typeId(string $slug): int

@@ -60,6 +60,11 @@ $account = $nav['account'];
                         <span><?php echo Html::e($item['label']); ?></span>
                     </a>
                     <?php endforeach; ?>
+                    <button type="button" role="menuitem" class="menu__item menu__item--mode" data-mode-toggle>
+                        <svg class="icon icon--sun" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-sun"></use></svg>
+                        <svg class="icon icon--moon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-moon"></use></svg>
+                        <span>Switch between light and dark</span>
+                    </button>
                     <div class="menu__divider" role="separator"></div>
                     <a role="menuitem" class="menu__item" href="?action=logoff">
                         <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-logoff"></use></svg>

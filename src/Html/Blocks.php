@@ -512,7 +512,7 @@ final class Blocks
             } else {
                 $inner = Html::e($value);
             }
-            $cellsHtml .= '<td class="record-list__cell' . $wrap . '"' . $titleAttr . '>' . $inner . '</td>';
+            $cellsHtml .= '<td class="record-list__cell' . $wrap . '" data-label="' . Html::e((string) ($columnDef['label'] ?? '')) . '"' . $titleAttr . '>' . $inner . '</td>';
         }
 
         $actionsHtml = '';

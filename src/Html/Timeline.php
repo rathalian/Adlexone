@@ -10,8 +10,9 @@ final class Timeline
 {
     /**
      * @param list<array{text: string, when: int, who?: string, href?: string, icon?: string, detail?: string}> $events
+     * @param int $preview when above zero, events after this many carry is-extra so a page can fold them on a phone
      */
-    public static function render(array $events, string $empty = 'Nothing has happened yet.'): string
+    public static function render(array $events, string $empty = 'Nothing has happened yet.', int $preview = 0): string
     {
         if ($events === []) {
             return '<p class="timeline__empty">' . Html::e($empty) . '</p>';
@@ -19,12 +20,13 @@ final class Timeline
         usort($events, static fn (array $left, array $right): int => $right['when'] <=> $left['when']);
         $html = '<ol class="timeline">';
         $day = '';
-        foreach ($events as $event) {
+        foreach (array_values($events) as $index => $event) {
+            $extra = $preview > 0 && $index >= $preview ? ' is-extra' : '';
             $when = (int) $event['when'];
             $label = self::day($when);
             if ($label !== $day) {
                 $day = $label;
-                $html .= '<li class="timeline__day" aria-hidden="true">' . Html::e($label) . '</li>';
+                $html .= '<li class="timeline__day' . $extra . '" aria-hidden="true">' . Html::e($label) . '</li>';
             }
             $who = trim((string) ($event['who'] ?? ''));
             $text = Html::e((string) $event['text']);
@@ -32,7 +34,7 @@ final class Timeline
                 $text = '<a href="' . Html::e((string) $event['href']) . '">' . $text . '</a>';
             }
             $detail = trim((string) ($event['detail'] ?? ''));
-            $html .= '<li class="timeline__event">'
+            $html .= '<li class="timeline__event' . $extra . '">'
                 . '<span class="timeline__node">' . Charts::icon((string) ($event['icon'] ?? 'ic-note')) . '</span>'
                 . '<div class="timeline__body"><p class="timeline__text">' . $text . '</p>'
                 . ($detail !== '' ? '<p class="timeline__detail">' . Html::e($detail) . '</p>' : '')
