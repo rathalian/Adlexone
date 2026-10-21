@@ -85,9 +85,15 @@ final class HomeScreen
         if (Access::can(Permission::ADMIN_SECURITY)) {
             $manage[] = self::tile(
                 '?manage=security&option=manage_users',
-                'Security',
-                'People, groups, and the records they can open.',
+                'People',
+                'People who can sign in.',
                 'ic-manage-users'
+            );
+            $manage[] = self::tile(
+                '?manage=security&option=manage_groups',
+                'Groups',
+                'A group is the people who can open an application.',
+                'ic-manage-groups'
             );
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {

@@ -100,6 +100,7 @@ final class TopNav
         ];
         if (Access::can(Permission::ADMIN_SECURITY)) {
             $links[] = ['label' => 'People', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-manage-users'];
+            $links[] = ['label' => 'Groups', 'href' => '?manage=security&option=manage_groups', 'icon' => 'ic-manage-groups'];
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
             $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-settings'];

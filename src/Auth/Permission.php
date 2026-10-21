@@ -166,6 +166,50 @@ final class Permission
         return $groupIds;
     }
 
+    /**
+     * Groups whose members can open this application.
+     * Other permissions on those groups are left as they are.
+     *
+     * @param list<int> $groupIds
+     */
+    public static function setAppUseGroups(string $slug, array $groupIds): void
+    {
+        Access::ensureReady();
+        $permission = self::appUse($slug);
+        $known = [];
+        foreach (Database::select('groups', ['group_id']) as $group) {
+            $known[(int) $group['group_id']] = true;
+        }
+        $wanted = [];
+        foreach ($groupIds as $groupId) {
+            $groupId = (int) $groupId;
+            if (isset($known[$groupId])) {
+                $wanted[$groupId] = true;
+            }
+        }
+        foreach (array_keys($known) as $groupId) {
+            $have = Access::permissionsForGroup($groupId);
+            $has = in_array($permission, $have, true);
+            $should = isset($wanted[$groupId]);
+            if ($has === $should) {
+                continue;
+            }
+            if ($should) {
+                $have[] = $permission;
+            } else {
+                $have = array_values(array_filter(
+                    $have,
+                    static fn (string $granted): bool => $granted !== $permission
+                ));
+            }
+            Access::setGroupPermissions($groupId, $have);
+        }
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        if ($userId > 0) {
+            Access::hydrateSession($userId);
+        }
+    }
+
     public static function revokeApp(string $slug): void
     {
         Access::ensureReady();

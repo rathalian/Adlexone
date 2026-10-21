@@ -186,7 +186,6 @@ final class ApplicationsScreen
             return;
         }
 
-        $permission = (string) ($app['permission'] ?? Permission::APP_ACCESS);
         $recordType = '';
         if (is_array($app['settings'] ?? null)) {
             $recordType = trim((string) ($app['settings']['default_item_type_id'] ?? ''));
@@ -197,7 +196,7 @@ final class ApplicationsScreen
             'Description' => Form::text('hint', Html::e((string) ($app['hint'] ?? ''))),
             'Record type' => self::recordTypeSelect($recordType),
             'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-launch')),
-            'Who can open it' => self::permissionSelect('permission', $permission, false),
+            'Who can open it' => self::groupAccessField((string) ($app['slug'] ?? '')),
             'Menu' => Form::checkbox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'Show in the Applications menu'),
         ];
         if ($app !== null) {
@@ -214,15 +213,19 @@ final class ApplicationsScreen
     {
         $name = trim((string) ($_POST['name'] ?? ''));
         $slug = self::slugify((string) ($_POST['slug'] ?? ''), $name);
-        $permission = (string) ($_POST['permission'] ?? '');
         $icon = (string) ($_POST['icon'] ?? 'ic-launch');
         $recordType = self::postedRecordType();
+        $groupIds = self::postedGroupIds();
         if ($recordType === false) {
             View::respond('Choose a record type from the list.', Blocks::link(APPLICATIONS_MANAGE_URL . ($id > 0 ? '&option=edit&application_id=' . $id : '&option=new'), 'Back', 'URL'));
             return;
         }
-        if ($name === '' || $slug === '' || !isset(Permission::catalog()[$permission]) || !in_array($icon, Capabilities::icons(), true)) {
-            View::respond('Enter a name and choose who can open the application.', Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
+        if ($groupIds === false) {
+            View::respond('Choose a group from the list.', Blocks::link(APPLICATIONS_MANAGE_URL . ($id > 0 ? '&option=edit&application_id=' . $id : '&option=new'), 'Back', 'URL'));
+            return;
+        }
+        if ($name === '' || $slug === '' || !in_array($icon, Capabilities::icons(), true)) {
+            View::respond('Enter a name for the application.', Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
             return;
         }
         if (ApplicationStore::slugInUse($slug, $id)) {
@@ -234,7 +237,7 @@ final class ApplicationsScreen
             'name' => $name,
             'hint' => trim((string) ($_POST['hint'] ?? '')),
             'icon' => $icon,
-            'permission' => $permission,
+            'permission' => Permission::appUse($slug),
             'enabled' => isset($_POST['enabled']) ? 1 : 0,
         ];
         if ($id > 0) {
@@ -249,6 +252,7 @@ final class ApplicationsScreen
             }
             ApplicationStore::updateApplication($id, $fields);
             ApplicationStore::assignRecordType($id, $recordType);
+            Permission::setAppUseGroups($slug, $groupIds);
             header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id);
             exit;
         }
@@ -263,6 +267,7 @@ final class ApplicationsScreen
             'record_type_chosen' => '1',
         ], JSON_UNESCAPED_SLASHES);
         $newId = ApplicationStore::insertApplication($fields);
+        Permission::setAppUseGroups($slug, $groupIds);
         header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $newId);
         exit;
     }
@@ -416,6 +421,57 @@ final class ApplicationsScreen
         }
         header('Location: ' . $back);
         exit;
+    }
+
+    public static function groupAccessField(string $slug): string
+    {
+        $permission = $slug !== '' ? Permission::appUse($slug) : '';
+        $rows = Database::select('groups', ['group_id', 'group_name'], '', [], 'group_name ASC');
+        if ($rows === []) {
+            return '<p class="form-help">No groups yet. Add a group from the account menu, then choose it here.</p>';
+        }
+        $html = '<div class="group-security-list">';
+        foreach ($rows as $row) {
+            $id = (string) $row['group_id'];
+            $checked = '';
+            if ($permission !== '') {
+                $have = \Adlexone\Auth\Access::permissionsForGroup((int) $id);
+                if (in_array($permission, $have, true)) {
+                    $checked = $id;
+                }
+            } elseif (strtolower((string) $row['group_name']) === 'administrator') {
+                $checked = $id;
+            }
+            $html .= Form::checkbox('groups[]', $id, $checked, (string) $row['group_name']);
+        }
+        $html .= '</div>';
+        $html .= '<p class="form-help">People in a ticked group can open this application. Add a group from the account menu.</p>';
+
+        return $html;
+    }
+
+    /**
+     * @return list<int>|false
+     */
+    public static function postedGroupIds(): array|false
+    {
+        $posted = $_POST['groups'] ?? [];
+        if (!is_array($posted)) {
+            return false;
+        }
+        $known = [];
+        foreach (Database::select('groups', ['group_id']) as $row) {
+            $known[(int) $row['group_id']] = true;
+        }
+        $ids = [];
+        foreach ($posted as $id) {
+            if (!ctype_digit((string) $id) || !isset($known[(int) $id])) {
+                return false;
+            }
+            $ids[] = (int) $id;
+        }
+
+        return array_values(array_unique($ids));
     }
 
     public static function permissionSelect(string $name, string $selected, bool $allowEmpty): string
