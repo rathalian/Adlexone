@@ -565,6 +565,78 @@ final class ItemScreen
         return $html . '</ul>';
     }
 
+    /**
+     * The column beside a record: who and when at a glance, then what has happened to it.
+     *
+     * @param array<string, mixed> $item
+     * @param list<int> $groupIds
+     */
+    private static function recordSide(int $itemId, array $item, array $groupIds): string
+    {
+        $opened = (int) ($item['create_date'] ?? 0);
+        $updated = (int) ($item['core_log_updated'] ?? 0);
+        $ownerId = (int) ($item['user_security'] ?? 0);
+        $creatorId = (int) ($item['creator_security'] ?? 0);
+        $names = \Adlexone\Application\RecordQuery::userNames([$ownerId, $creatorId]);
+        $status = WorkScreen::workStatusField((int) ($item['item_type_id'] ?? 0));
+        $stand = $status !== null ? trim((string) ($item['custom_field_' . $status['id']] ?? '')) : '';
+
+        $row = static fn (string $term, string $detail): string => $detail === ''
+            ? ''
+            : '<div class="facts__row"><dt>' . Html::e($term) . '</dt><dd>' . $detail . '</dd></div>';
+        $person = static fn (string $name): string => $name === ''
+            ? ''
+            : \Adlexone\Html\Presence::mark($name) . '<span>' . Html::e($name) . '</span>';
+        $when = static fn (int $stamp): string => $stamp > 0
+            ? '<span>' . Html::e(\Adlexone\Html\Presence::ago($stamp)) . '</span><small>' . Html::e(date('j M Y, g:i a', $stamp)) . '</small>'
+            : '';
+        $files = Database::count('item_attachments', 'item_id = ?', [$itemId]);
+        $groups = self::groupNames($groupIds);
+
+        $facts = '<dl class="facts">'
+            . $row('Status', $stand !== '' ? \Adlexone\Html\Presence::pill($stand) : '')
+            . $row('Owner', $person($names[$ownerId] ?? ''))
+            . $row('Opened by', $creatorId !== $ownerId ? $person($names[$creatorId] ?? '') : '')
+            . $row('Opened', $when($opened))
+            . $row('Last change', $updated > $opened ? $when($updated) : '')
+            . $row('Visible to', $groups !== '' ? Html::e($groups) : '')
+            . $row('Files', $files > 0 ? Html::e(self::countLabel($files, 'file', '')) : '')
+            . '</dl>';
+
+        $events = [];
+        $lines = Database::rows(
+            'SELECT log_text, CAST(create_date AS INTEGER) AS at, security_id FROM core_log WHERE item_id = ? ORDER BY CAST(create_date AS INTEGER) DESC LIMIT 30',
+            [$itemId]
+        );
+        $authors = \Adlexone\Application\RecordQuery::userNames(array_map(static fn (array $line): int => (int) ($line['security_id'] ?? 0), $lines));
+        foreach ($lines as $line) {
+            $text = trim((string) ($line['log_text'] ?? ''));
+            if ($text === '' || (int) $line['at'] <= 0) {
+                continue;
+            }
+            $events[] = [
+                'text' => $text,
+                'when' => (int) $line['at'],
+                'who' => $authors[(int) ($line['security_id'] ?? 0)] ?? '',
+                'icon' => 'ic-note',
+            ];
+        }
+        if ($opened > 0) {
+            $events[] = [
+                'text' => 'Record opened',
+                'when' => $opened,
+                'who' => $names[$creatorId] ?? '',
+                'icon' => 'ic-file-plus',
+            ];
+        }
+
+        return '<aside class="workspace__side" aria-label="About this record">'
+            . '<section class="sidecard"><h2 class="sidecard__title">About this record</h2>' . $facts . '</section>'
+            . '<section class="sidecard"><h2 class="sidecard__title">Timeline</h2>'
+            . \Adlexone\Html\Timeline::render($events, 'Nothing has been written on this record.') . '</section>'
+            . '</aside>';
+    }
+
     private static function countLabel(int $count, string $noun, string $none): string
     {
         if ($count <= 0) {
@@ -1578,6 +1650,10 @@ final class ItemScreen
 
                 if ($itemRole < 4) {
                     $html .= \Adlexone\Application\Rules::recordCard((int) $itemID);
+                }
+                if ($inApplication) {
+                    $html = '<div class="workspace"><div class="workspace__main">' . $html . '</div>'
+                        . self::recordSide((int) $itemID, $itemFields, array_map('intval', $itemGroupIds)) . '</div>';
                 }
                 Page::current()->setBody($html);
             } else {

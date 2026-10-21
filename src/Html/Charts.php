@@ -28,13 +28,14 @@ final class Charts
         $href = (string) ($kpi['href'] ?? '');
         $value = (string) $kpi['value'];
         $numeric = ctype_digit($value) ? ' data-count="' . Html::e($value) . '"' : '';
+        $valueClass = !ctype_digit($value) && mb_strlen($value) > 6 ? ' kpi__value--text' : '';
         $trend = $kpi['trend'] ?? [];
         $delta = trim((string) ($kpi['delta'] ?? ''));
 
         $inner = '<div class="kpi__head">'
             . ($icon !== '' ? '<span class="kpi__icon">' . self::icon($icon) . '</span>' : '')
             . '<span class="kpi__label">' . Html::e((string) $kpi['label']) . '</span></div>'
-            . '<div class="kpi__value"' . $numeric . '>' . Html::e($value) . '</div>'
+            . '<div class="kpi__value' . $valueClass . '"' . $numeric . '>' . Html::e($value) . '</div>'
             . '<div class="kpi__foot">'
             . ($delta !== '' ? '<span class="kpi__delta">' . Html::e($delta) . '</span>' : '')
             . ((string) ($kpi['note'] ?? '') !== '' ? '<span class="kpi__note">' . Html::e((string) $kpi['note']) . '</span>' : '')
@@ -178,7 +179,7 @@ final class Charts
      *
      * @param list<array{label: string, value: int|float, tone?: string, href?: string}> $columns
      */
-    public static function columns(array $columns): string
+    public static function columns(array $columns, bool $uniform = false): string
     {
         if ($columns === []) {
             return '';
@@ -194,7 +195,7 @@ final class Charts
             $label = Html::e((string) $column['label']);
             $tag = (string) ($column['href'] ?? '') !== '' ? 'a' : 'div';
             $href = $tag === 'a' ? ' href="' . Html::e((string) $column['href']) . '"' : '';
-            $html .= '<' . $tag . ' class="columns__col ' . self::series($column, $index) . '" role="listitem"' . $href
+            $html .= '<' . $tag . ' class="columns__col ' . ($uniform ? 's0' : self::series($column, $index)) . '" role="listitem"' . $href
                 . ' title="' . Html::e((string) $column['label'] . ': ' . self::number($value)) . '">'
                 . '<span class="columns__value">' . Html::e(self::number($value)) . '</span>'
                 . '<span class="columns__bar" style="--h:' . $height . '%"></span>'

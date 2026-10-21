@@ -13,6 +13,8 @@ use Adlexone\Auth\Csrf;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Charts;
+use Adlexone\Html\Timeline;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
 use Adlexone\Html\Presence;
@@ -189,6 +191,36 @@ final class RecordScreens
         $help = $isStatus
             ? 'Each row opens Work on that value.'
             : 'Each row lists the records with that value.';
+        $parts = [];
+        $barRows = [];
+        $usedTones = [];
+        foreach ($counts as $value => $count) {
+            $tone = $isStatus ? Presence::tone((string) $value) : '';
+            if ($tone !== '' && isset($usedTones[$tone])) {
+                $tone = '';
+            }
+            $usedTones[$tone] = true;
+            $parts[] = ['label' => (string) $value, 'value' => $count, 'tone' => $tone];
+            $barRows[] = ['label' => (string) $value, 'value' => $count, 'tone' => $tone, 'href' => self::countHref($field, (string) $value)];
+        }
+        if ($empty > 0) {
+            $parts[] = ['label' => 'Not set', 'value' => $empty, 'tone' => 'neutral'];
+            $barRows[] = ['label' => 'Not set', 'value' => $empty, 'tone' => 'neutral', 'href' => self::countHref($field, '')];
+        }
+        $total = count($loaded['ids']);
+        $largest = $counts === [] ? '' : (string) array_search(max($counts), $counts, true);
+        $lead = Charts::kpis([
+            ['label' => 'Records', 'value' => (string) $total, 'icon' => 'ic-files', 'tone' => 'brand'],
+            ['label' => 'Values in use', 'value' => (string) count(array_filter($counts)), 'icon' => 'ic-counts', 'tone' => 'info'],
+            ['label' => 'Most common', 'value' => $largest !== '' && max($counts) > 0 ? $largest : 'None', 'note' => $largest !== '' && max($counts) > 0 ? self::plural(max($counts), 'record') : '', 'icon' => 'ic-trend-up', 'tone' => 'success'],
+            ['label' => 'Not set', 'value' => (string) $empty, 'icon' => 'ic-circle-alert', 'tone' => $empty > 0 ? 'warning' : 'neutral'],
+        ]);
+        if ($total > 0) {
+            $lead .= Charts::row([
+                Charts::panel('Share of records', Charts::donut($parts, (string) $total, 'records')),
+                Charts::panel('Records by ' . strtolower($field['label']), Charts::bars($barRows)),
+            ]);
+        }
         self::show($field['label'], $help, Blocks::recordList([
             'column' => $field['label'],
             'columns' => [['key' => 'count', 'label' => 'Records']],
@@ -198,7 +230,7 @@ final class RecordScreens
             'emptyTitle' => 'No records yet',
             'emptyCopy' => 'Create the first record.',
             'groups' => [['rows' => $rows]],
-        ]));
+        ]), $lead);
     }
 
     /**
@@ -240,6 +272,20 @@ final class RecordScreens
             }
             $blocks[] = ['label' => (string) $label, 'rows' => $rows];
         }
+        $ownerBars = [];
+        foreach (array_merge($ordered, $named) as $label => $items) {
+            $ownerBars[] = ['label' => (string) $label, 'value' => count($items), 'tone' => $label === 'No owner' ? 'warning' : ''];
+        }
+        usort($ownerBars, static fn (array $left, array $right): int => $right['value'] <=> $left['value']);
+        $unowned = count($ordered['No owner'] ?? []);
+        $lead = Charts::kpis([
+            ['label' => 'Records', 'value' => (string) count($loaded['items']), 'icon' => 'ic-files', 'tone' => 'brand'],
+            ['label' => 'Owners', 'value' => (string) count($named), 'icon' => 'ic-owners', 'tone' => 'info'],
+            ['label' => 'No owner', 'value' => (string) $unowned, 'note' => $unowned > 0 ? 'Needs an owner' : 'Every record has one', 'icon' => 'ic-user-plus', 'tone' => $unowned > 0 ? 'warning' : 'success'],
+        ]);
+        if (count($ownerBars) > 0 && count($loaded['items']) > 0) {
+            $lead .= Charts::row([Charts::panel('Records per owner', Charts::bars($ownerBars))]);
+        }
         self::show('Owners', 'Records with no owner are listed first. Saving sets the owner and runs the update rules.', self::editor(
             'Record',
             [],
@@ -248,7 +294,7 @@ final class RecordScreens
             'Save',
             'No records yet',
             'Create the first record.'
-        ));
+        ), $lead);
     }
 
     /**
@@ -322,6 +368,18 @@ final class RecordScreens
         if ($filled !== []) {
             $groups[] = ['label' => 'Next step', 'rows' => $filled];
         }
+        $openCount = count($empty) + count($filled);
+        $lead = Charts::kpis([
+            ['label' => 'Open records', 'value' => (string) $openCount, 'icon' => 'ic-files', 'tone' => 'brand'],
+            ['label' => 'With a next step', 'value' => (string) count($filled), 'icon' => 'ic-circle-check', 'tone' => 'success'],
+            ['label' => 'No next step', 'value' => (string) count($empty), 'note' => $empty === [] ? '' : 'Needs a decision', 'icon' => 'ic-circle-alert', 'tone' => $empty === [] ? 'neutral' : 'warning'],
+        ]);
+        if ($openCount > 0) {
+            $lead .= Charts::row([Charts::panel('Open records with a next step', Charts::stack([
+                ['label' => 'Next step set', 'value' => count($filled), 'tone' => 'success'],
+                ['label' => 'No next step', 'value' => count($empty), 'tone' => 'warning'],
+            ]))]);
+        }
         self::show('Next steps', 'Finished records stay off this list. Saving writes ' . $field['label'] . ' and runs the update rules.', self::editor(
             'Record',
             [['key' => 'stand', 'label' => 'Status']],
@@ -330,7 +388,7 @@ final class RecordScreens
             'Save',
             'No open records',
             'Finished records stay off this list.'
-        ));
+        ), $lead);
     }
 
     /**
@@ -387,6 +445,7 @@ final class RecordScreens
         $today = new \DateTimeImmutable('today');
         $sunday = $today->modify('+' . (7 - (int) $today->format('N')) . ' days');
         $buckets = ['Overdue' => [], 'This week' => [], 'Later' => [], 'No date' => []];
+        $offsets = [];
         foreach ($loaded['items'] as $item) {
             if (!RecordQuery::isOpen($open, $statusValues[$item['id']] ?? '')) {
                 continue;
@@ -403,6 +462,9 @@ final class RecordScreens
             }
             $day = $date->setTime(0, 0);
             $row['sort'] = $day->getTimestamp();
+            $offset = (int) round(($day->getTimestamp() - $today->getTimestamp()) / 86400);
+            [$row['cells']['due'], $row['tones']['due']] = self::dueLabel($offset);
+            $offsets[] = $offset;
             if ($day < $today) {
                 $buckets['Overdue'][] = $row;
             } elseif ($day <= $sunday) {
@@ -415,12 +477,30 @@ final class RecordScreens
             usort($rows, static fn (array $left, array $right): int => ((int) ($left['sort'] ?? 0)) <=> ((int) ($right['sort'] ?? 0)));
             $buckets[$name] = $rows;
         }
+        $lead = Charts::kpis([
+            ['label' => 'Overdue', 'value' => (string) count($buckets['Overdue']), 'icon' => 'ic-alert', 'tone' => $buckets['Overdue'] === [] ? 'success' : 'danger', 'note' => $buckets['Overdue'] === [] ? 'Nothing is late' : 'Needs attention'],
+            ['label' => 'This week', 'value' => (string) count($buckets['This week']), 'icon' => 'ic-diary', 'tone' => 'warning'],
+            ['label' => 'Later', 'value' => (string) count($buckets['Later']), 'icon' => 'ic-clock', 'tone' => 'info'],
+            ['label' => 'No date', 'value' => (string) count($buckets['No date']), 'icon' => 'ic-circle-alert', 'tone' => 'neutral'],
+        ]);
+        $columns = [['label' => 'Overdue', 'value' => 0, 'tone' => 'danger']];
+        for ($i = 0; $i < 7; $i++) {
+            $columns[] = ['label' => $i === 0 ? 'Today' : $today->modify('+' . $i . ' days')->format('D'), 'value' => 0, 'tone' => $i === 0 ? 'warning' : 'info'];
+        }
+        $columns[] = ['label' => 'Later', 'value' => 0, 'tone' => 'neutral'];
+        foreach ($offsets as $offset) {
+            $slot = $offset < 0 ? 0 : ($offset <= 6 ? $offset + 1 : 8);
+            $columns[$slot]['value']++;
+        }
+        if ($offsets !== []) {
+            $lead .= Charts::row([Charts::panel('Due over the next week', Charts::columns($columns), 'Open records by ' . strtolower($field['label']) . '.')]);
+        }
         self::show('Diary', 'Grouped by ' . $field['label'] . '. Finished records stay off this list.', self::groupedRecords(
             $buckets,
-            [['key' => 'stand', 'label' => 'Status'], ['key' => 'when', 'label' => $field['label']]],
+            [['key' => 'stand', 'label' => 'Status'], ['key' => 'when', 'label' => $field['label']], ['key' => 'due', 'label' => 'Due']],
             'No open records',
             'Finished records stay off this list.'
-        ));
+        ), $lead);
     }
 
     /**
@@ -465,6 +545,19 @@ final class RecordScreens
         if ($step !== null) {
             $columns[] = ['key' => 'next', 'label' => $step['label']];
         }
+        $partyBars = [];
+        foreach ($blocks as $block) {
+            $partyBars[] = ['label' => (string) $block['label'], 'value' => count($block['rows']), 'tone' => (string) $block['label'] === $emptyLabel ? 'neutral' : ''];
+        }
+        usort($partyBars, static fn (array $left, array $right): int => $right['value'] <=> $left['value']);
+        $lead = Charts::kpis([
+            ['label' => 'Records', 'value' => (string) count($loaded['items']), 'icon' => 'ic-files', 'tone' => 'brand'],
+            ['label' => $field['label'] . ' count', 'value' => (string) count(array_filter($blocks, static fn (array $block): bool => (string) $block['label'] !== $emptyLabel)), 'icon' => 'ic-parties', 'tone' => 'info'],
+            ['label' => 'Without ' . strtolower($field['label']), 'value' => (string) count($emptyRows), 'icon' => 'ic-circle-alert', 'tone' => $emptyRows === [] ? 'success' : 'warning'],
+        ]);
+        if ($partyBars !== []) {
+            $lead .= Charts::row([Charts::panel('Records by ' . strtolower($field['label']), Charts::bars(array_slice($partyBars, 0, 8)), count($partyBars) > 8 ? 'The eight with the most records.' : '')]);
+        }
         self::show('Parties', 'Grouped by ' . $field['label'] . '.', $blocks === []
             ? self::emptyList('No records yet', 'Create the first record.')
             : Blocks::recordList([
@@ -473,7 +566,7 @@ final class RecordScreens
                 'searchLabel' => 'Search',
                 'empty' => 'No records yet',
                 'groups' => $blocks,
-            ]));
+            ]), $lead);
     }
 
     /**
@@ -492,6 +585,8 @@ final class RecordScreens
         $days = min($days, 365);
         $role = (int) ($config['role_id'] ?? 0);
         $rows = [];
+        $lines = [];
+        $names = [];
         if ($loaded['ids'] !== []) {
             $sql = 'SELECT item_id, log_text, create_date, security_id, role_id FROM core_log WHERE item_id IN ('
                 . RecordQuery::intList($loaded['ids']) . ') AND CAST(create_date AS INTEGER) >= ?';
@@ -524,6 +619,52 @@ final class RecordScreens
             }
         }
         $help = 'Log lines from the last ' . $days . ($days === 1 ? ' day.' : ' days.');
+        $events = [];
+        $perDay = [];
+        $people = [];
+        $touched = [];
+        foreach ($lines as $line) {
+            $itemId = (int) $line['item_id'];
+            $item = $loaded['items'][$itemId] ?? null;
+            if ($item === null) {
+                continue;
+            }
+            $when = (int) ($line['create_date'] ?? 0);
+            $who = $names[(int) ($line['security_id'] ?? 0)] ?? '';
+            $text = trim((string) ($line['log_text'] ?? ''));
+            $events[] = [
+                'text' => $text === '' ? 'Log line' : $text,
+                'when' => $when,
+                'who' => $who,
+                'href' => self::itemHref($itemId),
+                'icon' => 'ic-activity',
+                'detail' => self::title($item),
+            ];
+            $perDay[date('Y-m-d', $when)] = ($perDay[date('Y-m-d', $when)] ?? 0) + 1;
+            if ($who !== '') {
+                $people[$who] = true;
+            }
+            $touched[$itemId] = true;
+        }
+        $span = min($days, 14);
+        $columns = [];
+        for ($i = $span - 1; $i >= 0; $i--) {
+            $stamp = strtotime('-' . $i . ' days');
+            $columns[] = ['label' => $span > 7 ? date('j', $stamp) : date('D', $stamp), 'value' => $perDay[date('Y-m-d', $stamp)] ?? 0];
+        }
+        $lead = Charts::kpis([
+            ['label' => 'Log lines', 'value' => (string) count($events), 'icon' => 'ic-activity', 'tone' => 'brand'],
+            ['label' => 'Records changed', 'value' => (string) count($touched), 'icon' => 'ic-files', 'tone' => 'info'],
+            ['label' => 'People active', 'value' => (string) count($people), 'icon' => 'ic-users', 'tone' => 'success'],
+        ]);
+        if ($events !== []) {
+            $lead .= Charts::row([Charts::panel('Log lines per day', Charts::columns($columns, true), 'The last ' . $span . ($span === 1 ? ' day.' : ' days.'))]);
+        }
+        $timeline = '<section class="chartcard">' . Timeline::render($events, 'No log lines in this period. Lines written on these records show up here.') . '</section>';
+        if ($events !== []) {
+            self::show('Activity', $help, $timeline, $lead);
+            return;
+        }
         self::show('Activity', $help, Blocks::recordList([
             'column' => 'Line',
             'columns' => [['key' => 'when', 'label' => 'When']],
@@ -653,6 +794,27 @@ final class RecordScreens
         $help = $fromField
             ? 'Open records, oldest first, aged from ' . $field['label'] . '.'
             : 'Open records, oldest first, from the day they were created.';
+        $bands = [
+            ['label' => 'Under a week', 'value' => 0, 'tone' => 'success'],
+            ['label' => 'One to four weeks', 'value' => 0, 'tone' => 'info'],
+            ['label' => 'One to three months', 'value' => 0, 'tone' => 'warning'],
+            ['label' => 'Over three months', 'value' => 0, 'tone' => 'danger'],
+        ];
+        $days = [];
+        foreach ($dated as $row) {
+            $age = max(0, (int) floor(($today->getTimestamp() - (int) $row['sort']) / 86400));
+            $days[] = $age;
+            $bands[$age < 7 ? 0 : ($age < 30 ? 1 : ($age < 90 ? 2 : 3))]['value']++;
+        }
+        $lead = Charts::kpis([
+            ['label' => 'Open records', 'value' => (string) (count($dated) + count($undated)), 'icon' => 'ic-files', 'tone' => 'brand'],
+            ['label' => 'Oldest', 'value' => $days === [] ? 'None' : max($days) . ($days !== [] && max($days) === 1 ? ' day' : ' days'), 'icon' => 'ic-ageing', 'tone' => 'warning'],
+            ['label' => 'Average age', 'value' => $days === [] ? 'None' : (int) round(array_sum($days) / count($days)) . ' days', 'icon' => 'ic-clock', 'tone' => 'info'],
+            ['label' => 'Over 30 days', 'value' => (string) ($bands[2]['value'] + $bands[3]['value']), 'icon' => 'ic-alert', 'tone' => $bands[2]['value'] + $bands[3]['value'] > 0 ? 'danger' : 'success'],
+        ]);
+        if ($days !== []) {
+            $lead .= Charts::row([Charts::panel('Open records by age', Charts::columns($bands), $help)]);
+        }
         self::show('Ageing', $help, self::groupedRecords(
             $buckets,
             [
@@ -662,7 +824,7 @@ final class RecordScreens
             ],
             'No open records',
             'Finished records stay off this list.'
-        ));
+        ), $lead);
     }
 
     /**
@@ -1230,6 +1392,13 @@ final class RecordScreens
     /**
      * @param array{id: int, title: string} $item
      */
+    private static function plural(int|float $count, string $noun): string
+    {
+        $count = (int) $count;
+
+        return $count . ' ' . $noun . ($count === 1 ? '' : 's');
+    }
+
     private static function title(array $item): string
     {
         return $item['title'] !== '' ? $item['title'] : ('Record ' . $item['id']);
@@ -1245,12 +1414,12 @@ final class RecordScreens
         return defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './';
     }
 
-    private static function show(string $title, string $help, string $html): void
+    private static function show(string $title, string $help, string $html, string $lead = ''): void
     {
         Page::current()->suggestTitle($title);
         Page::current()->setBody(Blocks::vertical([[
             'title' => $title,
-            'html' => '<p class="form-help">' . Html::e($help) . '</p>' . $html,
+            'html' => '<p class="form-help">' . Html::e($help) . '</p>' . $lead . $html,
             'class' => 'card--work',
         ]]));
     }
@@ -1289,6 +1458,26 @@ final class RecordScreens
         }
 
         return Form::select('owner_' . $itemId, $values, $labels, (string) $ownerId);
+    }
+
+    /**
+     * @return array{0: string, 1: string} text and pill tone for a date a number of days from today
+     */
+    private static function dueLabel(int $offset): array
+    {
+        if ($offset < 0) {
+            $days = abs($offset);
+
+            return [$days === 1 ? '1 day overdue' : $days . ' days overdue', 'danger'];
+        }
+        if ($offset === 0) {
+            return ['Due today', 'warning'];
+        }
+        if ($offset === 1) {
+            return ['Due tomorrow', 'warning'];
+        }
+
+        return ['In ' . $offset . ' days', $offset <= 7 ? 'info' : 'neutral'];
     }
 
     private static function ageLabel(?\DateTimeImmutable $date, \DateTimeImmutable $today): string
