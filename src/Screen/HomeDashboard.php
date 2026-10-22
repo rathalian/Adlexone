@@ -15,30 +15,25 @@ use Adlexone\support\Database;
 use Adlexone\Theme\Theme;
 
 /**
- * The signed-in home page: a greeting, a few figures, the applications with a pulse
- * for each, what is assigned to the person, and what changed lately.
+ * The signed-in home page: a greeting, the applications with a pulse for each, then
+ * what is assigned to the person and what changed lately. Those two lists start closed.
+ * Recent activity loads when the person first opens it.
  */
 final class HomeDashboard
 {
     private const WEEKS = 8;
 
-    /** Rows kept visible on a phone before a list folds. */
-    private const PREVIEW = 3;
+    /** Controller name that returns the recent activity list as JSON. */
+    public const ACTIVITY = 'home_activity';
 
     /**
      * @param list<array<string, mixed>> $menu items from ApplicationStore::menuItems()
-     * @param list<array{href: string, title: string, hint: string, icon: string}> $manage
      */
-    public static function render(array $menu, array $manage, string $intro): string
+    public static function render(array $menu, string $intro): string
     {
         $apps = self::apps($menu);
-        $typeIds = array_values(array_filter(array_map(static fn (array $app): int => $app['type'], $apps)));
-        $typeToApp = [];
-        foreach ($apps as $index => $app) {
-            if ($app['type'] > 0 && !isset($typeToApp[$app['type']])) {
-                $typeToApp[$app['type']] = $index;
-            }
-        }
+        $typeIds = self::typeIds($apps);
+        $typeToApp = self::typeToApp($apps);
 
         $stats = self::stats($typeIds);
         $weekly = self::weekly($typeIds);
@@ -60,22 +55,42 @@ final class HomeDashboard
                 $series[$week] += $n;
             }
         }
+        $month = array_sum(array_slice($series, -4));
 
         $html = '<div class="home">'
-            . self::hero(count($apps), $records, $assigned['total'])
-            . self::status(count($apps), $records, $series)
-            . self::kpis(count($apps), $records, $assigned['total'], $series)
+            . self::hero(count($apps), $records, $assigned['total'], $month)
             . self::notice($apps)
             . self::checklist()
             . $intro
             . self::applications($apps);
 
-        $columns = self::assignedPanel($assigned['items'], $assigned['total']) . self::activityPanel($typeIds, $typeToApp, $apps);
+        $columns = self::assignedPanel($assigned) . self::activityPanel($typeIds);
         if ($columns !== '') {
             $html .= '<div class="home__split">' . $columns . '</div>';
         }
 
-        return $html . self::design($manage) . '</div>';
+        return $html . '</div>';
+    }
+
+    /**
+     * The recent activity list, sent when the person opens that panel.
+     *
+     * @param list<array<string, mixed>> $menu
+     */
+    public static function activityHtml(array $menu, string $scope): string
+    {
+        $apps = self::apps($menu);
+        $scope = $scope === 'mine' ? 'mine' : 'all';
+        $events = self::events(self::typeIds($apps), self::typeToApp($apps), $apps, $scope === 'mine');
+
+        $link = static fn (string $key, string $label): string => '<a class="work-scope__link' . ($scope === $key ? ' is-selected' : '') . '" data-lazy-link href="?controller='
+            . self::ACTIVITY . ($key === 'mine' ? '&scope=mine' : '') . '"' . ($scope === $key ? ' aria-current="true"' : '') . '>' . Html::e($label) . '</a>';
+
+        return '<nav class="work-scope panel__scope" aria-label="Activity to show">' . $link('all', 'Everyone') . $link('mine', 'Mine') . '</nav>'
+            . Timeline::render(
+                $events,
+                $scope === 'mine' ? 'None of your changes yet. Changes you make to records are listed here.' : 'No activity yet. Changes to records are listed here.'
+            );
     }
 
     /**
@@ -85,6 +100,7 @@ final class HomeDashboard
     private static function apps(array $menu): array
     {
         $apps = [];
+        $types = self::typeIdsBySlug(array_map(static fn (array $item): string => (string) ($item['app'] ?? ''), $menu));
         foreach ($menu as $item) {
             $slug = (string) ($item['app'] ?? '');
             $hint = trim((string) ($item['hint'] ?? ''));
@@ -94,7 +110,7 @@ final class HomeDashboard
                 'hint' => $hint !== '' ? $hint : '',
                 'icon' => (string) $item['icon'],
                 'href' => (string) $item['href'],
-                'type' => self::typeId($slug),
+                'type' => $types[$slug] ?? 0,
                 'accent' => Accent::forSlug($slug),
                 'count' => 0,
                 'touched' => 0,
@@ -106,16 +122,44 @@ final class HomeDashboard
         return $apps;
     }
 
-    private static function hero(int $apps, int $records, int $assigned): string
+    /**
+     * @param list<array<string, mixed>> $apps
+     * @return list<int>
+     */
+    private static function typeIds(array $apps): array
+    {
+        return array_values(array_filter(array_map(static fn (array $app): int => $app['type'], $apps)));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $apps
+     * @return array<int, int> record type id => index of the first application that keeps it
+     */
+    private static function typeToApp(array $apps): array
+    {
+        $map = [];
+        foreach ($apps as $index => $app) {
+            if ($app['type'] > 0 && !isset($map[$app['type']])) {
+                $map[$app['type']] = $index;
+            }
+        }
+
+        return $map;
+    }
+
+    private static function hero(int $apps, int $records, int $assigned, int $month): string
     {
         $hour = (int) date('G');
         $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
         $name = trim((string) ($_SESSION['access_display_name'] ?? $_SESSION['access_user_name'] ?? ''));
         $first = $name !== '' ? (string) (preg_split('/\s+/', $name)[0] ?? '') : '';
         $lead = $assigned > 0
-            ? 'You have ' . self::plural($assigned, 'record') . ' assigned to you.'
+            ? 'You have <a class="homehero__link" href="#assigned" data-open-panel="assigned">' . Html::e(self::plural($assigned, 'record') . ' assigned to you') . '</a>.'
             : 'Nothing is assigned to you right now.';
-        $lead .= ' This site has ' . self::plural($apps, 'application') . ' and ' . self::plural($records, 'record') . '.';
+        $lead .= ' ' . Html::e(
+            'This site has ' . self::plural($apps, 'application') . ' and ' . self::plural($records, 'record') . '. '
+            . ($month === 1 ? '1 record was' : $month . ' records were') . ' added in the past four weeks.'
+        );
 
         $actions = '<button type="button" class="btn btn--primary" data-palette-open>'
             . Charts::icon('ic-search') . 'Search<kbd class="kbd">Ctrl K</kbd></button>';
@@ -127,39 +171,9 @@ final class HomeDashboard
             . '<div class="homehero__copy">'
             . '<p class="homehero__date">' . Html::e(date('l j F')) . '</p>'
             . '<h1 class="homehero__title">' . Html::e($greeting . ($first !== '' ? ', ' . $first : '')) . '</h1>'
-            . '<p class="homehero__lead">' . Html::e($lead) . '</p></div>'
+            . '<p class="homehero__lead">' . $lead . '</p></div>'
             . '<div class="homehero__actions">' . $actions . '</div>'
             . '</header>';
-    }
-
-    /**
-     * One line that stands in for the figures on a phone.
-     *
-     * @param list<int> $series
-     */
-    private static function status(int $apps, int $records, array $series): string
-    {
-        $month = array_sum(array_slice($series, -4));
-
-        return '<p class="home__status">' . Html::e(
-            self::plural($apps, 'application') . ', ' . self::plural($records, 'record') . ', ' . $month . ' added in four weeks'
-        ) . '</p>';
-    }
-
-    /**
-     * @param list<int> $series
-     */
-    private static function kpis(int $apps, int $records, int $assigned, array $series): string
-    {
-        $recent = array_sum(array_slice($series, -1));
-        $month = array_sum(array_slice($series, -4));
-
-        return Charts::kpis([
-            ['label' => 'Applications', 'value' => (string) $apps, 'note' => 'Open to you', 'icon' => 'ic-grid', 'tone' => 'neutral'],
-            ['label' => 'Records', 'value' => (string) $records, 'note' => 'In your applications', 'icon' => 'ic-files', 'tone' => 'brand', 'trend' => $series],
-            ['label' => 'Assigned to you', 'value' => (string) $assigned, 'note' => $assigned === 0 ? 'Nothing waiting' : 'Waiting on you', 'icon' => 'ic-user-check', 'tone' => $assigned > 0 ? 'warning' : 'success'],
-            ['label' => 'Added in four weeks', 'value' => (string) $month, 'note' => self::plural($recent, 'record') . ' this week', 'icon' => 'ic-trend-up', 'tone' => 'success'],
-        ]);
     }
 
     /**
@@ -182,10 +196,12 @@ final class HomeDashboard
         }
         $app = (string) ($rows[0]['application'] ?? '');
         $href = $app !== '' ? '?application=' . rawurlencode($app) : './';
+        $key = 'announcement-' . (int) ($rows[0]['time'] ?? 0) . '-' . substr(md5($subject), 0, 8);
 
-        return '<aside class="banner" aria-label="Announcement">'
+        return '<aside class="banner" data-dismissible="' . Html::e($key) . '" aria-label="Announcement">'
             . '<span class="banner__icon">' . Charts::icon('ic-announce') . '</span>'
             . '<p class="banner__text"><strong>Announcement</strong> <a href="' . Html::e($href) . '">' . Html::e($subject) . '</a></p>'
+            . '<button type="button" class="iconbtn" data-dismiss aria-label="Hide this announcement">' . Charts::icon('ic-x') . '</button>'
             . '</aside>';
     }
 
@@ -194,11 +210,16 @@ final class HomeDashboard
         if (!Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
             return '';
         }
+        $seen = Database::rows(
+            'SELECT EXISTS(SELECT 1 FROM applications) AS apps, '
+            . (Database::tableExists('custom_fields') ? 'EXISTS(SELECT 1 FROM custom_fields)' : '0') . ' AS fields, '
+            . 'EXISTS(SELECT 1 FROM items) AS records, (SELECT COUNT(*) FROM (SELECT 1 FROM users LIMIT 2)) AS people'
+        )[0] ?? [];
         $steps = [
-            ['Create an application', 'An application groups the screens for one kind of work.', '?manage=builder', Database::count('applications') > 0],
-            ['Add fields to a record type', 'Fields hold the details a record keeps.', '?manage=fields', Database::tableExists('custom_fields') && Database::count('custom_fields') > 0],
-            ['Create a record', 'Open an application and add the first record.', './', Database::count('items') > 0],
-            ['Add people', 'Add the people who need to sign in, then place them in groups.', '?manage=security&option=manage_users', Database::count('users') > 1],
+            ['Create an application', 'An application groups the screens for one kind of work.', '?manage=builder', (int) ($seen['apps'] ?? 0) > 0],
+            ['Add fields to a record type', 'Fields hold the details a record keeps.', '?manage=fields', (int) ($seen['fields'] ?? 0) > 0],
+            ['Create a record', 'Open an application and add the first record.', './', (int) ($seen['records'] ?? 0) > 0],
+            ['Add people', 'Add the people who need to sign in, then place them in groups.', '?manage=security&option=manage_users', (int) ($seen['people'] ?? 0) > 1],
         ];
         $done = count(array_filter($steps, static fn (array $step): bool => $step[3]));
         if ($done === count($steps)) {
@@ -262,56 +283,115 @@ final class HomeDashboard
     }
 
     /**
-     * @param list<array{item_id: int, title: string, app: int, when: int}> $items
+     * @param array{total: int, items: list<array{item_id: int, title: string, app: string, accent: string, href: string, when: int}>, byApp: list<array{name: string, href: string, count: int}>} $assigned
      */
-    private static function assignedPanel(array $items, int $total): string
+    private static function assignedPanel(array $assigned): string
     {
-        $art = Theme::illustrationHref('empty-assigned');
+        $items = $assigned['items'];
         if ($items === []) {
+            $art = Theme::illustrationHref('empty-assigned');
             $body = '<div class="panel__empty">'
                 . ($art !== '' ? '<img src="' . Html::e($art) . '" alt="" width="88" height="66" loading="lazy">' : '')
                 . '<p>Nothing is assigned to you. Records you own are listed here.</p></div>';
         } else {
             $body = '<ul class="rows">';
-            foreach ($items as $index => $item) {
-                $body .= '<li' . ($index >= self::PREVIEW ? ' class="is-extra"' : '') . '><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
+            foreach ($items as $item) {
+                $body .= '<li><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
                     . '<span class="rows__dot"></span><span class="rows__main"><span class="rows__title">' . Html::e($item['title']) . '</span>'
                     . '<span class="rows__meta">' . Html::e($item['app']) . '</span></span>'
                     . '<span class="rows__when">' . Html::e(Presence::ago($item['when'])) . '</span></a></li>';
             }
-            $body .= '</ul>' . self::foldButton('Show ' . (count($items) - self::PREVIEW) . ' more', 'Show fewer', count($items) - self::PREVIEW);
+            $body .= '</ul>';
+            if ($assigned['total'] > count($items) || count($assigned['byApp']) > 1) {
+                $links = '';
+                foreach (array_slice($assigned['byApp'], 0, 4) as $app) {
+                    $links .= '<a href="' . Html::e($app['href']) . '">' . Html::e($app['name']) . '<span>' . $app['count'] . '</span></a>';
+                }
+                $rest = count($assigned['byApp']) - 4;
+                if ($rest > 0) {
+                    $links .= '<span>and ' . self::plural($rest, 'other application') . '</span>';
+                }
+                $body .= '<p class="panel__more"><span>All assigned to you</span>' . $links . '</p>';
+            }
         }
-        $count = $total > 0 ? '<span class="panel__count">' . $total . '</span>' : '';
+        $count = $assigned['total'] > 0 ? '<span class="panel__count">' . $assigned['total'] . '</span>' : '';
 
-        return '<section class="panel panel--assigned" data-fold aria-label="Assigned to you"><header class="panel__head"><h2>Assigned to you</h2>' . $count . '</header>' . $body . '</section>';
+        return self::panel('assigned', 'Assigned to you', $count, '<div class="panel__body">' . $body . '</div>', '');
     }
 
     /**
      * @param list<int> $typeIds
-     * @param array<int, int> $typeToApp
-     * @param list<array<string, mixed>> $apps
      */
-    private static function activityPanel(array $typeIds, array $typeToApp, array $apps): string
+    private static function activityPanel(array $typeIds): string
     {
         if ($typeIds === []) {
             return '';
         }
+
+        return self::panel(
+            'activity',
+            'Recent activity',
+            '',
+            '<div class="panel__body" data-lazy-body aria-live="polite"><p class="timeline__empty">Loading recent activity.</p>'
+            . '<noscript><p class="timeline__empty">Recent activity needs JavaScript.</p></noscript></div>',
+            '?controller=' . self::ACTIVITY
+        );
+    }
+
+    /**
+     * A panel that starts closed. The browser remembers whether the person opened it.
+     */
+    private static function panel(string $id, string $title, string $count, string $body, string $lazy): string
+    {
+        return '<details class="panel panel--' . $id . '" id="' . $id . '" data-remember="home.' . $id . '"'
+            . ($lazy !== '' ? ' data-lazy="' . Html::e($lazy) . '"' : '') . '>'
+            . '<summary class="panel__head"><h2>' . Html::e($title) . '</h2>' . $count . '<span class="panel__chev" aria-hidden="true"></span></summary>'
+            . $body . '</details>';
+    }
+
+    /**
+     * Log lines and new records for the applications, newest first.
+     *
+     * @param list<int> $typeIds
+     * @param array<int, int> $typeToApp
+     * @param list<array<string, mixed>> $apps
+     * @return list<array{text: string, when: int, who: string, href: string, icon: string, detail: string}>
+     */
+    private static function events(array $typeIds, array $typeToApp, array $apps, bool $mine): array
+    {
+        if ($typeIds === []) {
+            return [];
+        }
         $list = implode(',', array_map('intval', $typeIds));
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        $role = (int) ($_SESSION['access_role_id'] ?? 5);
         $visible = '';
         $visibleLog = '';
-        if ((int) ($_SESSION['access_role_id'] ?? 5) > 2) {
-            $ids = \Adlexone\Screen\WorkScreen::applicationAccessibleItemIds();
+        if ($role > 2) {
+            $ids = WorkScreen::applicationAccessibleItemIds();
             if ($ids === []) {
-                return '';
+                return [];
             }
             $visible = ' AND item_id IN (' . implode(',', array_map('intval', $ids)) . ')';
             $visibleLog = ' AND i.item_id IN (' . implode(',', array_map('intval', $ids)) . ')';
         }
+        $logParams = [$role];
+        $itemParams = [];
+        $ownLog = '';
+        $ownItem = '';
+        if ($mine) {
+            $ownLog = ' AND l.security_id = ?';
+            $ownItem = ' AND creator_security = ?';
+            $logParams[] = $userId;
+            $itemParams[] = $userId;
+        }
+
         $events = [];
         $lines = Database::rows(
             'SELECT l.item_id, l.log_text, CAST(l.create_date AS INTEGER) AS at, l.security_id, i.item_type_id FROM core_log l '
-            . 'JOIN items i ON i.item_id = l.item_id WHERE i.item_type_id IN (' . $list . ')' . $visibleLog . ' '
-            . 'ORDER BY CAST(l.create_date AS INTEGER) DESC LIMIT 12'
+            . 'JOIN items i ON i.item_id = l.item_id WHERE i.item_type_id IN (' . $list . ')' . $visibleLog . ' AND l.role_id >= ?' . $ownLog . ' '
+            . 'ORDER BY CAST(l.create_date AS INTEGER) DESC LIMIT 12',
+            $logParams
         );
         $names = RecordQuery::userNames(array_map(static fn (array $row): int => (int) ($row['security_id'] ?? 0), $lines));
         foreach ($lines as $line) {
@@ -330,7 +410,9 @@ final class HomeDashboard
             ];
         }
         $created = Database::rows(
-            'SELECT item_id, item_title, item_type_id, create_date, creator_security FROM items WHERE item_type_id IN (' . $list . ')' . $visible . ' ORDER BY create_date DESC LIMIT 8'
+            'SELECT item_id, item_title, item_type_id, create_date, creator_security FROM items WHERE item_type_id IN (' . $list . ')' . $visible . $ownItem
+            . ' ORDER BY create_date DESC LIMIT 8',
+            $itemParams
         );
         $creators = RecordQuery::userNames(array_map(static fn (array $row): int => (int) ($row['creator_security'] ?? 0), $created));
         foreach ($created as $row) {
@@ -350,32 +432,7 @@ final class HomeDashboard
         }
         usort($events, static fn (array $left, array $right): int => $right['when'] <=> $left['when']);
 
-        $shown = array_slice($events, 0, 7);
-        $more = max(0, count($shown) - self::PREVIEW);
-
-        return '<section class="panel panel--activity" data-fold aria-label="Recent activity"><header class="panel__head"><h2>Recent activity</h2></header>'
-            . Timeline::render($shown, 'No activity yet. Changes to records are listed here.', self::PREVIEW)
-            . ($more > 0 ? self::foldButton('Show ' . $more . ' more', 'Show fewer', $more) : '') . '</section>';
-    }
-
-    /**
-     * @param list<array{href: string, title: string, hint: string, icon: string}> $manage
-     */
-    private static function design(array $manage): string
-    {
-        if ($manage === []) {
-            return '';
-        }
-        $tiles = '';
-        foreach ($manage as $tile) {
-            $tiles .= '<a class="toolchip" href="' . Html::e($tile['href']) . '" title="' . Html::e($tile['hint']) . '">'
-                . '<span class="toolchip__icon">' . Charts::icon($tile['icon']) . '</span>'
-                . '<span class="toolchip__text"><strong>' . Html::e($tile['title']) . '</strong><small>' . Html::e($tile['hint']) . '</small></span></a>';
-        }
-
-        return '<section class="home__section home__section--design" data-fold aria-label="Design">'
-            . '<div class="home__heading"><h2>Design</h2>' . self::foldButton('Show', 'Hide', 1, 'foldbtn--inline') . '</div>'
-            . '<div class="toolgrid is-extra">' . $tiles . '</div></section>';
+        return array_slice($events, 0, 7);
     }
 
     /**
@@ -457,15 +514,39 @@ final class HomeDashboard
     /**
      * @param array<int, int> $typeToApp
      * @param list<array<string, mixed>> $apps
-     * @return array{total: int, items: list<array{item_id: int, title: string, app: string, accent: string, href: string, when: int}>}
+     * @return array{total: int, items: list<array{item_id: int, title: string, app: string, accent: string, href: string, when: int}>, byApp: list<array{name: string, href: string, count: int}>}
      */
     private static function assigned(int $userId, array $typeToApp, array $apps): array
     {
         if ($userId <= 0 || $typeToApp === []) {
-            return ['total' => 0, 'items' => []];
+            return ['total' => 0, 'items' => [], 'byApp' => []];
         }
         $list = implode(',', array_map('intval', array_keys($typeToApp)));
-        $total = (int) (Database::rows('SELECT COUNT(*) AS n FROM items WHERE user_security = ? AND item_type_id IN (' . $list . ')', [$userId])[0]['n'] ?? 0);
+        $total = 0;
+        $byApp = [];
+        $counts = Database::rows(
+            'SELECT item_type_id, COUNT(*) AS n FROM items WHERE user_security = ? AND item_type_id IN (' . $list . ') GROUP BY item_type_id',
+            [$userId]
+        );
+        foreach ($counts as $row) {
+            $app = $apps[$typeToApp[(int) $row['item_type_id']] ?? -1] ?? null;
+            if ($app === null) {
+                continue;
+            }
+            $n = (int) $row['n'];
+            $total += $n;
+            $href = (string) $app['href'];
+            $byApp[] = [
+                'name' => (string) $app['name'],
+                'href' => $href . (str_contains($href, '?') ? '&' : '?') . 'focus=mine',
+                'count' => $n,
+            ];
+        }
+        usort($byApp, static fn (array $left, array $right): int => $right['count'] <=> $left['count']);
+        if ($total === 0) {
+            return ['total' => 0, 'items' => [], 'byApp' => []];
+        }
+
         $rows = Database::rows(
             'SELECT item_id, item_title, item_type_id, create_date, core_log_updated FROM items WHERE user_security = ? AND item_type_id IN (' . $list . ') '
             . 'ORDER BY CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END DESC LIMIT 6',
@@ -489,34 +570,43 @@ final class HomeDashboard
             ];
         }
 
-        return ['total' => $total, 'items' => $items];
+        return ['total' => $total, 'items' => $items, 'byApp' => $byApp];
     }
 
     /**
      * A control that only shows on a phone. It opens the rows marked is-extra.
      */
-    private static function foldButton(string $more, string $less, int $hidden, string $class = ''): string
+    private static function foldButton(string $more, string $less, int $hidden): string
     {
         if ($hidden <= 0) {
             return '';
         }
 
-        return '<button type="button" class="foldbtn' . ($class !== '' ? ' ' . $class : '') . '" data-fold-toggle aria-expanded="false"'
+        return '<button type="button" class="foldbtn" data-fold-toggle aria-expanded="false"'
             . ' data-more="' . Html::e($more) . '" data-less="' . Html::e($less) . '">' . Html::e($more) . '</button>';
     }
 
-    private static function typeId(string $slug): int
+    /**
+     * @param list<string> $slugs
+     * @return array<string, int> application slug => default record type id
+     */
+    private static function typeIdsBySlug(array $slugs): array
     {
-        if ($slug === '' || !Database::tableExists('applications')) {
-            return 0;
+        $slugs = array_values(array_unique(array_filter($slugs, static fn (string $slug): bool => $slug !== '')));
+        if ($slugs === [] || !Database::tableExists('applications')) {
+            return [];
         }
-        $row = Database::first('applications', ['settings_json'], 'slug = ?', [$slug]);
-        if ($row === null) {
-            return 0;
+        $rows = Database::rows(
+            'SELECT slug, settings_json FROM applications WHERE slug IN (' . implode(',', array_fill(0, count($slugs), '?')) . ')',
+            $slugs
+        );
+        $out = [];
+        foreach ($rows as $row) {
+            $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
+            $out[(string) $row['slug']] = is_array($settings) ? (int) ($settings['default_item_type_id'] ?? 0) : 0;
         }
-        $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
 
-        return is_array($settings) ? (int) ($settings['default_item_type_id'] ?? 0) : 0;
+        return $out;
     }
 
     private static function plural(int $count, string $noun): string

@@ -49,31 +49,32 @@ final class TopNav
         ];
     }
 
-    /** @return list<array{label: string, href: string, icon: string, current: bool}> */
+    /** @return list<array{label: string, href: string, icon: string, current: bool, hint: string}> */
     public static function designItems(): array
     {
         $items = [];
-        $add = static function (string $label, string $href, string $icon, string $controller) use (&$items): void {
+        $add = static function (string $label, string $href, string $icon, string $controller, string $hint) use (&$items): void {
             $items[] = [
                 'label' => $label,
                 'href' => $href,
                 'icon' => $icon,
                 'current' => self::controllerMatches($controller),
+                'hint' => $hint,
             ];
         };
 
         if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-            $add('Create an application', '?manage=builder', 'ic-plus', 'manage_builder');
+            $add('Create an application', '?manage=builder', 'ic-plus', 'manage_builder', 'Add a record type, fields, and screens.');
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $add('Applications', '?manage=applications', 'ic-grid', 'manage_applications');
+            $add('Applications', '?manage=applications', 'ic-grid', 'manage_applications', 'Set the order of applications and their navigation.');
         }
         if (Access::can(Permission::ADMIN_ITEMS)) {
-            $add('Fields', '?manage=fields', 'ic-fields', 'manage_fields');
-            $add('Record types', '?manage=item-types', 'ic-layers', 'manage_item_types');
+            $add('Fields', '?manage=fields', 'ic-fields', 'manage_fields', 'Fields used across the applications.');
+            $add('Record types', '?manage=item-types', 'ic-layers', 'manage_item_types', 'The record type each application keeps.');
         }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
-            $add('Rules', '?manage=rules', 'ic-zap', 'manage_actions');
+            $add('Rules', '?manage=rules', 'ic-zap', 'manage_actions', 'What runs when a record is created or updated.');
         }
 
         return $items;

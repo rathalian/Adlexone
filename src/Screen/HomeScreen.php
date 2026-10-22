@@ -25,75 +25,6 @@ final class HomeScreen
 
         $menu = \Adlexone\Application\ApplicationStore::menuItems();
 
-        $manage = [];
-        if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-            $manage[] = self::tile(
-                '?manage=builder',
-                'Create an application',
-                'Create an application, including its record type, fields, and screens.',
-                'ic-plus'
-            );
-        }
-        if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $manage[] = self::tile(
-                '?manage=applications',
-                'Applications',
-                'Set the order of applications and their navigation.',
-                'ic-grid'
-            );
-        }
-        if (Access::can(Permission::ADMIN_ITEMS)) {
-            $manage[] = self::tile(
-                '?manage=fields',
-                'Fields',
-                'Fields used across the applications.',
-                'ic-fields'
-            );
-            $manage[] = self::tile(
-                '?manage=item-types',
-                'Record types',
-                'The record type each application keeps.',
-                'ic-layers'
-            );
-        }
-        if (Access::can(Permission::ADMIN_ACTIONS)) {
-            $manage[] = self::tile(
-                '?manage=rules',
-                'Rules',
-                'What runs when a record is created or updated.',
-                'ic-zap'
-            );
-        }
-        if (Access::can(Permission::ADMIN_SECURITY)) {
-            $manage[] = self::tile(
-                '?manage=security&option=manage_users',
-                'People',
-                'People who can sign in.',
-                'ic-users'
-            );
-            $manage[] = self::tile(
-                '?manage=security&option=manage_groups',
-                'Groups',
-                'A group is the people who can open an application.',
-                'ic-users-round'
-            );
-        }
-        if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $manage[] = self::tile(
-                '?manage=settings&option=adlexone_settings',
-                'Settings',
-                'Site name, theme, and related settings.',
-                'ic-sliders'
-            );
-        } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
-            $manage[] = self::tile(
-                '?manage=settings&option=sign_in_settings',
-                'Settings',
-                'Sign-in and system settings.',
-                'ic-sliders'
-            );
-        }
-
         $intro = '';
         if ($menu === [] && Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
             $intro = View::partialToString('launchpad_intro', [
@@ -104,9 +35,9 @@ final class HomeScreen
             ]);
         }
 
-        $html = HomeDashboard::render($menu, $manage, $intro);
+        $html = HomeDashboard::render($menu, $intro);
 
-        if ($menu === [] && $manage === [] && $intro === '') {
+        if ($menu === [] && $intro === '') {
             $html = Blocks::emptyState([
                 'illustration' => 'empty-apps',
                 'title' => 'Nothing is available for this account',
@@ -115,6 +46,18 @@ final class HomeScreen
         }
 
         Page::current()->setBody($html);
+    }
+
+    /**
+     * The recent activity list for the home page, as JSON. The page asks for it when
+     * the person first opens that panel.
+     */
+    public static function activity(): void
+    {
+        $menu = \Adlexone\Application\ApplicationStore::menuItems();
+        $scope = (string) ($_GET['scope'] ?? '');
+
+        WorkScreen::workJson(['html' => HomeDashboard::activityHtml($menu, $scope)]);
     }
     /**
      * One application opens straight into it. Several applications stay on
@@ -152,22 +95,5 @@ final class HomeScreen
         }
 
         return '';
-    }
-
-    /**
-     * Homepage. One tile per destination. Section menus stay inside each app.
-     *
-     * @return array{href: string, title: string, hint: string, icon: string, stat: string, when: string}
-     */
-    private static function tile(string $href, string $title, string $hint, string $icon, string $stat = '', string $when = ''): array
-    {
-        return [
-            'href' => $href,
-            'title' => $title,
-            'hint' => $hint,
-            'icon' => $icon,
-            'stat' => $stat,
-            'when' => $when,
-        ];
     }
 }

@@ -56,6 +56,68 @@
         button.textContent = open ? button.getAttribute('data-less') : button.getAttribute('data-more');
     });
 
+    /* Collapsible panels start closed. The browser remembers a panel the person opened. */
+    const panels = Array.from(document.querySelectorAll('details[data-remember]'));
+    const stored = (panel) => 'inlay.open.' + panel.getAttribute('data-remember');
+    const load = (panel, url) => {
+        const body = panel.querySelector('[data-lazy-body]');
+        if (!body) return;
+        const mine = String(Date.now());
+        body.setAttribute('data-serial', mine);
+        body.setAttribute('aria-busy', 'true');
+        fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then((response) => { if (!response.ok) throw new Error('failed'); return response.json(); })
+            .then((data) => {
+                if (body.getAttribute('data-serial') !== mine) return;
+                body.innerHTML = data.html || '';
+                panel.setAttribute('data-loaded', '1');
+            })
+            .catch(() => {
+                if (body.getAttribute('data-serial') !== mine) return;
+                body.innerHTML = '<p class="timeline__empty">Recent activity could not be loaded. Close this panel and open it again to retry.</p>';
+                panel.removeAttribute('data-loaded');
+            })
+            .finally(() => body.removeAttribute('aria-busy'));
+    };
+    const ensureLoaded = (panel) => {
+        const url = panel.getAttribute('data-lazy');
+        if (url && panel.open && !panel.hasAttribute('data-loaded')) {
+            panel.setAttribute('data-loaded', 'loading');
+            load(panel, url);
+        }
+    };
+    panels.forEach((panel) => {
+        try { if (localStorage.getItem(stored(panel)) === '1') panel.open = true; } catch (e) { /* storage is off */ }
+        panel.addEventListener('toggle', () => {
+            try { localStorage.setItem(stored(panel), panel.open ? '1' : '0'); } catch (e) { /* storage is off */ }
+            if (panel.open) {
+                if (panel.getAttribute('data-loaded') === null) ensureLoaded(panel);
+            } else if (panel.getAttribute('data-loaded') === 'loading') {
+                panel.removeAttribute('data-loaded');
+            }
+        });
+    });
+    const reveal = (id) => {
+        const panel = document.getElementById(id);
+        if (!panel || panel.tagName !== 'DETAILS') return false;
+        panel.open = true;
+        ensureLoaded(panel);
+        panel.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
+        return true;
+    };
+    document.addEventListener('click', (event) => {
+        const opener = event.target.closest('[data-open-panel]');
+        if (opener && reveal(opener.getAttribute('data-open-panel'))) event.preventDefault();
+        const link = event.target.closest('a[data-lazy-link]');
+        const holder = link && link.closest('details[data-lazy]');
+        if (holder && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+            event.preventDefault();
+            load(holder, link.getAttribute('href'));
+        }
+    });
+    if (window.location.hash.length > 1) reveal(window.location.hash.slice(1));
+    panels.forEach(ensureLoaded);
+
     /* Thin bar across the top while the next page loads */
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a[href]');
