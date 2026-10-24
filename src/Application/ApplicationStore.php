@@ -28,6 +28,7 @@ final class ApplicationStore
         self::retireServiceCentreLegacy();
         self::renameServiceCentreWork();
         self::renameBusinessNav();
+        self::addSearchTab();
         self::renameServiceCentreAnnouncements();
         self::renameContactCentreCapabilities();
         self::migrateBuiltInScreenIds();
@@ -469,6 +470,49 @@ final class ApplicationStore
             'slug = ? AND hint = ?',
             [self::SERVICE_CENTRE_SLUG, 'Tickets and announcements']
         );
+    }
+
+    /**
+     * Every application that lets people create records also gets a Search tab, once,
+     * placed after New. The marker keeps a removed tab from coming back.
+     */
+    private static function addSearchTab(): void
+    {
+        if (!self::tableExists('application_nav') || !Database::columnExists('applications', 'settings_json')) {
+            return;
+        }
+        foreach (Database::select('applications', '*') as $row) {
+            $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
+            $settings = is_array($settings) ? $settings : [];
+            if (($settings['search_tab_added'] ?? '') === '1') {
+                continue;
+            }
+            $applicationId = (int) $row['application_id'];
+            $links = Database::select('application_nav', '*', 'application_id = ?', [$applicationId], 'sort_order ASC, nav_id ASC');
+            $create = null;
+            $has = false;
+            foreach ($links as $link) {
+                $capability = ScreenCatalog::resolve((string) $link['capability']);
+                $has = $has || $capability === ScreenCatalog::SEARCH_ADVANCED;
+                if ($capability === ScreenCatalog::CREATE && $create === null) {
+                    $create = $link;
+                }
+            }
+            if (!$has && $create !== null) {
+                $config = json_decode((string) ($create['config_json'] ?? '{}'), true);
+                self::insertNav(
+                    $applicationId,
+                    'Search',
+                    ScreenCatalog::SEARCH_ADVANCED,
+                    (string) ($create['permission'] ?? ''),
+                    'ic-search',
+                    is_array($config) ? $config : [],
+                    (int) $create['sort_order'] + 5
+                );
+            }
+            $settings['search_tab_added'] = '1';
+            Database::update('applications', ['settings_json' => json_encode($settings, JSON_UNESCAPED_SLASHES)], 'application_id = ?', [$applicationId]);
+        }
     }
 
     /**

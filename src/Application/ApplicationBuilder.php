@@ -33,7 +33,7 @@ final class ApplicationBuilder
      */
     public static function blueprints(): array
     {
-        $plain = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
+        $plain = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::SEARCH_LIST];
         $extra = [
             ScreenCatalog::COUNTS,
             ScreenCatalog::OWNERS,
@@ -45,7 +45,7 @@ final class ApplicationBuilder
             ScreenCatalog::REGISTER,
         ];
         $work = array_merge($plain, $extra);
-        $wall = array_merge([ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::ANNOUNCEMENTS, ScreenCatalog::SEARCH_LIST], $extra);
+        $wall = array_merge([ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::ANNOUNCEMENTS, ScreenCatalog::SEARCH_LIST], $extra);
         $diary = [ScreenCatalog::DIARY];
         $intake = [ScreenCatalog::INTAKE];
         $status = static fn (array $values): array => self::menu('Status', $values);
@@ -309,7 +309,7 @@ final class ApplicationBuilder
             static fn (string $id): bool => in_array($id, $allowedScreens, true)
         ));
         if ($chosen === []) {
-            $chosen = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_LIST];
+            $chosen = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::SEARCH_LIST];
         }
 
         $itemTypeId = self::createItemType($recordTypeName);
@@ -349,6 +349,7 @@ final class ApplicationBuilder
             'legacy_key' => '',
             'settings_json' => json_encode([
                 'default_item_type_id' => (string) $itemTypeId,
+                'search_tab_added' => '1',
             ], JSON_UNESCAPED_SLASHES),
         ]);
         $grantedGroups = Permission::grantAppToGroups($slug, $groupIds, $permLevels);
@@ -363,6 +364,7 @@ final class ApplicationBuilder
         $icons = [
             ScreenCatalog::WORK => 'ic-work',
             ScreenCatalog::CREATE => 'ic-plus',
+            ScreenCatalog::SEARCH_ADVANCED => 'ic-search',
             ScreenCatalog::SEARCH_LIST => 'ic-saved',
             ScreenCatalog::ANNOUNCEMENTS => 'ic-announce',
             ScreenCatalog::SETTINGS => 'ic-sliders',

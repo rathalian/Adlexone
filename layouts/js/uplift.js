@@ -337,7 +337,7 @@
         const pool = [homeCommand].concat(modeCommands(), commands || []);
         let matches;
         if (terms.length === 0) {
-            matches = pool.filter((item) => item.kind !== 'Screens' && item.group !== 'Create' && item.group !== 'Appearance').slice(0, 14);
+            matches = pool.filter((item) => item.kind !== 'Screens' && item.group !== 'Create' && item.group !== 'Search' && item.group !== 'Appearance').slice(0, 14);
         } else {
             matches = pool
                 .map((item) => ({ item, s: score(item, terms) }))

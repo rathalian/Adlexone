@@ -65,6 +65,7 @@ final class ScreenCatalog
         return [
             self::WORK => 'Work',
             self::CREATE => 'New',
+            self::SEARCH_ADVANCED => 'Search',
             self::COUNTS => 'Counts',
             self::OWNERS => 'Owners',
             self::STEPS => 'Next steps',

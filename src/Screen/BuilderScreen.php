@@ -88,7 +88,8 @@ final class BuilderScreen
             ScreenCatalog::AGE => ['hint' => 'How long they have been open', 'icon' => 'ic-ageing'],
             ScreenCatalog::REGISTER => ['hint' => 'The records in columns', 'icon' => 'ic-register'],
             ScreenCatalog::INTAKE => ['hint' => 'A short report form', 'icon' => 'ic-intake'],
-            ScreenCatalog::SEARCH_LIST => ['hint' => 'Find them', 'icon' => 'ic-saved'],
+            ScreenCatalog::SEARCH_ADVANCED => ['hint' => 'Search every field', 'icon' => 'ic-search'],
+            ScreenCatalog::SEARCH_LIST => ['hint' => 'Saved searches', 'icon' => 'ic-saved'],
             ScreenCatalog::ANNOUNCEMENTS => ['hint' => 'The notice on the wall', 'icon' => 'ic-announce'],
             ScreenCatalog::SETTINGS => ['hint' => 'How this application is set up', 'icon' => 'ic-sliders'],
         ];

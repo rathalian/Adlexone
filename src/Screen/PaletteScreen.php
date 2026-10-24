@@ -61,6 +61,15 @@ final class PaletteScreen
                         'icon' => 'ic-plus',
                     ];
                 }
+                if (ScreenCatalog::resolve((string) $link['capability']) === ScreenCatalog::SEARCH_ADVANCED) {
+                    $commands[] = [
+                        'kind' => 'Actions',
+                        'label' => 'Search all fields in ' . strtolower((string) $item['label']),
+                        'group' => 'Search',
+                        'href' => Router::applicationUrl($slug, (int) $link['nav_id']),
+                        'icon' => 'ic-search',
+                    ];
+                }
                 $commands[] = [
                     'kind' => 'Screens',
                     'label' => (string) $link['label'],
