@@ -480,6 +480,7 @@ final class Blocks
     {
         $name = (string) ($row['name'] ?? '');
         $meta = (string) ($row['meta'] ?? '');
+        $metaHtml = (string) ($row['metaHtml'] ?? '');
         $mark = trim((string) ($row['mark'] ?? ''));
         $search = strtolower($name . ' ' . $groupLabel . ' ' . $meta . ' ' . $mark . ' ' . (string) ($row['search'] ?? ''));
         $nameHtml = '<span class="record-list__name">'
@@ -488,7 +489,7 @@ final class Blocks
         if ($meta !== '') {
             $title = (string) ($row['metaTitle'] ?? '');
             $titleAttr = $title !== '' ? ' title="' . Html::e($title) . '"' : '';
-            $nameHtml .= '<div class="record-list__meta"' . $titleAttr . '>' . Html::e($meta) . '</div>';
+            $nameHtml .= '<div class="record-list__meta"' . $titleAttr . '>' . ($metaHtml !== '' ? $metaHtml : Html::e($meta)) . '</div>';
             $search .= ' ' . strtolower($title);
         }
         $nameHtml .= '</span></span>';

@@ -80,6 +80,17 @@ final class SearchScreen
          */
         switch (@$_GET['option']) {
             case 'show_item_search' :
+            case 'show_search_results' :
+                if (Page::current()->inApplication()) {
+                    Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                    ApplicationSearch::open();
+                    break;
+                }
+                if (@$_GET['option'] === 'show_search_results') {
+                    Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                    self::searchResults();
+                    break;
+                }
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 $itemTypes = $_GET['item_types'] ?? '';
                 if ($itemTypes === '' && Page::current()->inApplication()) {
@@ -89,10 +100,6 @@ final class SearchScreen
                 $itemTypes = preg_replace('/[^0-9,]/', '', (string) $itemTypes) ?? '';
                 $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
                 self::showAdvancedItemSearch($filter);
-                break;
-            case 'show_search_results' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::searchResults();
                 break;
             case 'show_saved_searches' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
@@ -301,7 +308,9 @@ final class SearchScreen
             : (string)Wording::application('TXT_1', (string)Wording::get('LA_44', 'TXT_44'));
 
         if (empty($ids)) {
-            $again = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL . '&option=show_quick_search' : '';
+            $again = defined('MAN_BASE_URL')
+                ? (string) MAN_BASE_URL . (Page::current()->inApplication() ? '&option=show_item_search' : '&option=show_quick_search')
+                : '';
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => $heading,
@@ -1166,12 +1175,12 @@ final class SearchScreen
         $toolbar = '';
         $emptyAction = '';
         if (Page::current()->inApplication()) {
-            $searchButton = Blocks::link($base . '&option=show_quick_search', 'Search', '', 'btn btn--primary');
+            $searchButton = Blocks::link($base . '&option=show_item_search', 'Search', '', 'btn btn--primary');
             if ($rows === []) {
                 $emptyAction = $searchButton;
             } else {
                 $toolbar = '<div class="record-list__tools">'
-                    . Blocks::link($base . '&option=show_quick_search', 'Search', '', 'btn btn--primary btn--sm')
+                    . Blocks::link($base . '&option=show_item_search', 'Search', '', 'btn btn--primary btn--sm')
                     . '</div>';
             }
         }
@@ -1252,6 +1261,15 @@ final class SearchScreen
         if ($rss == false) {
             // Set title constant for language alias in showitems function
             define('SEARCH_NAME', $row['search_name']);
+
+            $finder = json_decode((string) ($row['criteria_json'] ?? ''), true);
+            if (is_array($finder) && Page::current()->inApplication()) {
+                $target = ApplicationSearch::savedHref($finder);
+                if ($target !== '') {
+                    header('Location: ' . \Adlexone\Http\Router::absolute($target));
+                    exit;
+                }
+            }
 
             $savedSql = \Adlexone\Data\SavedSearch::resolveSql($row);
             $built = Database::rows($savedSql);
