@@ -228,6 +228,11 @@
         panel.style.top = top + 'px';
         panel.style.left = left + 'px';
         panel.style.right = 'auto';
+        const placed = panel.getBoundingClientRect();
+        if (Math.abs(placed.left - left) > 1 || Math.abs(placed.top - top) > 1) {
+            panel.style.left = (left - (placed.left - left)) + 'px';
+            panel.style.top = (top - (placed.top - top)) + 'px';
+        }
     };
 
     lists.forEach((root) => {

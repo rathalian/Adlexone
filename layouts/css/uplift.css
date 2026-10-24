@@ -255,7 +255,7 @@ html[data-mode="dark"] .sectionnav__link[aria-current="page"]{ color:color-mix(i
 
 /* ---------- Page rhythm ---------- */
 .wrap{ max-width:var(--page-max); margin-left:auto; margin-right:auto; }
-.main > *{ animation:rise .4s var(--ease) both; }
+.main > *{ animation:rise .4s var(--ease) backwards; }
 @keyframes rise{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
 
 /* ---------- Home ---------- */
