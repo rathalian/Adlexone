@@ -707,10 +707,68 @@ final class ItemScreen
         }
 
         return '<aside class="workspace__side" aria-label="About this record">'
-            . '<section class="sidecard"><h2 class="sidecard__title">About this record</h2>' . $facts . '</section>'
+            . self::nextStepCard($item)
+            . '<section class="sidecard"><h2 class="sidecard__title">About this record</h2>'
+            . self::stageStrip($status['values'] ?? [], $stand) . $facts . '</section>'
             . '<section class="sidecard"><h2 class="sidecard__title">Timeline</h2>'
             . \Adlexone\Html\Timeline::render($events, 'Nothing has been written on this record.') . '</section>'
             . '</aside>';
+    }
+
+    /**
+     * The status values in order, with the record's own marked.
+     *
+     * @param list<string> $values
+     */
+    private static function stageStrip(array $values, string $current): string
+    {
+        $values = array_values(array_filter(array_map('trim', $values), static fn (string $value): bool => $value !== ''));
+        $at = array_search($current, $values, true);
+        if ($at === false || count($values) < 2 || count($values) > 8) {
+            return '';
+        }
+        $html = '<ol class="stages" aria-label="Stage">';
+        foreach ($values as $index => $value) {
+            $state = $index < $at ? ' is-done' : ($index === $at ? ' is-current' : '');
+            $html .= '<li class="stages__step' . $state . '"' . ($index === $at ? ' aria-current="step"' : '') . '>'
+                . '<span class="stages__label">' . Html::e($value) . '</span></li>';
+        }
+
+        return $html . '</ol>';
+    }
+
+    /**
+     * What happens next on the record, taken from its Next step field.
+     *
+     * @param array<string, mixed> $item
+     */
+    private static function nextStepCard(array $item): string
+    {
+        $typeId = (int) ($item['item_type_id'] ?? 0);
+        if ($typeId <= 0) {
+            return '';
+        }
+        $row = null;
+        foreach (Database::rows(
+            'SELECT cf.custom_field_id, cf.custom_field_name FROM item_type_custom_fields l JOIN custom_fields cf ON cf.custom_field_id = l.custom_field_id'
+            . ' WHERE l.item_type_id = ? ORDER BY l.custom_field_order ASC',
+            [$typeId]
+        ) as $candidate) {
+            if (WorkScreen::plainFieldName((string) $candidate['custom_field_name']) === 'next step') {
+                $row = $candidate;
+                break;
+            }
+        }
+        if ($row === null) {
+            return '';
+        }
+        $text = trim((string) ($item['custom_field_' . (int) $row['custom_field_id']] ?? ''));
+
+        return '<section class="sidecard sidecard--next"><h2 class="sidecard__title">Next step</h2>'
+            . ($text !== ''
+                ? '<p class="nextstep">' . Html::e($text) . '</p>'
+                : '<p class="nextstep nextstep--none">No next step. Enter one in the form.</p>')
+            . '</section>';
     }
 
     private static function countLabel(int $count, string $noun, string $none): string

@@ -211,7 +211,7 @@ html[data-mode="dark"] .topnav .menu__panel{ box-shadow:var(--shadow-3); }
 .crumbs a:hover{ opacity:1; text-decoration:underline; }
 .crumbs__sep{ display:inline-grid; opacity:.6; }
 .crumbs__sep .icon{ width:12px; height:12px; }
-.crumbs [aria-current="page"]{ font-weight:600; max-width:22rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.crumbs [aria-current="page"]{ font-weight:600; max-width:22rem; overflow-wrap:anywhere; }
 @media (max-width:900px){
     .apphero__inner{ padding:14px 16px; }
     .apphero__facts{ display:none; }
@@ -784,7 +784,7 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
     .panel__head{ min-height:48px; }
     .rows__link{ min-height:48px; }
     .banner{ padding:10px 12px; }
-    .banner__text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .banner__text{ overflow-wrap:anywhere; }
 
     .appgrid{ grid-template-columns:1fr; gap:8px; }
     .appcard{
@@ -824,3 +824,14 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
 .menu__filter-input:focus{ outline:2px solid var(--ring); outline-offset:1px; }
 .menu__heading{ padding:8px 12px 2px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--placeholder); }
 .menu__item[hidden]{ display:none; }
+
+.sidecard--next{ border-left:4px solid var(--accent, var(--brand)); }
+.nextstep{ margin:0; font-size:15px; font-weight:600; line-height:1.4; color:var(--ink); }
+.nextstep--none{ font-weight:400; color:var(--placeholder); }
+.stages{ display:flex; gap:3px; margin:0 0 12px; padding:0; list-style:none; }
+.stages__step{ flex:1 1 0; min-width:0; }
+.stages__step::before{ content:""; display:block; height:5px; border-radius:3px; background:var(--border); margin-bottom:5px; }
+.stages__step.is-done::before{ background:color-mix(in srgb, var(--accent, var(--brand)) 45%, var(--border)); }
+.stages__step.is-current::before{ background:var(--accent, var(--brand)); }
+.stages__label{ display:block; font-size:10.5px; line-height:1.2; color:var(--placeholder); overflow-wrap:anywhere; }
+.stages__step.is-current .stages__label{ color:var(--ink); font-weight:700; }
