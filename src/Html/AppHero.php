@@ -74,7 +74,7 @@ final class AppHero
             . '<p class="apphero__name">' . Html::e((string) $app['name']) . '</p>'
             . ($hint !== '' ? '<p class="apphero__hint">' . Html::e($hint) . '</p>' : '') . '</div>'
             . ($facts !== '' ? '<ul class="apphero__facts">' . $facts . '</ul>' : '')
-            . ($createHref !== '' ? '<a class="btn btn--glass apphero__action" href="' . Html::e($createHref) . '">' . Charts::icon('ic-plus') . 'New record</a>' : '')
+            . ($createHref !== '' ? '<a class="btn btn--glass apphero__action' . ($itemId === 0 && $section !== 'New' ? ' apphero__action--fab' : '') . '" href="' . Html::e($createHref) . '">' . Charts::icon('ic-plus') . 'New record</a>' : '')
             . '</div></header>';
     }
 }

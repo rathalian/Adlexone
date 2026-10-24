@@ -835,3 +835,22 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
 .stages__step.is-current::before{ background:var(--accent, var(--brand)); }
 .stages__label{ display:block; font-size:10.5px; line-height:1.2; color:var(--placeholder); overflow-wrap:anywhere; }
 .stages__step.is-current .stages__label{ color:var(--ink); font-weight:700; }
+
+@media (max-width:640px){
+    .apphero{ isolation:auto; }
+    .apphero::before{ display:none; }
+    .apphero__inner{ padding:10px 14px; gap:12px; align-items:center; flex-wrap:nowrap; }
+    .apphero__icon{ width:40px; height:40px; flex:none; }
+    .apphero__icon .icon{ width:20px; height:20px; }
+    .apphero__copy .crumbs, .apphero__hint{ display:none; }
+    .apphero__name{ font-size:20px; }
+    .apphero__action:not(.apphero__action--fab){ display:none; }
+    .apphero__action{
+        position:fixed; right:16px; bottom:18px; z-index:700; width:56px; height:56px; min-height:56px; padding:0;
+        border-radius:50%; justify-content:center; font-size:0; gap:0;
+        background:var(--accent, var(--brand)); color:#fff; border:2px solid rgba(255,255,255,.85); box-shadow:var(--shadow-3);
+        -webkit-backdrop-filter:none; backdrop-filter:none;
+    }
+    .apphero__action .icon{ width:24px; height:24px; margin:0; opacity:1; }
+    .toast{ bottom:84px; }
+}
