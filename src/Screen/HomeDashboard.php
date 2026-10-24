@@ -387,7 +387,7 @@ final class HomeDashboard
             return '';
         }
         $app = (string) ($rows[0]['application'] ?? '');
-        $href = $app !== '' ? '?application=' . rawurlencode($app) : './';
+        $href = self::announcementsHref($app, $slugs);
         $key = 'announcement-' . (int) ($rows[0]['time'] ?? 0) . '-' . substr(md5($subject), 0, 8);
 
         return '<aside class="banner" data-dismissible="' . Html::e($key) . '" aria-label="Announcement">'
@@ -395,6 +395,32 @@ final class HomeDashboard
             . '<p class="banner__text"><strong>Announcement</strong> <a href="' . Html::e($href) . '">' . Html::e($subject) . '</a></p>'
             . '<button type="button" class="iconbtn" data-dismiss aria-label="Hide this announcement">' . Charts::icon('ic-x') . '</button>'
             . '</aside>';
+    }
+
+    /**
+     * Address of the announcements screen for the application that posted the
+     * notice. A notice for the whole site opens the first listed application
+     * that keeps an announcements screen. An application without one opens at
+     * its start screen.
+     *
+     * @param list<string> $slugs
+     */
+    private static function announcementsHref(string $app, array $slugs): string
+    {
+        $candidates = $app !== '' ? [$app] : $slugs;
+        foreach ($candidates as $slug) {
+            $application = \Adlexone\Application\ApplicationStore::findBySlug($slug);
+            if ($application === null) {
+                continue;
+            }
+            foreach (\Adlexone\Application\ApplicationStore::navigation((int) $application['application_id']) as $nav) {
+                if (\Adlexone\Application\ScreenCatalog::resolve($nav['capability']) === \Adlexone\Application\ScreenCatalog::ANNOUNCEMENTS) {
+                    return \Adlexone\Http\Router::applicationUrl($slug, (int) $nav['nav_id']);
+                }
+            }
+        }
+
+        return $app !== '' ? \Adlexone\Http\Router::applicationUrl($app) : './';
     }
 
     private static function checklist(): string

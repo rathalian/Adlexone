@@ -72,7 +72,7 @@ final class AnnouncementsScreen
     public static function find(int $id, string $slug): ?array
     {
         if ($slug !== '' && Database::columnExists('announcements', 'application')) {
-            return Database::first('announcements', '*', 'id = ? AND application = ?', [$id, $slug]);
+            return Database::first('announcements', '*', "id = ? AND (application = ? OR application = '')", [$id, $slug]);
         }
         return Database::first('announcements', '*', 'id = ?', [$id]);
     }
@@ -130,7 +130,7 @@ final class AnnouncementsScreen
     public static function showList(string $slug): void
     {
         if ($slug !== '' && Database::columnExists('announcements', 'application')) {
-            $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], 'application = ?', [$slug], 'time DESC');
+            $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], "application = ? OR application = ''", [$slug], 'time DESC');
         } else {
             $result = Database::select('announcements', ['id', 'subject', 'message', 'time'], '', [], 'time DESC');
         }
