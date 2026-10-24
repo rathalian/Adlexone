@@ -111,7 +111,7 @@ final class ApplicationsScreen
                 'name' => (string) $app['name'],
                 'href' => APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id,
                 'cells' => [
-                    'menu' => $app['enabled'] ? 'Shown' : 'Hidden',
+                    'menu' => $app['enabled'] ? 'In the menu' : 'Not in the menu',
                 ],
                 'search' => (string) $app['slug'],
                 'actions' => [

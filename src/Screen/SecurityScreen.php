@@ -262,9 +262,6 @@ final class SecurityScreen
         ApplicationStore::mergeHomeChoices($baseURLArray, $nameArray);
         $application = empty($fieldValues['home_controller']) ? SET_DEFAULT_APPLICATION : $fieldValues['home_controller'] . '}-{' . @$fieldValues['home_controller_name'];
         $userPreferences[TXT_297] = Form::select('home_controller', $baseURLArray, $nameArray, $application);
-        $userPreferences[TXT_63] = Form::select('show_header', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_header']);
-        $userPreferences[TXT_64] = Form::select('show_graphics', ['Yes', 'No'], [TXT_93, TXT_94], @$fieldValues['show_graphics']);
-        $userPreferences[TXT_546] = Form::select('show_hide', ['Yes', 'No'], [TXT_563, TXT_564], @$fieldValues['show_hide']);
 
         foreach ($userPreferences as $label => $element) {
             $fields[$label] = $element;
