@@ -74,6 +74,11 @@ check(is_string($numberMarkup) && str_contains($numberMarkup, 'type="number"'), 
 $textDateMarkup = FieldControl::render(FieldTypes::TEXT_BOX, 'custom_field_12', '2026-10-20', $textDate);
 check(is_string($textDateMarkup) && str_contains($textDateMarkup, 'type="date"'), 'text plus date validation still opens a date picker');
 
+$onclick = (new \Adlexone\support\FieldCheck())->withTitle()->onclick();
+$attribute = preg_match('/^onclick="([^"]*)"$/', $onclick, $match) === 1 ? html_entity_decode($match[1], ENT_QUOTES) : '';
+check($attribute !== '' && str_starts_with($attribute, 'return fieldCheck("'), 'fieldCheck onclick stays inside one attribute');
+check(str_contains($attribute, '["item_title"]'), 'fieldCheck onclick names the title field');
+
 if ($failed > 0) {
     fwrite(STDERR, $failed . " checks failed\n");
     exit(1);

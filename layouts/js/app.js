@@ -506,6 +506,29 @@
         return false;
     };
 
+    const markServerErrors = () => {
+        const links = document.querySelectorAll('.form-errors a[data-field]');
+        let first = null;
+        links.forEach((link) => {
+            const control = controlOf(link.dataset.field);
+            if (!control) return;
+            if (!control.id) control.id = `field-${link.dataset.field}`;
+            link.setAttribute('href', `#${control.id}`);
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                control.focus();
+            });
+            link.closest('li').dataset.for = control.id;
+            showError(control, link.textContent || '');
+            first = first || control;
+        });
+        if (first) {
+            first.focus({ preventScroll: true });
+            first.scrollIntoView({ block: 'center' });
+        }
+    };
+    markServerErrors();
+
     document.addEventListener('input', (event) => {
         const control = event.target;
         if (control instanceof HTMLElement && control.getAttribute('aria-invalid') === 'true') clearError(control);

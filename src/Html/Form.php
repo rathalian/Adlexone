@@ -198,17 +198,19 @@ final class Form
     }
 
     /**
-     * @param list<string> $messages
+     * @param array<int|string, string> $messages message, keyed by the field name when the message belongs to one field
      */
     public static function errorSummary(string $title, array $messages): string
     {
         $items = '';
-        foreach ($messages as $message) {
+        foreach ($messages as $field => $message) {
             $message = trim((string) $message);
             if ($message === '') {
                 continue;
             }
-            $items .= Html::tag('li', [], Html::e($message));
+            $items .= is_string($field) && $field !== ''
+                ? Html::tag('li', [], Html::tag('a', ['href' => '#' . $field, 'data-field' => $field], Html::e($message)))
+                : Html::tag('li', [], Html::e($message));
         }
         if ($items === '') {
             return '';

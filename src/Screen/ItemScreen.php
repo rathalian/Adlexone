@@ -62,7 +62,7 @@ final class ItemScreen
         if (self::$formErrors === []) {
             return $formOptions;
         }
-        $formOptions['errors'] = array_values(self::$formErrors);
+        $formOptions['errors'] = self::$formErrors;
         $formOptions['error_title'] = defined('TXT_468') ? (string) TXT_468 : 'Check the form';
         return $formOptions;
     }
@@ -1808,6 +1808,10 @@ final class ItemScreen
                 self::addLogEntry($itemId, false, false);
             }
             Actions::executeAction($itemId, 'create_item', false);
+            $createdTitle = trim((string) ($_POST['item_title'] ?? ''));
+            if (self::returnToItem($itemId, ($createdTitle !== '' ? $createdTitle : 'The record') . ' created.')) {
+                return;
+            }
             header('Location: ' . MAN_BASE_URL . '&option=show_item&item_id=' . rawurlencode((string) $itemId));
             exit;
         }
@@ -1961,7 +1965,8 @@ final class ItemScreen
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') !== '') {
                 self::addAttachment($itemID, false, true);
             }
-            $message = (trim((string) ($_POST['item_title'] ?? '')) !== '') ? TXT_263 : TXT_272;
+            $savedTitle = trim((string) ($_POST['item_title'] ?? ''));
+            $message = ($savedTitle !== '') ? $savedTitle . ' updated.' : TXT_272;
             if (self::returnToItem($itemID, (string) $message)) {
                 return;
             }

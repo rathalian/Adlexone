@@ -50,13 +50,15 @@ final class FieldCheck
     public function onclick(): string
     {
         $header = defined('TXT_468') ? (string) TXT_468 : 'Check the form';
-        return 'onclick="javascript:return fieldCheck('
-            . json_encode($header, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ','
-            . json_encode($this->types, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ','
-            . json_encode($this->names, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ','
-            . json_encode($this->errors, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ','
-            . json_encode($this->requiredMessages, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ','
-            . json_encode($this->required, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)
-            . ')"';
+        $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        $call = 'return fieldCheck('
+            . json_encode($header, $flags) . ','
+            . json_encode($this->types, $flags) . ','
+            . json_encode($this->names, $flags) . ','
+            . json_encode($this->errors, $flags) . ','
+            . json_encode($this->requiredMessages, $flags) . ','
+            . json_encode($this->required, $flags)
+            . ')';
+        return 'onclick="' . htmlspecialchars($call, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"';
     }
 }

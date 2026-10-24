@@ -934,7 +934,7 @@ final class RecordScreens
             $options['badge'] = $opening;
         }
         if ($errors !== []) {
-            $options['errors'] = array_values($errors);
+            $options['errors'] = $errors;
             $options['error_title'] = 'Check the form';
         }
         $help = $opening !== ''
@@ -991,6 +991,8 @@ final class RecordScreens
         GroupMembership::setItemGroups($itemId, GroupMembership::idsFromPost($_POST));
         $_POST = array_merge($_POST, $payload);
         Actions::executeAction($itemId, 'create_item', false);
+        $createdTitle = trim((string) ($_POST['item_title'] ?? ''));
+        View::flash(($createdTitle !== '' ? $createdTitle : 'The record') . ' created.');
         header('Location: ' . self::base() . '&item=' . $itemId);
         exit;
     }

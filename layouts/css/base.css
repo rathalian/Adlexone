@@ -126,6 +126,10 @@ body{
     max-width:min(92vw,380px); overflow-wrap:anywhere;
     animation:menu-in .16s ease;
 }
+@keyframes toast-in{
+    from{ opacity:0; margin-bottom:-8px; }
+    to{ opacity:1; margin-bottom:0; }
+}
 @keyframes menu-in{
     from{ opacity:0; transform:translateY(-4px); }
     to{ opacity:1; transform:none; }
@@ -604,7 +608,7 @@ input[type="datetime-local"].input{
 @media (max-width: 640px) {
     .launchpad-grid { row-gap: 16px; }
     .desk{ grid-template-columns:1fr; }
-    .toast{ left:12px; right:12px; max-width:none; }
+    .toast{ left:12px; right:12px; bottom:12px; transform:none; max-width:none; }
 }
 
 /* Homepage: one tile per destination */
@@ -1523,14 +1527,14 @@ body:has(.sectionbar) .main > .grid > details.card.card--sheet.card--disclosure 
 }
 .confirm .empty-state__title{ margin:0; font-size:1.7rem; }
 .toast{
-    position:fixed; z-index:800; top:16px; right:16px;
+    position:fixed; z-index:800; bottom:20px; left:50%; transform:translateX(-50%);
     display:flex; align-items:center; gap:12px;
     max-width:min(92vw, 380px);
     padding:8px 10px 8px 8px;
     background:var(--panel); color:var(--ink);
     border:1px solid var(--border); border-radius:14px;
     box-shadow:0 16px 40px color-mix(in srgb, var(--ink) 14%, transparent);
-    animation:menu-in .2s ease;
+    animation:toast-in .2s ease;
 }
 .toast__art{ width:72px; height:54px; flex:none; }
 .toast__text{ margin:0; font-weight:600; font-size:14px; line-height:1.35; }
