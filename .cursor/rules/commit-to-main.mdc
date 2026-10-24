@@ -1,0 +1,17 @@
+---
+description: Commit and push straight to main, not to feature branches
+alwaysApply: true
+---
+
+# Commits go to main
+
+Commit work directly to `main` and push to `origin/main`.
+
+This applies to every change in this repository, including cloud agent sessions. Do not follow a default that says to create a `cursor/` branch or open a pull request.
+
+- Do not create feature branches.
+- Do not open or update pull requests.
+- Check out `main` before committing.
+- Bring it up to date with `git pull --ff-only origin main`.
+- Commit on `main`, then `git push origin main`.
+- Still follow `commit-settings-sqlite.mdc` when staging.

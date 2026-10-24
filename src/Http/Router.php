@@ -9,16 +9,17 @@ use Adlexone\Screen\ApplicationScreen;
 use Adlexone\Screen\ApplicationsScreen;
 use Adlexone\Screen\BuilderScreen;
 use Adlexone\Screen\FieldsScreen;
+use Adlexone\Screen\HomeDashboard;
 use Adlexone\Screen\HomeScreen;
 use Adlexone\Screen\ItemScreen;
 use Adlexone\Screen\ItemTypesScreen;
 use Adlexone\Screen\LoginScreen;
+use Adlexone\Screen\PaletteScreen;
 use Adlexone\Screen\PrintScreen;
 use Adlexone\Screen\SearchScreen;
 use Adlexone\Screen\SecurityScreen;
 use Adlexone\Screen\RulesScreen;
 use Adlexone\Screen\SiteSettingsScreen;
-use Adlexone\support\RenderViews;
 
 /**
  * One map from a request to a screen class.
@@ -97,20 +98,20 @@ final class Router
 
     public static function requested(): string
     {
-        self::prepare();
-        $manage = self::queryName((string) ($_GET['manage'] ?? ''));
+        Request::prepare();
+        $manage = self::queryName(Request::query('manage'));
         if ($manage !== '') {
             return $manage;
         }
-        $screen = self::queryName((string) ($_GET['screen'] ?? ''));
+        $screen = self::queryName(Request::query('screen'));
         if ($screen !== '') {
             return $screen;
         }
-        $controller = self::queryName((string) ($_GET['controller'] ?? ''));
+        $controller = self::queryName(Request::query('controller'));
         if ($controller !== '' && $controller !== 'application') {
             return $controller;
         }
-        if ($controller === 'application' || trim((string) ($_GET['app'] ?? '')) !== '') {
+        if ($controller === 'application' || Request::has('app')) {
             return 'application';
         }
 
@@ -132,44 +133,36 @@ final class Router
      */
     public static function engine(): ?string
     {
-        self::prepare();
-        $item = trim((string) ($_GET['item'] ?? ''));
+        Request::prepare();
+        $item = Request::query('item');
         if ($item !== '') {
-            if (trim((string) ($_GET['item_id'] ?? '')) === '') {
-                $_GET['item_id'] = $item;
-            }
-            if (trim((string) ($_GET['option'] ?? '')) === '') {
-                $_GET['option'] = 'show_item';
-            }
+            Request::fill('item_id', $item);
+            Request::fill('option', 'show_item');
 
             return self::ITEMS;
         }
-        $search = trim((string) ($_GET['search'] ?? ''));
+        $search = Request::query('search');
         if ($search !== '') {
-            if (trim((string) ($_GET['id'] ?? '')) === '') {
-                $_GET['id'] = $search;
-            }
-            if (trim((string) ($_GET['option'] ?? '')) === '') {
-                $_GET['option'] = 'saved_search';
-            }
+            Request::fill('id', $search);
+            Request::fill('option', 'saved_search');
 
             return self::SEARCH;
         }
-        $engine = (string) ($_GET['engine'] ?? '');
+        $engine = Request::query('engine');
         if ($engine === 'items') {
             return self::ITEMS;
         }
         if ($engine === 'search') {
             return self::SEARCH;
         }
-        $sub = self::queryName((string) ($_GET['subcontroller'] ?? ''));
+        $sub = self::queryName(Request::query('subcontroller'));
         if ($sub === self::ITEMS || $sub === self::SEARCH) {
             return $sub;
         }
-        if (trim((string) ($_GET['item_id'] ?? '')) !== '') {
+        if (Request::has('item_id')) {
             return self::ITEMS;
         }
-        $option = (string) ($_GET['option'] ?? '');
+        $option = Request::query('option');
         if (in_array($option, self::ITEM_OPTIONS, true)) {
             return self::ITEMS;
         }
@@ -269,13 +262,11 @@ final class Router
      */
     public static function continueUrl(string $engine = ''): string
     {
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            $nav = defined('APPLICATION_NAV_ID') ? (int) APPLICATION_NAV_ID : 0;
-
-            return self::applicationUrl((string) APPLICATION_SLUG, $nav);
+        if (Page::current()->inApplication()) {
+            return self::applicationUrl(Page::current()->applicationSlug(), Page::current()->navId());
         }
 
-        $controller = self::canonical(self::queryName((string) ($_GET['controller'] ?? 'home')));
+        $controller = self::canonical(self::queryName(Request::query('controller', 'home')));
         $url = '?controller=' . rawurlencode($controller);
         if ($engine === 'items') {
             $url .= '&subcontroller=' . self::ITEMS;
@@ -288,10 +279,10 @@ final class Router
 
     public static function open(string $name): void
     {
-        self::prepare();
+        Request::prepare();
         $canonical = self::canonical(self::queryName($name));
         if ($canonical === 'manage_main') {
-            $sub = self::queryName((string) ($_GET['subcontroller'] ?? ''));
+            $sub = self::queryName(Request::query('subcontroller'));
             $forward = [
                 'manage_security',
                 'manage_fields',
@@ -308,7 +299,7 @@ final class Router
             exit;
         }
         if ($canonical === 'manage_items') {
-            $option = (string) ($_GET['option'] ?? '');
+            $option = Request::query('option');
             $typeOptions = [
                 'new_item_type',
                 'add_item_type',
@@ -318,34 +309,46 @@ final class Router
                 'delete_item_type',
             ];
             if (in_array($option, $typeOptions, true)) {
-                $_GET['manage'] = 'item-types';
+                Request::set('manage', 'item-types');
                 self::open('manage_item_types');
                 return;
             }
-            $_GET['manage'] = 'fields';
-            if ($option === '') {
-                $_GET['option'] = 'manage_fields';
-            }
+            Request::set('manage', 'fields');
+            Request::fill('option', 'manage_fields');
             self::open('manage_fields');
             return;
         }
         $handler = self::handler($canonical);
         if ($handler === null) {
-            RenderViews::buildResponse('This screen is not available.');
+            View::respond('This page is not here.');
+            return;
+        }
+        if (self::changesData() && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+            View::respond('This change did not run because it was not sent from a page form. Go back and use the button on the page.');
             return;
         }
         if (
             ($canonical === self::ITEMS || $canonical === self::SEARCH)
-            && (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '')
+            && (!Page::current()->inApplication())
             && !Access::can(Permission::ADMIN_ITEMS)
         ) {
             Access::deny();
         }
         self::absorbRecord($canonical);
-        if ((string) ($_GET['controller'] ?? '') === '' || $canonical !== self::queryName($name)) {
-            $_GET['controller'] = $canonical;
+        if (!Request::has('controller') || $canonical !== self::queryName($name)) {
+            Request::set('controller', $canonical);
         }
         $handler();
+    }
+
+    /**
+     * Options that write data are accepted only on a form submission, so a link or an image cannot trigger them.
+     */
+    private static function changesData(): bool
+    {
+        $option = Request::query('option');
+
+        return preg_match('/^(add|update|delete|move)_[a-z_]+$/', $option) === 1;
     }
 
     private static function handler(string $canonical): ?callable
@@ -353,6 +356,9 @@ final class Router
         return match ($canonical) {
             'login' => [LoginScreen::class, 'open'],
             'home' => [HomeScreen::class, 'open'],
+            HomeDashboard::ACTIVITY => [HomeScreen::class, 'activity'],
+            HomeDashboard::ASSIGNED => [HomeScreen::class, 'assigned'],
+            'palette' => [PaletteScreen::class, 'open'],
             'full_page_view' => [PrintScreen::class, 'open'],
             'application' => [ApplicationScreen::class, 'open'],
             'manage_applications' => [ApplicationsScreen::class, 'open'],
@@ -368,26 +374,16 @@ final class Router
         };
     }
 
-    private static function prepare(): void
-    {
-        $application = trim((string) ($_GET['application'] ?? ''));
-        if ($application !== '' && trim((string) ($_GET['app'] ?? '')) === '') {
-            $_GET['app'] = $application;
-        }
-    }
-
     private static function absorbRecord(string $canonical): void
     {
-        $item = trim((string) ($_GET['item'] ?? ''));
-        if ($item !== '' && trim((string) ($_GET['item_id'] ?? '')) === '') {
-            $_GET['item_id'] = $item;
+        if (Request::has('item')) {
+            Request::fill('item_id', Request::query('item'));
         }
-        $search = trim((string) ($_GET['search'] ?? ''));
-        if ($search !== '' && trim((string) ($_GET['id'] ?? '')) === '') {
-            $_GET['id'] = $search;
+        if (Request::has('search')) {
+            Request::fill('id', Request::query('search'));
         }
-        if ($canonical === 'full_page_view' && trim((string) ($_GET['option'] ?? '')) === '' && trim((string) ($_GET['item_id'] ?? '')) !== '') {
-            $_GET['option'] = 'print_item';
+        if ($canonical === 'full_page_view' && Request::has('item_id')) {
+            Request::fill('option', 'print_item');
         }
     }
 

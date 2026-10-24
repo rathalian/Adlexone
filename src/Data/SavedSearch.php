@@ -177,6 +177,17 @@ final class SavedSearch
         if (preg_match('/^custom_field_(\d+)$/', $field, $m)) {
             return ItemFields::matchSql((int) $m[1], $op, $value);
         }
+        if ($field === 'q') {
+            return self::textClause($value);
+        }
+        if ($field === 'create_date_days' || $field === 'core_log_updated_days') {
+            $days = (int) $value;
+            if ($days <= 0) {
+                return '';
+            }
+            $column = $field === 'create_date_days' ? 'create_date' : 'COALESCE(core_log_updated, create_date)';
+            return $column . ' >= ' . (time() - $days * 86400);
+        }
         if ($field === 'group_id') {
             $id = (int) $value;
             if ($op === '<>' || $op === '!=') {
@@ -193,6 +204,9 @@ final class SavedSearch
             return '';
         }
         $op = html_entity_decode($op, ENT_COMPAT, 'UTF-8');
+        if ($value === 'session_user' && in_array($field, ['creator_security', 'user_security'], true)) {
+            $value = (string) (int) ($_SESSION['access_user_id'] ?? 0);
+        }
         $escaped = Database::escape($value);
         return match (strtoupper($op)) {
             'LIKE' => "{$field} LIKE '%{$escaped}%'",
@@ -200,6 +214,41 @@ final class SavedSearch
             '>', '>=', '<', '<=' => "{$field} {$op} '{$escaped}'",
             default => "{$field} = '{$escaped}'",
         };
+    }
+
+    /**
+     * @return list<string> the words and "quoted phrases" of a search box
+     */
+    public static function terms(string $text): array
+    {
+        preg_match_all('/"([^"]+)"|(\S+)/u', $text, $found, PREG_SET_ORDER);
+        $terms = [];
+        foreach ($found as $match) {
+            $term = trim(($match[2] ?? '') !== '' ? $match[2] : $match[1]);
+            if ($term !== '') {
+                $terms[] = $term;
+            }
+        }
+
+        return array_slice($terms, 0, 8);
+    }
+
+    /**
+     * Every term must appear in the name, the number, a field value, or a note.
+     */
+    private static function textClause(string $text): string
+    {
+        $clauses = [];
+        foreach (self::terms($text) as $term) {
+            $like = "'%" . Database::escape(Database::escapeLike($term)) . "%' ESCAPE '\\'";
+            $number = ctype_digit($term) ? " OR item_id = {$term}" : '';
+            $clauses[] = "(item_title LIKE {$like}{$number}"
+                . " OR item_id IN (SELECT item_id FROM item_field_values WHERE value LIKE {$like}"
+                . " AND custom_field_id NOT IN (SELECT custom_field_id FROM custom_fields WHERE field_type IN ('password', 'hidden')))"
+                . " OR item_id IN (SELECT item_id FROM core_log WHERE log_text LIKE {$like}))";
+        }
+
+        return $clauses === [] ? '' : '(' . implode(' AND ', $clauses) . ')';
     }
 
     /**

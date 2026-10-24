@@ -34,61 +34,54 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 /** * Import necessary classes
  */
+use Adlexone\Http\Page;
 use Adlexone\Http\PublicBaseUrl;
+use Adlexone\Http\Request;
 use Adlexone\Http\Router;
-use Adlexone\support\RenderViews;
+use Adlexone\Platform\OperatorScreen;
+use Adlexone\Platform\Runtime;
+use Adlexone\Platform\SetupScreen;
+use Adlexone\Platform\StatusScreen;
 use Adlexone\support\SharedMethods;
+
 /**
- * Define system paths and constants.
- * Code under test stays in this checkout. Live config, attachments, and
- * SQLite stay in the main checkout — see bootstrap/live_data.php.
+ * Paths, then settings. The database is opened only for an installed site.
+ * Setup and the operator screen run before SchemaMigrator so a missing
+ * SQLite file is not created as an empty database on a GET.
  */
-require_once __DIR__ . '/live_data.php';
 $baseDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR;
-$dataDir = adlexone_live_data_directory(rtrim($baseDir, '/\\')) . DIRECTORY_SEPARATOR;
-define('SET_INSTALL_PATH', $baseDir);
-define('SET_CONFIGURATION_PATH', $dataDir . 'config' . DIRECTORY_SEPARATOR);
-define('SET_ATTACHMENTS_PATH', $dataDir . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR);
-define('DSN', 'sqlite:' . $dataDir . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite');
-
-// Shared platform schema (app packs must not own tables).
-\Adlexone\Database\SchemaMigrator::migrate();
-
-/**
- * Load configuration settings from JSON files in the config directory and its subdirectories
- */
-$configDir = SET_CONFIGURATION_PATH;
-$jsonFiles = glob($configDir . '*.json');
-
-foreach ($jsonFiles as $jsonFile) {
-    SharedMethods::loadJsonSettingsToConstants($jsonFile);
-}
-
-$subDirs = glob($configDir . '*', GLOB_ONLYDIR);
-foreach ($subDirs as $subDir) {
-    $subJsonFiles = glob($subDir . '/*.json');
-    foreach ($subJsonFiles as $jsonFile) {
-        Adlexone\support\SharedMethods::loadJsonSettingsToConstants($jsonFile);
-    }
-}
+Runtime::define($baseDir);
+Runtime::loadConfig();
 
 /** * Enable error reporting for debugging (disable in production)
  */
 
-if (SET_DEBUG_MODE == 'Yes') {
-    error_reporting(SET_ERROR_REPORTING_LEVEL);
+if (defined('SET_DEBUG_MODE') && SET_DEBUG_MODE == 'Yes') {
+    error_reporting(defined('SET_ERROR_REPORTING_LEVEL') ? (int) SET_ERROR_REPORTING_LEVEL : E_ALL);
     ini_set('display_errors', '1');
     ini_set('log_errors', '1');
-
 }
 
+Runtime::startSession();
 
-
-/** * Start session if not already started
- */
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+if (Runtime::mode() === Runtime::OPERATOR) {
+    OperatorScreen::handle();
+    Page::current()->send();
+    exit;
 }
+if (Runtime::mode() === Runtime::SETUP) {
+    SetupScreen::handle();
+    Page::current()->send();
+    exit;
+}
+if (Runtime::mode() === Runtime::SUSPENDED || Runtime::mode() === Runtime::UNKNOWN) {
+    StatusScreen::handle();
+    Page::current()->send();
+    exit;
+}
+
+// Shared platform schema (app packs must not own tables).
+\Adlexone\Database\SchemaMigrator::migrate();
 
 /** Start output buffering to prevent headers already sent errors
  */
@@ -109,7 +102,7 @@ if (!defined('SET_DEFAULT_LANGUAGE')) {
     define('SET_DEFAULT_LANGUAGE', 'English');
 }
 if (!defined('SET_HOME_LEAD')) {
-    define('SET_HOME_LEAD', 'The work, arranged the way your team actually does it.');
+    define('SET_HOME_LEAD', 'This site keeps the applications, records, and rules for the work.');
 }
 
 // Apply addslashesRecursive() to all data and strip scripts
@@ -139,7 +132,11 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
     if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
         \Adlexone\Auth\Csrf::enforceOrDeny();
+        // Screens write the posted fields to table columns, so the token must not reach them.
+        unset($_POST[\Adlexone\Auth\Csrf::FIELD]);
     }
+
+    Request::normaliseNumbers();
 
     // A stored home such as application:service-centre still arrives as controller.
     $requestedController = (string) ($_GET['controller'] ?? '');
@@ -173,9 +170,9 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
     \Adlexone\support\MenuOptions::prepare();
 
-    if (Router::bare(Router::requested())) {
-        Router::open(Router::requested());
-    } else {
-        RenderViews::renderThemePage('main_page', SET_THEME);
-    }
+    $requested = Router::requested();
+    Page::current()->useLayout(Router::bare($requested) ? Page::RESPONSE : Page::SHELL);
+    Router::open($requested);
 }
+
+Page::current()->send();

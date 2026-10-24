@@ -1,6 +1,0 @@
-{
-    "SET_SMTP_HOST": "enter your mail server name",
-    "SET_SMTP_PORT": "25",
-    "SET_SMTP_USER": "",
-    "SET_SMTP_PASSWORD": ""
-}

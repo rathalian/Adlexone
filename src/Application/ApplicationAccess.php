@@ -5,6 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\Http\Page;
 
 /**
  * Whether the signed-in person may use the application that is open.
@@ -13,8 +14,8 @@ final class ApplicationAccess
 {
     public static function slug(): string
     {
-        if (defined('APPLICATION_SLUG')) {
-            return (string) APPLICATION_SLUG;
+        if (Page::current()->inApplication()) {
+            return Page::current()->applicationSlug();
         }
         return trim((string) ($_GET['app'] ?? $_SESSION['application_slug'] ?? ''));
     }
@@ -32,22 +33,34 @@ final class ApplicationAccess
         );
     }
 
+    /**
+     * Post, edit, and delete notices. Opening the application includes this.
+     */
     public static function canAnnounce(): bool
     {
         $slug = self::slug();
         if ($slug === '') {
             return Access::can(Permission::ADMIN_SETTINGS);
         }
-        return Access::can(Permission::appAnnounce($slug), Permission::ADMIN_SETTINGS);
+        return Access::can(Permission::appUse($slug), Permission::ADMIN_SETTINGS);
     }
 
     public static function canSettings(): bool
     {
-        $slug = self::slug();
-        if ($slug === '') {
-            return Access::can(Permission::ADMIN_SETTINGS);
-        }
-        return Access::can(Permission::appSettings($slug), Permission::ADMIN_SETTINGS);
+        return self::canDesign();
+    }
+
+    /**
+     * People who design applications. Daily use of an app does not include this.
+     */
+    public static function canDesign(): bool
+    {
+        return Access::can(
+            Permission::ADMIN_SETTINGS,
+            Permission::ADMIN_ITEMS,
+            Permission::ADMIN_ACTIONS,
+            Permission::ADMIN_SYSTEM
+        );
     }
 
     /**

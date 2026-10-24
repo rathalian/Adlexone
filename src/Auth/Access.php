@@ -80,9 +80,11 @@ final class Access
         $permissions = self::permissionsForUser($userId);
         $_SESSION['access_permissions'] = $permissions;
         $_SESSION['access_role_id'] = self::legacyRoleFromPermissions($permissions);
-        $identity = Database::first('users', ['user_name', 'theme'], 'user_id = ?', [$userId]);
+        $identity = Database::first('users', ['user_name', 'first_name', 'last_name', 'theme'], 'user_id = ?', [$userId]);
         if ($identity !== null) {
             $_SESSION['access_user_name'] = (string) ($identity['user_name'] ?? '');
+            $display = trim(trim((string) ($identity['first_name'] ?? '')) . ' ' . trim((string) ($identity['last_name'] ?? '')));
+            $_SESSION['access_display_name'] = $display !== '' ? $display : (string) ($identity['user_name'] ?? '');
             $theme = trim((string) ($identity['theme'] ?? ''));
             if ($theme !== '') {
                 $_SESSION['access_theme'] = $theme;
@@ -215,6 +217,7 @@ final class Access
             ? TXT_356
             : 'You do not have access to this area. Please contact your administrator.';
         \Adlexone\Http\View::respond($message);
+        \Adlexone\Http\Page::current()->send();
         exit;
     }
 

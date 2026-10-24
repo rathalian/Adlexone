@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Data;
 
 use Adlexone\support\Database;
+use Adlexone\support\FieldValidation;
 
 /**
  * Custom field values for items (EAV).
@@ -167,13 +168,53 @@ final class ItemFields
         $fieldId = (int) $fieldId;
         $op = strtoupper(trim($operator));
         $escaped = Database::escape($value);
+        $from = "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND ";
+
+        if (in_array($op, ['DATE=', 'DATE>=', 'DATE<='], true)) {
+            $day = FieldValidation::parseDate($value);
+            if ($day === null) {
+                return '0';
+            }
+            $compare = $op === 'DATE=' ? '=' : substr($op, 4);
+
+            return $from . self::storedDay() . " {$compare} '" . $day->format('Y-m-d') . "')";
+        }
+        if ($op === 'TICKED') {
+            return $from . "TRIM(value) NOT IN ('', '0'))";
+        }
+        if ($op === 'UNTICKED') {
+            return "item_id NOT IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND TRIM(value) NOT IN ('', '0'))";
+        }
+        if (in_array($op, ['>', '>=', '<', '<='], true) && is_numeric($value)) {
+            return $from . "TRIM(value) <> '' AND CAST(value AS REAL) {$op} " . (float) $value . ')';
+        }
+
+        if ($op === 'CONTAINS') {
+            return $from . "value LIKE '%" . Database::escape(Database::escapeLike($value)) . "%' ESCAPE '\\')";
+        }
+        if ($op === 'NOT') {
+            return "item_id NOT IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value = '{$escaped}')";
+        }
+
         return match ($op) {
-            'LIKE' => "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value LIKE '%{$escaped}%')",
-            '<>', '!=' => "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value <> '{$escaped}')",
-            '>' => "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value > '{$escaped}')",
-            '<' => "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value < '{$escaped}')",
-            default => "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value = '{$escaped}')",
+            'LIKE' => $from . "value LIKE '%{$escaped}%')",
+            '<>', '!=' => $from . "value <> '{$escaped}')",
+            '>', '>=', '<', '<=' => $from . "value {$op} '{$escaped}')",
+            default => $from . "value = '{$escaped}')",
         };
+    }
+
+    /**
+     * A stored date as Y-m-d, whichever of the two stored forms it is in.
+     */
+    private static function storedDay(): string
+    {
+        $v = "REPLACE(TRIM(value), '/', '-')";
+
+        return "(CASE WHEN {$v} GLOB '[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]*'"
+            . " THEN substr({$v}, 7, 4) || '-' || substr({$v}, 4, 2) || '-' || substr({$v}, 1, 2)"
+            . " WHEN {$v} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*' THEN substr({$v}, 1, 10)"
+            . ' ELSE NULL END)';
     }
 
     /**

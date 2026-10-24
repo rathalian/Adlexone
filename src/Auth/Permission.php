@@ -8,8 +8,8 @@ use Adlexone\support\Database;
 /**
  * Named permissions used for authorization.
  *
- * Application-scoped keys (app.{slug}.use|announce|settings) are generated
- * from the applications registry so Manage Security can assign them in the UI.
+ * Application-scoped keys (app.{slug}.use|settings) are generated
+ * from the applications registry so a group can be given them.
  */
 final class Permission
 {
@@ -24,11 +24,6 @@ final class Permission
     public static function appUse(string $slug): string
     {
         return 'app.' . self::safeSlug($slug) . '.use';
-    }
-
-    public static function appAnnounce(string $slug): string
-    {
-        return 'app.' . self::safeSlug($slug) . '.announce';
     }
 
     public static function appSettings(string $slug): string
@@ -51,15 +46,15 @@ final class Permission
     {
         return [
             self::ADMIN_SYSTEM => [
-                'label' => 'System configuration (sign-in, advanced settings, and outbound email)',
+                'label' => 'Sign-in, email, and advanced settings',
                 'legacy_max_role' => 0,
             ],
             self::ADMIN_SETTINGS => [
-                'label' => 'Application settings',
+                'label' => 'Applications and site settings',
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_SECURITY => [
-                'label' => 'Users and groups',
+                'label' => 'People and groups',
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_ACTIONS => [
@@ -67,7 +62,7 @@ final class Permission
                 'legacy_max_role' => 1,
             ],
             self::ADMIN_ITEMS => [
-                'label' => 'Item types and fields',
+                'label' => 'Fields and record types',
                 'legacy_max_role' => 1,
             ],
             self::APP_ACCESS => [
@@ -78,9 +73,69 @@ final class Permission
     }
 
     /**
+     * Site permissions a group can be given.
+     * Signing in is granted to every person, so that permission is not listed.
+     *
+     * @return array<string, string>
+     */
+    public static function siteChoices(): array
+    {
+        $out = [];
+        foreach (self::baseCatalog() as $key => $meta) {
+            if ($key === self::APP_ACCESS) {
+                continue;
+            }
+            $out[$key] = (string) $meta['label'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * One row per application, with the permission keys that belong to it.
+     *
+     * @return list<array{name: string, slug: string, open: string, settings: string}>
+     */
+    public static function applicationChoices(): array
+    {
+        $out = [];
+        foreach (self::applicationRows() as $app) {
+            $out[] = [
+                'name' => $app['name'],
+                'slug' => $app['slug'],
+                'open' => self::appUse($app['slug']),
+                'settings' => self::appSettings($app['slug']),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * @return array<string, array{label: string, legacy_max_role: int}>
      */
     private static function applicationCatalog(): array
+    {
+        $out = [];
+        foreach (self::applicationRows() as $app) {
+            // legacy_max_role 4 bridges shared item engines still gated by role numbers.
+            $out[self::appUse($app['slug'])] = [
+                'label' => 'Open: ' . $app['name'],
+                'legacy_max_role' => 4,
+            ];
+            $out[self::appSettings($app['slug'])] = [
+                'label' => 'Settings: ' . $app['name'],
+                'legacy_max_role' => 1,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array{slug: string, name: string}>
+     */
+    private static function applicationRows(): array
     {
         if (!Database::tableExists('applications')) {
             return [];
@@ -91,21 +146,10 @@ final class Permission
             if ($slug === '') {
                 continue;
             }
-            $name = (string) $app['name'];
-            // legacy_max_role 4 bridges shared item engines still gated by role numbers.
-            $out[self::appUse($slug)] = [
-                'label' => 'Use application: ' . $name,
-                'legacy_max_role' => 4,
-            ];
-            $out[self::appAnnounce($slug)] = [
-                'label' => 'Manage announcements: ' . $name,
-                'legacy_max_role' => 2,
-            ];
-            $out[self::appSettings($slug)] = [
-                'label' => 'Application settings: ' . $name,
-                'legacy_max_role' => 1,
-            ];
+            $name = trim((string) $app['name']);
+            $out[] = ['slug' => $slug, 'name' => $name !== '' ? $name : $slug];
         }
+
         return $out;
     }
 
@@ -114,7 +158,7 @@ final class Permission
      * When $groupIds is empty, Administrator groups + the current user's groups are used.
      *
      * @param list<int> $groupIds
-     * @param list<string> $levels subset of use|announce|settings (default all)
+     * @param list<string> $levels subset of use|settings (default both). Older packages may still say announce.
      * @return list<int> group ids that received grants
      */
     public static function grantAppToGroups(string $slug, array $groupIds = [], array $levels = []): array
@@ -122,7 +166,6 @@ final class Permission
         Access::ensureReady();
         $levelMap = [
             'use' => self::appUse($slug),
-            'announce' => self::appAnnounce($slug),
             'settings' => self::appSettings($slug),
         ];
         if ($levels === []) {
@@ -166,10 +209,54 @@ final class Permission
         return $groupIds;
     }
 
+    /**
+     * Groups whose members can open this application.
+     * Other permissions on those groups are left as they are.
+     *
+     * @param list<int> $groupIds
+     */
+    public static function setAppUseGroups(string $slug, array $groupIds): void
+    {
+        Access::ensureReady();
+        $permission = self::appUse($slug);
+        $known = [];
+        foreach (Database::select('groups', ['group_id']) as $group) {
+            $known[(int) $group['group_id']] = true;
+        }
+        $wanted = [];
+        foreach ($groupIds as $groupId) {
+            $groupId = (int) $groupId;
+            if (isset($known[$groupId])) {
+                $wanted[$groupId] = true;
+            }
+        }
+        foreach (array_keys($known) as $groupId) {
+            $have = Access::permissionsForGroup($groupId);
+            $has = in_array($permission, $have, true);
+            $should = isset($wanted[$groupId]);
+            if ($has === $should) {
+                continue;
+            }
+            if ($should) {
+                $have[] = $permission;
+            } else {
+                $have = array_values(array_filter(
+                    $have,
+                    static fn (string $granted): bool => $granted !== $permission
+                ));
+            }
+            Access::setGroupPermissions($groupId, $have);
+        }
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        if ($userId > 0) {
+            Access::hydrateSession($userId);
+        }
+    }
+
     public static function revokeApp(string $slug): void
     {
         Access::ensureReady();
-        foreach ([self::appUse($slug), self::appAnnounce($slug), self::appSettings($slug)] as $permission) {
+        foreach ([self::appUse($slug), self::appSettings($slug)] as $permission) {
             Database::delete('group_permissions', 'permission = ?', [$permission]);
         }
     }
@@ -184,7 +271,6 @@ final class Permission
         Access::ensureReady();
         $map = [
             self::appUse($oldSlug) => self::appUse($newSlug),
-            self::appAnnounce($oldSlug) => self::appAnnounce($newSlug),
             self::appSettings($oldSlug) => self::appSettings($newSlug),
         ];
         foreach ($map as $from => $to) {
@@ -200,7 +286,6 @@ final class Permission
         Access::ensureReady();
         $levelMap = [
             self::appUse($slug) => 'use',
-            self::appAnnounce($slug) => 'announce',
             self::appSettings($slug) => 'settings',
         ];
         $byGroup = [];
@@ -243,7 +328,7 @@ final class Permission
                 continue;
             }
             $gid = (int) $group['group_id'];
-            $levels = is_array($grant['levels'] ?? null) ? $grant['levels'] : ['use', 'announce', 'settings'];
+            $levels = is_array($grant['levels'] ?? null) ? $grant['levels'] : ['use', 'settings'];
             self::grantAppToGroups($slug, [$gid], array_map('strval', $levels));
             $allGroups[] = $gid;
         }

@@ -271,6 +271,49 @@ check(!str_contains($groupDetail, 'ada@example.com'), 'the actor is skipped for 
 $preview = Rules::preview($logRule, 1, 1);
 check(($preview['matches'] ?? null) === false, 'try against the stored record does not invent a change');
 
+Database::exec('CREATE TABLE announcements (
+    id INTEGER PRIMARY KEY,
+    time INTEGER,
+    message TEXT,
+    type TEXT,
+    subject TEXT,
+    application TEXT
+)');
+Database::exec('CREATE TABLE applications (
+    application_id INTEGER PRIMARY KEY,
+    slug TEXT
+)');
+Database::insert('applications', ['application_id' => 1, 'slug' => 'complaints']);
+Database::insert('item_type_custom_fields', ['item_type_id' => 1, 'custom_field_id' => 8, 'custom_field_order' => 2]);
+Database::insert('items', [
+    'item_id' => 2,
+    'create_date' => time(),
+    'item_type_id' => 1,
+    'creator_security' => 1,
+    'user_security' => 1,
+    'item_title' => 'Complaint',
+]);
+$stampRule = Rules::add(1, [
+    'item_type_id' => 1,
+    'name' => 'Stamp and post',
+    'event' => Rules::EVENT_UPDATE,
+    'operator' => Rules::OP_ALWAYS,
+    'sort_order' => 50,
+    'steps' => [
+        ['outcome' => Rules::OUTCOME_STAMP, 'action_field' => 'custom_field_8'],
+        ['outcome' => Rules::OUTCOME_ANNOUNCE, 'subject' => 'Opened: ITEM_TITLE', 'body' => 'ITEM_TITLE has been opened.'],
+    ],
+]);
+Rules::run(2, 'update_item');
+$stamped = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [2, 8]);
+check((string) ($stamped['value'] ?? '') === Rules::today(), 'stamp writes today\'s date');
+$notice = Database::first('announcements', ['subject', 'message', 'application'], 'application = ?', ['complaints']);
+check((string) ($notice['subject'] ?? '') === 'Opened: Complaint', 'a notice is posted for the application');
+check((string) ($notice['message'] ?? '') === 'Complaint has been opened.', 'the notice uses the record title');
+$stampRun = Database::first('application_rule_runs', ['detail'], 'rule_id = ?', [$stampRule]);
+check(str_contains((string) ($stampRun['detail'] ?? ''), 'Stamped'), 'the run says the date was stamped');
+check(str_contains((string) ($stampRun['detail'] ?? ''), 'Posted a notice'), 'the run says the notice was posted');
+
 if ($failed > 0) {
     fwrite(STDERR, $failed . " check(s) failed\n");
     exit(1);

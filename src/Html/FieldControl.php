@@ -35,10 +35,18 @@ final class FieldControl
             return (string) (self::$custom[$type])($name, $value, $field);
         }
 
+        $control = FieldTypes::control($type, (string) ($field['validation_type'] ?? ''));
         $rows = defined('SET_FORM_FIELD_HEIGHT') ? (string) SET_FORM_FIELD_HEIGHT : '3';
 
-        return match ($type) {
-            FieldTypes::TEXT_BOX, 'URL', 'dynamicURL', 'workerField' => Form::text($name, $value),
+        return match ($control) {
+            FieldTypes::TEXT_BOX, 'workerField' => Form::text($name, $value),
+            FieldTypes::DATE => Form::date($name, (string) ($value ?? '')),
+            FieldTypes::TIME => Form::time($name, $value),
+            FieldTypes::DATETIME => Form::datetime($name, $value),
+            FieldTypes::EMAIL => Form::email($name, $value),
+            FieldTypes::NUMBER => Form::number($name, $value),
+            'URL' => Form::url($name, $value),
+            'dynamicURL' => Form::text($name, $value),
             'password' => Form::password($name, (string) $value),
             'hidden' => Form::hidden($name, $value),
             FieldTypes::TEXT_AREA => Form::textarea($name, $value, $rows),

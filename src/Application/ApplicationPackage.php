@@ -208,7 +208,9 @@ final class ApplicationPackage
                 'enabled' => (string) ($field['enabled'] ?? 'Yes'),
                 'field_reference' => 0,
                 'data' => '',
-                'validation_type' => '',
+                'validation_type' => FieldTypes::impliedValidation($type) !== ''
+                    ? FieldTypes::impliedValidation($type)
+                    : (string) ($field['validation_type'] ?? ''),
                 'required' => (string) ($field['required'] ?? 'No'),
             ]);
             Database::update('custom_fields', ['field_reference' => $newId], 'custom_field_id = ?', [$newId]);
@@ -304,7 +306,7 @@ final class ApplicationPackage
             'slug' => $slug,
             'name' => $name,
             'hint' => (string) ($appMeta['hint'] ?? ''),
-            'icon' => (string) ($appMeta['icon'] ?? 'ic-launch'),
+            'icon' => (string) ($appMeta['icon'] ?? 'ic-grid'),
             'permission' => $usePerm,
             'enabled' => 1,
             'sort_order' => $max + 10,

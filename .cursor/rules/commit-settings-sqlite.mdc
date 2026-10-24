@@ -1,13 +1,14 @@
 ---
-description: Live config, attachments, and SQLite stay on main
+description: Keep live settings and the SQLite database off git
 alwaysApply: true
 ---
 
-# Live data stays on main
+# Do not commit settings or SQLite
 
-`config/*.json`, `storage/attachments/`, and `storage/database/adlexone.sqlite` are Adam's live data. They belong to the **main** checkout.
+Live files hold customer records and secrets. Do not stage or push them:
 
-- On **main**, stage and commit those tracked files with related work so other environments stay in sync.
-- On any other branch, do not stage, commit, or replace them. A test must not carry its own copy of the database, settings, or attachments.
-- Test from a linked worktree. Boot uses the main checkout's config, attachments, and SQLite, so the test writes into the data already on main.
-- Do not `git checkout` another branch in the main working tree. That would swap the live files for the branch snapshot.
+- `config/*.json` (copy from `config.example/` on a new install)
+- `storage/database/*.sqlite` and any backup copy
+- `storage/attachments/`
+
+`config.example/` and `storage/database/shared_schema.sql` stay in git. A new install creates the database from the setup page.

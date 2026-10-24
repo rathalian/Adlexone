@@ -15,7 +15,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 8;
+    private const VERSION = 11;
 
     private static bool $done = false;
 
@@ -72,6 +72,21 @@ final class SchemaMigrator
         if ($current < 8) {
             self::applyV8();
             self::mark(8);
+            $current = 8;
+        }
+        if ($current < 9) {
+            self::applyV9();
+            self::mark(9);
+            $current = 9;
+        }
+        if ($current < 10) {
+            self::applyV10();
+            self::mark(10);
+            $current = 10;
+        }
+        if ($current < 11) {
+            self::applyV11();
+            self::mark(11);
         }
     }
 
@@ -527,7 +542,7 @@ final class SchemaMigrator
 
     /**
      * Retire Service Centre as a product: drop the seeded app, legacy permissions,
-     * and orphan announcements scoped to it. Helpdesk remains a Builder blueprint.
+     * and orphan announcements scoped to it.
      */
     private static function applyV5(): void
     {
@@ -693,6 +708,70 @@ final class SchemaMigrator
     /**
      * Turn trigger-plus-email package rows into one rule each, then remove them.
      */
+    /**
+     * Studio, Matters, House, and anything else already installed give way
+     * to the case-file applications. The builder installs those on the next request.
+     */
+    private static function applyV9(): void
+    {
+        \Adlexone\Application\ApplicationBuilder::removeInstalledApplications();
+    }
+
+    /**
+     * Retype known date and number fields created as free text.
+     */
+    private static function applyV10(): void
+    {
+        if (!Database::tableExists('custom_fields')) {
+            return;
+        }
+        $dates = [
+            'Closed on', 'Completed on', 'Settled on', 'Done on', 'Response due',
+            'Decided on', 'Due', 'Placed on', 'Signed on',
+        ];
+        foreach (Database::select('custom_fields', ['custom_field_id', 'custom_field_name', 'field_type']) as $row) {
+            $name = (string) ($row['custom_field_name'] ?? '');
+            $base = trim(preg_replace('/\s+\([^)]+\)\s*$/', '', $name) ?? $name);
+            $type = \Adlexone\support\FieldTypes::normalise((string) ($row['field_type'] ?? ''));
+            $id = (int) $row['custom_field_id'];
+            if (in_array($base, $dates, true) && $type === \Adlexone\support\FieldTypes::TEXT_BOX) {
+                Database::update(
+                    'custom_fields',
+                    ['field_type' => \Adlexone\support\FieldTypes::DATE, 'validation_type' => 'date'],
+                    'custom_field_id = ?',
+                    [$id]
+                );
+            }
+            if (in_array($base, ['Amount', 'Reserve'], true) && $type === \Adlexone\support\FieldTypes::TEXT_BOX) {
+                Database::update(
+                    'custom_fields',
+                    ['field_type' => \Adlexone\support\FieldTypes::NUMBER, 'validation_type' => 'numeric'],
+                    'custom_field_id = ?',
+                    [$id]
+                );
+            }
+        }
+    }
+
+    /**
+     * Announcements are part of opening an application, not a separate permission.
+     */
+    private static function applyV11(): void
+    {
+        $where = "permission GLOB 'app.*.announce' OR permission = 'servicecentre.announce'";
+        if (Database::tableExists('group_permissions')) {
+            Database::delete('group_permissions', $where);
+        }
+        if (Database::tableExists('application_nav') && Database::columnExists('application_nav', 'permission')) {
+            Database::run('UPDATE application_nav SET permission = \'\' WHERE ' . $where);
+        }
+        if (Database::tableExists('applications') && Database::columnExists('applications', 'permission')) {
+            Database::run(
+                "UPDATE applications SET permission = replace(permission, '.announce', '.use') WHERE permission GLOB 'app.*.announce'"
+            );
+        }
+    }
+
     private static function migrateActionPackages(): void
     {
         if (!Database::tableExists('action_definitions')) {

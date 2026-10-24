@@ -5,7 +5,11 @@ namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\support\Database;
-use Adlexone\support\RenderViews;
+use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Http\View;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -77,37 +81,35 @@ final class AnnouncementsScreen
     {
         $row = self::find((int) $id, $slug);
         if ($row === null) {
-            RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
+            View::respond('Announcement not found.', Blocks::link(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
         }
 
         $heading = date(SET_DATE_FORMAT, (int) $row['time']) . ': ' . (string) $row['subject'];
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             [
                 'title' => $heading,
-                'html' => RenderViews::buildFormFieldsGrid([
-                    '' => RenderViews::buildTextArea('', (string) $row['message'], '', true),
+                'html' => Form::fields([
+                    '' => Form::textarea('', (string) $row['message'], '', true),
                 ]),
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function showCreate(): void
     {
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             'New announcement',
             MAN_BASE_URL . '&option=add_announcement',
             [
-                'Subject' => RenderViews::buildTextInput('subject', ''),
-                'Message' => RenderViews::buildTextArea('message', ''),
+                'Subject' => Form::text('subject', ''),
+                'Message' => Form::textarea('message', ''),
             ],
             [
-                RenderViews::buildFormButton('submit', 'submit_button', 'Save'),
-                RenderViews::buildFormButton('reset', 'reset', 'Reset'),
+                Form::button('submit', 'submit_button', 'Save'),
+                Form::button('reset', 'reset', 'Reset'),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function create(string $slug): void
@@ -142,74 +144,72 @@ final class AnnouncementsScreen
             $actions = '';
             if ($canManage) {
                 $actions = '<div class="notice__actions">'
-                    . ($lead ? RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary') : '')
-                    . RenderViews::buildURL(MAN_BASE_URL . '&option=edit_announcement&id=' . $row['id'], 'Edit', '', 'btn btn--sm btn--quiet')
-                    . RenderViews::buildURL(MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'], 'Delete', '', 'btn btn--sm btn--danger', '', '_parent', 'Delete this announcement?')
+                    . ($lead ? Blocks::link(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary') : '')
+                    . Blocks::link(MAN_BASE_URL . '&option=edit_announcement&id=' . $row['id'], 'Edit', '', 'btn btn--sm btn--quiet')
+                    . Blocks::link(MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'], 'Delete', '', 'btn btn--sm btn--danger', '', '_parent', 'Delete this announcement?')
                     . '</div>';
             }
             $picture = $lead && $art !== ''
-                ? '<img class="notice__art" src="' . htmlspecialchars($art, ENT_QUOTES, 'UTF-8') . '" alt="" width="160" height="120">'
+                ? '<img class="notice__art" src="' . Html::e($art) . '" alt="" width="160" height="120">'
                 : '';
-            $kicker = $lead ? 'On the wall' : '';
+            $kicker = $lead ? 'Latest' : '';
             $html .= '<article class="notice' . ($lead ? ' notice--lead' : '') . '">'
                 . $picture
                 . '<div class="notice__copy">'
                 . ($kicker !== '' ? '<p class="notice__kicker">' . $kicker . '</p>' : '')
-                . '<h2 class="notice__subject">' . htmlspecialchars((string) $row['subject'], ENT_QUOTES, 'UTF-8') . '</h2>'
+                . '<h2 class="notice__subject">' . Html::e((string) $row['subject']) . '</h2>'
                 . '<div class="notice__body">' . $row['message'] . '</div>'
-                . '<div class="notice__meta"><time datetime="' . date('c', (int) $row['time']) . '">' . htmlspecialchars(date(SET_DATE_FORMAT, (int) $row['time']), ENT_QUOTES, 'UTF-8') . '</time>' . $actions . '</div>'
+                . '<div class="notice__meta"><time datetime="' . date('c', (int) $row['time']) . '">' . Html::e(date(SET_DATE_FORMAT, (int) $row['time'])) . '</time>' . $actions . '</div>'
                 . '</div></article>';
             $index++;
         }
         if ($html === '') {
-            $html = RenderViews::buildEmptyState([
-                'illustration' => 'empty-work',
-                'title' => 'Nothing on the wall',
+            $html = Blocks::emptyState([
+                'illustration' => 'notice',
+                'title' => 'No announcements',
                 'copy' => $canManage
-                    ? 'Post a notice for the people who use this.'
-                    : 'When a notice is posted, it will show up here.',
+                    ? 'Post an announcement for the people who use this application.'
+                    : 'Announcements are listed here once they are posted.',
                 'action' => $canManage
-                    ? RenderViews::buildURL(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary')
+                    ? Blocks::link(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary')
                     : '',
             ]);
         } else {
             $html = '<div class="notice-wall">' . $html . '</div>';
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             ['title' => 'Announcements', 'html' => $html],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function showEdit(string $id, string $slug): void
     {
         $row = self::find((int) $id, $slug);
         if ($row === null) {
-            RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
+            View::respond('Announcement not found.', Blocks::link(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
         }
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             'Edit announcement',
             MAN_BASE_URL . '&option=update_announcement',
             [
-                'Subject' => RenderViews::buildTextInput('subject', (string) $row['subject']),
-                'Message' => RenderViews::buildTextArea('message', (string) $row['message'], SET_FORM_FIELD_HEIGHT),
-                '' => RenderViews::buildHiddenInput('id', (string) (int) $id),
+                'Subject' => Form::text('subject', (string) $row['subject']),
+                'Message' => Form::textarea('message', (string) $row['message'], SET_FORM_FIELD_HEIGHT),
+                '' => Form::hidden('id', (string) (int) $id),
             ],
             [
-                RenderViews::buildFormButton('submit', 'submit_button', 'Save'),
-                RenderViews::buildFormButton('reset', 'reset', 'Reset'),
+                Form::button('submit', 'submit_button', 'Save'),
+                Form::button('reset', 'reset', 'Reset'),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function update(string $slug): void
     {
         $id = (int) ($_POST['id'] ?? 0);
         if (self::find($id, $slug) === null) {
-            RenderViews::buildResponse('Announcement not found.', RenderViews::buildURL(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
+            View::respond('Announcement not found.', Blocks::link(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
             return;
         }
         Database::update('announcements', [

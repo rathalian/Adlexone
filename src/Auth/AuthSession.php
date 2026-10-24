@@ -40,6 +40,7 @@ final class AuthSession
             $_SESSION['access_permissions'],
             $_SESSION['access_user_id'],
             $_SESSION['access_user_name'],
+            $_SESSION['access_display_name'],
             $_SESSION['access_theme'],
             $_SESSION['access_language'],
             $_SESSION['access_home_controller_name'],

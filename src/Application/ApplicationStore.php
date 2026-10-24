@@ -27,9 +27,12 @@ final class ApplicationStore
         ApplicationBuilder::installShowcase();
         self::retireServiceCentreLegacy();
         self::renameServiceCentreWork();
+        self::renameBusinessNav();
+        self::addSearchTab();
         self::renameServiceCentreAnnouncements();
         self::renameContactCentreCapabilities();
         self::migrateBuiltInScreenIds();
+        self::refreshIcons();
     }
 
     public static function ensureSchema(): void
@@ -68,9 +71,8 @@ final class ApplicationStore
     }
 
     /**
-     * Empty installs start with no applications. Use Manage → Builder
-     * (or the guided Create flow) to compose the first business app.
-     * Existing Service Centre rows are left untouched.
+     * An empty install stays empty until the showcase applications are installed.
+     * Use Manage → Builder to compose another business app.
      */
     public static function seedIfEmpty(): void
     {
@@ -147,7 +149,7 @@ final class ApplicationStore
             'slug' => $fields['slug'],
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
-            'icon' => $fields['icon'] ?? 'ic-launch',
+            'icon' => $fields['icon'] ?? 'ic-grid',
             'permission' => $fields['permission'],
             'enabled' => (int) ($fields['enabled'] ?? 1),
             'sort_order' => (int) ($fields['sort_order'] ?? 0),
@@ -190,10 +192,51 @@ final class ApplicationStore
             'slug' => $newSlug,
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
-            'icon' => $fields['icon'] ?? 'ic-launch',
+            'icon' => $fields['icon'] ?? 'ic-grid',
             'permission' => $fields['permission'],
             'enabled' => (int) ($fields['enabled'] ?? 0),
         ], 'application_id = ?', [$id]);
+    }
+
+    /**
+     * The record type chosen on the application details page.
+     * Screens that keep a record type use this one.
+     */
+    public static function assignRecordType(int $applicationId, string $typeId): void
+    {
+        self::ensureReady();
+        $app = self::find($applicationId);
+        if ($app === null) {
+            return;
+        }
+        $typeId = trim($typeId);
+        $settings = is_array($app['settings']) ? $app['settings'] : [];
+        $settings['default_item_type_id'] = $typeId;
+        $settings['record_type_chosen'] = '1';
+        ApplicationSettings::put((string) $app['slug'], $settings);
+
+        $catalog = Capabilities::catalog();
+        foreach (self::navigation($applicationId) as $link) {
+            $capability = (string) $link['capability'];
+            $kind = (string) ($catalog[ScreenCatalog::resolve($capability)]['config'] ?? 'none');
+            if (!in_array($kind, ['item_type', 'field', 'activity', 'register', 'intake'], true)) {
+                continue;
+            }
+            $config = is_array($link['config']) ? $link['config'] : [];
+            if ($typeId === '') {
+                unset($config['item_type_id']);
+            } else {
+                $config['item_type_id'] = $typeId;
+            }
+            self::updateNav(
+                (int) $link['nav_id'],
+                (string) $link['label'],
+                $capability,
+                (string) $link['permission'],
+                (string) $link['icon'],
+                $config
+            );
+        }
     }
 
     public static function deleteApplication(int $id): void
@@ -430,6 +473,68 @@ final class ApplicationStore
     }
 
     /**
+     * Every application that lets people create records also gets a Search tab, once,
+     * placed after New. The marker keeps a removed tab from coming back.
+     */
+    private static function addSearchTab(): void
+    {
+        if (!self::tableExists('application_nav') || !Database::columnExists('applications', 'settings_json')) {
+            return;
+        }
+        foreach (Database::select('applications', '*') as $row) {
+            $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
+            $settings = is_array($settings) ? $settings : [];
+            if (($settings['search_tab_added'] ?? '') === '1') {
+                continue;
+            }
+            $applicationId = (int) $row['application_id'];
+            $links = Database::select('application_nav', '*', 'application_id = ?', [$applicationId], 'sort_order ASC, nav_id ASC');
+            $create = null;
+            $has = false;
+            foreach ($links as $link) {
+                $capability = ScreenCatalog::resolve((string) $link['capability']);
+                $has = $has || $capability === ScreenCatalog::SEARCH_ADVANCED;
+                if ($capability === ScreenCatalog::CREATE && $create === null) {
+                    $create = $link;
+                }
+            }
+            if (!$has && $create !== null) {
+                $config = json_decode((string) ($create['config_json'] ?? '{}'), true);
+                self::insertNav(
+                    $applicationId,
+                    'Search',
+                    ScreenCatalog::SEARCH_ADVANCED,
+                    (string) ($create['permission'] ?? ''),
+                    'ic-search',
+                    is_array($config) ? $config : [],
+                    (int) $create['sort_order'] + 5
+                );
+            }
+            $settings['search_tab_added'] = '1';
+            Database::update('applications', ['settings_json' => json_encode($settings, JSON_UNESCAPED_SLASHES)], 'application_id = ?', [$applicationId]);
+        }
+    }
+
+    /**
+     * Work uses a list icon, and the saved-search tab is named Saved.
+     */
+    private static function renameBusinessNav(): void
+    {
+        if (!self::tableExists('application_nav')) {
+            return;
+        }
+        Database::run(
+            "UPDATE application_nav SET icon = 'ic-subjects'
+             WHERE capability IN ('items.work', 'servicecentre.work', 'contact_centre.work')
+               AND icon = 'ic-search'"
+        );
+        Database::run(
+            "UPDATE application_nav SET label = 'Saved'
+             WHERE capability = 'search.saved_list' AND label = 'Searches'"
+        );
+    }
+
+    /**
      * Announcements live in the Contact Centre function pack.
      */
     private static function renameServiceCentreAnnouncements(): void
@@ -474,6 +579,68 @@ final class ApplicationStore
         }
         foreach (ScreenCatalog::ALIASES as $from => $to) {
             Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
+        }
+    }
+
+    /**
+     * Applications and screen links stored an older icon id. A link that kept the
+     * old default for its screen goes back to the screen's own icon. Anything else
+     * moves to the nearest current icon.
+     */
+    private static function refreshIcons(): void
+    {
+        $renamed = Capabilities::renamedIcons();
+        if (self::tableExists('application_nav')) {
+            $defaults = [
+                'items.work' => ['ic-subjects', 'ic-search'],
+                'items.create' => ['ic-itemtype-add'],
+                'search.quick' => ['ic-quick-search'],
+                'search.advanced' => ['ic-search'],
+                'search.saved' => ['ic-search'],
+                'search.saved_list' => ['ic-search', 'ic-my-ticket-searches'],
+                'announcements.board' => ['ic-announcements'],
+                'app.settings' => ['ic-settings'],
+                'items.counts' => ['ic-search'],
+                'items.owners' => ['ic-my-ticket-searches'],
+                'items.steps' => ['ic-create-ticket'],
+                'items.diary' => ['ic-time'],
+                'items.parties' => ['ic-knowledgebase'],
+                'items.activity' => ['ic-announcements'],
+                'items.files' => ['ic-new-article'],
+                'items.age' => ['ic-time'],
+                'items.register' => ['ic-item-mgmt'],
+                'items.intake' => ['ic-itemtype-add'],
+            ];
+            foreach ($defaults as $capability => $old) {
+                $marks = implode(',', array_fill(0, count($old), '?'));
+                Database::run(
+                    "UPDATE application_nav SET icon = '' WHERE capability = ? AND icon IN ($marks)",
+                    array_merge([$capability], $old)
+                );
+            }
+            foreach ($renamed as $old => $new) {
+                Database::run('UPDATE application_nav SET icon = ? WHERE icon = ?', [$new, $old]);
+            }
+        }
+        if (self::tableExists('applications')) {
+            $showcase = [
+                'matters' => ['ic-knowledgebase', 'ic-briefcase'],
+                'conveyancing' => ['ic-item-mgmt', 'ic-home'],
+                'claims' => ['ic-servicecentre', 'ic-shield'],
+                'repairs' => ['ic-time', 'ic-wrench'],
+                'complaints' => ['ic-create-ticket', 'ic-complaint'],
+                'committee' => ['ic-subjects', 'ic-landmark'],
+                'audit' => ['ic-search', 'ic-audit'],
+                'incidents' => ['ic-announcements', 'ic-alert'],
+                'candidates' => ['ic-my-ticket-searches', 'ic-user'],
+                'contracts' => ['ic-new-article', 'ic-contract'],
+            ];
+            foreach ($showcase as $slug => [$old, $new]) {
+                Database::run('UPDATE applications SET icon = ? WHERE slug = ? AND icon = ?', [$new, $slug, $old]);
+            }
+            foreach ($renamed as $old => $new) {
+                Database::run('UPDATE applications SET icon = ? WHERE icon = ?', [$new, $old]);
+            }
         }
     }
 

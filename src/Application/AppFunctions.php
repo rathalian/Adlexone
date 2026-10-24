@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
-use Adlexone\support\RenderViews;
+use Adlexone\Http\View;
 
 /**
  * Optional custom screens under site/apps/{pack}/.
  *
- * Prefer the built-in screens (Work, Create, Search, Announcements, Settings)
- * configured in Manage → Navigation or the Builder. Packs are only for rare
+ * Prefer the built-in screens configured in Manage → Navigation or the Builder.
+ * Packs are only for rare
  * installation-specific screens that cannot be expressed as shared config.
  */
 final class AppFunctions
@@ -64,7 +64,7 @@ final class AppFunctions
     {
         self::discover();
         if (!isset(self::$registry[$id])) {
-            RenderViews::buildResponse('This screen is missing.');
+            View::respond('This screen is missing.');
             return;
         }
 
@@ -78,7 +78,7 @@ final class AppFunctions
             return;
         }
 
-        RenderViews::buildResponse('This screen is missing.');
+        View::respond('This screen is missing.');
     }
 
     /**
@@ -99,7 +99,7 @@ final class AppFunctions
         self::$registry[$id] = [
             'label' => (string) $meta['label'],
             'origin' => (string) ($meta['origin'] ?? self::$currentOrigin),
-            'icon' => (string) ($meta['icon'] ?? 'ic-launch'),
+            'icon' => (string) ($meta['icon'] ?? 'ic-grid'),
             'config' => (string) ($meta['config'] ?? 'none'),
             'default_option' => (string) ($meta['default_option'] ?? ''),
             'open' => $meta['open'],

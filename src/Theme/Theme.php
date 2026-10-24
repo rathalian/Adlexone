@@ -120,6 +120,15 @@ final class Theme
         return self::layoutUrl('css/base.css') . ($v > 0 ? '?v=' . $v : '');
     }
 
+    public static function layoutCssHref(string $name): string
+    {
+        $name = preg_replace('/[^A-Za-z0-9_-]+/', '', $name) ?? '';
+        $fs = self::layoutFs() . 'css' . DIRECTORY_SEPARATOR . $name . '.css';
+        $v = is_file($fs) ? (int) @filemtime($fs) : 0;
+
+        return self::layoutUrl('css/' . $name . '.css') . ($v > 0 ? '?v=' . $v : '');
+    }
+
     public static function cssHref(string $theme = ''): string
     {
         $theme = self::canonicalize($theme !== '' ? $theme : self::name());
@@ -130,12 +139,13 @@ final class Theme
         return self::url($file, $theme) . ($v > 0 ? '?v=' . $v : '');
     }
 
-    public static function jsHref(): string
+    public static function jsHref(string $name = 'app'): string
     {
-        $fs = self::layoutFs() . 'js' . DIRECTORY_SEPARATOR . 'app.js';
+        $name = preg_replace('/[^A-Za-z0-9_-]+/', '', $name) ?? '';
+        $fs = self::layoutFs() . 'js' . DIRECTORY_SEPARATOR . $name . '.js';
         $v = is_file($fs) ? (int) @filemtime($fs) : 0;
 
-        return self::layoutUrl('js/app.js') . ($v > 0 ? '?v=' . $v : '');
+        return self::layoutUrl('js/' . $name . '.js') . ($v > 0 ? '?v=' . $v : '');
     }
 
     public static function spriteHref(): string
@@ -243,5 +253,55 @@ final class Theme
     public static function pagePath(string $page): string
     {
         return self::layoutFs() . 'pages' . DIRECTORY_SEPARATOR . $page . '.php';
+    }
+
+    public static function partialPath(string $name): string
+    {
+        return self::layoutFs() . 'partials' . DIRECTORY_SEPARATOR . $name . '.php';
+    }
+
+    /** Accent colour from a skin, used by the theme picker. */
+    public static function accent(string $theme): string
+    {
+        $theme = self::canonicalize($theme);
+        $file = self::rootFs() . $theme . DIRECTORY_SEPARATOR . self::cssFile($theme);
+        $css = is_file($file) ? (string) file_get_contents($file) : '';
+        if (preg_match('/--inlay:\s*(#[0-9a-fA-F]{3,8})/', $css, $match) === 1) {
+            return $match[1];
+        }
+        if (preg_match('/--brand:\s*(#[0-9a-fA-F]{3,8})/', $css, $match) === 1) {
+            return $match[1];
+        }
+
+        return '#1c1917';
+    }
+
+    public static function picker(string $name, string $current, bool $submitOnChange = false, string $followLabel = ''): string
+    {
+        $current = $current === '' ? '' : self::canonicalize($current);
+        $change = $submitOnChange ? ' onchange="this.form.submit()"' : '';
+        $html = '<div class="theme-swatches" role="radiogroup">';
+        $options = self::installed();
+        if ($followLabel !== '') {
+            $checked = $current === '' ? ' checked' : '';
+            $active = $current === '' ? ' is-selected' : '';
+            $html .= '<label class="theme-swatch theme-swatch--follow' . $active . '">'
+                . '<input type="radio" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" value=""' . $checked . $change . '>'
+                . '<span class="theme-swatch__chip" aria-hidden="true"></span>'
+                . '<span class="theme-swatch__name">' . htmlspecialchars($followLabel, ENT_QUOTES, 'UTF-8') . '</span>'
+                . '</label>';
+        }
+        foreach ($options as $slug => $label) {
+            $checked = $slug === $current ? ' checked' : '';
+            $active = $slug === $current ? ' is-selected' : '';
+            $html .= '<label class="theme-swatch' . $active . '">'
+                . '<input type="radio" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" value="'
+                . htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') . '"' . $checked . $change . '>'
+                . '<span class="theme-swatch__chip" style="background:' . htmlspecialchars(self::accent($slug), ENT_QUOTES, 'UTF-8') . '"></span>'
+                . '<span class="theme-swatch__name">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+                . '</label>';
+        }
+
+        return $html . '</div>';
     }
 }

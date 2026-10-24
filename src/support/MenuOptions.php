@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace Adlexone\support;
 
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Html\Html;
+
 /**
  * One menu model for custom fields.
  *
@@ -107,7 +111,7 @@ final class MenuOptions
             }
             if ($level === 1 && $childId > 0 && isset(self::$names[$childId])) {
                 $html .= '<div class="label menu-cascade-label">'
-                    . htmlspecialchars(self::$names[$childId], ENT_QUOTES, 'UTF-8') . '</div>';
+                    . Html::e(self::$names[$childId]) . '</div>';
             } elseif ($level > 0) {
                 $html .= '<div class="menu-cascade-gap" aria-hidden="true"></div>';
             }
@@ -122,7 +126,7 @@ final class MenuOptions
                 $labels[] = (string)$option['menu_value'];
             }
             $extra = $nested ? 'onchange="this.form.submit()"' : '';
-            $html .= RenderViews::buildSelectDropdown(self::inputName($fieldId, $childId, $level), $values, $labels, $selected, $extra);
+            $html .= Form::select(self::inputName($fieldId, $childId, $level), $values, $labels, $selected, $extra);
 
             $chosen = null;
             foreach ($options as $option) {
@@ -213,11 +217,11 @@ final class MenuOptions
             $id = (int)$node['menu_value_id'];
             $indent = (int)$node['depth'] * 20;
             $rows .= '<div class="menu-editor-row" style="margin-left:' . $indent . 'px">'
-                . RenderViews::buildTextInput((string)$id, (string)$node['menu_value'])
-                . RenderViews::buildHiddenInput('menu_value_old_id_' . $id, (string)$node['menu_value'])
+                . Form::text((string)$id, (string)$node['menu_value'])
+                . Form::hidden('menu_value_old_id_' . $id, (string)$node['menu_value'])
                 . self::parentSelect('parent_' . $id, $fieldId, (int)$node['parent_menu_value_id'], $id)
-                . RenderViews::buildURL(
-                    ITEM_BASE_URL . '&option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . $fieldId,
+                . Blocks::link(
+                    '?manage=fields' . '&option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . $fieldId,
                     TXT_47,
                     '',
                     'URL',
@@ -226,7 +230,7 @@ final class MenuOptions
                 . '</div>';
         }
         if ($rows === '') {
-            $rows = htmlspecialchars(TXT_366, ENT_QUOTES, 'UTF-8');
+            $rows = Html::e(TXT_366);
         }
         return $rows;
     }
@@ -243,7 +247,7 @@ final class MenuOptions
             $values[] = (string)$id;
             $labels[] = (string)$node['path'];
         }
-        return RenderViews::buildSelectDropdown($name, $values, $labels, (string)$selected);
+        return Form::select($name, $values, $labels, (string)$selected);
     }
 
     public static function valueExists(int $fieldId, string $value, int $parentId): bool
@@ -297,7 +301,8 @@ final class MenuOptions
             Database::update(
                 'custom_field_menu_values',
                 ['menu_value' => $newValue],
-                "WHERE menu_value_id = '" . $id . "' AND custom_field_id = '" . $fieldId . "'"
+                'WHERE menu_value_id = ? AND custom_field_id = ?',
+                [(int) $id, (int) $fieldId]
             );
             if (!in_array($newValue, $oldValues, true)) {
                 self::renameStoredItems($fieldId, $previous, $newValue);
@@ -323,7 +328,8 @@ final class MenuOptions
             Database::update(
                 'custom_field_menu_values',
                 ['parent_menu_value_id' => $parentId],
-                "WHERE menu_value_id = '" . $id . "' AND custom_field_id = '" . $fieldId . "'"
+                'WHERE menu_value_id = ? AND custom_field_id = ?',
+                [(int) $id, (int) $fieldId]
             );
         }
         unset(self::$nodeCache[$fieldId]);
@@ -374,7 +380,8 @@ final class MenuOptions
             Database::update(
                 'custom_field_menu_values',
                 ['sub_menu_values' => ''],
-                "WHERE menu_value_id = '" . $parentId . "'"
+                'WHERE menu_value_id = ?',
+                [(int) $parentId]
             );
         }
     }

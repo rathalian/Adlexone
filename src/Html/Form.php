@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Html;
 
+use Adlexone\support\FieldValidation;
+
 /**
  * Escaped form markup. Class names are the contract with layouts/css/base.css.
  * Raw $attributes strings are a legacy passthrough for screens that still
@@ -13,7 +15,7 @@ final class Form
     /**
      * @param array<string, string> $fields label => control HTML
      * @param list<string> $buttons
-     * @param array{method?: string, name?: string, id?: string, enctype?: string} $options
+     * @param array{method?: string, name?: string, id?: string, enctype?: string, kicker?: string, badge?: string, mark?: string, facts?: list<string>, record?: bool, disclosure?: bool, lead?: string, inside?: string, after?: string, errors?: list<string>, error_title?: string} $options
      */
     public static function form(string $title, string $action, array $fields, array $buttons, array $options = []): string
     {
@@ -24,14 +26,38 @@ final class Form
             (string) ($options['id'] ?? ''),
             (string) ($options['enctype'] ?? 'application/x-www-form-urlencoded')
         );
+        if (is_array($options['errors'] ?? null) && $options['errors'] !== []) {
+            $errorTitle = trim((string) ($options['error_title'] ?? ''));
+            if ($errorTitle === '') {
+                $errorTitle = defined('TXT_468') ? (string) TXT_468 : 'Check the form';
+            }
+            $html .= self::errorSummary($errorTitle, $options['errors']);
+        }
         $html .= self::fields($fields);
+        $html .= (string) ($options['inside'] ?? '');
         $html .= self::close($buttons);
+        $html = (string) ($options['lead'] ?? '') . $html . (string) ($options['after'] ?? '');
 
         $block = [
             'title' => $title,
             'html' => $html,
-            'class' => 'card--sheet',
+            'class' => 'card--sheet' . (!empty($options['record']) ? ' card--record' : ''),
         ];
+        $kicker = trim((string) ($options['kicker'] ?? ''));
+        $badge = trim((string) ($options['badge'] ?? ''));
+        if ($kicker !== '') {
+            $block['kicker'] = $kicker;
+        }
+        if ($badge !== '') {
+            $block['badge'] = $badge;
+        }
+        $mark = trim((string) ($options['mark'] ?? ''));
+        if ($mark !== '') {
+            $block['mark'] = $mark;
+        }
+        if (is_array($options['facts'] ?? null) && $options['facts'] !== []) {
+            $block['facts'] = $options['facts'];
+        }
         if (!empty($options['disclosure'])) {
             $block['disclosure'] = true;
         }
@@ -88,7 +114,7 @@ final class Form
         foreach ($labelFormElementArray as $label => $element) {
             $fieldIndex++;
             $labelText = trim((string) $label);
-            if ($labelText === '') {
+            if ($labelText === '' || is_int($label)) {
                 $html .= $element;
                 continue;
             }
@@ -113,11 +139,8 @@ final class Form
     {
         $message = str_replace('\\n', "\n", $message);
 
-        return htmlspecialchars(
-            'return confirm(' . json_encode($message, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ')',
-            ENT_QUOTES,
-            'UTF-8'
-        );
+        return Html::e(
+            'return confirm(' . json_encode($message, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ')');
     }
 
     public static function confirmData(string $message): string
@@ -153,14 +176,49 @@ final class Form
 
     public static function text(string $name, mixed $value = '', string $placeholder = '', bool $readOnly = false): string
     {
-        return Html::tag('input', [
-            'type' => 'text',
-            'name' => $name,
-            'value' => $value ?? '',
+        return self::input('text', $name, $value, [
             'placeholder' => $placeholder,
-            'class' => 'input',
             'readonly' => $readOnly ? true : null,
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    public static function input(string $type, string $name, mixed $value = '', array $extra = []): string
+    {
+        $attributes = array_merge([
+            'type' => $type,
+            'name' => $name,
+            'value' => $value ?? '',
+            'class' => 'input',
+        ], $extra);
+
+        return Html::tag('input', $attributes);
+    }
+
+    /**
+     * @param array<int|string, string> $messages message, keyed by the field name when the message belongs to one field
+     */
+    public static function errorSummary(string $title, array $messages): string
+    {
+        $items = '';
+        foreach ($messages as $field => $message) {
+            $message = trim((string) $message);
+            if ($message === '') {
+                continue;
+            }
+            $items .= is_string($field) && $field !== ''
+                ? Html::tag('li', [], Html::tag('a', ['href' => '#' . $field, 'data-field' => $field], Html::e($message)))
+                : Html::tag('li', [], Html::e($message));
+        }
+        if ($items === '') {
+            return '';
+        }
+
+        return '<div class="form-errors" role="alert">'
+            . Html::tag('p', ['class' => 'form-errors__title'], Html::e($title))
+            . '<ul>' . $items . '</ul></div>';
     }
 
     public static function file(string $name, string $maximumSize): string
@@ -169,18 +227,50 @@ final class Form
             . Html::tag('input', ['name' => $name, 'type' => 'file', 'class' => 'input input-file']);
     }
 
-    public static function date(string $nameID, string $value, string $dateFormat): string
+    public static function date(string $nameID, string $value, string $dateFormat = ''): string
     {
-        $day = self::text('day_' . $nameID, $value);
-        $month = self::text('month_' . $nameID, $value);
-        $year = self::text('year_' . $nameID, $value);
-        $separator = '-';
+        unset($dateFormat);
+        return self::input('date', $nameID, FieldValidation::toDateInput($value), [
+            'autocomplete' => 'off',
+        ]);
+    }
 
-        return match ($dateFormat) {
-            'dmY' => "{$day}{$separator}{$month}{$separator}{$year} " . (defined('TXT_382') ? TXT_382 : ''),
-            'mdY' => "{$month}{$separator}{$day}{$separator}{$year} " . (defined('TXT_383') ? TXT_383 : ''),
-            default => "{$year}{$separator}{$month}{$separator}{$year} " . (defined('TXT_382') ? TXT_382 : ''),
-        };
+    public static function time(string $name, mixed $value = ''): string
+    {
+        return self::input('time', $name, FieldValidation::toTimeInput($value), [
+            'autocomplete' => 'off',
+        ]);
+    }
+
+    public static function datetime(string $name, mixed $value = ''): string
+    {
+        return self::input('datetime-local', $name, FieldValidation::toDatetimeInput($value), [
+            'autocomplete' => 'off',
+        ]);
+    }
+
+    public static function email(string $name, mixed $value = ''): string
+    {
+        return self::input('email', $name, $value, [
+            'autocomplete' => 'off',
+            'inputmode' => 'email',
+        ]);
+    }
+
+    public static function number(string $name, mixed $value = ''): string
+    {
+        return self::input('number', $name, $value, [
+            'step' => 'any',
+            'inputmode' => 'decimal',
+        ]);
+    }
+
+    public static function url(string $name, mixed $value = ''): string
+    {
+        return self::input('url', $name, $value, [
+            'autocomplete' => 'off',
+            'inputmode' => 'url',
+        ]);
     }
 
     public static function password(string $name, string $value): string
@@ -190,6 +280,7 @@ final class Form
             'name' => $name,
             'value' => $value,
             'class' => 'input',
+            'autocomplete' => 'new-password',
         ]);
     }
 
@@ -211,7 +302,7 @@ final class Form
     public static function button(string $type, string $name = '', string $value = '', string $attributes = '', string $variant = ''): string
     {
         if ($variant === '') {
-            $variant = $type === 'reset' ? 'secondary' : 'primary';
+            $variant = $type === 'reset' ? 'quiet' : 'primary';
         }
         $class = match ($variant) {
             'primary' => 'btn btn--primary',

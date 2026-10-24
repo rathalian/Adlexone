@@ -14,7 +14,7 @@
     --label:#2a2754;
     --body:#1c1a3a;
     --input:#1c1a3a;
-    --placeholder:#6b6890;
+    --placeholder:#69668d;
     --title-strip:#efeff8;
     --title-strip-border:#d8d6ea;
     --title-size:11.5px;
@@ -26,7 +26,19 @@
     --page-bg:#f4f4fb;
     --brandbar-border:#e4e3f0;
     --brandmaker:#5c5980;
+    --logo-ground:#1c1a3a;
+    --logo-bar:#5c59c6;
+    --logo-piece:#f4f4fb;
+    --logo-joint:#e2e0f6;
     --btn-primary-hover:#2e2b78;
     --danger:#b91c1c;
     --danger-ink:#991b1b;
+    --success:#047857;
+    --success-ink:#065f46;
+    --warning:#b45309;
+    --warning-ink:#92400e;
+    --info:#1d4ed8;
+    --info-ink:#1e3a8a;
+    --neutral:#57534e;
+    --neutral-ink:#44403c;
 }

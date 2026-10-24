@@ -8,8 +8,13 @@ use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
-use Adlexone\support\RenderViews;
 use Adlexone\support\RssFeed;
+use Adlexone\Http\Page;
+use Adlexone\Html\Blocks;
+use Adlexone\Html\Form;
+use Adlexone\Http\View;
+use Adlexone\Text\Wording;
+use Adlexone\Html\Html;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -18,7 +23,7 @@ final class SearchScreen
 {
     public static function open(): void
     {
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
+        if (Page::current()->inApplication()) {
             ApplicationAccess::requireUse();
         } elseif (!Access::can(Permission::ADMIN_ITEMS)) {
             Access::deny();
@@ -75,21 +80,29 @@ final class SearchScreen
          */
         switch (@$_GET['option']) {
             case 'show_item_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+            case 'show_search_results' :
+                if (Page::current()->inApplication()) {
+                    Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                    ApplicationSearch::open();
+                    break;
+                }
+                if (@$_GET['option'] === 'show_search_results') {
+                    Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                    self::searchResults();
+                    break;
+                }
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 $itemTypes = $_GET['item_types'] ?? '';
-                if ($itemTypes === '' && defined('APPLICATION_SLUG')) {
+                if ($itemTypes === '' && Page::current()->inApplication()) {
                     $allowed = self::applicationSearchTypeIds();
                     $itemTypes = $allowed !== [] ? implode(',', $allowed) : '';
                 }
+                $itemTypes = preg_replace('/[^0-9,]/', '', (string) $itemTypes) ?? '';
                 $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
                 self::showAdvancedItemSearch($filter);
                 break;
-            case 'show_search_results' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::searchResults();
-                break;
             case 'show_saved_searches' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 $application = (string)($_GET['application'] ?? '');
                 if ($application === '' && str_starts_with((string)($_GET['controller'] ?? ''), 'app_')) {
                     $application = (string)$_GET['controller'];
@@ -97,31 +110,31 @@ final class SearchScreen
                 self::showSavedSearches($_SESSION['access_user_id'], $application);
                 break;
             case 'saved_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 self::savedSearch($_GET['id'], $_SESSION['access_user_id'], @$_GET['global']);
                 break;
             case 'delete_saved_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 self::deleteSavedSearch($_GET['id'], $_SESSION['access_user_id'], @$_GET['scope']);
                 break;
             case 'quick_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 self::quickSearch();
                 break;
             case 'show_quick_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 self::showQuickSearch();
                 break;
             case 'edit_saved_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
                 self::editSavedSearch($_GET['id']);
                 break;
             case 'update_saved_search' :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 0);
                 self::updateSavedSearch($_GET['id']);
                 break;
             default :
-                RenderViews::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 self::showQuickSearch();
                 break;
         }
@@ -131,10 +144,10 @@ final class SearchScreen
      */
     public static function applicationSearchTypeIds(): array
     {
-        if (!defined('APPLICATION_SLUG') || (string) APPLICATION_SLUG === '') {
+        if (!Page::current()->inApplication()) {
             return [];
         }
-        return ApplicationSettings::allowedItemTypeIds((string) APPLICATION_SLUG);
+        return ApplicationSettings::allowedItemTypeIds(Page::current()->applicationSlug());
     }
 
     /**
@@ -147,7 +160,11 @@ final class SearchScreen
     {
         $allowed = self::applicationSearchTypeIds();
         if ($allowed === []) {
-            return $filter;
+            if (is_array($filter)) {
+                return array_values(array_map('intval', $filter));
+            }
+
+            return preg_replace('/[^0-9]/', '', (string) $filter) ?? '';
         }
         if (is_array($filter)) {
             $ids = array_values(array_filter(array_map('intval', $filter), static fn (int $id): bool => in_array($id, $allowed, true)));
@@ -175,17 +192,17 @@ final class SearchScreen
             if (substr($values, -1) == '*') {
                 $values = substr($values, 0, -1);
                 $validId = false;
-                if (Database::exists('items', 'WHERE item_id =' . $values . ' AND item_type_id = ' . APP_COUNT_ITEM_TYPE)) {
+                if (Database::exists('items', 'item_id = ? AND item_type_id = ?', [(int) $values, (int) APP_COUNT_ITEM_TYPE])) {
                     $validId = true;
                 }
             } else {
                 $validId = True;
             }
-            $event_id = (isset($_GET['event_id'])) ? $_GET['event_id'] : '';
-            $selectionCriteria = 'WHERE item_id =' . $values . ' AND event_id = "' . $event_id . '"';
+            $values = (int) $values;
+            $event_id = isset($_GET['event_id']) && is_scalar($_GET['event_id']) ? (string) $_GET['event_id'] : '';
             if ($validId == True) {
-                if (Database::exists('system_log', $selectionCriteria)) {
-                    $sql = 'UPDATE ' . 'system_log SET event_counter = event_counter + 1 ' . $selectionCriteria;
+                if (Database::exists('system_log', 'item_id = ? AND event_id = ?', [$values, $event_id])) {
+                    Database::run('UPDATE system_log SET event_counter = event_counter + 1 WHERE item_id = ? AND event_id = ?', [$values, $event_id]);
                 } else {
                     unset($columnArray);
                     $columnArray['item_id'] = $values;
@@ -212,18 +229,24 @@ final class SearchScreen
         $jsRequiredMsgArray = "['" . TXT_206 . "']";
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $inApplication = Page::current()->inApplication();
+        $typeLabels = $inApplication ? ['Name', 'ID', 'Notes'] : [TXT_84, TXT_102, TXT_601];
         $fields = [
-            TXT_682 => RenderViews::buildSelectDropdown('search_type', array('item_id', 'item_title', 'log_entries'), array(TXT_102, TXT_84, TXT_601), ''),
-            TXT_683 => RenderViews::buildTextInput('search_value', ''),
-            '' => RenderViews::buildHiddenInput('search', 'Search'),
+            TXT_682 => Form::select(
+                'search_type',
+                ['item_title', 'item_id', 'log_entries'],
+                $typeLabels,
+                'item_title'
+            ),
+            ($inApplication ? 'Name' : TXT_683) => Form::text('search_value', ''),
+            '' => Form::hidden('search', 'Search'),
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
-            RenderViews::applicationText('TXT_62', TXT_376),
+        Page::current()->setBody(Form::form(
+            Wording::application('TXT_62', TXT_376),
             \Adlexone\Http\Router::continueUrl('search') . '&option=quick_search',
             $fields,
-            [RenderViews::buildFormButton('submit', 'search', TXT_3, $javascript)]
+            [Form::button('submit', 'search', TXT_3, $javascript)]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -282,24 +305,25 @@ final class SearchScreen
 
         $heading = defined('SEARCH_NAME')
             ? (string)SEARCH_NAME
-            : (string)RenderViews::applicationText('TXT_1', (string)RenderViews::getLanguageConstant('LA_44', 'TXT_44'));
+            : (string)Wording::application('TXT_1', (string)Wording::get('LA_44', 'TXT_44'));
 
         if (empty($ids)) {
-            $again = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL . '&option=show_quick_search' : '';
-            define('BODY_CONTENT', RenderViews::buildVerticalCards([
+            $again = defined('MAN_BASE_URL')
+                ? (string) MAN_BASE_URL . (Page::current()->inApplication() ? '&option=show_item_search' : '&option=show_quick_search')
+                : '';
+            Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => $heading,
-                    'html' => RenderViews::buildEmptyState([
+                    'html' => Blocks::emptyState([
                         'illustration' => 'empty-search',
-                        'title' => 'Nothing matched',
-                        'copy' => 'Try another search.',
+                        'title' => 'No records matched',
+                        'copy' => 'Change the search and run it again.',
                         'action' => $again !== ''
-                            ? '<a class="btn btn--primary" href="' . htmlspecialchars($again, ENT_QUOTES, 'UTF-8') . '">Search again</a>'
+                            ? '<a class="btn btn--primary" href="' . Html::e($again) . '">Search again</a>'
                             : '',
                     ]),
                 ],
             ]));
-            RenderViews::renderThemePage('main_page_content', SET_THEME);
             return;
         }
 
@@ -313,26 +337,25 @@ final class SearchScreen
         $rows = [];
         foreach ($result as $row) {
             $itemId = (int)$row['item_id'];
-            $rows[] = RenderViews::itemRecord(
+            $rows[] = Blocks::itemRecord(
                 $row,
                 $base . '&item=' . $itemId,
-                RenderViews::itemActions($itemId, $base)
+                Blocks::itemActions($itemId, $base)
             );
         }
 
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             [
                 'title' => $heading,
-                'html' => RenderViews::buildRecordList([
-                    'column' => RenderViews::getLanguageConstant('LA_84', 'TXT_84'),
-                    'columns' => RenderViews::itemListColumns(),
+                'html' => Blocks::recordList([
+                    'column' => Wording::get('LA_84', 'TXT_84'),
+                    'columns' => Blocks::itemListColumns(),
                     'searchLabel' => TXT_3,
                     'empty' => TXT_115,
                     'groups' => [['rows' => $rows]],
                 ]),
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     /**
@@ -380,23 +403,23 @@ final class SearchScreen
     				$headFields[] = "disp_" . $tmpvars1[1];
     				switch(trim($value)) {
     					case 'item_id':
-    						$headTitle[] = RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4);
     						break;
     					case 'item_title':
-    						$headTitle[] = RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4);
     						break;
     					case 'create_date':
-    						$headTitle[] = RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4);
     						break;
     					case 'item_type_id':
-    						$headTitle[] = RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4);
     						break;
 
     					case 'creator_security':
-    						$headTitle[] = RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'creator_security\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_551', 'TXT_551') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'creator_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_551', 'TXT_551') . '</strong></a>', $_SESSION['access_role_id'], 4);
     						break;
     					case 'user_security':
-    						$headTitle[] = RenderViews::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'user_security\'; document.repform.submit()" class="URL"><strong>' . RenderViews::getLanguageConstant('LA_269', 'TXT_269') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'user_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_269', 'TXT_269') . '</strong></a>', $_SESSION['access_role_id'], 4);
     						break;
 
 
@@ -404,7 +427,7 @@ final class SearchScreen
     						$tmpvars = explode("_",$tmpvars1[1]);
     						$headsql = "SELECT custom_field_name FROM custom_fields WHERE custom_field_id = " . $tmpvars[count($tmpvars) - 1];
     												$headresult = Database::rows($headsql);
-    						$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'custom_field_' . $tmpvars[count($tmpvars) - 1] . ' \'; document.repform.submit()" class="URL"><strong>' . ($headresult[0]['custom_field_name'] ?? '') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'custom_field_' . $tmpvars[count($tmpvars) - 1] . ' \'; document.repform.submit()" class="URL"><strong>' . ($headresult[0]['custom_field_name'] ?? '') . '</strong></a>', $_SESSION['access_role_id'], 4);
     						unset($tmpvars1);
     						unset($tmpvars);
     				}
@@ -420,27 +443,27 @@ final class SearchScreen
     							$tmpvars = explode("_",$key);
     							$headsql = "SELECT custom_field_name FROM custom_fields WHERE custom_field_id = " . $tmpvars[count($tmpvars) - 1];
     														$headresult = Database::rows($headsql);
-    							$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'custom_field_' . $tmpvars[count($tmpvars) - 1] . '\'; document.repform.submit()" class="URL"><strong>' . ($headresult[0]['custom_field_name'] ?? '') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    							$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'custom_field_' . $tmpvars[count($tmpvars) - 1] . '\'; document.repform.submit()" class="URL"><strong>' . ($headresult[0]['custom_field_name'] ?? '') . '</strong></a>', $_SESSION['access_role_id'], 4);
     							unset($tmpvars);
     						} else {
     							switch($key) {
     								case 'disp_item_id':
-    									$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::languageAlias('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_item_title':
-    									$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . RenderViews::languageAlias('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_create_date':
-    									$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_item_type_id':
-    									$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . RenderViews::languageAlias('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_creator_security':
-    									$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'creator_security\'; document.repform.submit()" class="URL"><strong>' . RenderViews::languageAlias('LA_551', 'TXT_551') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'creator_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_551', 'TXT_551') . '</strong></a>', $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_user_security':
-    									$headTitle[] = RenderViews::secureOutput('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'user_security\'; document.repform.submit()" class="URL"><strong>' . RenderViews::languageAlias('LA_269', 'TXT_269') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'user_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_269', 'TXT_269') . '</strong></a>', $_SESSION['access_role_id'], 4);
     									break;
 
     									break;
@@ -593,14 +616,14 @@ final class SearchScreen
     			$tableHeadings = array();
     			foreach($headTitle as $key => $value) {
     				$tableHeadings[] = $value;
-    				$headHtml .= RenderViews::buildHiddenInput($headFields[$key],$headFields[$key]);
+    				$headHtml .= Form::hidden($headFields[$key],$headFields[$key]);
     			}
     			$fields[] = TXT_388;
     		} else {
-                $fields = array(RenderViews::getLanguageConstant('LA_102', 'TXT_102'),RenderViews::getLanguageConstant('LA_84', 'TXT_84'),TXT_225,RenderViews::getLanguageConstant('LA_226', 'TXT_226'),TXT_388);
+                $fields = array(Wording::get('LA_102', 'TXT_102'),Wording::get('LA_84', 'TXT_84'),TXT_225,Wording::get('LA_226', 'TXT_226'),TXT_388);
     		}
 
-    		$html = RenderViews::buildFormFieldsGrid($fields);
+    		$html = Form::fields($fields);
     		$i = 0;
     		$countUpdate = (defined('APP_COUNT_ITEM_TYPE')) ? '&event_id=view_item' : '';
     		if (count($result) > 0) {
@@ -659,13 +682,13 @@ final class SearchScreen
     							if ($urlRow['field_type'] == 'URL'){
     								if ($row[$value] != ''){
     									$http = (!stristr($value,'http') AND !stristr($value,'https')) ? 'http://' : '';
-    									$cellData[] = RenderViews::url($http.$row[$value] , $row[$value], 'URL','','','_blank');
+    									$cellData[] = Blocks::link($http.$row[$value], $row[$value], '', 'URL', '', '_blank');
     								}else{
     									$cellData[] = $row[$value];
     								}
     							}elseif ($urlRow['field_type'] == 'dynamicURL'){
     								if ($row[$value] != ''){
-    									$cellData[] = RenderViews::url(str_replace('<?php echo INSERT; ?>',$row[$value],$urlRow['data']),$row[$value],'URL','','','_blank');
+    									$cellData[] = Blocks::link(str_replace('<?php echo INSERT; ?>',$row[$value],$urlRow['data']), $row[$value], '', 'URL', '', '_blank');
     								}else{
     									$cellData[] = $row[$value];
     								}
@@ -683,8 +706,8 @@ final class SearchScreen
     						$knowledgeArticlesArray[] = $row['item_id'] . '*';
     					}
     				}
-    				$actions = (string) RenderViews::outputIfRoleAllowed(
-    				    RenderViews::buildURL(
+    				$actions = (string) Access::outputIfRoleAllowed(
+    				    Blocks::link(
     				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=log_entry&item_id=' . $row['item_id'],
     				        TXT_246
     				    ),
@@ -692,8 +715,8 @@ final class SearchScreen
     				    4
     				);
 
-    				$actions .= (string) RenderViews::outputIfRoleAllowed(
-    				    ' - ' . RenderViews::buildURL(
+    				$actions .= (string) Access::outputIfRoleAllowed(
+    				    ' - ' . Blocks::link(
     				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . $row['item_id'],
     				        TXT_389
     				    ),
@@ -701,8 +724,8 @@ final class SearchScreen
     				    4
     				);
 
-    				$actions .= (string) RenderViews::outputIfRoleAllowed(
-    				    ' - ' . RenderViews::buildURL(
+    				$actions .= (string) Access::outputIfRoleAllowed(
+    				    ' - ' . Blocks::link(
     				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $row['item_id'],
     				        TXT_28
     				    ),
@@ -710,8 +733,8 @@ final class SearchScreen
     				    3
     				);
 
-    				$actions .= (string) RenderViews::outputIfRoleAllowed(
-    				    ' - ' . RenderViews::buildURL(
+    				$actions .= (string) Access::outputIfRoleAllowed(
+    				    ' - ' . Blocks::link(
     				        '?controller=full_page_view&option=print_item&item_id=' . $row['item_id'],
     				        TXT_625,
     				        '',      // spriteName
@@ -723,8 +746,8 @@ final class SearchScreen
     				    5
     				);
 
-    				$actions .= (string) RenderViews::outputIfRoleAllowed(
-    				    ' - ' . RenderViews::buildURL(
+    				$actions .= (string) Access::outputIfRoleAllowed(
+    				    ' - ' . Blocks::link(
     				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=delete_item&item_id=' . $row['item_id'],
     				        TXT_315,
     				        '', // spriteName
@@ -735,27 +758,23 @@ final class SearchScreen
     				    2
     				);
     				$cellData[] = $actions;
-    				$formHTML = RenderViews::buildFormFieldsGrid($cellData);
+    				$formHTML = Form::fields($cellData);
     				$i++;
     				unset($cellData, $actions);
     			}
     		} else {
-    			$html .= RenderViews::buildFormFieldsGrid(array(TXT_115));
+    			$html .= Form::fields(array(TXT_115));
     		}
-    		$html = RenderViews::buildStartForm(\Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results','POST','form-horizontal');
+    		$html = Form::open(\Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results','POST','form-horizontal');
 
-    		//RenderViews search results
-    		//$html .= RenderViews::tbStartTable('table table-striped table-hover');
-    		//$html .= RenderViews::tbTableHeadings($tableHeadings);
     		$html .= $formHTML;
-    //		$html .= RenderViews::endTable();
     		unset($tableRows,$cellData);
     		//Display next/prev menu
     		if ($countBoolean) {
     			$paginationHTML = '<div class="pagination pagination-centered "><ul>';
     			$pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
     			if ($pageset > 1) {
-    				$paginationHTML .= RenderViews::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value--; document.repform.submit()">Prev</a></li>', $_SESSION['access_role_id'], 5);
+    				$paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value--; document.repform.submit()">Prev</a></li>', $_SESSION['access_role_id'], 5);
     			} else {
     				$paginationHTML .= "";
     			}
@@ -769,40 +788,38 @@ final class SearchScreen
     				if ($i == $pageset) {
     					$paginationHTML .= '<li class="active"><a href ="#">'. $i .'</a></li>';
     				} else {
-    					$paginationHTML .= RenderViews::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value=' . $i . '; document.repform.submit()">' . $i . ' </a></li>', $_SESSION['access_role_id'], 5);
+    					$paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value=' . $i . '; document.repform.submit()">' . $i . ' </a></li>', $_SESSION['access_role_id'], 5);
     				}
     			}
     			if ($pageset == $iend) {
     				$paginationHTML .=  "";
     			} else {
-    				$paginationHTML .= RenderViews::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value++; document.repform.submit()">Next</a></li>', $_SESSION['access_role_id'], 5);
+    				$paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value++; document.repform.submit()">Next</a></li>', $_SESSION['access_role_id'], 5);
     			}
     			$paginationHTML .= '</ul></div>';
     			$html .= $paginationHTML;
-    			$html .= RenderViews::buildHiddenInput('pageset',$pageset);
+    			$html .= Form::hidden('pageset',$pageset);
     		}
-    		$html .= RenderViews::buildHiddenInput('currsort','');
-    		//$html .= RenderViews::hiddenField('sess',htmlentities($origSQL,ENT_COMPAT, 'UTF-8'));
+    		$html .= Form::hidden('currsort','');
     		$_SESSION['item_search_sql'] = $origSQL;
-    		$html .= RenderViews::buildHiddenInput('search',@$pageset);
-    		$html .= RenderViews::buildHiddenInput('countrecs',$countrecs);
-    		$html .= RenderViews::buildHiddenInput('search_type',$_GET['option']);
+    		$html .= Form::hidden('search',@$pageset);
+    		$html .= Form::hidden('countrecs',$countrecs);
+    		$html .= Form::hidden('search_type',$_GET['option']);
     		$html .= $headHtml;
     		$html .= '</form>';
     	}else{
-    		$html = RenderViews::buildFormFieldsGrid([
-    			RenderViews::getLanguageConstant('LA_102', 'TXT_102') => htmlspecialchars(TXT_115, ENT_QUOTES, 'UTF-8'),
+    		$html = Form::fields([
+    			Wording::get('LA_102', 'TXT_102') => Html::e(TXT_115),
     		]);
 
     	}
     	if (defined('APP_COUNT_ITEM_TYPE') && count($knowledgeArticlesArray) > 0) {
     		self::updateKnoweldgeCount($knowledgeArticlesArray);
     	}
-    	$heading = (defined('SEARCH_NAME')) ? SEARCH_NAME : RenderViews::languageAlias('LA_44', 'TXT_44');
+    	$heading = (defined('SEARCH_NAME')) ? SEARCH_NAME : Wording::get('LA_44', 'TXT_44');
         $bodyBlock[] = ['title' => $heading, 'html' => $html];
-        $bodyContent = RenderViews::buildVerticalCards($bodyBlock);
-    	define('BODY_CONTENT', $bodyContent);
-    	RenderViews::renderThemePage('main_page_content', SET_THEME);
+        $bodyContent = Blocks::vertical($bodyBlock);
+    	Page::current()->setBody($bodyContent);
     }
 
     public static function quickSearch()
@@ -813,21 +830,102 @@ final class SearchScreen
         $_POST['disp_create_date'] = "disp_create_date";
         $_POST['disp_item_type_id'] = "disp_item_type_id";
         $sql = "";
-        switch ($_POST['search_type']) {
+        $value = is_scalar($_POST['search_value'] ?? null) ? (string) $_POST['search_value'] : '';
+        switch ((string) ($_POST['search_type'] ?? '')) {
             case 'item_id':
-                $_POST['item_id'] = $_POST['search_value'];
+                $_POST['item_id'] = ctype_digit($value) ? $value : '0';
                 $_POST['id_operator'] = '=';
                 break;
             case 'item_title':
-                $_POST['item_title'] = '%' . $_POST['search_value'] . '%';
+                $_POST['item_title'] = $value;
                 $_POST['item_title_operator'] = 'LIKE';
                 break;
             case 'log_entries':
                 $sql = 'SELECT ' . 'items.item_id, item_title, ' . 'items.create_date, item_type_id FROM ' .
                     'items JOIN ' . 'core_log ON ' . 'items.item_id = ' .
-                    "core_log.item_id WHERE log_text LIKE '%%" . $_POST['search_value'] . "%%'";
+                    "core_log.item_id WHERE log_text LIKE '%" . Database::escape($value) . "%'";
+                break;
+            default:
+                View::respond(TXT_548);
+                return;
         }
+        $_POST['search'] = $_POST['search'] ?? 'quick_search';
         self::searchResults($sql);
+    }
+
+    /**
+     * A comparison operator from a posted value, limited to the ones the search form offers.
+     */
+    private static function operator(mixed $posted, string $fallback = '='): string
+    {
+        $op = strtoupper(trim(html_entity_decode(is_scalar($posted) ? (string) $posted : '', ENT_COMPAT, 'UTF-8')));
+
+        return in_array($op, ['=', '<>', '!=', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE'], true) ? $op : $fallback;
+    }
+
+    /**
+     * AND or OR between two search conditions.
+     */
+    private static function joiner(mixed $posted): string
+    {
+        return strtoupper(trim(is_scalar($posted) ? (string) $posted : '')) === 'OR' ? 'OR' : 'AND';
+    }
+
+    /**
+     * A user id, or the signed-in user's id for the "me" choice in the search form.
+     */
+    private static function personId(string $posted): int
+    {
+        return $posted === 'session_user' ? (int) ($_SESSION['access_user_id'] ?? 0) : (int) $posted;
+    }
+
+    private static function dateColumn(mixed $posted): string
+    {
+        return in_array($posted, ['create_date', 'core_log_updated'], true) ? (string) $posted : 'create_date';
+    }
+
+    private static function postedText(string $key): string
+    {
+        return is_scalar($_POST[$key] ?? null) ? (string) $_POST[$key] : '';
+    }
+
+    private static function literal(string $value): string
+    {
+        return "'" . Database::escape($value) . "'";
+    }
+
+    /**
+     * Seconds since the epoch for a posted date, or null when it is not a date.
+     */
+    private static function postedTime(string $key): ?int
+    {
+        $text = trim(self::postedText($key));
+        if ($text === '') {
+            return null;
+        }
+        $parsed = date_parse($text);
+        if (($parsed['error_count'] ?? 1) > 0 || !is_int($parsed['year'] ?? false) || !is_int($parsed['month'] ?? false) || !is_int($parsed['day'] ?? false)) {
+            return null;
+        }
+
+        return mktime(
+            (int) ($parsed['hour'] ?? 0),
+            (int) ($parsed['minute'] ?? 0),
+            (int) ($parsed['second'] ?? 0),
+            $parsed['month'],
+            $parsed['day'],
+            $parsed['year']
+        );
+    }
+
+    /**
+     * An ORDER BY column from a posted value, or an empty string when it is not a plain column name.
+     */
+    private static function sortColumn(string $posted): string
+    {
+        $posted = trim($posted);
+
+        return preg_match('/^[A-Za-z_][A-Za-z0-9_.]*$/', $posted) === 1 ? $posted : '';
     }
 
     /**
@@ -840,13 +938,8 @@ final class SearchScreen
 
         // Handling accessing the page from option=show_search_results with no POSTed data
         if (empty($_POST['search']) and empty($_POST['new_favourite']) and @$_POST['item_type_id'] == '' and empty($_POST['search_type'])) {
-            // Error messagae
-            if (($_POST['search_type'] == 'quick_search' || $_POST['search_type'] = 'show_search_results') && $_POST['sess'] != '') {
-                $_POST['search'] = 'log_entries';
-            } else {
-                RenderViews::buildResponse(TXT_548);
-                return;
-            }
+            View::respond(TXT_548);
+            return;
         }
 
         // Handle item id filtering
@@ -874,79 +967,78 @@ final class SearchScreen
             }
             // Item ID
             if (!empty($_POST['item_id'])) {
-                if ($_POST['id_operator'] == '=') {
-                    $condition .= $andOr . " item_id = '" . $_POST['item_id'] . "' ";
+                $itemIdText = self::postedText('item_id');
+                if (self::operator($_POST['id_operator'] ?? '=') === '=') {
+                    $condition .= $andOr . " item_id = " . (ctype_digit($itemIdText) ? $itemIdText : '0') . " ";
                 } else {
-                    $condition .= $andOr . " item_id LIKE '%" . $_POST['item_id'] . "%' ";
+                    $condition .= $andOr . " item_id LIKE " . self::literal('%' . Database::escapeLike($itemIdText) . '%') . " ESCAPE '\\' ";
                 }
-                $andOr = @$_POST['id_andor'];
+                $andOr = self::joiner($_POST['id_andor'] ?? '');
             }
             // Hour Range
             if (!empty($_POST['hour_range'])) {
-              $condition .= $andOr . " " . $_POST['hour_type'] . " " . html_entity_decode($_POST['hour_range_operator'], ENT_COMPAT, 'UTF-8') . " " . (time() - intval($_POST['hour_range'] * 60 * 60)) . " ";
-              $andOr = $_POST['hour_range_andor'];
+                $hours = (int) self::postedText('hour_range');
+                $condition .= $andOr . " " . self::dateColumn($_POST['hour_type'] ?? '') . " " . self::operator($_POST['hour_range_operator'] ?? '', '<=') . " " . (time() - $hours * 60 * 60) . " ";
+                $andOr = self::joiner($_POST['hour_range_andor'] ?? '');
             }
-            // Date Created 1
-            if (!empty($_POST['date_1'])) {
-                $date1Array = date_parse($_POST['date_1']);
-                $time = mktime($date1Array['hour'], $date1Array['minute'], $date1Array['second'], $date1Array['month'], $date1Array['day'], $date1Array['year']);
-                $condition .= $andOr . " " . $_POST['date_type_1'] . " " . html_entity_decode($_POST['date_operator_1'], ENT_COMPAT, 'UTF-8') . " '" . $time . "' ";
-                $andOr = $_POST['date_andor_1'];
-            }
-            // Date Created 2
-            if (!empty($_POST['date_2'])) {
-                $date2Array = date_parse($_POST['date_2']);
-                $time = mktime($date2Array['hour'], $date2Array['minute'], $date2Array['second'], $date2Array['month'], $date2Array['day'], $date2Array['year']);
-                $condition .= $andOr . " " . $_POST['date_type_2'] . " " . html_entity_decode($_POST['date_operator_2'], ENT_COMPAT, 'UTF-8') . " '" . $time . "' ";
-                $andOr = $_POST['date_andor_2'];
+            // Date Created 1 and 2
+            foreach (['1', '2'] as $n) {
+                $time = self::postedTime('date_' . $n);
+                if ($time !== null) {
+                    $condition .= $andOr . " " . self::dateColumn($_POST['date_type_' . $n] ?? '') . " " . self::operator($_POST['date_operator_' . $n] ?? '', '>=') . " " . $time . " ";
+                    $andOr = self::joiner($_POST['date_andor_' . $n] ?? '');
+                }
             }
             // Creator User
             if (!empty($_POST['creator_security'])) {
-                $condition .= $andOr . " creator_security " . html_entity_decode($_POST['security_creators_operator'], ENT_COMPAT, 'UTF-8') . " '" . $_POST['creator_security'] . "' ";
-                $andOr = $_POST['security_creators_andor'];
+                $condition .= $andOr . " creator_security " . self::operator($_POST['security_creators_operator'] ?? '') . " " . self::personId(self::postedText('creator_security')) . " ";
+                $andOr = self::joiner($_POST['security_creators_andor'] ?? '');
             }
             // Security User
             if (!empty($_POST['user_security'])) {
-                $condition .= $andOr . " user_security " . html_entity_decode($_POST['security_users_operator'], ENT_COMPAT, 'UTF-8') . " '" . $_POST['user_security'] . "' ";
-                $andOr = $_POST['security_users_andor'];
+                $condition .= $andOr . " user_security " . self::operator($_POST['security_users_operator'] ?? '') . " " . self::personId(self::postedText('user_security')) . " ";
+                $andOr = self::joiner($_POST['security_users_andor'] ?? '');
             }
             // Security Group
             if (!empty($_POST['security_groups'])) {
-                $groupId = (int) $_POST['security_groups'];
-                if (html_entity_decode($_POST['security_groups_operator'], ENT_COMPAT, 'UTF-8') == '=') {
+                $groupId = (int) self::postedText('security_groups');
+                if (self::operator($_POST['security_groups_operator'] ?? '') === '=') {
                     $condition .= $andOr . " item_id IN (SELECT item_id FROM item_groups WHERE group_id = " . $groupId . ") ";
                 } else {
                     $condition .= $andOr . " item_id NOT IN (SELECT item_id FROM item_groups WHERE group_id = " . $groupId . ") ";
                 }
-                $andOr = $_POST['security_groups_andor'];
+                $andOr = self::joiner($_POST['security_groups_andor'] ?? '');
             }
             // Item Title
             if (!empty($_POST['item_title'])) {
-                if ($_POST['item_title_operator'] == '=') {
-                    $condition .= $andOr . " item_title = '" . $_POST['item_title'] . "' ";
+                $titleText = self::postedText('item_title');
+                if (self::operator($_POST['item_title_operator'] ?? 'LIKE', 'LIKE') === '=') {
+                    $condition .= $andOr . " item_title = " . self::literal($titleText) . " ";
                 } else {
-                    $condition .= $andOr . " item_title LIKE '%" . $_POST['item_title'] . "%' ";
+                    $condition .= $andOr . " item_title LIKE " . self::literal('%' . Database::escapeLike($titleText) . '%') . " ESCAPE '\\' ";
                 }
-                $andOr = @$_POST['title_andor'];
+                $andOr = self::joiner($_POST['title_andor'] ?? '');
             }
 
             // Custom Fields
             $i = 0;
-            while ($i < @$_POST['custom_field_count']) {
-                if (!empty($_POST['custom_field_value_' . $i]) or $_POST['custom_field_value_' . $i] != '') {
-                    $fieldId = (int) $_POST['custom_field_' . $i];
-                    $op = html_entity_decode($_POST['custom_field_operator_' . $i], ENT_COMPAT, 'UTF-8');
-                    $val = (string) $_POST['custom_field_value_' . $i];
+            $customFieldCount = min(50, max(0, (int) self::postedText('custom_field_count')));
+            while ($i < $customFieldCount) {
+                if (self::postedText('custom_field_value_' . $i) !== '') {
+                    $fieldId = (int) self::postedText('custom_field_' . $i);
+                    $op = self::operator($_POST['custom_field_operator_' . $i] ?? '');
+                    $val = self::postedText('custom_field_value_' . $i);
                     $condition .= $andOr . ' ' . \Adlexone\Data\ItemFields::matchSql($fieldId, $op, $val) . ' ';
-                    $andOr = $_POST['custom_field_andor_' . $i];
+                    $andOr = self::joiner($_POST['custom_field_andor_' . $i] ?? '');
                 }
                 $i++;
             }
             $columnArray = array('item_id', 'item_type_id', 'item_title');
+            $itemColumns = Database::columns('items');
             foreach ($_POST as $key => $value) {
-                if (substr($key, 0, 4) == "disp" && $value !== '') {
-                    $col = substr($key, 5);
-                    if ($col !== '' && !preg_match('/^custom_field_\d+$/', $col) && !in_array($col, $columnArray, true)) {
+                if (substr((string) $key, 0, 4) == "disp" && $value !== '') {
+                    $col = substr((string) $key, 5);
+                    if ($col !== '' && in_array($col, $itemColumns, true) && !in_array($col, $columnArray, true)) {
                         $columnArray[] = $col;
                     }
                 }
@@ -979,17 +1071,19 @@ final class SearchScreen
             }
         }
 
-        if (isset($_POST['sortOrder'])) {
-            $newsort = substr($_POST['sort_field'], 5) . " ";
+        $sortColumn = self::sortColumn(substr(self::postedText('sort_field'), 5));
+        if (isset($_POST['sortOrder']) && $sortColumn !== '') {
+            $newsort = $sortColumn . " ";
             $newsort .= ($_POST['sortOrder'] == "descending") ? "DESC" : "";
             $sql .= " ORDER BY " . $newsort;
         } else {
             $newsort = "";
-            if (isset($_POST['currsort']) && trim($_POST['currsort'] != "")) {
-                if (trim($_POST['currsort']) == trim(substr($currsort, 0, strpos($currsort, " ")))) {
-                    $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $_POST['currsort'] . " ";
+            $postedSort = self::sortColumn(self::postedText('currsort'));
+            if ($postedSort !== '' && isset($currsort)) {
+                if ($postedSort == trim(substr($currsort, 0, (int) strpos($currsort, " ")))) {
+                    $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $postedSort . " ";
                 } else {
-                    $newsort = (strpos($currsort, "DESC") == 0) ? $_POST['currsort'] . " DESC " : $_POST['currsort'] . " ";
+                    $newsort = (strpos($currsort, "DESC") == 0) ? $postedSort . " DESC " : $postedSort . " ";
                 }
                 $sql = str_replace("ORDER BY " . $currsort, "ORDER BY " . $newsort, $sql);
             } else {
@@ -1013,16 +1107,11 @@ final class SearchScreen
                 \Adlexone\Data\SavedSearch::criteriaFromPost($_POST)
             );
         } else {
-    //		echo RenderViews::showInformation(TXT_375, 'tcBorder', 'tdcHeading', 'tdc2', 'Yes', '', '', false);
-    //
     //        if ($buildImage != '') {
     //            $imagesFolder = THEME_PATH . $theme . '/images/';
     //            $imageHTML = '<img src="' . $imagesFolder . $buildImage . '"> ';
     //        }
-            RenderViews::buildResponse(TXT_354, TXT_375);
-            // $html .= RenderViews::tableData('2', '', 'left', '', $titleClass, array($imageHTML . '&nbsp;' . TXT_354), 'row');
-            //$html .= RenderViews::tableData('', '', 'left', '', $contentClass, array($text), 'row');
-            //  $html .= RenderViews::endTable();
+            View::respond(TXT_354, TXT_375);
     //        if ($lineBreak == true) {
     //            $html .= '<br />';
     //        }
@@ -1033,13 +1122,15 @@ final class SearchScreen
     public static function showSavedSearches($userID, $application = '')
     {
         if ($_SESSION['access_role_id'] <= '1') {
-            $applicationClause = ($application != '') ? " WHERE application = '" . $application . "'" : "";
+            $applicationClause = ($application != '') ? " WHERE application = ?" : "";
+            $params = ($application != '') ? [$application] : [];
             $sql = "SELECT * FROM saved_searches $applicationClause ORDER BY search_name ASC";
         } else {
-            $applicationClause = ($application != '') ? " AND application = '" . $application . "'" : "";
-            $sql = "SELECT * FROM saved_searches WHERE (user = '$userID' OR user = 'all') $applicationClause ORDER BY search_name ASC";
+            $applicationClause = ($application != '') ? " AND application = ?" : "";
+            $params = array_merge([(string) $userID], ($application != '') ? [$application] : []);
+            $sql = "SELECT * FROM saved_searches WHERE (user = ? OR user = 'all') $applicationClause ORDER BY search_name ASC";
         }
-            $result = Database::rows($sql);
+        $result = Database::rows($sql, $params);
         $base = \Adlexone\Http\Router::continueUrl('search');
         $rows = [];
         if (count($result) > 0) {
@@ -1083,58 +1174,49 @@ final class SearchScreen
         }
         $toolbar = '';
         $emptyAction = '';
-        if (defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '') {
-            $itemType = '';
-            $defaultType = ApplicationSettings::defaultItemTypeId((string) APPLICATION_SLUG);
-            if ($defaultType !== '') {
-                $itemType = rawurlencode($defaultType);
-            }
-            $quickLabel = RenderViews::applicationText('TXT_62', 'Quick search');
-            $advancedLabel = RenderViews::applicationText('TXT_61', 'Advanced search');
-            $searchButton = RenderViews::buildURL($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary');
+        if (Page::current()->inApplication()) {
+            $searchButton = Blocks::link($base . '&option=show_item_search', 'Search', '', 'btn btn--primary');
             if ($rows === []) {
                 $emptyAction = $searchButton;
             } else {
                 $toolbar = '<div class="record-list__tools">'
-                    . RenderViews::buildURL($base . '&option=show_quick_search', $quickLabel, '', 'btn btn--primary btn--sm')
-                    . RenderViews::buildURL($base . '&option=show_item_search' . ($itemType !== '' ? '&item_types=' . $itemType : ''), $advancedLabel, '', 'btn btn--sm')
+                    . Blocks::link($base . '&option=show_item_search', 'Search', '', 'btn btn--primary btn--sm')
                     . '</div>';
             }
         }
-        $list = RenderViews::buildRecordList([
+        $list = Blocks::recordList([
             'column' => TXT_151,
             'columns' => [
                 ['key' => 'description', 'label' => TXT_153, 'wrap' => true],
             ],
             'searchLabel' => TXT_3,
-            'empty' => 'No saved searches yet',
-            'emptyIllustration' => 'empty-search',
-            'emptyTitle' => 'No saved searches yet',
-            'emptyCopy' => 'Search once, then keep it here.',
+            'empty' => 'No saved searches',
+            'emptyIllustration' => 'empty-saved',
+            'emptyTitle' => 'No saved searches',
+            'emptyCopy' => 'Run a search, then save it to this list.',
             'emptyAction' => $emptyAction,
             'toolbar' => $toolbar,
             'groups' => [['rows' => $rows]],
         ]);
-        define('BODY_CONTENT', RenderViews::buildVerticalCards([
+        Page::current()->setBody(Blocks::vertical([
             [
-                'title' => RenderViews::applicationText('TXT_60', TXT_313),
+                'title' => Wording::application('TXT_60', TXT_313),
                 'html' => $list,
             ],
         ]));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescription, $application, $security, array $criteria = [])
     {
         // Check for duplicate and respond with a return message if exists
-        $sql = "SELECT user FROM saved_searches WHERE search_name = '$searchName' AND user = '$userID'";
-            $result = Database::rows($sql);
+        $searchName = trim((string) $searchName);
+        $result = Database::rows('SELECT user FROM saved_searches WHERE search_name = ? AND user = ?', [$searchName, (string) $userID]);
         if (count($result) > 0) {
-            RenderViews::buildResponse(TXT_311, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
+            View::respond(TXT_311, Blocks::link('javascript: history.go(-1)', TXT_306, 'URL'));
             return;
         }
-        if ($searchName == '') {
-            RenderViews::buildResponse(TXT_367, RenderViews::buildURL('javascript: history.go(-1)', TXT_306, 'URL'));
+        if ($searchName === '') {
+            View::respond(TXT_367, Blocks::link('javascript: history.go(-1)', TXT_306, 'URL'));
             return;
         }
             if ($security == 'all') {
@@ -1154,7 +1236,7 @@ final class SearchScreen
             $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode($criteria);
             Database::insert('saved_searches', $columnArray);
             // Success messagae
-        RenderViews::buildResponse(TXT_25, RenderViews::buildURL('javascript: history.go(-1)', TXT_404, 'URL'));
+        View::respond(TXT_25, Blocks::link('javascript: history.go(-1)', TXT_404, 'URL'));
     }
 
     public static function savedSearch($searchID, $userID, $global = false, $rss = false)
@@ -1162,19 +1244,32 @@ final class SearchScreen
         unset($_SESSION['item_search_sql']);
 
         // Show item search based based on stored sql
+        $searchID = (int) $searchID;
         if (@$_GET['global'] == true) {
-            $sql = "SELECT * FROM saved_searches WHERE search_id = '$searchID' AND user = 'all'";
+            $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND user = 'all'", [$searchID]);
         } elseif ($_SESSION['access_role_id'] <= 2) {
-            $sql = "SELECT * FROM saved_searches WHERE search_id = '$searchID'";
+            $result = Database::rows('SELECT * FROM saved_searches WHERE search_id = ?', [$searchID]);
         } else {
-            $sql = "SELECT * FROM saved_searches WHERE search_id = '$searchID' AND (user = 'system' OR user = 'all' OR user = '$userID')";
+            $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND (user = 'system' OR user = 'all' OR user = ?)", [$searchID, (string) $userID]);
         }
-            $result = Database::rows($sql);
         $row = $result[0] ?? null;
+        if ($row === null) {
+            View::respond(TXT_115, Blocks::link(\Adlexone\Http\Router::continueUrl('search') . '&option=show_saved_searches', TXT_313));
+            return;
+        }
 
         if ($rss == false) {
             // Set title constant for language alias in showitems function
             define('SEARCH_NAME', $row['search_name']);
+
+            $finder = json_decode((string) ($row['criteria_json'] ?? ''), true);
+            if (is_array($finder) && Page::current()->inApplication()) {
+                $target = ApplicationSearch::savedHref($finder);
+                if ($target !== '') {
+                    header('Location: ' . \Adlexone\Http\Router::absolute($target));
+                    exit;
+                }
+            }
 
             $savedSql = \Adlexone\Data\SavedSearch::resolveSql($row);
             $built = Database::rows($savedSql);
@@ -1194,10 +1289,9 @@ final class SearchScreen
             ob_clean();
             $itemArray = Database::rows(\Adlexone\Data\SavedSearch::resolveSql($row));
             foreach ($itemArray as $id) {
-                $sql = "SELECT item_id, item_title FROM items WHERE item_id = '$id'";
-                            $result = Database::rows($sql);
+                $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
                 $row = $result[0] ?? null;
-                $linkArray[] = RenderViews::buildURL('?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['item_id'], '', 'URL');
+                $linkArray[] = Blocks::link('?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['item_id'], '', 'URL');
                 $titleArray[] = $row['item_title'];
             }
             RssFeed::send(SET_DATE_FORMAT, $row['search_name'], $row['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
@@ -1207,12 +1301,12 @@ final class SearchScreen
     public static function deleteSavedSearch($searchID, $userID, $scope)
     {
         // Delete favourite search
+        $searchID = (int) $searchID;
         if ($scope == 'global' and $_SESSION['access_role_id'] <= 1) {
-            $sql = "DELETE FROM saved_searches WHERE search_id = '$searchID'";
+            Database::delete('saved_searches', 'search_id = ?', [$searchID]);
         } else {
-            $sql = "DELETE FROM saved_searches WHERE search_id = '$searchID' AND user = '$userID'";
+            Database::delete('saved_searches', 'search_id = ? AND user = ?', [$searchID, (string) $userID]);
         }
-        Database::run($sql);
         self::showSavedSearches($userID);
     }
 
@@ -1232,7 +1326,7 @@ final class SearchScreen
                 $i++;
             }
         } elseif ($filter != '' and $filter != '0') {
-            $condition = "WHERE item_type_id = '$filter'";
+            $condition = 'WHERE item_type_id = ' . (int) $filter;
         } else {
             $condition = '';
         }
@@ -1261,7 +1355,7 @@ final class SearchScreen
             }
         }
         // Create the list box
-        return RenderViews::buildSelectDropdown('item_type_id', $listValues, $listDisplayValues, @$itemTypeID, 'onChange="document.itemSearch.submit();"');
+        return Form::select('item_type_id', $listValues, $listDisplayValues, @$itemTypeID, 'onChange="document.itemSearch.submit();"');
     }
 
     public static function showSecurityGroups()
@@ -1280,7 +1374,7 @@ final class SearchScreen
             $i++;
         }
         // Create the list box
-        return RenderViews::buildSelectDropdown('security_groups', $listValues, $listDisplayValues, '');
+        return Form::select('security_groups', $listValues, $listDisplayValues, '');
     }
 
     public static function showCustomFieldsAsList($itemTypeID = '', $fieldData = '', $dispRows = '')
@@ -1291,11 +1385,11 @@ final class SearchScreen
             if (is_array($itemTypeID)) {
                 $condition = "WHERE ";
                 foreach ($itemTypeID as $value) {
-                    $condition .= "item_type_id = " . $value . " OR ";
+                    $condition .= "item_type_id = " . (int) $value . " OR ";
                 }
                 $condition = substr($condition, 0, -4);
             } else {
-                $condition = "WHERE item_type_id = $itemTypeID";
+                $condition = "WHERE item_type_id = " . (int) $itemTypeID;
             }
             $result = Database::select('item_type_custom_fields', $columnArray, $condition);
             $i = 0;
@@ -1321,8 +1415,8 @@ final class SearchScreen
         $html = '';
         foreach ($result as $row) {
             $fieldData[] = $row[1];
-            $fieldData[] = RenderViews::buildCheckBox('disp_custom_field_' . $row[0], false, true, 'form-control');
-            $fieldData[] = RenderViews::buildRadioButton('sort_field', 'sort_custom_field_' . $row[0], '', '');
+            $fieldData[] = Form::checkbox('disp_custom_field_' . $row[0], false, true);
+            $fieldData[] = Form::radio('sort_field', 'sort_custom_field_' . $row[0], '');
             if (count($fieldData) == 9) {
                 $dispRows .= '<div class="group-security-list">' . implode('', $fieldData) . '</div>';
                 unset($fieldData);
@@ -1383,13 +1477,13 @@ final class SearchScreen
                 $listDisplayValues[] = $row['custom_field_name'];
             }
             $html .= self::searchControlRow(
-                RenderViews::buildSelectDropdown('custom_field_' . $a, $listValues, $listDisplayValues, ''),
-                RenderViews::buildSelectDropdown('custom_field_operator_' . $a, ['=', 'LIKE', '<>', '>', '<'], [TXT_418, TXT_112, TXT_318, TXT_364, TXT_365], '='),
-                RenderViews::buildTextInput('custom_field_value_' . $a, ''),
-                RenderViews::buildSelectDropdown('custom_field_andor_' . $a, ['AND', 'OR'], [TXT_109, TXT_110], 'AND')
+                Form::select('custom_field_' . $a, $listValues, $listDisplayValues, ''),
+                Form::select('custom_field_operator_' . $a, ['=', 'LIKE', '<>', '>', '<'], [TXT_418, TXT_112, TXT_318, TXT_364, TXT_365], '='),
+                Form::text('custom_field_value_' . $a, ''),
+                Form::select('custom_field_andor_' . $a, ['AND', 'OR'], [TXT_109, TXT_110], 'AND')
             );
         }
-        $html .= RenderViews::buildHiddenInput('custom_field_count', (string)$count);
+        $html .= Form::hidden('custom_field_count', (string)$count);
 
         return $html;
     }
@@ -1408,7 +1502,7 @@ final class SearchScreen
             $urls[] = $scope;
         }
 
-        return RenderViews::buildSelectDropdown('application', $urls, $names, $selected);
+        return Form::select('application', $urls, $names, $selected);
     }
 
     /**
@@ -1417,7 +1511,7 @@ final class SearchScreen
      * This function generates an advanced search form for items, allowing users to filter
      * and sort items based on various criteria such as item types, system criteria, date ranges,
      * custom fields, and more. The form is divided into sections for better organization and
-     * uses the `RenderViews` utility for rendering form elements.
+     * uses the `Form` builders for form elements.
      *
      * @param string|array $filter Optional filter criteria for item types.
      * @return void
@@ -1435,23 +1529,23 @@ final class SearchScreen
         $operatorDisplayValues = array(TXT_81, TXT_112, TXT_318);
         $andOrValues = array('AND', 'OR');
         $andOrDisplayValues = array(TXT_109, TXT_110);
-        $eventId = (isset($_GET['event_id'])) ? '&event_id=' . $_GET['event_id'] : '';
+        $eventId = (isset($_GET['event_id']) && is_scalar($_GET['event_id'])) ? '&event_id=' . rawurlencode((string) $_GET['event_id']) : '';
 
         $fields = [];
         $allowedTypes = self::applicationSearchTypeIds();
-        $inApplication = defined('APPLICATION_SLUG') && (string) APPLICATION_SLUG !== '';
+        $inApplication = Page::current()->inApplication();
         if (!$inApplication || count($allowedTypes) > 1) {
             $fields[$inApplication ? 'Kind' : TXT_99] = self::showItemTypeMenu($filter);
         }
-        $fields[RenderViews::getLanguageConstant('LA_102', 'TXT_102')] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('id_operator', $operatorValues, $operatorDisplayValues, ''),
-            RenderViews::buildTextInput('item_id', ''),
-            RenderViews::buildSelectDropdown('id_andor', $andOrValues, $andOrDisplayValues, '')
+        $fields[Wording::get('LA_102', 'TXT_102')] = self::searchControlRow(
+            Form::select('id_operator', $operatorValues, $operatorDisplayValues, ''),
+            Form::text('item_id', ''),
+            Form::select('id_andor', $andOrValues, $andOrDisplayValues, '')
         );
-        $fields[$inApplication ? 'Name' : RenderViews::getLanguageConstant('LA_84', 'TXT_84')] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('item_title_operator', $operatorValues, $operatorDisplayValues, ''),
-            RenderViews::buildTextInput('item_title', ''),
-            RenderViews::buildSelectDropdown('title_andor', $andOrValues, $andOrDisplayValues, '')
+        $fields[$inApplication ? 'Name' : Wording::get('LA_84', 'TXT_84')] = self::searchControlRow(
+            Form::select('item_title_operator', $operatorValues, $operatorDisplayValues, ''),
+            Form::text('item_title', ''),
+            Form::select('title_andor', $andOrValues, $andOrDisplayValues, '')
         );
 
         // Populate users dropdown
@@ -1463,39 +1557,39 @@ final class SearchScreen
         }
 
         // Add user-related fields to system criteria
-        $fields[RenderViews::getLanguageConstant('LA_551', 'TXT_551')] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('security_creators_operator', $operatorValues, $operatorDisplayValues, ''),
-            RenderViews::buildSelectDropdown('creator_security', array_keys($listValues), array_values($listValues), ''),
-            RenderViews::buildSelectDropdown('security_creators_andor', $andOrValues, $andOrDisplayValues, '')
+        $fields[Wording::get('LA_551', 'TXT_551')] = self::searchControlRow(
+            Form::select('security_creators_operator', $operatorValues, $operatorDisplayValues, ''),
+            Form::select('creator_security', array_keys($listValues), array_values($listValues), ''),
+            Form::select('security_creators_andor', $andOrValues, $andOrDisplayValues, '')
         );
-        $fields[RenderViews::getLanguageConstant('LA_269', 'TXT_269')] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('security_users_operator', $operatorValues, $operatorDisplayValues, ''),
-            RenderViews::buildSelectDropdown('user_security', array_keys($listValues), array_values($listValues), ''),
-            RenderViews::buildSelectDropdown('security_users_andor', $andOrValues, $andOrDisplayValues, '')
+        $fields[Wording::get('LA_269', 'TXT_269')] = self::searchControlRow(
+            Form::select('security_users_operator', $operatorValues, $operatorDisplayValues, ''),
+            Form::select('user_security', array_keys($listValues), array_values($listValues), ''),
+            Form::select('security_users_andor', $andOrValues, $andOrDisplayValues, '')
         );
         $fields[TXT_79] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), ''),
+            Form::select('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), ''),
             self::showSecurityGroups(),
-            RenderViews::buildSelectDropdown('security_groups_andor', $andOrValues, $andOrDisplayValues, '')
+            Form::select('security_groups_andor', $andOrValues, $andOrDisplayValues, '')
         );
 
         $fields[TXT_406] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
-            RenderViews::buildSelectDropdown('hour_range_operator', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
-            RenderViews::buildTextInput('hour_range', '', '30'),
-            RenderViews::buildSelectDropdown('hour_range_andor', $andOrValues, $andOrDisplayValues, '')
+            Form::select('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
+            Form::select('hour_range_operator', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
+            Form::text('hour_range', '', '30'),
+            Form::select('hour_range_andor', $andOrValues, $andOrDisplayValues, '')
         );
         $fields[TXT_103 . ' 1'] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
-            RenderViews::buildSelectDropdown('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
-            RenderViews::buildTextInput('date_1', ''),
-            RenderViews::buildSelectDropdown('date_andor_1', $andOrValues, $andOrDisplayValues, '')
+            Form::select('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
+            Form::select('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
+            Form::text('date_1', ''),
+            Form::select('date_andor_1', $andOrValues, $andOrDisplayValues, '')
         );
         $fields[TXT_103 . ' 2'] = self::searchControlRow(
-            RenderViews::buildSelectDropdown('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
-            RenderViews::buildSelectDropdown('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<='),
-            RenderViews::buildTextInput('date_2', ''),
-            RenderViews::buildSelectDropdown('date_andor_2', $andOrValues, $andOrDisplayValues, '')
+            Form::select('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
+            Form::select('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<='),
+            Form::text('date_2', ''),
+            Form::select('date_andor_2', $andOrValues, $andOrDisplayValues, '')
         );
         $fields[TXT_407] = '<p class="field-note">dd-mm-yyyy hh:mm:ss</p>';
 
@@ -1506,39 +1600,39 @@ final class SearchScreen
         }
 
         $fields[TXT_258] = '<div class="choice-list__sort">'
-            . '<label class="checkbox">' . RenderViews::buildRadioButton('sortOrder', 'ascending', 'ascending', '') . ' ' . htmlspecialchars(TXT_533, ENT_QUOTES, 'UTF-8') . '</label>'
-            . '<label class="checkbox">' . RenderViews::buildRadioButton('sortOrder', 'descending', '', '') . ' ' . htmlspecialchars(TXT_534, ENT_QUOTES, 'UTF-8') . '</label>'
+            . '<label class="checkbox">' . Form::radio('sortOrder', 'ascending', 'ascending') . ' ' . Html::e(TXT_533) . '</label>'
+            . '<label class="checkbox">' . Form::radio('sortOrder', 'descending', '') . ' ' . Html::e(TXT_534) . '</label>'
             . '</div>';
 
         $displayChoices = [
-            [RenderViews::getLanguageConstant('LA_102', 'TXT_102'), 'spec_item_id', 'disp_item_id', 'sort_item_id', true],
-            [RenderViews::getLanguageConstant('LA_84', 'TXT_84'), 'spec_item_title', 'disp_item_title', 'sort_item_title', false],
+            [Wording::get('LA_102', 'TXT_102'), 'spec_item_id', 'disp_item_id', 'sort_item_id', true],
+            [Wording::get('LA_84', 'TXT_84'), 'spec_item_title', 'disp_item_title', 'sort_item_title', false],
             [TXT_225, 'disp_create_date', '', 'sort_create_date', false],
         ];
         $choiceHtml = '<div class="choice-list">';
         foreach ($displayChoices as [$label, $checkName, $hiddenName, $sortValue, $sortChecked]) {
             $choiceHtml .= '<div class="choice-list__row">'
-                . RenderViews::buildCheckBox($checkName, 'true', 'true', 'checkbox', (string)$label)
-                . ($hiddenName !== '' ? RenderViews::buildHiddenInput($hiddenName, $hiddenName) : '')
-                . '<span class="choice-list__sort">' . RenderViews::buildRadioButton('sort_field', $sortValue, $sortChecked ? $sortValue : '', '', 'aria-label="' . htmlspecialchars(TXT_258, ENT_QUOTES, 'UTF-8') . '"')
-                . htmlspecialchars(TXT_258, ENT_QUOTES, 'UTF-8') . '</span>'
+                . Form::checkbox($checkName, 'true', 'true', (string)$label)
+                . ($hiddenName !== '' ? Form::hidden($hiddenName, $hiddenName) : '')
+                . '<span class="choice-list__sort">' . Form::radio('sort_field', $sortValue, $sortChecked ? $sortValue : '', 'aria-label="' . Html::e(TXT_258) . '"')
+                . Html::e(TXT_258) . '</span>'
                 . '</div>';
         }
         $choiceHtml .= '</div>';
         $fields[TXT_527] = $choiceHtml;
 
-        $fields[RenderViews::getLanguageConstant('LA_310', 'TXT_310')] = RenderViews::buildTextInput('search_name', '');
-        $fields[RenderViews::getLanguageConstant('LA_312', 'TXT_312')] = RenderViews::buildTextArea('search_description', '', SET_FORM_FIELD_HEIGHT);
+        $fields[Wording::get('LA_310', 'TXT_310')] = Form::text('search_name', '');
+        $fields[Wording::get('LA_312', 'TXT_312')] = Form::textarea('search_description', '', SET_FORM_FIELD_HEIGHT);
         if ($_SESSION['access_role_id'] <= '1') {
-            $fields[TXT_403] = RenderViews::buildSelectDropdown('security', array('mine', 'all', 'system'), array(TXT_402, TXT_401, TXT_482), '1');
+            $fields[TXT_403] = Form::select('security', array('mine', 'all', 'system'), array(TXT_402, TXT_401, TXT_482), '1');
         } else {
-            $fields[''] = RenderViews::buildHiddenInput('security', 'mine');
+            $fields[''] = Form::hidden('security', 'mine');
         }
 
         $fields[TXT_350] = self::searchApplicationMenu((string)($_GET['controller'] ?? ''));
 
         if ($_SESSION['access_role_id'] == 0) {
-            $fields[TXT_421] = RenderViews::buildTextArea('sql_query', '', SET_FORM_FIELD_HEIGHT);
+            $fields[TXT_421] = Form::textarea('sql_query', '', SET_FORM_FIELD_HEIGHT);
         }
 
         $jsFieldNameArray = "['search_name']";
@@ -1548,62 +1642,68 @@ final class SearchScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
 
-        define('BODY_CONTENT', RenderViews::buildForm(
-            RenderViews::applicationText('TXT_61', (string)RenderViews::getLanguageConstant('LA_96', 'TXT_96')),
+        Page::current()->setBody(Form::form(
+            Wording::application('TXT_61', (string)Wording::get('LA_96', 'TXT_96')),
             \Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results' . $eventId,
             $fields,
             [
-                RenderViews::buildFormButton('submit', 'search', TXT_3),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
-                RenderViews::buildFormButton('submit', 'new_favourite', TXT_309, $javascript),
+                Form::button('submit', 'search', TXT_3),
+                Form::button('reset', 'reset', TXT_75),
+                Form::button('submit', 'new_favourite', TXT_309, $javascript),
             ],
             ['name' => 'itemSearch', 'id' => 'itemSearch']
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function editSavedSearch($id)
     {
         $id = (int) $id;
         $columnArray = ['search_name', 'saved_search_sql'];
-        $condition = "WHERE search_id = '" . $id . "'";
-        $row = Database::first('saved_searches', $columnArray, $condition);
+        $row = Database::first('saved_searches', $columnArray, 'search_id = ?', [$id]);
 
         if (!$row) {
             // No record found — show a friendly message
-           RenderViews::buildResponse(TXT_628,TXT_115);
+           View::respond(TXT_628,TXT_115);
             return;
         }
 
         $action = \Adlexone\Http\Router::continueUrl('search') . '&option=update_saved_search&id=' . $id;
         $fields = [
-            TXT_627 => RenderViews::buildTextInput('search_name', $row['search_name']),
-            TXT_628 => RenderViews::buildTextArea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT),
+            TXT_627 => Form::text('search_name', $row['search_name']),
+            TXT_628 => Form::textarea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT),
         ];
-        define('BODY_CONTENT', RenderViews::buildForm(
+        Page::current()->setBody(Form::form(
             TXT_628 . ' - ' . $row['search_name'],
             $action,
             $fields,
             [
-                RenderViews::buildFormButton('submit', 'submit_button', TXT_74),
-                RenderViews::buildFormButton('reset', 'reset', TXT_75),
+                Form::button('submit', 'submit_button', TXT_74),
+                Form::button('reset', 'reset', TXT_75),
             ]
         ));
-        RenderViews::renderThemePage('main_page_content', SET_THEME);
     }
 
     public static function updateSavedSearch($id)
     {
-        $sql = html_entity_decode($_POST['saved_search_sql'], ENT_COMPAT, 'UTF-8');
+        $id = (int) $id;
+        if (!Database::exists('saved_searches', 'search_id = ?', [$id])) {
+            View::respond(TXT_115);
+            return;
+        }
+        $sql = html_entity_decode(self::postedText('saved_search_sql'), ENT_COMPAT, 'UTF-8');
+        $name = trim(html_entity_decode(self::postedText('search_name'), ENT_COMPAT, 'UTF-8'));
+        if ($name === '') {
+            View::respond(TXT_367);
+            return;
+        }
         $columnArray['saved_search_sql'] = $sql;
-        $columnArray['search_name'] = html_entity_decode($_POST['search_name'], ENT_COMPAT, 'UTF-8');
+        $columnArray['search_name'] = $name;
         $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode([
             'version' => 1,
             'legacy_sql' => $sql,
         ]);
-        $condition = "WHERE search_id = '" . $id . "'";
-        Database::update('saved_searches', $columnArray, $condition);
+        Database::update('saved_searches', $columnArray, 'search_id = ?', [$id]);
         // Success messagae
-        RenderViews::buildResponse(TXT_628,TXT_629);
+        View::respond(TXT_628,TXT_629);
     }
 }
