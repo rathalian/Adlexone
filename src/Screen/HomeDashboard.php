@@ -252,6 +252,22 @@ final class HomeDashboard
     /**
      * @param list<array<string, mixed>> $apps
      */
+    /**
+     * Weeks from the first week with any record to the latest week.
+     *
+     * @param list<int> $series
+     */
+    private static function weeksOfHistory(array $series): int
+    {
+        foreach (array_values($series) as $index => $count) {
+            if ($count > 0) {
+                return count($series) - $index;
+            }
+        }
+
+        return 0;
+    }
+
     private static function applications(array $apps): string
     {
         if ($apps === []) {
@@ -260,7 +276,7 @@ final class HomeDashboard
         $cards = '';
         foreach ($apps as $app) {
             $stat = $app['type'] > 0 ? self::plural((int) $app['count'], 'record') : '';
-            $hasSeries = array_sum($app['series']) > 0;
+            $hasSeries = self::weeksOfHistory($app['series']) >= 3;
             $when = $app['touched'] > 0 ? 'Updated ' . Presence::ago((int) $app['touched']) : ($app['type'] > 0 ? 'No records yet' : '');
             $cards .= '<a class="appcard" href="' . Html::e((string) $app['href']) . '" style="' . Html::e(Accent::style((string) $app['accent'])) . '">'
                 . '<span class="appcard__top"><span class="appcard__icon">' . Charts::icon((string) $app['icon']) . '</span>'

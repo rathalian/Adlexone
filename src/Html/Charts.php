@@ -71,7 +71,7 @@ final class Charts
      *
      * @param list<array{label: string, value: int|float, href?: string, tone?: string, note?: string}> $rows
      */
-    public static function bars(array $rows, string $unit = ''): string
+    public static function bars(array $rows, string $unit = '', bool $uniform = false): string
     {
         $rows = array_values(array_filter($rows, static fn (array $row): bool => (string) $row['label'] !== ''));
         if ($rows === []) {
@@ -89,7 +89,7 @@ final class Charts
             if ((string) ($row['href'] ?? '') !== '') {
                 $label = '<a href="' . Html::e((string) $row['href']) . '">' . $label . '</a>';
             }
-            $html .= '<li class="bars__row ' . self::series($row, $index) . '">'
+            $html .= '<li class="bars__row ' . ($uniform && !in_array((string) ($row['tone'] ?? ''), self::TONES, true) ? 's0' : self::series($row, $index)) . '">'
                 . '<span class="bars__label">' . $label . '</span>'
                 . '<span class="bars__track"><span class="bars__fill" style="--w:' . $width . '%"></span></span>'
                 . '<span class="bars__value">' . Html::e(self::number($value)) . ($unit !== '' ? ' <small>' . Html::e($unit) . '</small>' : '') . '</span>'
@@ -197,7 +197,7 @@ final class Charts
             $href = $tag === 'a' ? ' href="' . Html::e((string) $column['href']) . '"' : '';
             $html .= '<' . $tag . ' class="columns__col ' . ($uniform ? 's0' : self::series($column, $index)) . '" role="listitem"' . $href
                 . ' title="' . Html::e((string) $column['label'] . ': ' . self::number($value)) . '">'
-                . '<span class="columns__value">' . Html::e(self::number($value)) . '</span>'
+                . '<span class="columns__value">' . ($value > 0 ? Html::e(self::number($value)) : '') . '</span>'
                 . '<span class="columns__bar" style="--h:' . $height . '%"></span>'
                 . '<span class="columns__label">' . $label . '</span></' . $tag . '>';
         }

@@ -284,7 +284,7 @@ final class RecordScreens
             ['label' => 'No owner', 'value' => (string) $unowned, 'note' => $unowned > 0 ? 'Needs an owner' : 'Every record has one', 'icon' => 'ic-user-plus', 'tone' => $unowned > 0 ? 'warning' : 'success'],
         ]);
         if (count($ownerBars) > 0 && count($loaded['items']) > 0) {
-            $lead .= Charts::row([Charts::panel('Records per owner', Charts::bars($ownerBars))]);
+            $lead .= Charts::row([Charts::panel('Records per owner', Charts::bars($ownerBars, '', true))]);
         }
         self::show('Owners', 'Records with no owner are listed first. Saving sets the owner and runs the update rules.', self::editor(
             'Record',
@@ -556,7 +556,7 @@ final class RecordScreens
             ['label' => 'Without ' . strtolower($field['label']), 'value' => (string) count($emptyRows), 'icon' => 'ic-circle-alert', 'tone' => $emptyRows === [] ? 'success' : 'warning'],
         ]);
         if ($partyBars !== []) {
-            $lead .= Charts::row([Charts::panel('Records by ' . strtolower($field['label']), Charts::bars(array_slice($partyBars, 0, 8)), count($partyBars) > 8 ? 'The eight with the most records.' : '')]);
+            $lead .= Charts::row([Charts::panel('Records by ' . strtolower($field['label']), Charts::bars(array_slice($partyBars, 0, 8), '', true), count($partyBars) > 8 ? 'The eight with the most records.' : '')]);
         }
         self::show('Parties', 'Grouped by ' . $field['label'] . '.', $blocks === []
             ? self::emptyList('No records yet', 'Create the first record.')
