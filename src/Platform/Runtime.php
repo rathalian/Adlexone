@@ -85,6 +85,18 @@ final class Runtime
         }
     }
 
+    /**
+     * Sets the time zone dates are shown in. Timestamps are stored as Unix
+     * time, so changing the zone never changes stored values.
+     */
+    public static function applyTimezone(): void
+    {
+        $zone = defined('SET_TIMEZONE') ? trim((string) SET_TIMEZONE) : '';
+        if ($zone !== '' && in_array($zone, \DateTimeZone::listIdentifiers(), true)) {
+            date_default_timezone_set($zone);
+        }
+    }
+
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {

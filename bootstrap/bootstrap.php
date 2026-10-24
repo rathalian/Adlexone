@@ -52,6 +52,7 @@ use Adlexone\support\SharedMethods;
 $baseDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR;
 Runtime::define($baseDir);
 Runtime::loadConfig();
+Runtime::applyTimezone();
 
 /** * Enable error reporting for debugging (disable in production)
  */

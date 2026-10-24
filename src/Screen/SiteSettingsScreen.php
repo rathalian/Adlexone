@@ -216,6 +216,13 @@ final class SiteSettingsScreen
                         $settings['SET_DATE_FORMAT'] = (string) $posted['SET_DATE_FORMAT'];
                     }
                 }
+                if (array_key_exists('SET_TIMEZONE', $posted)) {
+                    if (!in_array((string) $posted['SET_TIMEZONE'], \DateTimeZone::listIdentifiers(), true)) {
+                        $problems[] = 'Choose one of the listed time zones.';
+                    } else {
+                        $settings['SET_TIMEZONE'] = (string) $posted['SET_TIMEZONE'];
+                    }
+                }
                 if (array_key_exists('SET_DEFAULT_APPLICATION', $posted)) {
                     if (!in_array((string) $posted['SET_DEFAULT_APPLICATION'], self::homeValues(), true)) {
                         $problems[] = 'Choose one of the listed home applications.';
@@ -391,6 +398,13 @@ final class SiteSettingsScreen
             $groupLabels[] = $row['group_name'];
         }
         $homeLead = defined('SET_HOME_LEAD') ? (string) SET_HOME_LEAD : 'This site keeps the applications, records, and rules for the work.';
+        $zoneValues = \DateTimeZone::listIdentifiers();
+        $zoneLabels = [];
+        $now = new \DateTimeImmutable('now');
+        foreach ($zoneValues as $zone) {
+            $offset = $now->setTimezone(new \DateTimeZone($zone))->format('P');
+            $zoneLabels[] = str_replace('_', ' ', $zone) . ' (UTC' . $offset . ')';
+        }
         $fields = [
             'Records per page' => Form::text('SET_ITEMS_PAGE', SET_ITEMS_PAGE),
             'Date format' => Form::select(
@@ -399,6 +413,8 @@ final class SiteSettingsScreen
                 ['14-10-2026, 10:01 AM', '10-14-2026, 10:01 AM', '14.10.2026 22:01'],
                 SET_DATE_FORMAT
             ),
+            'Time zone' => Form::select('SET_TIMEZONE', $zoneValues, $zoneLabels, date_default_timezone_get())
+                . '<p class="form-help">Greetings, dates, and times are shown in this zone. The offset listed includes daylight saving where it applies today.</p>',
             'Home application' => Form::select('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION),
             'Group for new accounts' => Form::select('USER_REG_ACTION', $groupValues, $groupLabels, USER_REG_ACTION),
             'Sign-in sentence' => Form::textarea('SET_HOME_LEAD', $homeLead, '3'),
