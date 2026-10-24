@@ -548,11 +548,7 @@ final class WorkScreen
         if ($owners !== []) {
             $names = [];
             foreach (Database::select('users', ['user_id', 'user_name', 'first_name', 'last_name'], 'user_id IN (' . implode(',', array_keys($owners)) . ')') as $user) {
-                $name = trim((string) ($user['user_name'] ?? ''));
-                if ($name === '') {
-                    $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
-                }
-                $names[(int) $user['user_id']] = $name;
+                $names[(int) $user['user_id']] = \Adlexone\Application\RecordQuery::displayName($user);
             }
             foreach ($facts as $id => $fact) {
                 $facts[$id]['owner'] = $names[$fact['user_id']] ?? '';

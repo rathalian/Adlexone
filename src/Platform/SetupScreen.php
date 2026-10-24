@@ -117,7 +117,9 @@ final class SetupScreen
             'password',
             DefaultAccount::postedPassword($_POST['password'] ?? null),
             true,
-            'The default is ' . DefaultAccount::PASSWORD . '. It is stored as a hash in the SQLite file, not in the settings JSON.'
+            DefaultAccount::allowed()
+                ? 'The default is ' . DefaultAccount::PASSWORD . '. It is stored as a hash in the SQLite file, not in the settings JSON.'
+                : 'At least 12 characters. It is stored as a hash in the SQLite file, not in the settings JSON.'
         );
         $html .= self::field(
             'Confirm password',

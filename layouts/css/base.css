@@ -1608,6 +1608,8 @@ body:has(.sectionbar) .main > .grid > details.card.card--sheet.card--disclosure 
     .record-list__search{ max-width:none; flex-basis:100%; }
 }
 
+.record-list td.record-sheet__control{ width:34%; min-width:14rem; white-space:normal; }
+.record-sheet__control .input,
 .record-sheet__control .text,
 .record-sheet__control .select{
     width:100%;

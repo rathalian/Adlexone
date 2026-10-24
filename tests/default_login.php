@@ -39,6 +39,28 @@ $check(str_contains($login, 'DefaultAccount::stillInUse()'), 'application login 
 $check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::USERNAME)'), 'application login pre-fills the default username conditionally');
 $check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::PASSWORD)'), 'application login pre-fills the default password conditionally');
 
+foreach (['localhost:8000' => true, '127.0.0.1' => true, '192.168.1.20' => true, 'inlay.local' => true, 'health.example.com' => false, '203.0.113.9' => false] as $host => $expected) {
+    $_SERVER['HTTP_HOST'] = $host;
+    $check(DefaultAccount::allowed() === $expected, 'default account on ' . $host . ' is ' . ($expected ? 'allowed' : 'refused'));
+}
+$_SERVER['HTTP_HOST'] = 'health.example.com';
+$check(DefaultAccount::postedPassword('') === '', 'a public host gets no default password');
+foreach (['admin', 'short-pass'] as $weak) {
+    try {
+        DefaultAccount::assertPassword($weak);
+        $check(false, 'public host refuses ' . $weak);
+    } catch (RuntimeException) {
+        $check(true, 'public host refuses ' . $weak);
+    }
+}
+DefaultAccount::assertPassword('a-long-enough-pass');
+$check(true, 'public host accepts a 12 character password');
+unset($_SERVER['HTTP_HOST']);
+
+$check(\Adlexone\Application\RecordQuery::displayName(['user_name' => 'admin', 'first_name' => 'Reid', 'last_name' => '']) === 'Reid', 'a person is shown by first name before username');
+$check(\Adlexone\Application\RecordQuery::displayName(['user_name' => 'admin', 'first_name' => 'Reid', 'last_name' => 'Walsh']) === 'Reid Walsh', 'a person is shown by full name');
+$check(\Adlexone\Application\RecordQuery::displayName(['user_name' => 'admin']) === 'admin', 'username is the fallback');
+
 if ($failed > 0) {
     fwrite(STDERR, $failed . " checks failed\n");
     exit(1);

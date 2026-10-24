@@ -270,7 +270,7 @@ final class OperatorScreen
             'Admin username',
             'admin_user',
             'text',
-            DefaultAccount::USERNAME,
+            DefaultAccount::allowed() ? DefaultAccount::USERNAME : '',
             false,
             'The customer application login. Leave username and password blank and they choose the first account on their hostname.'
         );
@@ -278,9 +278,11 @@ final class OperatorScreen
             'Admin password',
             'admin_password',
             'password',
-            DefaultAccount::PASSWORD,
+            DefaultAccount::allowed() ? DefaultAccount::PASSWORD : '',
             false,
-            'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in their SQLite file.'
+            DefaultAccount::allowed()
+                ? 'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in their SQLite file.'
+                : 'At least 12 characters, or leave blank to let them choose on first visit. Stored as a hash in their SQLite file.'
         );
         $html .= '<button type="submit" class="btn btn--primary login-submit">Create the store</button>';
         $html .= '</form>';
@@ -351,7 +353,9 @@ final class OperatorScreen
             'password',
             DefaultAccount::postedPassword($_POST['password'] ?? null),
             true,
-            'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in the operator database.'
+            DefaultAccount::allowed()
+                ? 'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in the operator database.'
+                : 'At least 12 characters. Stored as a hash in the operator database.'
         );
         $html .= self::field(
             'Confirm password',
@@ -372,7 +376,7 @@ final class OperatorScreen
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="login">';
         $html .= self::field('Username', 'user_name', 'text', DefaultAccount::USERNAME, true);
-        $html .= self::field('Password', 'password', 'password', DefaultAccount::PASSWORD, true);
+        $html .= self::field('Password', 'password', 'password', DefaultAccount::allowed() ? DefaultAccount::PASSWORD : '', true);
         $html .= '<button type="submit" class="btn btn--primary login-submit">Sign in</button>';
         $html .= '</form>';
 

@@ -287,6 +287,18 @@ final class RecordQuery
     }
 
     /**
+     * A person is shown by full name, and by username only when no name is set.
+     *
+     * @param array<string, mixed> $user
+     */
+    public static function displayName(array $user): string
+    {
+        $full = trim(trim((string) ($user['first_name'] ?? '')) . ' ' . trim((string) ($user['last_name'] ?? '')));
+
+        return $full !== '' ? $full : trim((string) ($user['user_name'] ?? ''));
+    }
+
+    /**
      * @param list<int> $ids
      * @return array<int, string>
      */
@@ -298,11 +310,7 @@ final class RecordQuery
             return $names;
         }
         foreach (Database::select('users', ['user_id', 'user_name', 'first_name', 'last_name'], 'user_id IN (' . self::intList($ids) . ')') as $user) {
-            $name = trim((string) ($user['user_name'] ?? ''));
-            if ($name === '') {
-                $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
-            }
-            $names[(int) $user['user_id']] = $name;
+            $names[(int) $user['user_id']] = self::displayName($user);
         }
 
         return $names;

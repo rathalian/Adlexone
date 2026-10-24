@@ -174,10 +174,7 @@ final class Rules
             if ($id <= 0) {
                 continue;
             }
-            $name = trim((string) ($user['user_name'] ?? ''));
-            if ($name === '') {
-                $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
-            }
+            $name = RecordQuery::displayName($user);
             $people[$id] = $name !== '' ? $name : ('User ' . $id);
         }
         return $people;
@@ -1121,8 +1118,12 @@ final class Rules
         }
         if ($outcome === self::OUTCOME_SET_FIELD) {
             $label = self::fieldLabel((string) ($step['action_field'] ?? ''));
+            $value = (string) ($step['action_value'] ?? '');
+            if (trim($value) === '') {
+                return ($past ? 'Cleared ' : 'Would clear ') . $label . '.';
+            }
             $verb = $past ? 'Set' : 'Would set';
-            return $verb . ' ' . $label . ' to ' . (string) ($step['action_value'] ?? '') . '.';
+            return $verb . ' ' . $label . ' to ' . $value . '.';
         }
         if ($outcome === self::OUTCOME_SET_OWNER) {
             $name = self::ownerLabel((string) ($step['action_value'] ?? ''), $current);
@@ -1610,13 +1611,17 @@ final class Rules
     {
         return match ((string) ($step['outcome'] ?? '')) {
             self::OUTCOME_EMAIL => 'Email ' . strtolower(self::recipients()[(string) ($step['recipient'] ?? '')] ?? 'the owner'),
-            self::OUTCOME_SET_FIELD => 'Set ' . ($fieldLabels[(string) ($step['action_field'] ?? '')] ?? self::fieldLabel((string) ($step['action_field'] ?? '')))
-                . ' to ' . (string) ($step['action_value'] ?? ''),
+            self::OUTCOME_SET_FIELD => self::setFieldSummary($fieldLabels[(string) ($step['action_field'] ?? '')] ?? self::fieldLabel((string) ($step['action_field'] ?? '')), (string) ($step['action_value'] ?? '')),
             self::OUTCOME_SET_OWNER => 'Set the owner to ' . self::ownerLabel((string) ($step['action_value'] ?? ''), []),
             self::OUTCOME_STAMP => 'Stamp ' . ($fieldLabels[(string) ($step['action_field'] ?? '')] ?? self::fieldLabel((string) ($step['action_field'] ?? ''))) . ' with today\'s date',
             self::OUTCOME_ANNOUNCE => 'Post a notice',
             default => 'Write a log line',
         };
+    }
+
+    private static function setFieldSummary(string $label, string $value): string
+    {
+        return trim($value) === '' ? 'Clear ' . $label : 'Set ' . $label . ' to ' . $value;
     }
 
     private static function plainFieldLabel(string $name): string
@@ -1684,11 +1689,7 @@ final class Rules
         if ($user === null) {
             return '';
         }
-        $name = trim((string) ($user['user_name'] ?? ''));
-        if ($name === '') {
-            $name = trim((string) ($user['first_name'] ?? '') . ' ' . (string) ($user['last_name'] ?? ''));
-        }
-        return $name;
+        return RecordQuery::displayName($user);
     }
 
     /**
