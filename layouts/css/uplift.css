@@ -224,14 +224,12 @@ html[data-mode="dark"] .topnav .menu__panel{ box-shadow:var(--shadow-3); }
     backdrop-filter:saturate(1.4) blur(12px);
     border-bottom:1px solid var(--border);
 }
-.sectionbar--tabs{ padding-left:calc(32px - 12px); }
+.sectionbar--tabs{ padding-left:calc(var(--page-gutter) - 12px); }
 
 /* Bars run the full width, but their contents sit in the same column as the page body. */
 @media (min-width:961px){
-    .appbar .brandrow{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
-    .sectionbar{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
+    .appbar .brandrow, .sectionbar, .app-footer{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
     .sectionbar--tabs{ padding-left:calc(var(--page-inset) - 12px); }
-    .app-footer{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
 }
 .sectionbar--tabs .sectionnav{ overflow:hidden; }
 .sectionnav__link{ border-bottom-width:3px; border-radius:0; transition:color .15s, border-color .15s, background .15s; }
