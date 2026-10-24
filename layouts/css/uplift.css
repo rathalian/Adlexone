@@ -813,3 +813,12 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
 .keysheet__list dt{ display:flex; gap:4px; align-items:center; white-space:nowrap; font-size:13px; }
 .keysheet__list dd{ margin:0; font-size:14px; }
 .keysheet .kbd{ display:inline-flex; margin-left:0; }
+
+.menu__filter{ padding:6px 6px 4px; position:sticky; top:0; background:var(--panel); z-index:1; }
+.menu__filter-input{
+    width:100%; height:34px; padding:0 10px; border:1px solid var(--field-border, var(--border)); border-radius:8px;
+    background:var(--form-surface, var(--panel)); color:var(--input, var(--ink)); font:inherit; font-size:13px;
+}
+.menu__filter-input:focus{ outline:2px solid var(--ring); outline-offset:1px; }
+.menu__heading{ padding:8px 12px 2px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--placeholder); }
+.menu__item[hidden]{ display:none; }

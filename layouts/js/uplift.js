@@ -591,3 +591,66 @@
         }
     });
 })();
+
+/* Long menus: a filter box, and the applications used most recently listed first */
+(() => {
+    const filters = document.querySelectorAll('[data-menu-filter]');
+    if (filters.length === 0) return;
+    const key = 'inlay.recentApps';
+    const read = () => {
+        try { return JSON.parse(localStorage.getItem(key) || '[]').filter((href) => typeof href === 'string'); } catch (e) { return []; }
+    };
+
+    filters.forEach((input) => {
+        const panel = input.closest('.menu__panel');
+        const menu = input.closest('.menu');
+        const items = () => Array.from(panel.querySelectorAll('.menu__item'));
+
+        const recent = read().slice(0, 3);
+        const first = panel.querySelector('.menu__filter');
+        const placed = recent.map((href) => items().find((item) => item.getAttribute('href') === href)).filter(Boolean);
+        if (placed.length > 0) {
+            const heading = document.createElement('div');
+            heading.className = 'menu__heading';
+            heading.textContent = 'Recent';
+            first.after(heading);
+            let after = heading;
+            placed.forEach((item) => { after.after(item); after = item; });
+            const rest = document.createElement('div');
+            rest.className = 'menu__heading';
+            rest.textContent = 'All applications';
+            after.after(rest);
+        }
+
+        panel.addEventListener('click', (event) => {
+            const link = event.target.closest('.menu__item');
+            if (!link) return;
+            const href = link.getAttribute('href') || '';
+            if (href === '') return;
+            const next = [href].concat(read().filter((entry) => entry !== href)).slice(0, 6);
+            try { localStorage.setItem(key, JSON.stringify(next)); } catch (e) { /* storage is off */ }
+        });
+
+        input.addEventListener('input', () => {
+            const term = input.value.trim().toLowerCase();
+            items().forEach((item) => {
+                const name = (item.querySelector('.menu__item-text > span') || item).textContent.toLowerCase();
+                item.hidden = term !== '' && !name.includes(term);
+            });
+            panel.querySelectorAll('.menu__heading').forEach((heading) => { heading.hidden = term !== ''; });
+        });
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const match = items().find((item) => !item.hidden);
+                if (match) window.location.href = match.getAttribute('href');
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                items().find((item) => !item.hidden)?.focus();
+            }
+        });
+        menu.querySelector('.menu__button')?.addEventListener('click', () => {
+            window.setTimeout(() => { if (!panel.hidden) input.focus(); }, 0);
+        });
+    });
+})();
