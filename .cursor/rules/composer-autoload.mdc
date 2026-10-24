@@ -1,0 +1,22 @@
+---
+description: Rebuild the Composer classmap before committing changes under src/
+alwaysApply: true
+---
+
+# Keep the Composer classmap current
+
+`vendor/` is committed, and production hosts never run Composer. The optimised classmap in `vendor/composer/` is what a release ships. A class added under `src/` without a rebuilt classmap is missing from that release, and `bin/build-release.php` refuses to build.
+
+The project has no third-party packages, only PHP and extension requirements. There is nothing to `composer update`. The step that matters on every commit is the classmap.
+
+Before every commit that adds, renames, moves, or deletes a PHP file under `src/`, or edits `composer.json`:
+
+```text
+composer dump-autoload -o
+```
+
+- Use `php composer.phar dump-autoload -o` where `composer` is not installed. Set `COMPOSER_ALLOW_SUPERUSER=1` when running as root.
+- Stage `vendor/composer/autoload_*.php` in the same commit as the source change.
+- Do not stage `vendor/composer/installed.php`. It only records the current commit hash and changes on every run. Restore it with `git checkout -- vendor/composer/installed.php`.
+- The `.githooks/pre-commit` hook does all of this. `.cursor/prepare-runtime.sh` turns it on for cloud sessions with `git config core.hooksPath .githooks`. Run the same command once in a local clone.
+- Never run `composer update` or `composer require` to add a package without being asked. Releases are zips of this repository, and any new package must be committed under `vendor/`.

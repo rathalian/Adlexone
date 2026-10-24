@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Keeps the committed Composer classmap in step with src/.
+# Enable once per clone: git config core.hooksPath .githooks
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+if ! git diff --cached --name-only --diff-filter=ACDMR | grep -qE '^(src/.*\.php|composer\.json)$'; then
+  exit 0
+fi
+
+if command -v composer >/dev/null 2>&1; then
+  composer_cmd=(composer)
+elif [[ -f composer.phar ]]; then
+  composer_cmd=(php composer.phar)
+else
+  echo "pre-commit: Composer is not installed, so the classmap was not rebuilt." >&2
+  echo "Install Composer, or run: php composer.phar dump-autoload -o" >&2
+  exit 1
+fi
+
+COMPOSER_ALLOW_SUPERUSER=1 "${composer_cmd[@]}" dump-autoload -o --no-interaction --quiet
+
+git add vendor/composer/autoload_classmap.php \
+        vendor/composer/autoload_static.php \
+        vendor/composer/autoload_psr4.php \
+        vendor/composer/autoload_namespaces.php \
+        vendor/composer/autoload_real.php
+git checkout -- vendor/composer/installed.php 2>/dev/null || true

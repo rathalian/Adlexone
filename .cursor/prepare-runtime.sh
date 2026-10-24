@@ -4,6 +4,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 
+git config core.hooksPath .githooks 2>/dev/null || true
+
 mkdir -p config storage/database storage/attachments storage/writeable
 
 copy_if_missing() {
