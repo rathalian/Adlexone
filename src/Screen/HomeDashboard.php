@@ -163,9 +163,6 @@ final class HomeDashboard
 
         $actions = '<button type="button" class="btn btn--primary" data-palette-open>'
             . Charts::icon('ic-search') . 'Search<kbd class="kbd">Ctrl K</kbd></button>';
-        if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-            $actions .= '<a class="btn btn--glass" href="?manage=builder">' . Charts::icon('ic-plus') . 'Create an application</a>';
-        }
 
         return '<header class="homehero">'
             . '<div class="homehero__copy">'
