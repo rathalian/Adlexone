@@ -6,6 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
+use Adlexone\Application\ScreenCatalog;
 use Adlexone\Http\Router;
 use Adlexone\Http\TopNav;
 use Adlexone\support\Database;
@@ -50,6 +51,15 @@ final class PaletteScreen
             foreach (ApplicationStore::navigation((int) $app['application_id']) as $link) {
                 if (!Capabilities::linkVisible($link)) {
                     continue;
+                }
+                if (ScreenCatalog::resolve((string) $link['capability']) === ScreenCatalog::CREATE) {
+                    $commands[] = [
+                        'kind' => 'Actions',
+                        'label' => 'New ' . strtolower((string) $item['label']) . ' record',
+                        'group' => 'Create',
+                        'href' => Router::applicationUrl($slug, (int) $link['nav_id']),
+                        'icon' => 'ic-plus',
+                    ];
                 }
                 $commands[] = [
                     'kind' => 'Screens',

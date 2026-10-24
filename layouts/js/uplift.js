@@ -10,10 +10,15 @@
     });
 
     /* Colour mode */
+    const systemMode = () => (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     const setMode = (mode) => {
-        root.setAttribute('data-mode', mode);
-        try { localStorage.setItem('inlay.mode', mode); } catch (e) { /* storage is off */ }
+        root.setAttribute('data-mode', mode === 'system' ? systemMode() : mode);
+        try {
+            if (mode === 'system') localStorage.removeItem('inlay.mode');
+            else localStorage.setItem('inlay.mode', mode);
+        } catch (e) { /* storage is off */ }
     };
+    window.inlaySetMode = setMode;
     const toggleMode = () => setMode(root.getAttribute('data-mode') === 'dark' ? 'light' : 'dark');
     document.addEventListener('click', (event) => {
         if (event.target.closest('[data-mode-toggle]')) toggleMode();
@@ -277,13 +282,17 @@
     let timer = 0;
     let serial = 0;
 
-    const modeCommand = () => ({
-        kind: 'Actions',
-        label: document.documentElement.getAttribute('data-mode') === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
-        group: 'Appearance',
-        icon: document.documentElement.getAttribute('data-mode') === 'dark' ? 'ic-sun' : 'ic-moon',
-        run: () => document.querySelector('[data-mode-toggle]')?.click(),
-    });
+    const modeCommands = () => [
+        { kind: 'Actions', label: 'Use light mode', group: 'Appearance', icon: 'ic-sun', run: () => window.inlaySetMode('light') },
+        { kind: 'Actions', label: 'Use dark mode', group: 'Appearance', icon: 'ic-moon', run: () => window.inlaySetMode('dark') },
+        { kind: 'Actions', label: 'Match the system appearance', group: 'Appearance', icon: 'ic-sliders', run: () => window.inlaySetMode('system') },
+        { kind: 'Actions', label: 'Show keyboard shortcuts', group: 'Help', icon: 'ic-search', run: () => window.inlayShortcuts && window.inlayShortcuts() },
+    ];
+    const kindOrder = ['Records', 'Actions', 'Applications', 'Screens', 'Design', 'Account'];
+    const rank = (item) => {
+        const at = kindOrder.indexOf(item.kind);
+        return at === -1 ? kindOrder.length : at;
+    };
     const homeCommand = { kind: 'Actions', label: 'Go to home', group: 'Navigation', icon: 'ic-home', href: './' };
 
     const load = () => {
@@ -325,10 +334,10 @@
 
     const render = () => {
         const terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-        const pool = [homeCommand, modeCommand()].concat(commands || []);
+        const pool = [homeCommand].concat(modeCommands(), commands || []);
         let matches;
         if (terms.length === 0) {
-            matches = pool.filter((item) => item.kind !== 'Screens').slice(0, 14);
+            matches = pool.filter((item) => item.kind !== 'Screens' && item.group !== 'Create' && item.group !== 'Appearance').slice(0, 14);
         } else {
             matches = pool
                 .map((item) => ({ item, s: score(item, terms) }))
@@ -336,7 +345,9 @@
                 .sort((a, b) => b.s - a.s)
                 .map((entry) => entry.item)
                 .slice(0, 12);
-            matches = records.concat(matches);
+            matches = records.concat(matches).map((item, index) => ({ item, index }))
+                .sort((a, b) => (rank(a.item) - rank(b.item)) || (a.index - b.index))
+                .map((entry) => entry.item);
         }
         shown = matches;
         active = Math.min(active, Math.max(0, shown.length - 1));
@@ -469,6 +480,114 @@
         } else if (event.key === 'Tab' && !box.hidden) {
             event.preventDefault();
             input.focus();
+        }
+    });
+})();
+
+/* Keyboard shortcuts: j and k move through a list, Enter opens, n starts a record, g then h goes home, ? lists them */
+(() => {
+    const rows = () => Array.from(document.querySelectorAll('.record-list tbody tr[data-search], .work-card'))
+        .filter((row) => row.offsetParent !== null);
+    let current = -1;
+    let pending = '';
+    let pendingTimer = 0;
+
+    const mark = (index) => {
+        const all = rows();
+        if (all.length === 0) return;
+        current = (index + all.length) % all.length;
+        all.forEach((row, at) => row.classList.toggle('is-focused', at === current));
+        all[current].scrollIntoView({ block: 'nearest' });
+    };
+    const openCurrent = () => {
+        const row = rows()[current];
+        const link = row && row.querySelector('a[href]');
+        if (link) window.location.href = link.getAttribute('href');
+    };
+
+    let sheet = null;
+    const items = [
+        ['Ctrl K or /', 'Search and commands'],
+        ['?', 'Show this list'],
+        ['j and k', 'Move down and up a list'],
+        ['Enter', 'Open the highlighted record'],
+        ['n', 'Start a new record in this application'],
+        ['g then h', 'Go to the home page'],
+        ['Esc', 'Close a dialog or the search'],
+    ];
+    const build = () => {
+        sheet = document.createElement('div');
+        sheet.className = 'keysheet';
+        sheet.setAttribute('role', 'dialog');
+        sheet.setAttribute('aria-modal', 'true');
+        sheet.setAttribute('aria-label', 'Keyboard shortcuts');
+        sheet.hidden = true;
+        const backdrop = document.createElement('div');
+        backdrop.className = 'palette__backdrop';
+        backdrop.addEventListener('click', () => close());
+        const box = document.createElement('div');
+        box.className = 'keysheet__box';
+        const title = document.createElement('h2');
+        title.className = 'keysheet__title';
+        title.textContent = 'Keyboard shortcuts';
+        const list = document.createElement('dl');
+        list.className = 'keysheet__list';
+        items.forEach(([keys, what]) => {
+            const term = document.createElement('dt');
+            keys.split(/( or | then | and )/).forEach((part) => {
+                if (/^ (or|then|and) $/.test(part)) {
+                    term.appendChild(document.createTextNode(part));
+                } else {
+                    const kbd = document.createElement('kbd');
+                    kbd.className = 'kbd';
+                    kbd.textContent = part;
+                    term.appendChild(kbd);
+                }
+            });
+            const detail = document.createElement('dd');
+            detail.textContent = what;
+            list.appendChild(term);
+            list.appendChild(detail);
+        });
+        box.appendChild(title);
+        box.appendChild(list);
+        sheet.appendChild(backdrop);
+        sheet.appendChild(box);
+        document.body.appendChild(sheet);
+    };
+    const open = () => {
+        if (!sheet) build();
+        sheet.hidden = false;
+    };
+    const close = () => {
+        if (sheet) sheet.hidden = true;
+    };
+    window.inlayShortcuts = open;
+
+    document.addEventListener('keydown', (event) => {
+        if (event.metaKey || event.ctrlKey || event.altKey) return;
+        const target = event.target;
+        const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || '') || target.isContentEditable;
+        if (event.key === 'Escape') { close(); return; }
+        if (typing) return;
+        if (document.getElementById('palette') && !document.getElementById('palette').hidden) return;
+        const key = event.key;
+        if (pending === 'g') {
+            pending = '';
+            window.clearTimeout(pendingTimer);
+            if (key === 'h') { event.preventDefault(); window.location.href = './'; }
+            return;
+        }
+        if (key === '?') { event.preventDefault(); if (sheet && !sheet.hidden) close(); else open(); }
+        else if (key === 'j') { event.preventDefault(); mark(current + 1); }
+        else if (key === 'k') { event.preventDefault(); mark(current < 0 ? 0 : current - 1); }
+        else if (key === 'Enter' && current >= 0 && !(target.tagName === 'A' || target.tagName === 'BUTTON')) { openCurrent(); }
+        else if (key === 'n') {
+            const create = document.querySelector('.apphero__action');
+            if (create) { event.preventDefault(); window.location.href = create.getAttribute('href'); }
+        } else if (key === 'g') {
+            pending = 'g';
+            pendingTimer = window.setTimeout(() => { pending = ''; }, 900);
         }
     });
 })();
