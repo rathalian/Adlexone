@@ -1,12 +1,17 @@
-# If the domain is pointed at the install root instead of public/, refuse the
-# data and code paths. The document root should still be public/.
+# Used when the domain's document root is the install root (shared Apache
+# hosting). If the document root is public/, this file is not read and the
+# server must keep everything outside public/ off the web.
+#
+# Only index.php may run from a browser. Settings, data, and code stay closed.
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(storage|config|bootstrap|src|vendor|tests)(/|$) - [F,L]
+    RewriteRule ^(storage|config|config\.example|bootstrap|src|vendor|translations|tests|public)(/|$) - [F,L]
     RewriteRule ^composer\.(json|lock|phar)$ - [F,L]
+    RewriteRule ^index\.php$ - [L]
+    RewriteRule \.php$ - [F,L]
 </IfModule>
 <IfModule mod_authz_core.c>
-    <FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|json)$">
+    <FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|json|sql|md|lock|phar)$">
         Require all denied
     </FilesMatch>
 </IfModule>
