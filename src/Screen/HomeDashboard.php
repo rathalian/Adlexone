@@ -12,6 +12,7 @@ use Adlexone\Html\Html;
 use Adlexone\Html\Presence;
 use Adlexone\Html\Timeline;
 use Adlexone\support\Database;
+use Adlexone\support\FieldValidation;
 use Adlexone\Theme\Theme;
 
 /**
@@ -27,6 +28,15 @@ final class HomeDashboard
     public const ACTIVITY = 'home_activity';
     public const ASSIGNED = 'home_assigned';
     private const ASSIGNED_LIMIT = 500;
+    private const QUIET_DAYS = 14;
+
+    /** @var array<string, array{0: string, 1: string}> reason => tile label and tone */
+    private const REASONS = [
+        'overdue' => ['Overdue', 'danger'],
+        'soon' => ['Due this week', 'warning'],
+        'changed' => ['Changed by others', 'info'],
+        'quiet' => ['No change for 14 days', 'neutral'],
+    ];
 
     /**
      * @param list<array<string, mixed>> $menu items from ApplicationStore::menuItems()
@@ -50,21 +60,14 @@ final class HomeDashboard
 
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
         $assigned = self::assigned($userId, $typeToApp, $apps);
-        $records = array_sum(array_column($apps, 'count'));
-        $series = array_fill(0, self::WEEKS, 0);
-        foreach ($apps as $app) {
-            foreach ($app['series'] as $week => $n) {
-                $series[$week] += $n;
-            }
-        }
-        $month = array_sum(array_slice($series, -4));
+        $attention = self::attention($userId, $typeToApp, $apps);
 
         $columns = self::assignedPanel($assigned) . self::activityPanel($typeIds);
         $split = $columns !== '' ? '<div class="home__split">' . $columns . '</div>' : '';
         $workFirst = $assigned['total'] > 0;
 
         $html = '<div class="home' . ($workFirst ? ' home--work-first' : '') . '">'
-            . self::hero(count($apps), $records, $assigned['total'], $month)
+            . self::hero($assigned['total'], $attention, self::resume($userId, $typeToApp, $apps))
             . self::notice($apps)
             . ($workFirst ? $split : self::checklist())
             . $intro
@@ -149,30 +152,220 @@ final class HomeDashboard
         return $map;
     }
 
-    private static function hero(int $apps, int $records, int $assigned, int $month): string
+    /**
+     * @param array{groups: array<string, list<array<string, mixed>>>, next: array<string, mixed>|null} $attention
+     * @param array<string, mixed>|null $resume
+     */
+    private static function hero(int $assigned, array $attention, ?array $resume): string
     {
         $hour = (int) date('G');
         $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
         $name = trim((string) ($_SESSION['access_display_name'] ?? $_SESSION['access_user_name'] ?? ''));
         $first = $name !== '' ? (string) (preg_split('/\s+/', $name)[0] ?? '') : '';
-        $lead = $assigned > 0
-            ? 'You have <a class="homehero__link" href="#assigned" data-open-panel="assigned">' . Html::e(self::plural($assigned, 'record') . ' assigned to you') . '</a>.'
-            : 'Nothing is assigned to you right now.';
-        $lead .= ' ' . Html::e(
-            'This site has ' . self::plural($apps, 'application') . ' and ' . self::plural($records, 'record') . '. '
-            . ($month === 1 ? '1 record was' : $month . ' records were') . ' added in the past four weeks.'
-        );
 
-        $actions = '<button type="button" class="btn btn--primary" data-palette-open>'
-            . Charts::icon('ic-search') . 'Search<kbd class="kbd">Ctrl K</kbd></button>';
+        $need = array_sum(array_map('count', $attention['groups']));
+        $assignedLink = '<a class="homehero__link" href="#assigned" data-open-panel="assigned">' . Html::e(self::plural($assigned, 'record') . ($assigned === 1 ? ' is' : ' are') . ' assigned to you') . '</a>';
+        if ($assigned === 0) {
+            $lead = 'Nothing is assigned to you right now.';
+        } elseif ($need === 0) {
+            $lead = $assignedLink . ' and none need attention today.';
+        } else {
+            $lead = $assignedLink . '. ' . Html::e(($need === 1 ? '1 needs' : $need . ' need') . ' attention today.');
+        }
+
+        $tiles = '';
+        if ($assigned > 0) {
+            foreach (self::REASONS as $key => [$label, $tone]) {
+                $n = count($attention['groups'][$key] ?? []);
+                $inner = '<strong class="homehero__n">' . $n . '</strong><span class="homehero__what">' . Html::e($label) . '</span>';
+                $tiles .= $n > 0
+                    ? '<li><a class="homehero__tile homehero__tile--' . $tone . '" href="#assigned" data-open-panel="assigned" data-panel-focus="?controller=' . self::ASSIGNED . '&focus=' . $key . '">' . $inner . '</a></li>'
+                    : '<li><span class="homehero__tile homehero__tile--none">' . $inner . '</span></li>';
+            }
+            $tiles = '<ul class="homehero__tiles" aria-label="Your records that need attention">' . $tiles . '</ul>';
+        }
+
+        $card = '';
+        $pick = $attention['next'] ?? null;
+        $kicker = 'Up next';
+        if ($pick === null && $resume !== null) {
+            $pick = $resume;
+            $kicker = 'Pick up where you left off';
+        }
+        if ($pick !== null) {
+            $card = '<a class="homehero__next" href="' . Html::e((string) $pick['href']) . '">'
+                . '<span class="homehero__kicker">' . Html::e($kicker) . '</span>'
+                . '<span class="homehero__nexttitle">' . Html::e((string) $pick['title']) . '</span>'
+                . '<span class="homehero__nextmeta">' . Html::e((string) $pick['app'] . ' · ' . (string) $pick['label']) . '</span>'
+                . '<span class="homehero__nextgo">Open the record' . Charts::icon('ic-arrow-right') . '</span></a>';
+        }
 
         return '<header class="homehero">'
             . '<div class="homehero__copy">'
             . '<p class="homehero__date">' . Html::e(date('l j F')) . '</p>'
             . '<h1 class="homehero__title">' . Html::e($greeting . ($first !== '' ? ', ' . $first : '')) . '</h1>'
-            . '<p class="homehero__lead">' . $lead . '</p></div>'
-            . '<div class="homehero__actions">' . $actions . '</div>'
+            . '<p class="homehero__lead">' . $lead . '</p>' . $tiles . '</div>'
+            . $card
             . '</header>';
+    }
+
+    /**
+     * Open records assigned to the person that need a look, each placed under the most urgent reason.
+     *
+     * @param array<int, int> $typeToApp
+     * @param list<array<string, mixed>> $apps
+     * @return array{groups: array<string, list<array<string, mixed>>>, next: array<string, mixed>|null}
+     */
+    private static function attention(int $userId, array $typeToApp, array $apps): array
+    {
+        $groups = ['overdue' => [], 'soon' => [], 'changed' => [], 'quiet' => []];
+        if ($userId <= 0 || $typeToApp === []) {
+            return ['groups' => $groups, 'next' => null];
+        }
+
+        $now = time();
+        $today = (int) strtotime('today');
+        $rows = Database::rows(
+            'SELECT item_id, item_title, item_type_id, create_date, core_log_updated FROM items WHERE user_security = ? AND item_type_id IN ('
+            . implode(',', array_map('intval', array_keys($typeToApp))) . ') LIMIT 2000',
+            [$userId]
+        );
+        $byType = [];
+        foreach ($rows as $row) {
+            $byType[(int) $row['item_type_id']][(int) $row['item_id']] = $row;
+        }
+
+        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        $others = [];
+        if ($rows !== []) {
+            $ids = implode(',', array_map(static fn (array $row): int => (int) $row['item_id'], $rows));
+            $found = Database::rows(
+                'SELECT item_id, security_id, MAX(CAST(create_date AS INTEGER)) AS at FROM core_log WHERE item_id IN (' . $ids . ') '
+                . 'AND role_id >= ? AND security_id IS NOT NULL AND security_id <> ? AND CAST(create_date AS INTEGER) >= ? GROUP BY item_id',
+                [$role, $userId, $now - 7 * 86400]
+            );
+            $names = RecordQuery::userNames(array_map(static fn (array $row): int => (int) $row['security_id'], $found));
+            foreach ($found as $row) {
+                $others[(int) $row['item_id']] = ['at' => (int) $row['at'], 'who' => $names[(int) $row['security_id']] ?? ''];
+            }
+        }
+
+        foreach ($byType as $typeId => $items) {
+            $app = $apps[$typeToApp[$typeId] ?? -1] ?? null;
+            if ($app === null) {
+                continue;
+            }
+            $ids = array_keys($items);
+            $fields = RecordQuery::fields($typeId);
+            $status = WorkScreen::workStatusField($typeId);
+            $stand = $status !== null ? RecordQuery::values($ids, $status['id']) : [];
+            $open = RecordQuery::openValues([], $status);
+            $due = self::dueField($fields);
+            $dates = $due !== null ? RecordQuery::values($ids, $due['id']) : [];
+
+            foreach ($items as $id => $row) {
+                if (!RecordQuery::isOpen($open, (string) ($stand[$id] ?? ''))) {
+                    continue;
+                }
+                $title = trim((string) $row['item_title']);
+                $last = max((int) $row['create_date'], (int) ($row['core_log_updated'] ?? 0));
+                $entry = [
+                    'item_id' => $id,
+                    'title' => $title !== '' ? $title : 'Record ' . $id,
+                    'app' => (string) $app['name'],
+                    'accent' => (string) $app['accent'],
+                    'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . $id,
+                    'when' => $last,
+                    'appIndex' => $typeToApp[$typeId],
+                ];
+
+                $offset = null;
+                $day = FieldValidation::parseDate((string) ($dates[$id] ?? ''));
+                if ($day !== null) {
+                    $offset = (int) round(($day->setTime(0, 0)->getTimestamp() - $today) / 86400);
+                }
+                if ($offset !== null && $offset < 0) {
+                    $groups['overdue'][] = $entry + ['rank' => $offset, 'label' => self::days(-$offset) . ' overdue'];
+                } elseif ($offset !== null && $offset <= 7) {
+                    $groups['soon'][] = $entry + ['rank' => $offset, 'label' => $offset === 0 ? 'Due today' : ($offset === 1 ? 'Due tomorrow' : 'Due in ' . $offset . ' days')];
+                } elseif (isset($others[$id])) {
+                    $who = $others[$id]['who'];
+                    $groups['changed'][] = $entry + ['rank' => -$others[$id]['at'], 'label' => ($who !== '' ? 'Changed by ' . $who : 'Changed by someone else') . ' ' . Presence::ago($others[$id]['at'])];
+                } elseif ($now - $last >= self::QUIET_DAYS * 86400) {
+                    $quiet = (int) floor(($now - $last) / 86400);
+                    $groups['quiet'][] = $entry + ['rank' => -$quiet, 'label' => 'No change for ' . self::days($quiet)];
+                }
+            }
+        }
+
+        $next = null;
+        foreach ($groups as $key => $list) {
+            usort($list, static fn (array $left, array $right): int => $left['rank'] <=> $right['rank']);
+            $groups[$key] = $list;
+            $next ??= $list[0] ?? null;
+        }
+
+        return ['groups' => $groups, 'next' => $next];
+    }
+
+    /**
+     * The record the person changed most recently, for the days when nothing needs attention.
+     *
+     * @param array<int, int> $typeToApp
+     * @param list<array<string, mixed>> $apps
+     * @return array<string, mixed>|null
+     */
+    private static function resume(int $userId, array $typeToApp, array $apps): ?array
+    {
+        if ($userId <= 0 || $typeToApp === []) {
+            return null;
+        }
+        $row = Database::rows(
+            'SELECT l.item_id, CAST(l.create_date AS INTEGER) AS at, i.item_title, i.item_type_id FROM core_log l JOIN items i ON i.item_id = l.item_id '
+            . 'WHERE l.security_id = ? AND i.item_type_id IN (' . implode(',', array_map('intval', array_keys($typeToApp))) . ') '
+            . 'ORDER BY CAST(l.create_date AS INTEGER) DESC LIMIT 1',
+            [$userId]
+        )[0] ?? null;
+        $app = $row !== null ? ($apps[$typeToApp[(int) $row['item_type_id']] ?? -1] ?? null) : null;
+        if ($row === null || $app === null) {
+            return null;
+        }
+        $title = trim((string) $row['item_title']);
+
+        return [
+            'title' => $title !== '' ? $title : 'Record ' . (int) $row['item_id'],
+            'app' => (string) $app['name'],
+            'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
+            'label' => 'You changed it ' . Presence::ago((int) $row['at']),
+        ];
+    }
+
+    /**
+     * The date a record is due by. A date that records an outcome, such as "Settled on", is not a due date.
+     *
+     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @return array{id: int}|null
+     */
+    private static function dueField(array $fields): ?array
+    {
+        $dates = array_values(array_filter($fields, static fn (array $f): bool => $f['type'] === 'date' || $f['type'] === 'datetime'));
+        foreach ($dates as $field) {
+            if (str_contains($field['plain'], 'due')) {
+                return $field;
+            }
+        }
+        foreach ($dates as $field) {
+            if (!str_ends_with($field['plain'], ' on')) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    private static function days(int $count): string
+    {
+        return $count . ($count === 1 ? ' day' : ' days');
     }
 
     /**
@@ -300,12 +493,14 @@ final class HomeDashboard
     /**
      * @param array{item_id: int, title: string, app: string, accent: string, href: string, when: int} $item
      */
-    private static function assignedRow(array $item): string
+    private static function assignedRow(array $item, string $tone = ''): string
     {
+        $when = $tone !== '' ? (string) $item['label'] : Presence::ago($item['when']);
+
         return '<li><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
             . '<span class="rows__dot"></span><span class="rows__main"><span class="rows__title">' . Html::e($item['title']) . '</span>'
             . '<span class="rows__meta">' . Html::e($item['app']) . '</span></span>'
-            . '<span class="rows__when">' . Html::e(Presence::ago($item['when'])) . '</span></a></li>';
+            . '<span class="rows__when' . ($tone !== '' ? ' rows__when--' . Html::e($tone) : '') . '">' . Html::e($when) . '</span></a></li>';
     }
 
     /**
@@ -349,11 +544,22 @@ final class HomeDashboard
      *
      * @param list<array<string, mixed>> $menu
      */
-    public static function assignedHtml(array $menu): string
+    public static function assignedHtml(array $menu, string $focus = ''): string
     {
         $apps = self::apps($menu);
         $typeToApp = self::typeToApp($apps);
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        $attention = self::attention($userId, $typeToApp, $apps);
+        $scope = self::scope($attention, $focus);
+        if (isset(self::REASONS[$focus]) && $attention['groups'][$focus] !== []) {
+            $tone = self::REASONS[$focus][1];
+            $html = $scope . '<ul class="rows">';
+            foreach ($attention['groups'][$focus] as $item) {
+                $html .= self::assignedRow($item, $tone);
+            }
+
+            return $html . '</ul>';
+        }
         $items = $userId > 0 && $typeToApp !== []
             ? self::assignedItems($userId, implode(',', array_map('intval', array_keys($typeToApp))), $typeToApp, $apps, self::ASSIGNED_LIMIT + 1)
             : [];
@@ -367,7 +573,7 @@ final class HomeDashboard
         foreach ($items as $item) {
             $groups[$item['appIndex']][] = $item;
         }
-        $html = '';
+        $html = $scope;
         foreach ($groups as $index => $group) {
             $href = (string) $apps[$index]['href'];
             $href .= (str_contains($href, '?') ? '&' : '?') . 'focus=mine';
@@ -384,6 +590,28 @@ final class HomeDashboard
         }
 
         return $html;
+    }
+
+    /**
+     * Links that switch the assigned list between every record and each reason that needs attention.
+     *
+     * @param array{groups: array<string, list<array<string, mixed>>>, next: array<string, mixed>|null} $attention
+     */
+    private static function scope(array $attention, string $focus): string
+    {
+        if (array_sum(array_map('count', $attention['groups'])) === 0) {
+            return '';
+        }
+        $link = static fn (string $key, string $label): string => '<a class="work-scope__link' . ($focus === $key ? ' is-selected' : '') . '" data-lazy-link href="?controller='
+            . self::ASSIGNED . ($key !== '' ? '&focus=' . $key : '') . '"' . ($focus === $key ? ' aria-current="true"' : '') . '>' . Html::e($label) . '</a>';
+        $html = $link('', 'All');
+        foreach (self::REASONS as $key => [$label]) {
+            if ($attention['groups'][$key] !== []) {
+                $html .= $link($key, $label . ' ' . count($attention['groups'][$key]));
+            }
+        }
+
+        return '<nav class="work-scope panel__scope" aria-label="Assigned records to show">' . $html . '</nav>';
     }
 
     /**

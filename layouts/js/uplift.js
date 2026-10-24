@@ -112,7 +112,12 @@
     };
     document.addEventListener('click', (event) => {
         const opener = event.target.closest('[data-open-panel]');
-        if (opener && reveal(opener.getAttribute('data-open-panel'))) event.preventDefault();
+        if (opener && reveal(opener.getAttribute('data-open-panel'))) {
+            event.preventDefault();
+            const focus = opener.getAttribute('data-panel-focus');
+            const panel = document.getElementById(opener.getAttribute('data-open-panel'));
+            if (focus && panel) load(panel, focus);
+        }
         const link = event.target.closest('a[data-lazy-link]');
         const holder = link && link.closest('details[data-lazy]');
         if (holder && !event.metaKey && !event.ctrlKey && !event.shiftKey) {

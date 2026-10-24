@@ -64,7 +64,7 @@ final class HomeScreen
      */
     public static function assigned(): void
     {
-        WorkScreen::workJson(['html' => HomeDashboard::assignedHtml(\Adlexone\Application\ApplicationStore::menuItems())]);
+        WorkScreen::workJson(['html' => HomeDashboard::assignedHtml(\Adlexone\Application\ApplicationStore::menuItems(), (string) ($_GET['focus'] ?? ''))]);
     }
 
     /**
