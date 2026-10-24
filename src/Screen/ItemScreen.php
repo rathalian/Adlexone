@@ -647,7 +647,7 @@ final class ItemScreen
      * @param array<string, mixed> $item
      * @param list<int> $groupIds
      */
-    private static function recordSide(int $itemId, array $item, array $groupIds): string
+    private static function recordSide(int $itemId, array $item, array $groupIds, bool $canWrite = false): string
     {
         $opened = (int) ($item['create_date'] ?? 0);
         $updated = (int) ($item['core_log_updated'] ?? 0);
@@ -711,8 +711,20 @@ final class ItemScreen
             . '<section class="sidecard"><h2 class="sidecard__title">About this record</h2>'
             . self::stageStrip($status['values'] ?? [], $stand) . $facts . '</section>'
             . '<section class="sidecard"><h2 class="sidecard__title">Timeline</h2>'
+            . ($canWrite && defined('SET_LOG_ENTRY') && SET_LOG_ENTRY === 'yes' ? self::noteComposer($itemId) : '')
             . \Adlexone\Html\Timeline::render($events, 'Nothing has been written on this record.') . '</section>'
             . '</aside>';
+    }
+
+    private static function noteComposer(int $itemId): string
+    {
+        return '<form class="composer" method="post" action="' . Html::e(MAN_BASE_URL . '&option=add_log_entry') . '">'
+            . \Adlexone\Auth\Csrf::field()
+            . Form::hidden('item_id', (string) $itemId) . Form::hidden('role_id', '5') . Form::hidden('from_timeline', '1')
+            . '<label class="sr-only" for="composer-note">Add a note to the timeline</label>'
+            . '<textarea class="textarea composer__input" id="composer-note" name="log_entry" rows="2" placeholder="Add a note"></textarea>'
+            . '<button class="btn btn--primary btn--sm composer__send" type="submit" name="submit_button" value="Add">Add note</button>'
+            . '</form>';
     }
 
     /**
@@ -1743,7 +1755,7 @@ final class ItemScreen
                 }
                 if ($inApplication) {
                     $html = '<div class="workspace"><div class="workspace__main">' . $html . '</div>'
-                        . self::recordSide((int) $itemID, $itemFields, array_map('intval', $itemGroupIds)) . '</div>';
+                        . self::recordSide((int) $itemID, $itemFields, array_map('intval', $itemGroupIds), $itemRole < 4) . '</div>';
                 }
                 Page::current()->setBody($html);
             } else {
@@ -2113,7 +2125,8 @@ final class ItemScreen
             Actions::executeAction($itemID, 'update_item_log_entry', false);
         }
         if ($showInformation == true) {
-            if (self::returnToItem($itemID, (string) TXT_248, 'notes')) {
+            $fromTimeline = isset($_POST['from_timeline']);
+            if (self::returnToItem($itemID, $fromTimeline ? 'Note added.' : (string) TXT_248, $fromTimeline ? '' : 'notes')) {
                 return;
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
