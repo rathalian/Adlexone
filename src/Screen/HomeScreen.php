@@ -60,6 +60,14 @@ final class HomeScreen
         WorkScreen::workJson(['html' => HomeDashboard::activityHtml($menu, $scope)]);
     }
     /**
+     * Every record assigned to the person, as JSON, for the Show all link on the home page.
+     */
+    public static function assigned(): void
+    {
+        WorkScreen::workJson(['html' => HomeDashboard::assignedHtml(\Adlexone\Application\ApplicationStore::menuItems())]);
+    }
+
+    /**
      * One application opens straight into it. Several applications stay on
      * this page so the person can choose, unless their account names a home app.
      */

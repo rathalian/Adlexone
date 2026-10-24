@@ -74,7 +74,7 @@
             })
             .catch(() => {
                 if (body.getAttribute('data-serial') !== mine) return;
-                body.innerHTML = '<p class="timeline__empty">Recent activity could not be loaded. Close this panel and open it again to retry.</p>';
+                body.innerHTML = '<p class="timeline__empty">This list could not be loaded. Close this panel and open it again to retry.</p>';
                 panel.removeAttribute('data-loaded');
             })
             .finally(() => body.removeAttribute('aria-busy'));

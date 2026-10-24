@@ -357,6 +357,7 @@ final class Router
             'login' => [LoginScreen::class, 'open'],
             'home' => [HomeScreen::class, 'open'],
             HomeDashboard::ACTIVITY => [HomeScreen::class, 'activity'],
+            HomeDashboard::ASSIGNED => [HomeScreen::class, 'assigned'],
             'palette' => [PaletteScreen::class, 'open'],
             'full_page_view' => [PrintScreen::class, 'open'],
             'application' => [ApplicationScreen::class, 'open'],

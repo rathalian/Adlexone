@@ -428,6 +428,13 @@ html[data-mode="dark"] .appcard__count{ color:color-mix(in srgb, var(--accent) 5
 .panel__more a:hover{ text-decoration:underline; }
 .panel__more a span{ padding:0 7px; border-radius:99px; font-size:11px; background:var(--hover); color:var(--body); }
 .panel__scope{ margin:0 0 10px; }
+.panel__more .panel__all{ margin-right:6px; }
+.assigned-group + .assigned-group{ margin-top:14px; }
+.assigned-group__title{ margin:0 0 2px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.assigned-group__title a{ display:inline-flex; align-items:center; gap:8px; color:var(--accent-ink, var(--brand2)); text-decoration:none; }
+.assigned-group .rows__meta{ display:none; }
+.assigned-group__title a:hover{ text-decoration:underline; }
+.assigned-group__title span{ padding:0 7px; border-radius:99px; font-size:11px; background:var(--hover); color:var(--body); }
 .panel__head h2{ margin:0; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--title); }
 .panel__empty{ display:flex; align-items:center; gap:16px; padding:8px 0 14px; color:var(--placeholder); }
 .panel__empty p{ margin:0; font-size:13.5px; }

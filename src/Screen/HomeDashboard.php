@@ -25,6 +25,8 @@ final class HomeDashboard
 
     /** Controller name that returns the recent activity list as JSON. */
     public const ACTIVITY = 'home_activity';
+    public const ASSIGNED = 'home_assigned';
+    private const ASSIGNED_LIMIT = 500;
 
     /**
      * @param list<array<string, mixed>> $menu items from ApplicationStore::menuItems()
@@ -280,6 +282,95 @@ final class HomeDashboard
     }
 
     /**
+     * @param array{item_id: int, title: string, app: string, accent: string, href: string, when: int} $item
+     */
+    private static function assignedRow(array $item): string
+    {
+        return '<li><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
+            . '<span class="rows__dot"></span><span class="rows__main"><span class="rows__title">' . Html::e($item['title']) . '</span>'
+            . '<span class="rows__meta">' . Html::e($item['app']) . '</span></span>'
+            . '<span class="rows__when">' . Html::e(Presence::ago($item['when'])) . '</span></a></li>';
+    }
+
+    /**
+     * Records assigned to the person, most recently changed first.
+     *
+     * @param array<int, int> $typeToApp
+     * @param list<array<string, mixed>> $apps
+     * @return list<array{item_id: int, title: string, app: string, accent: string, href: string, when: int, appIndex: int}>
+     */
+    private static function assignedItems(int $userId, string $typeList, array $typeToApp, array $apps, int $limit): array
+    {
+        $rows = Database::rows(
+            'SELECT item_id, item_title, item_type_id, create_date, core_log_updated FROM items WHERE user_security = ? AND item_type_id IN (' . $typeList . ') '
+            . 'ORDER BY CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END DESC LIMIT ' . $limit,
+            [$userId]
+        );
+        $items = [];
+        foreach ($rows as $row) {
+            $index = $typeToApp[(int) $row['item_type_id']] ?? -1;
+            $app = $apps[$index] ?? null;
+            if ($app === null) {
+                continue;
+            }
+            $title = trim((string) $row['item_title']);
+            $items[] = [
+                'item_id' => (int) $row['item_id'],
+                'title' => $title !== '' ? $title : 'Record ' . (int) $row['item_id'],
+                'app' => (string) $app['name'],
+                'accent' => (string) $app['accent'],
+                'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
+                'when' => max((int) $row['create_date'], (int) ($row['core_log_updated'] ?? 0)),
+                'appIndex' => $index,
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * Every record assigned to the person, grouped by application. Sent when they choose Show all.
+     *
+     * @param list<array<string, mixed>> $menu
+     */
+    public static function assignedHtml(array $menu): string
+    {
+        $apps = self::apps($menu);
+        $typeToApp = self::typeToApp($apps);
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        $items = $userId > 0 && $typeToApp !== []
+            ? self::assignedItems($userId, implode(',', array_map('intval', array_keys($typeToApp))), $typeToApp, $apps, self::ASSIGNED_LIMIT + 1)
+            : [];
+        if ($items === []) {
+            return '<p class="timeline__empty">Nothing is assigned to you. Records you own are listed here.</p>';
+        }
+        $capped = count($items) > self::ASSIGNED_LIMIT;
+        $items = array_slice($items, 0, self::ASSIGNED_LIMIT);
+
+        $groups = [];
+        foreach ($items as $item) {
+            $groups[$item['appIndex']][] = $item;
+        }
+        $html = '';
+        foreach ($groups as $index => $group) {
+            $href = (string) $apps[$index]['href'];
+            $href .= (str_contains($href, '?') ? '&' : '?') . 'focus=mine';
+            $html .= '<section class="assigned-group">'
+                . '<h3 class="assigned-group__title"><a href="' . Html::e($href) . '">' . Html::e((string) $apps[$index]['name'])
+                . '<span>' . count($group) . '</span></a></h3><ul class="rows">';
+            foreach ($group as $item) {
+                $html .= self::assignedRow($item);
+            }
+            $html .= '</ul></section>';
+        }
+        if ($capped) {
+            $html .= '<p class="timeline__empty">The ' . self::ASSIGNED_LIMIT . ' most recent records are shown. Open an application to see the rest.</p>';
+        }
+
+        return $html;
+    }
+
+    /**
      * @param array{total: int, items: list<array{item_id: int, title: string, app: string, accent: string, href: string, when: int}>, byApp: list<array{name: string, href: string, count: int}>} $assigned
      */
     private static function assignedPanel(array $assigned): string
@@ -293,10 +384,7 @@ final class HomeDashboard
         } else {
             $body = '<ul class="rows">';
             foreach ($items as $item) {
-                $body .= '<li><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
-                    . '<span class="rows__dot"></span><span class="rows__main"><span class="rows__title">' . Html::e($item['title']) . '</span>'
-                    . '<span class="rows__meta">' . Html::e($item['app']) . '</span></span>'
-                    . '<span class="rows__when">' . Html::e(Presence::ago($item['when'])) . '</span></a></li>';
+                $body .= self::assignedRow($item);
             }
             $body .= '</ul>';
             if ($assigned['total'] > count($items) || count($assigned['byApp']) > 1) {
@@ -308,12 +396,16 @@ final class HomeDashboard
                 if ($rest > 0) {
                     $links .= '<span>and ' . self::plural($rest, 'other application') . '</span>';
                 }
-                $body .= '<p class="panel__more"><span>All assigned to you</span>' . $links . '</p>';
+                $body .= '<p class="panel__more">'
+                    . '<a class="panel__all" data-lazy-link href="?controller=' . self::ASSIGNED . '">Show all ' . $assigned['total'] . '</a>'
+                    . $links . '</p>';
             }
         }
         $count = $assigned['total'] > 0 ? '<span class="panel__count">' . $assigned['total'] . '</span>' : '';
 
-        return self::panel('assigned', 'Assigned to you', $count, '<div class="panel__body">' . $body . '</div>', '');
+        $lazy = $items === [] ? '' : '?controller=' . self::ASSIGNED;
+
+        return self::panel('assigned', 'Assigned to you', $count, '<div class="panel__body" data-lazy-body aria-live="polite">' . $body . '</div>', $lazy, true);
     }
 
     /**
@@ -338,10 +430,10 @@ final class HomeDashboard
     /**
      * A panel that starts closed. The browser remembers whether the person opened it.
      */
-    private static function panel(string $id, string $title, string $count, string $body, string $lazy): string
+    private static function panel(string $id, string $title, string $count, string $body, string $lazy, bool $loaded = false): string
     {
         return '<details class="panel panel--' . $id . '" id="' . $id . '" data-remember="home.' . $id . '"'
-            . ($lazy !== '' ? ' data-lazy="' . Html::e($lazy) . '"' : '') . '>'
+            . ($lazy !== '' ? ' data-lazy="' . Html::e($lazy) . '"' : '') . ($loaded ? ' data-loaded="1"' : '') . '>'
             . '<summary class="panel__head"><h2>' . Html::e($title) . '</h2>' . $count . '<span class="panel__chev" aria-hidden="true"></span></summary>'
             . $body . '</details>';
     }
@@ -544,28 +636,7 @@ final class HomeDashboard
             return ['total' => 0, 'items' => [], 'byApp' => []];
         }
 
-        $rows = Database::rows(
-            'SELECT item_id, item_title, item_type_id, create_date, core_log_updated FROM items WHERE user_security = ? AND item_type_id IN (' . $list . ') '
-            . 'ORDER BY CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END DESC LIMIT 6',
-            [$userId]
-        );
-        $items = [];
-        foreach ($rows as $row) {
-            $app = $apps[$typeToApp[(int) $row['item_type_id']] ?? -1] ?? null;
-            if ($app === null) {
-                continue;
-            }
-            $title = trim((string) $row['item_title']);
-            $when = max((int) $row['create_date'], (int) ($row['core_log_updated'] ?? 0));
-            $items[] = [
-                'item_id' => (int) $row['item_id'],
-                'title' => $title !== '' ? $title : 'Record ' . (int) $row['item_id'],
-                'app' => (string) $app['name'],
-                'accent' => (string) $app['accent'],
-                'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
-                'when' => $when,
-            ];
-        }
+        $items = self::assignedItems($userId, $list, $typeToApp, $apps, 6);
 
         return ['total' => $total, 'items' => $items, 'byApp' => $byApp];
     }
