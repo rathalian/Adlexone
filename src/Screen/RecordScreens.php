@@ -773,7 +773,7 @@ final class RecordScreens
                 'age' => self::ageLabel($date, $today),
                 'when' => $fromField
                     ? RecordQuery::display($field, $values[$item['id']] ?? '')
-                    : ($item['created'] > 0 ? date(trim(explode(',', (string) SET_DATE_FORMAT)[0]), $item['created']) : ''),
+                    : ($item['created'] > 0 ? \Adlexone\Html\Stamp::day($item['created']) : ''),
             ], $item['owner']);
             $row['sort'] = $stamp;
             if ($date === null) {

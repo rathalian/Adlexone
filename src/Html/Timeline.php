@@ -39,7 +39,7 @@ final class Timeline
                 . '<div class="timeline__body"><p class="timeline__text">' . $text . '</p>'
                 . ($detail !== '' ? '<p class="timeline__detail">' . Html::e($detail) . '</p>' : '')
                 . '<p class="timeline__meta">' . ($who !== '' ? Presence::mark($who) . '<span>' . Html::e($who) . '</span>' : '')
-                . '<time datetime="' . Html::e(date('c', $when)) . '" title="' . Html::e(date('j M Y, g:i a', $when)) . '">'
+                . '<time datetime="' . Html::e(date('c', $when)) . '" title="' . Html::e(Stamp::dayTime($when)) . '">'
                 . Html::e(Presence::ago($when)) . '</time></p></div></li>';
         }
 

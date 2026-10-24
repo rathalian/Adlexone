@@ -664,7 +664,7 @@ final class ItemScreen
             ? ''
             : \Adlexone\Html\Presence::mark($name) . '<span>' . Html::e($name) . '</span>';
         $when = static fn (int $stamp): string => $stamp > 0
-            ? '<span>' . Html::e(\Adlexone\Html\Presence::ago($stamp)) . '</span><small>' . Html::e(date('j M Y, g:i a', $stamp)) . '</small>'
+            ? '<span>' . Html::e(\Adlexone\Html\Presence::ago($stamp)) . '</span><small>' . Html::e(\Adlexone\Html\Stamp::dayTime($stamp)) . '</small>'
             : '';
         $files = Database::count('item_attachments', 'item_id = ?', [$itemId]);
         $groups = self::groupNames($groupIds);

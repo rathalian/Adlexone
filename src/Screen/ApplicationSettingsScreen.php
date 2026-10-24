@@ -461,7 +461,7 @@ final class ApplicationSettingsScreen
             $html .= '<p class="record-list__empty">This rule has not run yet.</p>';
         } else {
             foreach ($runs as $run) {
-                $when = date('j M Y, g:i a', (int) ($run['ran_at'] ?? time()));
+                $when = \Adlexone\Html\Stamp::dayTime((int) ($run['ran_at'] ?? time()));
                 $html .= '<div class="log-item"><div class="log-heading"><strong>'
                     . Html::e($when)
                     . ' — record ' . (int) ($run['item_id'] ?? 0)

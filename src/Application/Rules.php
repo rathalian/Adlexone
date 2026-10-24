@@ -639,7 +639,7 @@ final class Rules
         }
         $html = '';
         foreach ($runs as $run) {
-            $when = date('j M Y, g:i a', (int) ($run['ran_at'] ?? time()));
+            $when = \Adlexone\Html\Stamp::dayTime((int) ($run['ran_at'] ?? time()));
             $html .= '<div class="log-item"><div class="log-heading"><strong>'
                 . Html::e($when)
                 . ' — ' . Html::e((string) $run['rule_name'])

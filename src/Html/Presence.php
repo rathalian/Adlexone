@@ -121,8 +121,6 @@ final class Presence
         if ($delta < 86400 * 14) {
             return (int) floor($delta / 86400) . 'd ago';
         }
-        $format = defined('SET_DATE_FORMAT') ? (string) SET_DATE_FORMAT : 'j M Y';
-
-        return date($format, $timestamp);
+        return Stamp::day($timestamp);
     }
 }
