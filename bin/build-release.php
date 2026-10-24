@@ -4,11 +4,16 @@ declare(strict_types=1);
 /**
  * Builds a release zip from the last commit on the current branch.
  *
- *   php bin/build-release.php [output-directory]
+ *   php bin/build-release.php [--with-public] [output-directory]
  *
  * The zip unpacks straight into a web server document root (no wrapper folder).
  * It never holds config/*.json, a SQLite database, or attachments, so unpacking
  * a newer release over a live site replaces the code and keeps the data.
+ *
+ * The zip is for a document root at the install folder, where the root
+ * .htaccess keeps settings, data, and code closed. It leaves out public/,
+ * because public/.htaccess would reopen that folder under the install root.
+ * Pass --with-public for a host that lets you set the document root to public/.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -27,6 +32,19 @@ foreach (['phar', 'zlib'] as $extension) {
 
 $root = dirname(__DIR__);
 chdir($root);
+
+$withPublic = false;
+$positional = [];
+foreach (array_slice($argv, 1) as $argument) {
+    if ($argument === '--with-public') {
+        $withPublic = true;
+    } elseif (str_starts_with($argument, '-')) {
+        fwrite(STDERR, "Unknown option {$argument}.\nUsage: php bin/build-release.php [--with-public] [output-directory]\n");
+        exit(1);
+    } else {
+        $positional[] = $argument;
+    }
+}
 
 /** Paths in the repository that stay out of the release. */
 const EXCLUDE = [
@@ -147,12 +165,12 @@ if ($unmapped !== []) {
     );
 }
 
-$outDir = $argv[1] ?? ($root . '/dist');
+$outDir = $positional[0] ?? ($root . '/dist');
 if (!is_dir($outDir) && !mkdir($outDir, 0755, true) && !is_dir($outDir)) {
     fail("Cannot create {$outDir}.");
 }
 $outDir = realpath($outDir) ?: $outDir;
-$name = "inlay-{$version}-{$commit}";
+$name = "inlay-{$version}-{$commit}" . ($withPublic ? '-public' : '');
 $zipPath = $outDir . DIRECTORY_SEPARATOR . $name . '.zip';
 
 $work = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'inlay-release-' . bin2hex(random_bytes(4));
@@ -164,7 +182,8 @@ try {
     run('git archive --format=tar --output=' . escapeshellarg($tarPath) . ' HEAD');
     (new PharData($tarPath))->extractTo($staging, null, true);
 
-    foreach (EXCLUDE as $path) {
+    $exclude = $withPublic ? EXCLUDE : [...EXCLUDE, 'public'];
+    foreach ($exclude as $path) {
         removeTree($staging . '/' . $path);
     }
 
@@ -178,7 +197,8 @@ try {
         fail("Live settings or data are tracked in git and would ship:\n  " . implode("\n  ", $leaked));
     }
 
-    foreach (REQUIRED as $path) {
+    $required = $withPublic ? [...REQUIRED, 'public/index.php'] : REQUIRED;
+    foreach ($required as $path) {
         if (!file_exists($staging . '/' . $path)) {
             fail("The release is missing {$path}.");
         }

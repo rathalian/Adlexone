@@ -54,6 +54,7 @@ final class HelpText
             self::p('While the site is open, SQLite may add ' . self::code(basename($sqlite) . '-wal') . ' and ' . self::code(basename($sqlite) . '-shm') . ' in the same folder. They are part of the live database. Copy them together with the main file if you take a manual backup, or use the operator backup, which folds them back into the main file first.'),
             self::h('Shared hosting'),
             self::p('Unzip Inlay outside the web folder, for example in the account home as inlay/. Point the domain’s document root at inlay/public. If the host only lets you pick a folder under public_html, pick inlay/public. Leave config and storage next to public, not inside it.'),
+            self::p('If the host cannot change the document root, unzip Inlay into the document root itself. The .htaccess file there refuses requests for config, storage, and code, and only index.php runs. This needs Apache with mod_rewrite and AllowOverride All.'),
             self::h('Secrets'),
             self::p('SMTP passwords and OAuth client secrets are written into the settings folder above when an administrator saves them later. Leave the password field blank on that screen to keep the current value. Do not commit that folder or the SQLite file to git.'),
             self::h('First sign-in'),
