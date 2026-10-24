@@ -9,6 +9,7 @@ use Adlexone\Http\View;
 <?php View::partial('head', ['title' => $page->title() !== '' ? $page->title() : 'Inlay']); ?>
 </head>
 <body>
+    <a class="skip-link" href="#content">Skip to the page content</a>
 <main class="main" id="content" tabindex="-1">
     <?php echo $page->body(); ?>
 </main>

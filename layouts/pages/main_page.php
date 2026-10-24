@@ -19,6 +19,7 @@ $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
 <?php View::partial('head', ['title' => $page->documentTitle()]); ?>
 </head>
 <body<?php echo $page->inApplication() ? ' style="' . Html::e(Accent::style(Accent::forSlug($page->applicationSlug()))) . '"' : ''; ?>>
+    <a class="skip-link" href="#content">Skip to the page content</a>
     <div class="brandbar appbar">
 <?php View::partial('top_nav', ['nav' => $nav]); ?>
 </div>

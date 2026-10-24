@@ -22,6 +22,7 @@ $formHtml = $formHtml ?? '';
 <?php View::partial('head', ['title' => $title . ' — Inlay']); ?>
 </head>
 <body class="page-login page-setup">
+    <a class="skip-link" href="#content">Skip to the page content</a>
 <main class="main" id="content">
     <div class="login-shell">
         <aside class="login-atmosphere">

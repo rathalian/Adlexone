@@ -1378,8 +1378,28 @@ final class RecordScreens
             $cellsHtml .= '<td class="record-list__cell">' . $inner . '</td>';
         }
 
+        $control = self::labelControl((string) ($row['control'] ?? ''), $name);
+
         return '<tr data-search="' . Html::e($search) . '"><td>' . $nameHtml . '</td>' . $cellsHtml
-            . '<td class="record-list__cell record-sheet__control">' . (string) ($row['control'] ?? '') . '</td></tr>';
+            . '<td class="record-list__cell record-sheet__control">' . $control . '</td></tr>';
+    }
+
+    /**
+     * Gives a row control an accessible name that includes the record it belongs to.
+     */
+    private static function labelControl(string $control, string $recordName): string
+    {
+        if ($control === '' || str_contains($control, 'aria-label=') || !preg_match('/<(input|select|textarea)\b[^>]*\bname="(owner|step)_\d+"/', $control, $found)) {
+            return $control;
+        }
+        $label = ($found[2] === 'owner' ? 'Owner of ' : 'Next step for ') . $recordName;
+
+        return (string) preg_replace_callback(
+            '/<(input|select|textarea)\b/',
+            static fn (array $tag): string => '<' . $tag[1] . ' aria-label="' . Html::e($label) . '"',
+            $control,
+            1
+        );
     }
 
     private static function emptyList(string $title, string $copy): string

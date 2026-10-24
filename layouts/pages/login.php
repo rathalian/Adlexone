@@ -21,6 +21,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
 <?php View::partial('head', ['title' => 'Sign in — Inlay']); ?>
 </head>
 <body class="page-login">
+    <a class="skip-link" href="#content">Skip to the page content</a>
 <main class="main" id="content">
     <div class="login-shell">
         <aside class="login-atmosphere" aria-hidden="true">
