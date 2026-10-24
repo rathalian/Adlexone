@@ -22,16 +22,24 @@
  *
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
-// Check for minimum PHP version
-(phpversion() >= "8.0") or exit ('ERROR: You must have PHP Verson 8.0 or higher installed');
-$missingExtensions = array_values(array_filter(
-    ['pdo', 'pdo_sqlite', 'dom', 'libxml', 'ctype'],
-    static fn (string $extension): bool => !extension_loaded($extension)
-));
-if ($missingExtensions !== []) {
+// Check for minimum PHP version. PHP_VERSION_ID covers the patch level (8.1.0 is 80100)
+// and ignores any vendor suffix on the version string, such as 8.1.2-1ubuntu2.14.
+// Keep this block in syntax that PHP 5.4 can parse, so an old server reads the message.
+if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 80100) {
     if (!headers_sent()) {
-        http_response_code(500);
-        header('Content-Type: text/plain; charset=UTF-8');
+        header('Content-Type: text/plain; charset=UTF-8', true, 500);
+    }
+    exit("Inlay needs PHP 8.1 or later. This server is running PHP " . PHP_VERSION . ".\n");
+}
+$missingExtensions = array();
+foreach (array('pdo', 'pdo_sqlite', 'dom', 'libxml', 'ctype') as $extension) {
+    if (!extension_loaded($extension)) {
+        $missingExtensions[] = $extension;
+    }
+}
+if ($missingExtensions !== array()) {
+    if (!headers_sent()) {
+        header('Content-Type: text/plain; charset=UTF-8', true, 500);
     }
     exit(
         "Inlay cannot start. PHP " . PHP_VERSION . " is missing: " . implode(', ', $missingExtensions) . ".\n\n"
@@ -40,7 +48,7 @@ if ($missingExtensions !== []) {
     );
 }
 //***** Initialize Adlexone - source / full version build
-define('VERSION','3.0');
+define('VERSION','1.0');
 define('LAYOUT_PATH', 'layouts/');
 define('THEME_PATH', 'site/themes/');
 define('SITE_APPS_PATH', 'site/apps/');
