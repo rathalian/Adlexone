@@ -20,9 +20,5 @@ fi
 
 COMPOSER_ALLOW_SUPERUSER=1 "${composer_cmd[@]}" dump-autoload -o --no-interaction --quiet
 
-git add vendor/composer/autoload_classmap.php \
-        vendor/composer/autoload_static.php \
-        vendor/composer/autoload_psr4.php \
-        vendor/composer/autoload_namespaces.php \
-        vendor/composer/autoload_real.php
+git add vendor/composer/autoload_*.php
 git checkout -- vendor/composer/installed.php 2>/dev/null || true

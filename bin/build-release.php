@@ -64,6 +64,8 @@ const REQUIRED = [
     '.htaccess',
     'index.php',
     'bootstrap/bootstrap.php',
+    'bootstrap/mbstring_fallback.php',
+    'vendor/composer/autoload_files.php',
     'vendor/autoload.php',
     'vendor/composer/autoload_classmap.php',
     'config/.htaccess',

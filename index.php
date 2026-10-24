@@ -25,7 +25,7 @@
 // Check for minimum PHP version
 (phpversion() >= "8.0") or exit ('ERROR: You must have PHP Verson 8.0 or higher installed');
 $missingExtensions = array_values(array_filter(
-    ['pdo', 'pdo_sqlite', 'dom', 'libxml', 'mbstring', 'ctype'],
+    ['pdo', 'pdo_sqlite', 'dom', 'libxml', 'ctype'],
     static fn (string $extension): bool => !extension_loaded($extension)
 ));
 if ($missingExtensions !== []) {
@@ -36,7 +36,7 @@ if ($missingExtensions !== []) {
     exit(
         "Inlay cannot start. PHP " . PHP_VERSION . " is missing: " . implode(', ', $missingExtensions) . ".\n\n"
         . "Turn these extensions on for this site, then reload the page. In cPanel, open Select PHP Version and tick them under Extensions. "
-        . "On a server you manage, install the matching PHP packages, for example php-sqlite3, php-xml, and php-mbstring on Debian or Ubuntu.\n"
+        . "On a server you manage, install the matching PHP packages, for example php-sqlite3 and php-xml on Debian or Ubuntu.\n"
     );
 }
 //***** Initialize Adlexone - source / full version build

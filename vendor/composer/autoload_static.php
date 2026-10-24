@@ -6,6 +6,10 @@ namespace Composer\Autoload;
 
 class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
 {
+    public static $files = array (
+        '70f17d4c9d42941707937003146f55aa' => __DIR__ . '/../..' . '/bootstrap/mbstring_fallback.php',
+    );
+
     public static $prefixLengthsPsr4 = array (
         'A' =>
         array (
