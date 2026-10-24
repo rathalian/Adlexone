@@ -12,6 +12,9 @@
     --shadow-2:0 4px 12px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.05);
     --shadow-3:0 14px 32px rgba(15,23,42,.12), 0 4px 10px rgba(15,23,42,.06);
     --appbar-h:53px;
+    --page-max:1480px;
+    --page-gutter:32px;
+    --page-inset:max(var(--page-gutter), calc((100% - var(--page-max)) / 2 + var(--page-gutter)));
     --frost:color-mix(in srgb, var(--page-bg, #f7f5f1) 82%, transparent);
     --c1:#0ea5e9;
     --c2:#8b5cf6;
@@ -19,6 +22,10 @@
     --c4:#10b981;
     --c5:#ec4899;
     --ease:cubic-bezier(.2,.7,.2,1);
+}
+
+@media (min-width:2200px){
+    :root{ --page-max:1760px; }
 }
 
 html{ color-scheme:light; scroll-behavior:smooth; }
@@ -182,7 +189,7 @@ html[data-mode="dark"] .topnav .menu__panel{ box-shadow:var(--shadow-3); }
 }
 .apphero__inner{
     display:flex; align-items:center; gap:18px; flex-wrap:wrap;
-    max-width:1480px; margin:0 auto; padding:18px 32px;
+    max-width:var(--page-max); margin:0 auto; padding:18px var(--page-gutter);
 }
 .apphero__icon{
     flex:none; display:grid; place-items:center; width:52px; height:52px; border-radius:14px;
@@ -218,6 +225,14 @@ html[data-mode="dark"] .topnav .menu__panel{ box-shadow:var(--shadow-3); }
     border-bottom:1px solid var(--border);
 }
 .sectionbar--tabs{ padding-left:calc(32px - 12px); }
+
+/* Bars run the full width, but their contents sit in the same column as the page body. */
+@media (min-width:961px){
+    .appbar .brandrow{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
+    .sectionbar{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
+    .sectionbar--tabs{ padding-left:calc(var(--page-inset) - 12px); }
+    .app-footer{ padding-left:var(--page-inset); padding-right:var(--page-inset); }
+}
 .sectionbar--tabs .sectionnav{ overflow:hidden; }
 .sectionnav__link{ border-bottom-width:3px; border-radius:0; transition:color .15s, border-color .15s, background .15s; }
 .sectionnav__link:hover{ background:var(--hover); }
@@ -239,7 +254,7 @@ html[data-mode="dark"] .sectionnav__link[aria-current="page"]{ color:color-mix(i
 .sectionmore__item{ min-height:36px; margin:0; padding:0 10px; border-bottom:0 !important; border-radius:8px; }
 
 /* ---------- Page rhythm ---------- */
-.wrap{ max-width:1480px; margin-left:auto; margin-right:auto; }
+.wrap{ max-width:var(--page-max); margin-left:auto; margin-right:auto; }
 .main > *{ animation:rise .4s var(--ease) both; }
 @keyframes rise{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
 
