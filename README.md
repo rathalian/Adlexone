@@ -19,6 +19,16 @@ Point the domain’s document root at the `public/` folder. The SQLite file, `co
 
 3. **Updates.** Replace the code and leave `config/` and `storage/` in place. On boot, `Adlexone\Database\SchemaMigrator` upgrades the live file. Reference DDL: `storage/database/shared_schema.sql`.
 
+## Release zip for shared Apache hosting
+
+`php bin/build-release.php` builds `dist/inlay-{version}-{commit}.zip` from the last commit. It needs PHP 8.1+ with `phar` and `zlib`, and git. The zip holds the code only. It never holds `config/*.json`, a SQLite file, or attachments.
+
+1. Unzip it into the domain's document root. The file manager on most hosts can do this. Apache needs `mod_rewrite` and `AllowOverride All`.
+2. Open the site and follow the setup page. It names the folders PHP must be able to write: `config/`, `storage/database/`, and `storage/attachments/`.
+3. To update, unzip the next release over the same folder. `config/` and `storage/` are left as they are, and `SchemaMigrator` upgrades the database on the next request.
+
+The root `.htaccess` lets only `index.php` run and refuses requests for `config/`, `storage/`, `src/`, `vendor/`, and other code or data paths. A host that lets you set the document root should use `php bin/build-release.php --with-public` and point the domain at `public/` instead. That zip adds the `public/` folder, and the code, settings, and data then sit outside the web folder.
+
 ## Several customers on one server
 
 Set `INLAY_STORES` to a directory outside `public/` and `INLAY_OPERATOR_HOST` to the management hostname. The same keys can live in `config/platform.json` next to the code. Environment values win. Open the operator host, create the operator account, then add a customer. Each customer gets `{stores}/{slug}/adlexone.sqlite`, `config/`, and `attachments/`. Leave the admin password blank and their first visit is the same setup page, with their own paths. The operator login is stored in `platform.sqlite` beside the stores directory, not inside a customer database.
