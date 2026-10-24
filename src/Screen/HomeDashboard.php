@@ -59,17 +59,17 @@ final class HomeDashboard
         }
         $month = array_sum(array_slice($series, -4));
 
-        $html = '<div class="home">'
+        $columns = self::assignedPanel($assigned) . self::activityPanel($typeIds);
+        $split = $columns !== '' ? '<div class="home__split">' . $columns . '</div>' : '';
+        $workFirst = $assigned['total'] > 0;
+
+        $html = '<div class="home' . ($workFirst ? ' home--work-first' : '') . '">'
             . self::hero(count($apps), $records, $assigned['total'], $month)
             . self::notice($apps)
-            . self::checklist()
+            . ($workFirst ? $split : self::checklist())
             . $intro
-            . self::applications($apps);
-
-        $columns = self::assignedPanel($assigned) . self::activityPanel($typeIds);
-        if ($columns !== '') {
-            $html .= '<div class="home__split">' . $columns . '</div>';
-        }
+            . self::applications($apps)
+            . ($workFirst ? self::checklist() : $split);
 
         return $html . '</div>';
     }

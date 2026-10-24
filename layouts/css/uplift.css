@@ -756,6 +756,8 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
     .home > .home__section--apps{ order:4; }
     .home .panel--assigned{ order:5; }
     .home .panel--activity{ order:6; }
+    .home--work-first .panel--assigned{ order:3; }
+    .home--work-first > .checklist{ order:5; }
 
     .homehero{ padding:18px 16px; gap:12px; border-radius:var(--radius-m); }
     .homehero__title{ font-size:26px; }
