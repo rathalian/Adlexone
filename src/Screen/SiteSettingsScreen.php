@@ -502,7 +502,7 @@ final class SiteSettingsScreen
         $themes = \Adlexone\Theme\Theme::installed();
         if ($save) {
             $theme = \Adlexone\Theme\Theme::canonicalize(trim((string) ($_POST['theme'] ?? '')));
-            if (!isset($themes[$theme])) {
+            if ($theme !== '' && !isset($themes[$theme])) {
                 View::respond('Choose an installed theme.', Blocks::link('?manage=settings&option=my_theme', 'Theme', '', 'btn btn--primary btn--sm'));
                 return;
             }
@@ -511,16 +511,19 @@ final class SiteSettingsScreen
             header('Location: ?manage=settings&option=my_theme');
             exit;
         }
-        $current = \Adlexone\Theme\Theme::canonicalize((string) ($_SESSION['access_theme'] ?? ''));
+        $own = Database::first('users', ['theme'], 'user_id = ?', [$userId]);
+        $current = \Adlexone\Theme\Theme::canonicalize((string) ($own['theme'] ?? ''));
         if (!isset($themes[$current])) {
-            $current = defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'inlay-stone';
+            $current = '';
         }
+        $default = \Adlexone\Theme\Theme::canonicalize(defined('SET_DEFAULT_THEME') ? (string) SET_DEFAULT_THEME : 'inlay-stone');
+        $defaultLabel = $themes[$default] ?? $default;
         Page::current()->setBody(Form::form(
             'Theme',
             '?manage=settings&option=update_my_theme',
             [
-                'Your theme' => \Adlexone\Theme\Theme::picker('theme', $current)
-                    . '<p class="form-help">Used on your account. The site default applies when this is left unset.</p>',
+                'Your theme' => \Adlexone\Theme\Theme::picker('theme', $current, false, 'Follow the site theme')
+                    . '<p class="form-help">Follow the site theme to use ' . Html::e($defaultLabel) . ', the default the administrator has set. Choose another theme to keep it on your account only.</p>',
             ],
             [Form::button('submit', 'submit_button', 'Save')]
         ));

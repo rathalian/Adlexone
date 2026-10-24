@@ -276,12 +276,22 @@ final class Theme
         return '#1c1917';
     }
 
-    public static function picker(string $name, string $current, bool $submitOnChange = false): string
+    public static function picker(string $name, string $current, bool $submitOnChange = false, string $followLabel = ''): string
     {
-        $current = self::canonicalize($current);
+        $current = $current === '' ? '' : self::canonicalize($current);
         $change = $submitOnChange ? ' onchange="this.form.submit()"' : '';
         $html = '<div class="theme-swatches" role="radiogroup">';
-        foreach (self::installed() as $slug => $label) {
+        $options = self::installed();
+        if ($followLabel !== '') {
+            $checked = $current === '' ? ' checked' : '';
+            $active = $current === '' ? ' is-selected' : '';
+            $html .= '<label class="theme-swatch theme-swatch--follow' . $active . '">'
+                . '<input type="radio" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" value=""' . $checked . $change . '>'
+                . '<span class="theme-swatch__chip" aria-hidden="true"></span>'
+                . '<span class="theme-swatch__name">' . htmlspecialchars($followLabel, ENT_QUOTES, 'UTF-8') . '</span>'
+                . '</label>';
+        }
+        foreach ($options as $slug => $label) {
             $checked = $slug === $current ? ' checked' : '';
             $active = $slug === $current ? ' is-selected' : '';
             $html .= '<label class="theme-swatch' . $active . '">'

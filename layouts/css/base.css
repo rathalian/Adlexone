@@ -2402,3 +2402,6 @@ input[type="file"]::file-selector-button:hover{ background:var(--hover); }
     font-weight:600; font-size:14px; text-decoration:none;
 }
 .skip-link:focus{ top:12px; outline:2px solid var(--ring); outline-offset:2px; }
+.theme-swatch--follow .theme-swatch__chip{
+    background:repeating-linear-gradient(135deg, var(--border) 0 4px, transparent 4px 8px);
+}

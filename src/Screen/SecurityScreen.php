@@ -244,8 +244,7 @@ final class SecurityScreen
         $userPreferences = [];
         if ($adminEdit) {
             $themes = \Adlexone\Theme\Theme::installed();
-            $theme = empty($fieldValues['theme']) ? SET_DEFAULT_THEME : $fieldValues['theme'];
-            $userPreferences[TXT_182] = \Adlexone\Theme\Theme::picker('theme', (string) $theme);
+            $userPreferences[TXT_182] = \Adlexone\Theme\Theme::picker('theme', (string) ($fieldValues['theme'] ?? ''), false, 'Follow the site theme');
         }
 
         $languageFileArray = [];
@@ -625,7 +624,7 @@ final class SecurityScreen
         }
         if (isset($columns['theme'])) {
             $theme = \Adlexone\Theme\Theme::canonicalize($columns['theme']);
-            if (isset(\Adlexone\Theme\Theme::installed()[$theme])) {
+            if ($theme === '' || isset(\Adlexone\Theme\Theme::installed()[$theme])) {
                 $columns['theme'] = $theme;
             } else {
                 unset($columns['theme']);
