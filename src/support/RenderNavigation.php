@@ -344,7 +344,11 @@ final class RenderNavigation
      * Put a controller's links in the top navigation card and drop the left sidebar.
      * Call this once at the top of a controller, before the page is rendered.
      */
-    public static function applySectionNav(string $label, string $linksHtml, string $hero = ''): void
+    /**
+     * @param list<array{label: string, href?: string}> $crumbs Replaces the label with a breadcrumb trail
+     *        ending at the current page. Only the last crumb is not a link.
+     */
+    public static function applySectionNav(string $label, string $linksHtml, string $hero = '', array $crumbs = []): void
     {
         $page = Page::current();
         if ($page->hasSectionNav()) {
@@ -353,7 +357,22 @@ final class RenderNavigation
         $page->suggestEyebrow($label);
         $built = self::build([$label => $linksHtml]);
         $page->setAppHero($hero);
-        $page->setSectionNav(self::sectionNav($built[$label] ?? [], $label, $hero === ''));
+        $links = $built[$label] ?? [];
+        if ($crumbs !== [] && $links === []) {
+            $page->suggestNavLabel((string) end($crumbs)['label']);
+        }
+        $page->setSectionNav(self::sectionNav($links, $label, $hero === '', $crumbs));
+    }
+
+    /**
+     * Section bar for a Configure screen: a breadcrumb that starts at Configure, then the tabs
+     * that belong to this screen only.
+     *
+     * @param list<array{label: string, href?: string}> $trail the crumbs after Configure
+     */
+    public static function applyConfigureNav(array $trail, string $linksHtml = ''): void
+    {
+        self::applySectionNav('Configure', $linksHtml, '', array_merge([['label' => 'Configure']], $trail));
     }
 
     /**
@@ -361,15 +380,21 @@ final class RenderNavigation
      *
      * @param array<int, array{label: ?string, html: ?string, href: string, target: ?string, rel: ?string}> $links
      */
-    public static function sectionNav(array $links, string $label, bool $named = true): string
+    public static function sectionNav(array $links, string $label, bool $named = true, array $crumbs = []): string
     {
-        if ($links === []) {
+        if ($links === [] && $crumbs === []) {
             return '';
         }
 
-        $html = '<div class="sectionbar' . ($named ? '' : ' sectionbar--tabs') . '">';
-        if ($named) {
+        $html = '<div class="sectionbar' . ($named ? '' : ' sectionbar--tabs') . ($links === [] ? ' sectionbar--crumbs' : '') . '">';
+        if ($crumbs !== []) {
+            $html .= self::breadcrumb($crumbs);
+            $label = (string) end($crumbs)['label'];
+        } elseif ($named) {
             $html .= '<p class="sectionbar__name">' . self::sectionMark() . Html::e($label) . '</p>';
+        }
+        if ($links === []) {
+            return $html . '</div>';
         }
         $html .= '<nav class="sectionnav" aria-label="' . Html::e($label) . '">';
         foreach ($links as $lnk) {
@@ -392,6 +417,26 @@ final class RenderNavigation
         $html .= '</nav></div>';
 
         return $html;
+    }
+
+    /** @param list<array{label: string, href?: string}> $crumbs */
+    private static function breadcrumb(array $crumbs): string
+    {
+        $last = count($crumbs) - 1;
+        $html = '<nav class="sectionbar__name sectionbar__crumbs" aria-label="Breadcrumb"><ol class="crumbs">';
+        foreach ($crumbs as $i => $crumb) {
+            $label = Html::e((string) $crumb['label']);
+            $href = (string) ($crumb['href'] ?? '');
+            if ($i === $last) {
+                $html .= '<li class="crumbs__item" aria-current="page">' . $label . '</li>';
+            } elseif ($href !== '') {
+                $html .= '<li class="crumbs__item"><a href="' . Html::e($href) . '">' . $label . '</a></li>';
+            } else {
+                $html .= '<li class="crumbs__item">' . $label . '</li>';
+            }
+        }
+
+        return $html . '</ol></nav>';
     }
 
     private static function sectionMark(): string

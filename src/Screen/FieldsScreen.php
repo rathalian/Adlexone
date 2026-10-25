@@ -24,7 +24,7 @@ final class FieldsScreen
     {
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applySectionNav('Configure', RenderNavigation::designURLs());
+        RenderNavigation::applyConfigureNav([['label' => 'Fields']]);
         $scope = trim((string) ($_GET['application'] ?? ''));
         define('FIELDS_BASE_URL', '?manage=fields' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 

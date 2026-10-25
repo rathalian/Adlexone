@@ -25,7 +25,6 @@ final class Page
     private ?string $title = null;
     private ?string $eyebrow = null;
     private ?string $sectionNav = null;
-    private bool $keepConfigureMenu = false;
     private string $appHero = '';
     private ?string $navLabel = null;
     private string $navOption = '';
@@ -89,17 +88,6 @@ final class Page
     public function sectionNav(): string
     {
         return $this->sectionNav ?? '';
-    }
-
-    /** Keeps the Configure menu in the top bar when the section links do not already list its destinations. */
-    public function keepConfigureMenu(): void
-    {
-        $this->keepConfigureMenu = true;
-    }
-
-    public function keepsConfigureMenu(): bool
-    {
-        return $this->keepConfigureMenu;
     }
 
     public function setSectionNav(string $html): void

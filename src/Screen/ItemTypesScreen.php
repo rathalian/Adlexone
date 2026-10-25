@@ -24,7 +24,7 @@ final class ItemTypesScreen
     {
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applySectionNav('Configure', RenderNavigation::designURLs());
+        RenderNavigation::applyConfigureNav([['label' => 'Record types']]);
         $scope = trim((string) ($_GET['application'] ?? ''));
         define('ITEM_TYPES_BASE_URL', '?manage=item-types' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 

@@ -32,7 +32,8 @@ final class ApplicationsScreen
         define('APPLICATIONS_MANAGE_URL', '?manage=applications');
         $option = (string) ($_GET['option'] ?? '');
 
-        $section = RenderNavigation::designURLs();
+        $section = '';
+        $trail = [['label' => 'Applications']];
         $applicationOptions = [
             'edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav',
             'rules', 'new_rule', 'add_rule', 'edit_rule', 'update_rule', 'delete_rule',
@@ -47,10 +48,14 @@ final class ApplicationsScreen
                     Blocks::link(APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $sectionApp, 'Rules', 'ic-zap'),
                     Permission::ADMIN_ACTIONS
                 );
-                Page::current()->keepConfigureMenu();
+                $sectionName = ApplicationStore::find($sectionApp);
+                $trail = [
+                    ['label' => 'Applications', 'href' => APPLICATIONS_MANAGE_URL],
+                    ['label' => is_array($sectionName) ? (string) $sectionName['name'] : 'Application'],
+                ];
             }
         }
-        RenderNavigation::applySectionNav('Configure', $section);
+        RenderNavigation::applyConfigureNav($trail, $section);
         Page::current()->suggestTitle('Applications');
 
         if (in_array($option, [

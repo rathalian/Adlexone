@@ -30,16 +30,17 @@ final class SecurityScreen
 
         $securityOption = (string)($_GET['option'] ?? '');
         if ($securityOption !== 'modify_user') {
+            $groupSectionOptions = ['manage_groups', 'new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
             if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
                 $userSectionOptions = ['', 'manage_users_groups', 'new_user', 'admin_modify_user', 'add_user', 'update_user', 'delete_user', 'modify_group_membership', 'update_group_membership'];
-                $groupSectionOptions = ['new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
                 if (in_array($securityOption, $userSectionOptions, true)) {
                     Page::current()->setNavOption('manage_users');
                 } elseif (in_array($securityOption, $groupSectionOptions, true)) {
                     Page::current()->setNavOption('manage_groups');
                 }
             }
-            RenderNavigation::applySectionNav('Configure', RenderNavigation::designURLs());
+            $groupPage = in_array($securityOption, $groupSectionOptions, true);
+            RenderNavigation::applyConfigureNav([['label' => $groupPage ? 'Groups' : 'People']]);
         }
 
 

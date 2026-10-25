@@ -32,7 +32,7 @@ final class BuilderScreen
         define('BUILDER_URL', '?manage=builder');
         $option = (string) ($_GET['option'] ?? '');
 
-        RenderNavigation::applySectionNav('Configure', RenderNavigation::designURLs());
+        RenderNavigation::applyConfigureNav([['label' => 'Create an application']]);
         Page::current()->suggestTitle('Create an application');
 
         switch ($option) {

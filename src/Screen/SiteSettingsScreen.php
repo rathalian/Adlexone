@@ -133,8 +133,7 @@ final class SiteSettingsScreen
             return;
         }
 
-        $section = RenderNavigation::designURLs() . RenderNavigation::systemSettingsURLs(false);
-        RenderNavigation::applySectionNav('Configure', $section);
+        RenderNavigation::applyConfigureNav([['label' => 'Settings']], RenderNavigation::systemSettingsURLs());
 
 
 
