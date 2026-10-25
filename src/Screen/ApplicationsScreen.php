@@ -37,7 +37,7 @@ final class ApplicationsScreen
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
             }
         }
-        RenderNavigation::applySectionNav('Design', $section);
+        RenderNavigation::applySectionNav('Configure', $section);
         Page::current()->suggestTitle('Applications');
 
         switch ($option) {

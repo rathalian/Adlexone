@@ -32,10 +32,10 @@ $account = $nav['account'];
                 <span><?php echo Html::e($apps['items'][0]['label']); ?></span>
             </a>
             <?php elseif ($apps['mode'] === 'menu'): ?>
-            <?php View::partial('menu', ['id' => 'menu-applications', 'label' => 'Apps', 'items' => $apps['items']]); ?>
+            <?php View::partial('menu', ['id' => 'menu-applications', 'label' => 'Applications', 'items' => $apps['items']]); ?>
             <?php endif; ?>
             <?php if ($nav['design'] !== []): ?>
-            <?php View::partial('menu', ['id' => 'menu-design', 'label' => 'Design', 'items' => $nav['design']]); ?>
+            <?php View::partial('menu', ['id' => 'menu-design', 'label' => 'Configure', 'items' => $nav['design']]); ?>
             <?php endif; ?>
             <?php if ($account !== null): ?>
             <button class="topnav__icon" type="button" data-mode-toggle aria-label="Switch between light and dark" title="Switch between light and dark">

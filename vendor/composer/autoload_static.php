@@ -35,6 +35,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Application\\RecordQuery' => __DIR__ . '/../..' . '/src/Application/RecordQuery.php',
         'Adlexone\\Application\\Rules' => __DIR__ . '/../..' . '/src/Application/Rules.php',
         'Adlexone\\Application\\ScreenCatalog' => __DIR__ . '/../..' . '/src/Application/ScreenCatalog.php',
+        'Adlexone\\Application\\WorkflowFields' => __DIR__ . '/../..' . '/src/Application/WorkflowFields.php',
         'Adlexone\\Auth\\Access' => __DIR__ . '/../..' . '/src/Auth/Access.php',
         'Adlexone\\Auth\\AuthConfig' => __DIR__ . '/../..' . '/src/Auth/AuthConfig.php',
         'Adlexone\\Auth\\AuthException' => __DIR__ . '/../..' . '/src/Auth/AuthException.php',

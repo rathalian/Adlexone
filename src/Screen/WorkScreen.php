@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
+use Adlexone\Application\RecordQuery;
 use Adlexone\Application\ScreenCatalog;
+use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
@@ -64,6 +66,10 @@ final class WorkScreen
     {
         if ((string) ($_GET['option'] ?? '') === 'move_card' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
             self::moveWorkCard($itemTypeId);
+            return;
+        }
+        if ((string) ($_GET['option'] ?? '') === 'move_cards' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            self::moveWorkCards($itemTypeId);
             return;
         }
 
@@ -206,61 +212,17 @@ final class WorkScreen
      *
      * @return array{id: int, name: string, values: list<string>}|null
      */
-    public static function workStatusField(?int $itemTypeId): ?array
+    public static function workStatusField(?int $itemTypeId, string $slug = ''): ?array
     {
         if ($itemTypeId === null || $itemTypeId <= 0) {
             return null;
         }
-        $menus = [];
-        $links = Database::select(
-            'item_type_custom_fields',
-            ['custom_field_id'],
-            'item_type_id = ?',
-            [$itemTypeId],
-            'custom_field_order ASC'
-        );
-        foreach ($links as $link) {
-            $field = Database::first(
-                'custom_fields',
-                ['custom_field_id', 'custom_field_name', 'field_type'],
-                'custom_field_id = ?',
-                [(int) $link['custom_field_id']]
-            );
-            if ($field === null || FieldTypes::normalise((string) ($field['field_type'] ?? '')) !== FieldTypes::MENU) {
-                continue;
-            }
-            $menus[] = $field;
-        }
-        if ($menus === []) {
-            return null;
-        }
-        $chosen = $menus[0];
-        foreach ($menus as $field) {
-            if (strcasecmp((string) $field['custom_field_name'], 'Status') === 0) {
-                $chosen = $field;
-                break;
-            }
-        }
-        if (strcasecmp((string) $chosen['custom_field_name'], 'Status') !== 0) {
-            foreach ($menus as $field) {
-                if (str_contains(strtolower((string) $field['custom_field_name']), 'status')) {
-                    $chosen = $field;
-                    break;
-                }
-            }
-        }
-        $values = [];
-        foreach (Database::select('custom_field_menu_values', ['menu_value'], 'custom_field_id = ?', [(int) $chosen['custom_field_id']], 'menu_value_id ASC') as $row) {
-            $value = trim((string) ($row['menu_value'] ?? ''));
-            if ($value !== '') {
-                $values[] = $value;
-            }
-        }
+        $field = WorkflowFields::resolve($slug !== '' ? $slug : self::applicationSlug(), $itemTypeId, WorkflowFields::STATUS);
 
-        return [
-            'id' => (int) $chosen['custom_field_id'],
-            'name' => (string) $chosen['custom_field_name'],
-            'values' => $values,
+        return $field === null ? null : [
+            'id' => $field['id'],
+            'name' => $field['name'],
+            'values' => $field['values'],
         ];
     }
 
@@ -339,12 +301,16 @@ final class WorkScreen
                 ]));
                 $record['meta'] = implode(' · ', $bits);
                 $record['mark'] = trim((string) ($fact['owner'] ?? ''));
+                $record['itemId'] = $itemId;
+                $record['sortName'] = strtolower((string) $record['name']);
                 $opened = (int) ($row['create_date'] ?? 0);
+                $record['sortOpened'] = $opened;
                 if ($opened > 0) {
                     $record['cells']['opened'] = Presence::ago($opened);
                     $record['titles']['opened'] = date(SET_DATE_FORMAT, $opened);
                 }
                 $standValue = trim((string) ($stand['values'][$itemId] ?? ''));
+                $record['sortStand'] = strtolower($standValue);
                 $record['cells']['stand'] = $standValue;
                 if ($standValue !== '') {
                     $record['tones']['stand'] = Presence::tone($standValue);
@@ -352,19 +318,73 @@ final class WorkScreen
                 $rows[] = $record;
             }
         }
+        $sort = in_array((string) ($_GET['sort'] ?? ''), ['name', 'status', 'opened'], true)
+            ? (string) $_GET['sort']
+            : 'opened';
+        $direction = (string) ($_GET['dir'] ?? '') === 'asc' ? 'asc' : 'desc';
+        usort($rows, static function (array $left, array $right) use ($sort, $direction): int {
+            $key = match ($sort) {
+                'name' => 'sortName',
+                'status' => 'sortStand',
+                default => 'sortOpened',
+            };
+            $result = ($left[$key] ?? '') <=> ($right[$key] ?? '');
+
+            return $direction === 'asc' ? $result : -$result;
+        });
         $columns = [];
         if ($status !== null && $status['values'] !== []) {
-            $columns[] = ['key' => 'stand', 'label' => self::workFieldLabel((string) $status['name'])];
+            $columns[] = [
+                'key' => 'stand',
+                'label' => self::workFieldLabel((string) $status['name']),
+                'sortHref' => self::workSortHref($base, 'status', $sort, $direction),
+                'ariaSort' => $sort === 'status' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
+            ];
         }
-        $columns[] = ['key' => 'opened', 'label' => 'Opened'];
+        $columns[] = [
+            'key' => 'opened',
+            'label' => 'Opened',
+            'sortHref' => self::workSortHref($base, 'opened', $sort, $direction),
+            'ariaSort' => $sort === 'opened' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
+        ];
 
-        return Blocks::recordList([
+        $bulk = '';
+        if ($status !== null && $status['values'] !== []) {
+            $options = '<option value="">Set status to</option>';
+            foreach ($status['values'] as $value) {
+                $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
+            }
+            $bulk = '<div class="record-list__tools work-bulk__tools">'
+                . '<span class="record-list__meta" data-selected-count>0 selected</span>'
+                . '<select class="select work-bulk__status" name="status" aria-label="Status for selected records" required>' . $options . '</select>'
+                . '<button class="btn btn--sm" type="submit" data-bulk-submit disabled>Apply</button></div>';
+        }
+
+        $list = Blocks::recordList([
             'column' => self::workColumnName($itemTypeId),
+            'columnSortHref' => self::workSortHref($base, 'name', $sort, $direction),
+            'columnAriaSort' => $sort === 'name' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
             'columns' => $columns,
             'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
+            'toolbar' => $bulk,
+            'selectName' => $bulk !== '' ? 'item_ids' : '',
             'empty' => 'No records yet',
             'groups' => [['rows' => $rows]],
         ]);
+        if ($bulk === '') {
+            return $list;
+        }
+
+        return '<form class="work-bulk" method="post" action="' . Html::e($base . '&option=move_cards') . '">'
+            . Csrf::field() . $list . '</form>';
+    }
+
+    private static function workSortHref(string $base, string $key, string $current, string $direction): string
+    {
+        $next = $current === $key && $direction === 'asc' ? 'desc' : 'asc';
+
+        return self::workHref($base, 'list', self::currentFocus())
+            . '&sort=' . rawurlencode($key) . '&dir=' . $next;
     }
 
     /**
@@ -469,8 +489,10 @@ final class WorkScreen
         $dropAttr = $drop ? ' data-status="' . Html::e($label) . '"' : '';
 
         $tone = Presence::tone($drop ? $label : '');
+        $state = Presence::stateClass($label);
 
-        return '<div class="work-board__col" data-tone="' . Html::e($tone) . '"' . $dropAttr . '>'
+        return '<div class="work-board__col" data-tone="' . Html::e($tone) . '"'
+            . ($state !== '' ? ' data-state="' . Html::e($state) . '"' : '') . $dropAttr . '>'
             . '<div class="work-board__head"><span class="work-board__label"><span class="work-board__dot" aria-hidden="true"></span>'
             . Html::e($label) . '</span>'
             . '<span class="work-board__count">' . count($cards) . '</span></div>'
@@ -548,7 +570,7 @@ final class WorkScreen
         if ($owners !== []) {
             $names = [];
             foreach (Database::select('users', ['user_id', 'user_name', 'first_name', 'last_name'], 'user_id IN (' . implode(',', array_keys($owners)) . ')') as $user) {
-                $names[(int) $user['user_id']] = \Adlexone\Application\RecordQuery::displayName($user);
+                $names[(int) $user['user_id']] = RecordQuery::displayName($user);
             }
             foreach ($facts as $id => $fact) {
                 $facts[$id]['owner'] = $names[$fact['user_id']] ?? '';
@@ -629,7 +651,6 @@ final class WorkScreen
                 $name = self::plainFieldName((string) $field['custom_field_name']);
                 $fieldId = (int) $field['custom_field_id'];
                 if ($name === 'next step') {
-                    $nextField[$typeId] = $fieldId;
                     continue;
                 }
                 if ($firstText === 0) {
@@ -641,6 +662,10 @@ final class WorkScreen
             }
             if (!isset($detailField[$typeId]) && $firstText > 0) {
                 $detailField[$typeId] = $firstText;
+            }
+            $step = WorkflowFields::resolve(self::applicationSlug(), (int) $typeId, WorkflowFields::STEP);
+            if ($step !== null) {
+                $nextField[$typeId] = $step['id'];
             }
         }
         $wanted = array_values(array_unique(array_filter(array_merge(array_values($detailField), array_values($nextField)))));
@@ -736,6 +761,30 @@ final class WorkScreen
             'records' => count($ids),
             'mine' => $mine,
         ]);
+    }
+
+    public static function moveWorkCards(?int $itemTypeId): void
+    {
+        $posted = RecordQuery::ints($_POST['item_ids'] ?? []);
+        $accessible = self::applicationAccessibleItemIds($itemTypeId);
+        $ids = array_values(array_intersect($posted, $accessible));
+        $status = trim((string) ($_POST['status'] ?? ''));
+        $field = self::workStatusField($itemTypeId);
+        if ($ids === [] || $field === null || !in_array($status, $field['values'], true)) {
+            header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));
+            exit;
+        }
+        foreach ($ids as $itemId) {
+            RecordQuery::saveField($itemId, (int) $field['id'], $status);
+        }
+
+        header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));
+        exit;
+    }
+
+    private static function applicationSlug(): string
+    {
+        return Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
     }
 
     /**

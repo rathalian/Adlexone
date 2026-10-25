@@ -81,9 +81,9 @@ final class PaletteScreen
         }
         foreach (TopNav::build()['design'] as $item) {
             $commands[] = [
-                'kind' => 'Design',
+                'kind' => 'Configure',
                 'label' => (string) $item['label'],
-                'group' => 'Design',
+                'group' => 'Configure',
                 'href' => (string) $item['href'],
                 'icon' => (string) $item['icon'],
             ];

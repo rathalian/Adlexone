@@ -95,7 +95,22 @@ final class Presence
             $tone = 'neutral';
         }
 
-        return '<span class="pill pill--' . $tone . '">' . Html::e($label) . '</span>';
+        $state = self::stateClass($label);
+
+        return '<span class="pill pill--' . $tone . ($state !== '' ? ' pill--state-' . $state : '') . '">' . Html::e($label) . '</span>';
+    }
+
+    public static function stateClass(string $label): string
+    {
+        $value = strtolower(trim($label));
+        if (str_contains($value, 'waiting on us')) {
+            return 'action';
+        }
+        if (str_contains($value, 'waiting on them')) {
+            return 'external';
+        }
+
+        return '';
     }
 
     public static function ago(int $timestamp): string

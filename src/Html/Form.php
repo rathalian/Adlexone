@@ -232,7 +232,7 @@ final class Form
         unset($dateFormat);
         return self::input('date', $nameID, FieldValidation::toDateInput($value), [
             'autocomplete' => 'off',
-        ]);
+        ]) . self::dateHint(false);
     }
 
     public static function time(string $name, mixed $value = ''): string
@@ -246,7 +246,7 @@ final class Form
     {
         return self::input('datetime-local', $name, FieldValidation::toDatetimeInput($value), [
             'autocomplete' => 'off',
-        ]);
+        ]) . self::dateHint(true);
     }
 
     public static function email(string $name, mixed $value = ''): string
@@ -370,5 +370,14 @@ final class Form
         }
 
         return [$element, ''];
+    }
+
+    private static function dateHint(bool $withTime): string
+    {
+        $example = $withTime
+            ? FieldValidation::formatDatetime('2026-10-14 10:01:00')
+            : FieldValidation::formatDate('2026-10-14');
+
+        return '<span class="form-help date-format-help">Site format: ' . Html::e($example) . '.</span>';
     }
 }

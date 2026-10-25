@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Application\RecordQuery;
+use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Html\Accent;
@@ -62,17 +63,18 @@ final class HomeDashboard
         $assigned = self::assigned($userId, $typeToApp, $apps);
         $attention = self::attention($userId, $typeToApp, $apps);
 
-        $columns = self::assignedPanel($assigned) . self::activityPanel($typeIds);
-        $split = $columns !== '' ? '<div class="home__split">' . $columns . '</div>' : '';
+        $assignedPanel = self::assignedPanel($assigned);
+        $activityPanel = self::activityPanel($typeIds);
         $workFirst = $assigned['total'] > 0;
 
         $html = '<div class="home' . ($workFirst ? ' home--work-first' : '') . '">'
             . self::hero($assigned['total'], $attention, self::resume($userId, $typeToApp, $apps))
             . self::notice($apps)
-            . ($workFirst ? $split : self::checklist())
+            . self::checklist()
+            . $assignedPanel
             . $intro
-            . self::applications($apps)
-            . ($workFirst ? self::checklist() : $split);
+            . self::applications($apps, $assigned['byApp'])
+            . $activityPanel;
 
         return $html . '</div>';
     }
@@ -256,11 +258,11 @@ final class HomeDashboard
                 continue;
             }
             $ids = array_keys($items);
-            $fields = RecordQuery::fields($typeId);
-            $status = WorkScreen::workStatusField($typeId);
+            $slug = (string) $app['slug'];
+            $status = WorkScreen::workStatusField($typeId, $slug);
             $stand = $status !== null ? RecordQuery::values($ids, $status['id']) : [];
-            $open = RecordQuery::openValues([], $status);
-            $due = self::dueField($fields);
+            $open = WorkflowFields::openValues($slug, $typeId, $status);
+            $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
             $dates = $due !== null ? RecordQuery::values($ids, $due['id']) : [];
 
             foreach ($items as $id => $row) {
@@ -338,29 +340,6 @@ final class HomeDashboard
             'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
             'label' => 'You changed it ' . Presence::ago((int) $row['at']),
         ];
-    }
-
-    /**
-     * The date a record is due by. A date that records an outcome, such as "Settled on", is not a due date.
-     *
-     * @param list<array{id: int, plain: string, type: string}> $fields
-     * @return array{id: int}|null
-     */
-    private static function dueField(array $fields): ?array
-    {
-        $dates = array_values(array_filter($fields, static fn (array $f): bool => $f['type'] === 'date' || $f['type'] === 'datetime'));
-        foreach ($dates as $field) {
-            if (str_contains($field['plain'], 'due')) {
-                return $field;
-            }
-        }
-        foreach ($dates as $field) {
-            if (!str_ends_with($field['plain'], ' on')) {
-                return $field;
-            }
-        }
-
-        return null;
     }
 
     private static function days(int $count): string
@@ -487,23 +466,41 @@ final class HomeDashboard
         return 0;
     }
 
-    private static function applications(array $apps): string
+    private static function applications(array $apps, array $assignedByApp): string
     {
         if ($apps === []) {
             return '';
         }
+        $assigned = [];
+        foreach ($assignedByApp as $row) {
+            $assigned[(string) ($row['name'] ?? '')] = (int) ($row['count'] ?? 0);
+        }
+        foreach ($apps as $index => $app) {
+            $apps[$index]['assigned'] = $assigned[(string) $app['name']] ?? 0;
+        }
+        usort($apps, static function (array $left, array $right): int {
+            $byAssigned = (int) ($right['assigned'] ?? 0) <=> (int) ($left['assigned'] ?? 0);
+            if ($byAssigned !== 0) {
+                return $byAssigned;
+            }
+
+            return (int) ($right['touched'] ?? 0) <=> (int) ($left['touched'] ?? 0);
+        });
         $cards = '';
         foreach ($apps as $app) {
             $stat = $app['type'] > 0 ? self::plural((int) $app['count'], 'record') : '';
             $hasSeries = self::weeksOfHistory($app['series']) >= 3;
             $when = $app['touched'] > 0 ? 'Updated ' . Presence::ago((int) $app['touched']) : ($app['type'] > 0 ? 'No records yet' : '');
-            $cards .= '<a class="appcard" href="' . Html::e((string) $app['href']) . '" style="' . Html::e(Accent::style((string) $app['accent'])) . '">'
+            $assignedCount = (int) ($app['assigned'] ?? 0);
+            $cards .= '<a class="appcard' . ($assignedCount > 0 ? ' appcard--assigned' : '') . '" href="' . Html::e((string) $app['href']) . '" style="' . Html::e(Accent::style((string) $app['accent'])) . '">'
                 . '<span class="appcard__top"><span class="appcard__icon">' . Charts::icon((string) $app['icon']) . '</span>'
                 . '<span class="appcard__go" aria-hidden="true">' . Charts::icon('ic-arrow-right') . '</span></span>'
                 . '<span class="appcard__name">' . Html::e((string) $app['name']) . '</span>'
                 . ($app['hint'] !== '' ? '<span class="appcard__hint">' . Html::e((string) $app['hint']) . '</span>' : '')
                 . '<span class="appcard__figures">'
-                . ($stat !== '' ? '<span class="appcard__count">' . Html::e($stat) . '</span>' : '')
+                . ($assignedCount > 0
+                    ? '<span class="appcard__count">' . Html::e(self::plural($assignedCount, 'record') . ' assigned') . '</span>'
+                    : ($stat !== '' ? '<span class="appcard__count">' . Html::e($stat) . '</span>' : ''))
                 . ($hasSeries ? '<span class="appcard__spark" title="Records added over the last ' . self::WEEKS . ' weeks">' . Charts::sparkline($app['series'], 96, 28) . '</span>' : '')
                 . '</span>'
                 . '<span class="appcard__foot">' . Presence::stack($app['owners'], 3)
@@ -675,7 +672,7 @@ final class HomeDashboard
 
         $lazy = $items === [] ? '' : '?controller=' . self::ASSIGNED;
 
-        return self::panel('assigned', 'Assigned to you', $count, '<div class="panel__body" data-lazy-body aria-live="polite">' . $body . '</div>', $lazy, true);
+        return self::panel('assigned', 'Assigned to you', $count, '<div class="panel__body" data-lazy-body aria-live="polite">' . $body . '</div>', $lazy, true, $assigned['total'] > 0);
     }
 
     /**
@@ -700,10 +697,10 @@ final class HomeDashboard
     /**
      * A panel that starts closed. The browser remembers whether the person opened it.
      */
-    private static function panel(string $id, string $title, string $count, string $body, string $lazy, bool $loaded = false): string
+    private static function panel(string $id, string $title, string $count, string $body, string $lazy, bool $loaded = false, bool $open = false): string
     {
         return '<details class="panel panel--' . $id . '" id="' . $id . '" data-remember="home.' . $id . '"'
-            . ($lazy !== '' ? ' data-lazy="' . Html::e($lazy) . '"' : '') . ($loaded ? ' data-loaded="1"' : '') . '>'
+            . ($lazy !== '' ? ' data-lazy="' . Html::e($lazy) . '"' : '') . ($loaded ? ' data-loaded="1"' : '') . ($open ? ' open' : '') . '>'
             . '<summary class="panel__head"><h2>' . Html::e($title) . '</h2>' . $count . '<span class="panel__chev" aria-hidden="true"></span></summary>'
             . $body . '</details>';
     }

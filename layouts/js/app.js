@@ -238,6 +238,30 @@
     lists.forEach((root) => {
         const input = root.querySelector('.record-list__search');
         if (input) input.addEventListener('input', () => apply(root));
+        const all = root.querySelector('[data-select-all]');
+        const choices = Array.from(root.querySelectorAll('[data-select-row]'));
+        const selected = root.closest('form')?.querySelector('[data-selected-count]');
+        const submit = root.closest('form')?.querySelector('[data-bulk-submit]');
+        const selectionChanged = () => {
+            const count = choices.filter((choice) => choice.checked).length;
+            if (selected) selected.textContent = count === 1 ? '1 selected' : `${count} selected`;
+            if (submit) submit.disabled = count === 0;
+            if (all) {
+                all.checked = count > 0 && count === choices.length;
+                all.indeterminate = count > 0 && count < choices.length;
+            }
+        };
+        if (all) {
+            all.addEventListener('change', () => {
+                choices.forEach((choice) => {
+                    const row = choice.closest('tr');
+                    choice.checked = all.checked && !(row && row.hidden);
+                });
+                selectionChanged();
+            });
+        }
+        choices.forEach((choice) => choice.addEventListener('change', selectionChanged));
+        selectionChanged();
         root.querySelectorAll('details.rowmenu').forEach((menu) => {
             menu.addEventListener('toggle', () => {
                 if (!menu.open) return;

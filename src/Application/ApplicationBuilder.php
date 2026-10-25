@@ -336,6 +336,30 @@ final class ApplicationBuilder
         }
 
         $usePerm = Permission::appUse($slug);
+        $statusId = 0;
+        $stepId = 0;
+        $dueId = 0;
+        $openStatuses = [];
+        foreach ($fieldDefs as $field) {
+            $fieldName = trim((string) ($field['name'] ?? ''));
+            $fieldId = (int) ($fieldIdsByName[$fieldName] ?? 0);
+            $plain = self::plainName($fieldName);
+            if ($plain === 'status') {
+                $statusId = $fieldId;
+                $openStatuses = array_values(array_filter(array_map('strval', $field['values'] ?? [])));
+                if (count($openStatuses) > 1) {
+                    array_pop($openStatuses);
+                }
+            } elseif ($plain === 'next step') {
+                $stepId = $fieldId;
+            } elseif ($dueId === 0 && str_contains($plain, 'due')) {
+                $dueId = $fieldId;
+            }
+        }
+        $applicationSettings = WorkflowFields::store([
+            'default_item_type_id' => (string) $itemTypeId,
+            'search_tab_added' => '1',
+        ], $itemTypeId, $statusId, $stepId, $dueId, $openStatuses);
         $applicationId = ApplicationStore::insertApplication([
             'slug' => $slug,
             'name' => $name,
@@ -347,10 +371,7 @@ final class ApplicationBuilder
             'entry_mode' => 'shell',
             'legacy_controller' => '',
             'legacy_key' => '',
-            'settings_json' => json_encode([
-                'default_item_type_id' => (string) $itemTypeId,
-                'search_tab_added' => '1',
-            ], JSON_UNESCAPED_SLASHES),
+            'settings_json' => json_encode($applicationSettings, JSON_UNESCAPED_SLASHES),
         ]);
         $grantedGroups = Permission::grantAppToGroups($slug, $groupIds, $permLevels);
         GroupMembership::setItemTypeGroups($itemTypeId, $grantedGroups);

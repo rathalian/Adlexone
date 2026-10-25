@@ -7,7 +7,10 @@ use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Rules;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
+use Adlexone\Application\RecordQuery;
+use Adlexone\Application\WorkflowFields;
 use Adlexone\support\Database;
+use Adlexone\support\FieldTypes;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
@@ -83,12 +86,44 @@ final class ApplicationSettingsScreen
             $displayArray[] = (string) $row['item_type_name'];
         }
         $current = ApplicationSettings::defaultItemTypeId($slug);
+        $typeId = (int) $current;
+        $workflow = WorkflowFields::typeSettings($slug, $typeId);
+        $recordFields = $typeId > 0 ? RecordQuery::fields($typeId) : [];
+        $status = WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
+        $step = WorkflowFields::resolve($slug, $typeId, WorkflowFields::STEP);
+        $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
+        $open = WorkflowFields::openValues($slug, $typeId, $status) ?? [];
 
         $html = Form::form(
             'Application settings',
             MAN_BASE_URL . '&option=update_settings',
             [
                 'New work' => Form::select('default_item_type_id', $valueArray, $displayArray, $current),
+                'Workflow status' => self::workflowFieldSelect(
+                    'workflow_status_field_id',
+                    $recordFields,
+                    FieldTypes::MENU,
+                    (int) ($workflow['status_field_id'] ?? 0),
+                    $status,
+                    'This field supplies the Work columns and status summaries.'
+                ),
+                'Next step' => self::workflowFieldSelect(
+                    'workflow_step_field_id',
+                    $recordFields,
+                    [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA],
+                    (int) ($workflow['step_field_id'] ?? 0),
+                    $step,
+                    'This field supplies the next action shown on records and work cards.'
+                ),
+                'Due date' => self::workflowFieldSelect(
+                    'workflow_due_field_id',
+                    $recordFields,
+                    [FieldTypes::DATE, FieldTypes::DATETIME],
+                    (int) ($workflow['due_field_id'] ?? 0),
+                    $due,
+                    'This field supplies overdue and due-this-week attention.'
+                ),
+                'Open statuses' => self::openStatusChoices($status, $open),
             ],
             [
                 Form::button('submit', 'submit_button', 'Save'),
@@ -637,9 +672,81 @@ final class ApplicationSettingsScreen
     public static function save(string $slug): void
     {
         $settings = ApplicationSettings::get($slug);
-        $settings['default_item_type_id'] = trim((string) ($_POST['default_item_type_id'] ?? ''));
+        $default = trim((string) ($_POST['default_item_type_id'] ?? ''));
+        $settings['default_item_type_id'] = $default;
+        $typeId = ctype_digit($default) ? (int) $default : 0;
+        if ($typeId > 0 && Database::first('item_types', ['item_type_id'], 'item_type_id = ?', [$typeId]) !== null) {
+            $statusId = self::validWorkflowField($typeId, (int) ($_POST['workflow_status_field_id'] ?? 0), [FieldTypes::MENU]);
+            $stepId = self::validWorkflowField($typeId, (int) ($_POST['workflow_step_field_id'] ?? 0), [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA]);
+            $dueId = self::validWorkflowField($typeId, (int) ($_POST['workflow_due_field_id'] ?? 0), [FieldTypes::DATE, FieldTypes::DATETIME]);
+            $status = $statusId > 0 ? RecordQuery::field(RecordQuery::fields($typeId), $statusId) : WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
+            $allowed = is_array($status) ? $status['values'] : [];
+            $postedOpen = RecordQuery::strings($_POST['workflow_open_statuses'] ?? []);
+            $open = array_values(array_intersect($postedOpen, $allowed));
+            $settings = WorkflowFields::store($settings, $typeId, $statusId, $stepId, $dueId, $open);
+        }
         ApplicationSettings::put($slug, $settings);
         header('Location: ' . MAN_BASE_URL . '&option=settings');
         exit;
+    }
+
+    /**
+     * @param list<array{id: int, name: string, type: string}> $fields
+     * @param string|list<string> $types
+     * @param array{id: int, label: string}|null $automatic
+     */
+    private static function workflowFieldSelect(
+        string $name,
+        array $fields,
+        string|array $types,
+        int $selected,
+        ?array $automatic,
+        string $help
+    ): string {
+        $types = is_array($types) ? $types : [$types];
+        $values = [0];
+        $labels = ['Automatic' . ($automatic !== null ? ' — ' . $automatic['label'] : '')];
+        foreach ($fields as $field) {
+            if (!in_array($field['type'], $types, true)) {
+                continue;
+            }
+            $values[] = $field['id'];
+            $labels[] = $field['label'];
+        }
+
+        return Form::select($name, $values, $labels, $selected)
+            . '<p class="form-help">' . Html::e($help) . '</p>';
+    }
+
+    /**
+     * @param array{values: list<string>}|null $status
+     * @param list<string> $selected
+     */
+    private static function openStatusChoices(?array $status, array $selected): string
+    {
+        if ($status === null || $status['values'] === []) {
+            return '<p class="form-help">Choose a workflow status field first.</p>';
+        }
+        $html = '<div class="choice-list">';
+        foreach ($status['values'] as $value) {
+            $checked = in_array($value, $selected, true) ? ' checked' : '';
+            $html .= '<label class="checkbox"><input type="checkbox" name="workflow_open_statuses[]" value="'
+                . Html::e($value) . '"' . $checked . '> ' . Html::e($value) . '</label>';
+        }
+
+        return $html . '</div><p class="form-help">Records in these statuses remain in active-work summaries.</p>';
+    }
+
+    /**
+     * @param list<string> $types
+     */
+    private static function validWorkflowField(int $typeId, int $fieldId, array $types): int
+    {
+        if ($fieldId <= 0) {
+            return 0;
+        }
+        $field = RecordQuery::field(RecordQuery::fields($typeId), $fieldId);
+
+        return $field !== null && in_array($field['type'], $types, true) ? $fieldId : 0;
     }
 }

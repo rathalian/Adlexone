@@ -287,7 +287,13 @@ final class Blocks
             if ($key === '' || $label === '') {
                 continue;
             }
-            $columns[] = ['key' => $key, 'label' => $label, 'wrap' => !empty($columnDef['wrap'])];
+            $columns[] = [
+                'key' => $key,
+                'label' => $label,
+                'wrap' => !empty($columnDef['wrap']),
+                'sortHref' => trim((string) ($columnDef['sortHref'] ?? '')),
+                'ariaSort' => trim((string) ($columnDef['ariaSort'] ?? '')),
+            ];
         }
         $searchLabel = (string) ($list['searchLabel'] ?? (defined('TXT_3') ? TXT_3 : ''));
         $emptyText = (string) ($list['empty'] ?? (defined('TXT_115') ? TXT_115 : ''));
@@ -337,7 +343,8 @@ final class Blocks
                 . '</div>';
         }
 
-        $colCount = 1 + count($columns) + ($hasActions ? 1 : 0);
+        $selectName = trim((string) ($list['selectName'] ?? ''));
+        $colCount = 1 + count($columns) + ($hasActions ? 1 : 0) + ($selectName !== '' ? 1 : 0);
         $body = '';
         foreach ($groups as $group) {
             $groupRows = $group['rows'] ?? [];
@@ -352,7 +359,7 @@ final class Blocks
                     . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
             }
             foreach ($groupRows as $row) {
-                $body .= self::recordListRow($row, $label, $hasActions, $asMenu, $columns);
+                $body .= self::recordListRow($row, $label, $hasActions, $asMenu, $columns, $selectName);
             }
             $body .= '</tbody>';
         }
@@ -360,13 +367,35 @@ final class Blocks
         $columnHeads = '';
         foreach ($columns as $columnDef) {
             $wrap = !empty($columnDef['wrap']) ? ' record-list__cell--wrap' : '';
-            $columnHeads .= '<th class="record-list__cell' . $wrap . '">' . Html::e($columnDef['label']) . '</th>';
+            $ariaSort = in_array($columnDef['ariaSort'], ['ascending', 'descending'], true)
+                ? ' aria-sort="' . Html::e($columnDef['ariaSort']) . '"'
+                : '';
+            $label = Html::e($columnDef['label']);
+            if ($columnDef['sortHref'] !== '') {
+                $label = '<a class="record-list__sort" href="' . Html::e($columnDef['sortHref']) . '">' . $label
+                    . '<span class="record-list__sortmark" aria-hidden="true"></span></a>';
+            }
+            $columnHeads .= '<th class="record-list__cell' . $wrap . '"' . $ariaSort . '>' . $label . '</th>';
         }
         $manageLabel = defined('TXT_388') ? TXT_388 : '';
         $manageHead = $hasActions
             ? '<th class="record-list__manage"><span class="record-list__sr">' . Html::e($manageLabel) . '</span></th>'
             : '';
         $searchId = $id . '-search';
+
+        $selectHead = $selectName !== ''
+            ? '<th class="record-list__select"><input type="checkbox" data-select-all aria-label="Select all records"></th>'
+            : '';
+        $nameSortHref = trim((string) ($list['columnSortHref'] ?? ''));
+        $nameAriaSort = trim((string) ($list['columnAriaSort'] ?? ''));
+        $nameHead = Html::e($column);
+        if ($nameSortHref !== '') {
+            $nameHead = '<a class="record-list__sort" href="' . Html::e($nameSortHref) . '">' . $nameHead
+                . '<span class="record-list__sortmark" aria-hidden="true"></span></a>';
+        }
+        $nameSortAttr = in_array($nameAriaSort, ['ascending', 'descending'], true)
+            ? ' aria-sort="' . Html::e($nameAriaSort) . '"'
+            : '';
 
         return '<div class="record-list" id="' . Html::e($id) . '" data-record-list>'
             . '<div class="record-list__bar">'
@@ -376,7 +405,7 @@ final class Blocks
             . $primary
             . '</div>'
             . '<div class="record-list__tablewrap"><table class="table table-hover">'
-            . '<thead><tr><th>' . Html::e($column) . '</th>' . $columnHeads . $manageHead . '</tr></thead>'
+            . '<thead><tr>' . $selectHead . '<th' . $nameSortAttr . '>' . $nameHead . '</th>' . $columnHeads . $manageHead . '</tr></thead>'
             . $body
             . '</table></div>'
             . '<p class="record-list__nomatch" hidden>' . Html::e($noMatch) . '</p>'
@@ -474,9 +503,16 @@ final class Blocks
 
     /**
      * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, cells?: array<string, string>, actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string, target?: string}>} $row
-     * @param list<array{key: string, label: string, wrap?: bool}> $columns
+     * @param list<array{key: string, label: string, wrap?: bool, sortHref?: string, ariaSort?: string}> $columns
      */
-    private static function recordListRow(array $row, string $groupLabel, bool $hasActions, bool $asMenu, array $columns = []): string
+    private static function recordListRow(
+        array $row,
+        string $groupLabel,
+        bool $hasActions,
+        bool $asMenu,
+        array $columns = [],
+        string $selectName = ''
+    ): string
     {
         $name = (string) ($row['name'] ?? '');
         $meta = (string) ($row['meta'] ?? '');
@@ -525,7 +561,13 @@ final class Blocks
             $actionsHtml = '<td class="record-list__manage">' . self::recordListActions($actions, $name, $asMenu) . '</td>';
         }
 
-        return '<tr data-search="' . Html::e($search) . '"><td>' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
+        $select = '';
+        if ($selectName !== '' && (int) ($row['itemId'] ?? 0) > 0) {
+            $select = '<td class="record-list__select"><input type="checkbox" name="' . Html::e($selectName)
+                . '[]" value="' . (int) $row['itemId'] . '" aria-label="Select ' . Html::e($name) . '" data-select-row></td>';
+        }
+
+        return '<tr data-search="' . Html::e($search) . '">' . $select . '<td class="record-list__primary">' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
     }
 
     /**

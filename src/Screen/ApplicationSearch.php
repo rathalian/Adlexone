@@ -511,16 +511,19 @@ final class ApplicationSearch
     private static function landing(string $slug): string
     {
         $saved = self::savedFor($slug);
-        $html = '<div class="finder__landing">';
-        if ($saved === []) {
-            $html .= '<p class="finder__hint">Type a word, or add a field filter, then search. A search you save is listed here and on the Saved tab.</p>';
-        } else {
+        $html = '<div class="finder__landing">'
+            . '<div class="finder__guide"><h3>Find a record</h3>'
+            . '<p>Search a name, reference, field value, or note. Add a field filter when the wording alone is not specific enough.</p>'
+            . '<p class="finder__examples"><strong>Examples</strong> Barton · waiting on us · follow up the draft</p></div>';
+        if ($saved !== []) {
             $html .= '<h3 class="finder__heading">Saved searches</h3><ul class="finder__saved">';
             foreach ($saved as $row) {
                 $html .= '<li><a class="finder__savedlink" href="' . Html::e(self::savedLink($row)) . '">' . Html::e((string) $row['search_name'])
                     . '</a>' . ((string) $row['user'] === 'all' ? '<span class="finder__shared">Shared</span>' : '') . '</li>';
             }
             $html .= '</ul>';
+        } else {
+            $html .= '<p class="finder__hint">A search you save is listed here and on the Saved tab.</p>';
         }
 
         return $html . '</div>';

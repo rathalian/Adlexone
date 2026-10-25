@@ -5,6 +5,7 @@ use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
+use Adlexone\Application\WorkflowFields;
 use Adlexone\support\Database;
 use Adlexone\support\Actions;
 use Adlexone\support\AttachmentUpload;
@@ -760,21 +761,12 @@ final class ItemScreen
         if ($typeId <= 0) {
             return '';
         }
-        $row = null;
-        foreach (Database::rows(
-            'SELECT cf.custom_field_id, cf.custom_field_name FROM item_type_custom_fields l JOIN custom_fields cf ON cf.custom_field_id = l.custom_field_id'
-            . ' WHERE l.item_type_id = ? ORDER BY l.custom_field_order ASC',
-            [$typeId]
-        ) as $candidate) {
-            if (WorkScreen::plainFieldName((string) $candidate['custom_field_name']) === 'next step') {
-                $row = $candidate;
-                break;
-            }
-        }
-        if ($row === null) {
+        $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
+        $field = WorkflowFields::resolve($slug, $typeId, WorkflowFields::STEP);
+        if ($field === null) {
             return '';
         }
-        $text = trim((string) ($item['custom_field_' . (int) $row['custom_field_id']] ?? ''));
+        $text = trim((string) ($item['custom_field_' . $field['id']] ?? ''));
 
         return '<section class="sidecard sidecard--next"><h2 class="sidecard__title">Next step</h2>'
             . ($text !== ''

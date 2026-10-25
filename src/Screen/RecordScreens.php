@@ -9,6 +9,7 @@ use Adlexone\Application\Capabilities;
 use Adlexone\Application\RecordQuery;
 use Adlexone\Application\Rules;
 use Adlexone\Application\ScreenCatalog;
+use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
@@ -91,7 +92,7 @@ final class RecordScreens
             $html['Log lines'] = Form::select('role_id', array_map('strval', array_keys($roles)), array_values($roles), (string) ($config['role_id'] ?? '0'));
         }
         if ($capability === ScreenCatalog::INTAKE) {
-            $status = WorkScreen::workStatusField($typeId);
+            $status = WorkScreen::workStatusField($typeId, $slug);
             $values = [''];
             $labels = ['First status'];
             foreach ($status['values'] ?? [] as $value) {
@@ -134,7 +135,7 @@ final class RecordScreens
         }
         if ($capability === ScreenCatalog::INTAKE) {
             $value = trim((string) ($_POST['status_value'] ?? ''));
-            $status = WorkScreen::workStatusField($typeId);
+            $status = WorkScreen::workStatusField($typeId, $slug);
             if ($value !== '' && $status !== null && in_array($value, $status['values'], true)) {
                 $config['status_value'] = $value;
             }
@@ -152,7 +153,7 @@ final class RecordScreens
         if ($loaded === null) {
             return;
         }
-        $field = RecordQuery::chosen($loaded['fields'], $config, 'menu');
+        $field = self::chosen($loaded, $config, 'menu');
         if ($field === null) {
             self::missing('Add a menu field on the record type.');
             return;
@@ -331,7 +332,7 @@ final class RecordScreens
         if ($loaded === null) {
             return;
         }
-        $field = RecordQuery::chosen($loaded['fields'], $config, 'step');
+        $field = self::chosen($loaded, $config, 'step');
         if ($field === null || !in_array($field['type'], [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA], true)) {
             self::missing('Add a text field for the next step on the record type.');
             return;
@@ -400,7 +401,7 @@ final class RecordScreens
         if ($loaded === null) {
             return;
         }
-        $field = RecordQuery::chosen($loaded['fields'], $config, 'step');
+        $field = self::chosen($loaded, $config, 'step');
         if ($field === null) {
             self::back();
             return;
@@ -434,7 +435,7 @@ final class RecordScreens
         if ($loaded === null) {
             return;
         }
-        $field = RecordQuery::chosen($loaded['fields'], $config, 'date');
+        $field = self::chosen($loaded, $config, 'date');
         if ($field === null || !in_array($field['type'], [FieldTypes::DATE, FieldTypes::DATETIME], true)) {
             self::missing('Add a date field on the record type.');
             return;
@@ -518,7 +519,7 @@ final class RecordScreens
             return;
         }
         $values = RecordQuery::values($loaded['ids'], $field['id']);
-        $step = RecordQuery::chosen($loaded['fields'], [], 'step');
+        $step = self::chosen($loaded, [], 'step');
         $steps = $step === null ? [] : RecordQuery::values($loaded['ids'], $step['id']);
         $statusValues = self::statusValues($loaded);
         $groups = [];
@@ -1480,6 +1481,36 @@ final class RecordScreens
         }
 
         return Form::select('owner_' . $itemId, $values, $labels, (string) $ownerId);
+    }
+
+    /**
+     * A screen-specific field remains the first choice. The application's
+     * workflow choice comes next, followed by the established name heuristic.
+     *
+     * @param array<string, mixed> $loaded
+     * @param array<string, mixed> $config
+     */
+    private static function chosen(array $loaded, array $config, string $purpose): ?array
+    {
+        $picked = RecordQuery::field($loaded['fields'], (int) ($config['field_id'] ?? 0));
+        if ($picked !== null) {
+            return $picked;
+        }
+        $workflowPurpose = match ($purpose) {
+            'menu' => WorkflowFields::STATUS,
+            'step' => WorkflowFields::STEP,
+            'date' => WorkflowFields::DUE,
+            default => '',
+        };
+        if ($workflowPurpose !== '') {
+            $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
+            $picked = WorkflowFields::resolve($slug, (int) ($loaded['type_id'] ?? 0), $workflowPurpose);
+            if ($picked !== null) {
+                return $picked;
+            }
+        }
+
+        return RecordQuery::chosen($loaded['fields'], $config, $purpose);
     }
 
     /**

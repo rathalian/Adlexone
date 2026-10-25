@@ -16,6 +16,7 @@ return array(
     'Adlexone\\Application\\RecordQuery' => $baseDir . '/src/Application/RecordQuery.php',
     'Adlexone\\Application\\Rules' => $baseDir . '/src/Application/Rules.php',
     'Adlexone\\Application\\ScreenCatalog' => $baseDir . '/src/Application/ScreenCatalog.php',
+    'Adlexone\\Application\\WorkflowFields' => $baseDir . '/src/Application/WorkflowFields.php',
     'Adlexone\\Auth\\Access' => $baseDir . '/src/Auth/Access.php',
     'Adlexone\\Auth\\AuthConfig' => $baseDir . '/src/Auth/AuthConfig.php',
     'Adlexone\\Auth\\AuthException' => $baseDir . '/src/Auth/AuthException.php',

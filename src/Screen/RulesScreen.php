@@ -26,7 +26,7 @@ final class RulesScreen
 
         Access::require(Permission::ADMIN_ACTIONS);
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applySectionNav('Design', RenderNavigation::designURLs());
+        RenderNavigation::applySectionNav('Configure', RenderNavigation::designURLs());
 
         $slug = trim((string) ($_GET['app'] ?? $_POST['app'] ?? ''));
         $option = (string) ($_GET['option'] ?? '');
