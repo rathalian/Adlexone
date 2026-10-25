@@ -110,7 +110,7 @@ final class TopNav
 
         $links = [
             ['label' => 'My profile', 'href' => '?manage=security&option=modify_user', 'icon' => 'ic-user'],
-            ['label' => 'Theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-palette'],
+            ['label' => 'My theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-palette'],
         ];
 
         return [
