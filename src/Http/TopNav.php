@@ -41,10 +41,14 @@ final class TopNav
         if ($showAppMenu) {
             $mode = count($applications) === 1 ? 'link' : 'menu';
         }
+        $design = self::designItems();
+        if (Page::current()->hasSectionNav() && Page::current()->eyebrow() === 'Configure') {
+            $design = [];
+        }
 
         return [
             'apps' => ['mode' => $mode, 'items' => $appItems],
-            'design' => self::designItems(),
+            'design' => $design,
             'account' => self::account(),
         ];
     }
