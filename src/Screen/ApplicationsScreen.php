@@ -6,9 +6,12 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
+use Adlexone\Application\RecordQuery;
+use Adlexone\Application\WorkflowFields;
 use Adlexone\Screen\RecordScreens;
 use Adlexone\Auth\Permission;
 use Adlexone\support\Database;
+use Adlexone\support\FieldTypes;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Auth\Access;
@@ -199,6 +202,9 @@ final class ApplicationsScreen
             'Who can open it' => self::groupAccessField((string) ($app['slug'] ?? '')),
             'Menu' => Form::checkbox('enabled', '1', ($app === null || !empty($app['enabled'])) ? '1' : '0', 'Show in the Applications menu'),
         ];
+        if ($app !== null && ctype_digit($recordType) && (int) $recordType > 0) {
+            $fields += self::workflowFields((string) $app['slug'], (int) $recordType);
+        }
         if ($app !== null) {
             $fields[''] = Form::hidden('application_id', (string) $app['application_id']);
         }
@@ -252,6 +258,9 @@ final class ApplicationsScreen
             }
             ApplicationStore::updateApplication($id, $fields);
             ApplicationStore::assignRecordType($id, $recordType);
+            if ($recordType !== '') {
+                self::saveWorkflowFields($slug, (int) $recordType);
+            }
             Permission::setAppUseGroups($slug, $groupIds);
             header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id);
             exit;
@@ -596,6 +605,129 @@ final class ApplicationsScreen
             $labels[] = Html::e($name);
         }
         return Form::select('search_id', $values, $labels, $selected);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function workflowFields(string $slug, int $typeId): array
+    {
+        $settings = WorkflowFields::typeSettings($slug, $typeId);
+        $fields = RecordQuery::fields($typeId);
+        $status = WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
+        $step = WorkflowFields::resolve($slug, $typeId, WorkflowFields::STEP);
+        $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
+        $open = WorkflowFields::openValues($slug, $typeId, $status) ?? [];
+
+        return [
+            'Workflow status' => self::workflowSelect(
+                'workflow_status_field_id',
+                $fields,
+                FieldTypes::MENU,
+                (int) ($settings['status_field_id'] ?? 0),
+                $status,
+                'This field supplies the Work columns and status summaries.'
+            ),
+            'Next step' => self::workflowSelect(
+                'workflow_step_field_id',
+                $fields,
+                [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA],
+                (int) ($settings['step_field_id'] ?? 0),
+                $step,
+                'This field supplies the next action shown on records and work cards.'
+            ),
+            'Due date' => self::workflowSelect(
+                'workflow_due_field_id',
+                $fields,
+                [FieldTypes::DATE, FieldTypes::DATETIME],
+                (int) ($settings['due_field_id'] ?? 0),
+                $due,
+                'This field supplies overdue and due-this-week attention.'
+            ),
+            'Open statuses' => self::workflowOpenStatuses($status, $open),
+        ];
+    }
+
+    /**
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
+     * @param string|list<string> $types
+     * @param array{id: int, label: string}|null $automatic
+     */
+    private static function workflowSelect(
+        string $name,
+        array $fields,
+        string|array $types,
+        int $selected,
+        ?array $automatic,
+        string $help
+    ): string {
+        $types = is_array($types) ? $types : [$types];
+        $values = [0];
+        $labels = ['Automatic' . ($automatic !== null ? ' — ' . $automatic['label'] : '')];
+        foreach ($fields as $field) {
+            if (!in_array($field['type'], $types, true)) {
+                continue;
+            }
+            $values[] = $field['id'];
+            $labels[] = $field['label'];
+        }
+
+        return Form::select($name, $values, $labels, $selected)
+            . '<p class="form-help">' . Html::e($help) . '</p>';
+    }
+
+    /**
+     * @param array{values: list<string>}|null $status
+     * @param list<string> $selected
+     */
+    private static function workflowOpenStatuses(?array $status, array $selected): string
+    {
+        if ($status === null || $status['values'] === []) {
+            return '<p class="form-help">Choose a workflow status field first.</p>';
+        }
+        $html = '<div class="choice-list">';
+        foreach ($status['values'] as $value) {
+            $checked = in_array($value, $selected, true) ? ' checked' : '';
+            $html .= '<label class="checkbox"><input type="checkbox" name="workflow_open_statuses[]" value="'
+                . Html::e($value) . '"' . $checked . '> ' . Html::e($value) . '</label>';
+        }
+
+        return $html . '</div><p class="form-help">Records in these statuses remain in active-work summaries.</p>';
+    }
+
+    private static function saveWorkflowFields(string $slug, int $typeId): void
+    {
+        $fields = RecordQuery::fields($typeId);
+        $statusId = self::validWorkflowField($fields, (int) ($_POST['workflow_status_field_id'] ?? 0), [FieldTypes::MENU]);
+        $stepId = self::validWorkflowField($fields, (int) ($_POST['workflow_step_field_id'] ?? 0), [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA]);
+        $dueId = self::validWorkflowField($fields, (int) ($_POST['workflow_due_field_id'] ?? 0), [FieldTypes::DATE, FieldTypes::DATETIME]);
+        $status = $statusId > 0 ? RecordQuery::field($fields, $statusId) : WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
+        $allowed = is_array($status) ? $status['values'] : [];
+        $postedOpen = RecordQuery::strings($_POST['workflow_open_statuses'] ?? []);
+        $open = array_values(array_intersect($postedOpen, $allowed));
+        $settings = WorkflowFields::store(
+            ApplicationSettings::get($slug),
+            $typeId,
+            $statusId,
+            $stepId,
+            $dueId,
+            $open
+        );
+        ApplicationSettings::put($slug, $settings);
+    }
+
+    /**
+     * @param list<array{id: int, type: string}> $fields
+     * @param list<string> $types
+     */
+    private static function validWorkflowField(array $fields, int $fieldId, array $types): int
+    {
+        if ($fieldId <= 0) {
+            return 0;
+        }
+        $field = RecordQuery::field($fields, $fieldId);
+
+        return $field !== null && in_array($field['type'], $types, true) ? $fieldId : 0;
     }
 
     public static function slugify(string $slug, string $name): string
