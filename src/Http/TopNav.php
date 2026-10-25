@@ -80,6 +80,15 @@ final class TopNav
         if (Access::can(Permission::ADMIN_ACTIONS)) {
             $add('Rules', '?manage=rules', 'ic-zap', 'manage_actions', 'What runs when a record is created or updated.');
         }
+        if (Access::can(Permission::ADMIN_SECURITY)) {
+            $add('People', '?manage=security&option=manage_users', 'ic-users', 'manage_security', 'People who can sign in.');
+            $add('Groups', '?manage=security&option=manage_groups', 'ic-users-round', 'manage_security', 'Groups and their access.');
+        }
+        if (Access::can(Permission::ADMIN_SETTINGS)) {
+            $add('Settings', '?manage=settings&option=adlexone_settings', 'ic-sliders', 'manage_settings', 'Site, theme, sign-in, email, and advanced settings.');
+        } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
+            $add('Settings', '?manage=settings&option=sign_in_settings', 'ic-sliders', 'manage_settings', 'Sign-in, email, and advanced settings.');
+        }
 
         return $items;
     }
@@ -103,15 +112,6 @@ final class TopNav
             ['label' => 'My profile', 'href' => '?manage=security&option=modify_user', 'icon' => 'ic-user'],
             ['label' => 'Theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-palette'],
         ];
-        if (Access::can(Permission::ADMIN_SECURITY)) {
-            $links[] = ['label' => 'People', 'href' => '?manage=security&option=manage_users', 'icon' => 'ic-users'];
-            $links[] = ['label' => 'Groups', 'href' => '?manage=security&option=manage_groups', 'icon' => 'ic-users-round'];
-        }
-        if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings', 'icon' => 'ic-sliders'];
-        } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
-            $links[] = ['label' => 'Settings', 'href' => '?manage=settings&option=sign_in_settings', 'icon' => 'ic-sliders'];
-        }
 
         return [
             'name' => $name,

@@ -53,13 +53,18 @@ final class RenderNavigation
         return $html;
     }
 
-    public static function systemSettingsURLs()
+    public static function systemSettingsURLs(bool $includeLanding = true)
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-sliders'), Permission::ADMIN_SETTINGS);
+        $canSite = Access::can(Permission::ADMIN_SETTINGS);
+        $html = $includeLanding
+            ? Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-sliders'), Permission::ADMIN_SETTINGS)
+            : '';
 
         $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'ic-palette'), Permission::ADMIN_SETTINGS);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-lock'), Permission::ADMIN_SYSTEM);
+        if ($includeLanding || $canSite) {
+            $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-lock'), Permission::ADMIN_SYSTEM);
+        }
 
         $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=email_settings', TXT_565,'ic-mail'), Permission::ADMIN_SYSTEM);
 

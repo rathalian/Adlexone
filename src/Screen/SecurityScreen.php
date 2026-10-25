@@ -39,7 +39,7 @@ final class SecurityScreen
                     Page::current()->setNavOption('manage_groups');
                 }
             }
-            RenderNavigation::applySectionNav('People and groups', RenderNavigation::securityManagementURLs());
+            RenderNavigation::applySectionNav('Configure', RenderNavigation::designURLs());
         }
 
 

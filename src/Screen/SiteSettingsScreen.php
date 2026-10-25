@@ -133,10 +133,8 @@ final class SiteSettingsScreen
             return;
         }
 
-        /**
-         * Settings links sit in the top navigation card. There is no left sidebar.
-         */
-        RenderNavigation::applySectionNav('Settings', RenderNavigation::systemSettingsURLs());
+        $section = RenderNavigation::designURLs() . RenderNavigation::systemSettingsURLs(false);
+        RenderNavigation::applySectionNav('Configure', $section);
 
 
 
