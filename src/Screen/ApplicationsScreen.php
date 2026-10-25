@@ -41,12 +41,13 @@ final class ApplicationsScreen
         if (in_array($option, $applicationOptions, true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
-                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-sliders');
+                $section = Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-sliders');
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
                 $section .= Access::outputIfAllowed(
                     Blocks::link(APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $sectionApp, 'Rules', 'ic-zap'),
                     Permission::ADMIN_ACTIONS
                 );
+                Page::current()->keepConfigureMenu();
             }
         }
         RenderNavigation::applySectionNav('Configure', $section);

@@ -42,7 +42,7 @@ final class TopNav
             $mode = count($applications) === 1 ? 'link' : 'menu';
         }
         $design = self::designItems();
-        if (Page::current()->hasSectionNav() && Page::current()->eyebrow() === 'Configure') {
+        if (Page::current()->hasSectionNav() && Page::current()->eyebrow() === 'Configure' && !Page::current()->keepsConfigureMenu()) {
             $design = [];
         }
 
