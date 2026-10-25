@@ -43,7 +43,10 @@ final class ApplicationsScreen
             if ($sectionApp > 0) {
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-sliders');
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
-                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $sectionApp, 'Rules', 'ic-zap');
+                $section .= Access::outputIfAllowed(
+                    Blocks::link(APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $sectionApp, 'Rules', 'ic-zap'),
+                    Permission::ADMIN_ACTIONS
+                );
             }
         }
         RenderNavigation::applySectionNav('Configure', $section);
