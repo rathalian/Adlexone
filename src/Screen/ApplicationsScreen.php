@@ -33,15 +33,29 @@ final class ApplicationsScreen
         $option = (string) ($_GET['option'] ?? '');
 
         $section = RenderNavigation::designURLs();
-        if (in_array($option, ['edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav'], true)) {
+        $applicationOptions = [
+            'edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav',
+            'rules', 'new_rule', 'add_rule', 'edit_rule', 'update_rule', 'delete_rule',
+            'toggle_rule', 'duplicate_rule', 'move_rule', 'try_rule', 'run_rule',
+        ];
+        if (in_array($option, $applicationOptions, true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-sliders');
                 $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
+                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $sectionApp, 'Rules', 'ic-zap');
             }
         }
         RenderNavigation::applySectionNav('Configure', $section);
         Page::current()->suggestTitle('Applications');
+
+        if (in_array($option, [
+            'rules', 'new_rule', 'add_rule', 'edit_rule', 'update_rule', 'delete_rule',
+            'toggle_rule', 'duplicate_rule', 'move_rule', 'try_rule', 'run_rule',
+        ], true)) {
+            self::openRules($option);
+            return;
+        }
 
         switch ($option) {
             case 'export':
@@ -105,6 +119,65 @@ final class ApplicationsScreen
                 break;
         }
     }
+
+    private static function openRules(string $option): void
+    {
+        Access::require(Permission::ADMIN_ACTIONS);
+
+        $applicationId = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
+        $app = ApplicationStore::find($applicationId);
+        if ($app === null) {
+            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            return;
+        }
+        $slug = (string) $app['slug'];
+        $base = APPLICATIONS_MANAGE_URL . '&application_id=' . $applicationId;
+        if (!defined('MAN_BASE_URL')) {
+            define('MAN_BASE_URL', $base);
+        }
+        if (!defined('RULES_HOME_URL')) {
+            define('RULES_HOME_URL', APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $applicationId);
+        }
+        Page::current()->suggestTitle((string) $app['name'] . ' rules');
+
+        switch ($option) {
+            case 'new_rule':
+                ApplicationSettingsScreen::showRuleForm($slug, null);
+                break;
+            case 'edit_rule':
+                ApplicationSettingsScreen::showRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
+                break;
+            case 'add_rule':
+                ApplicationSettingsScreen::saveRule($slug, 0);
+                break;
+            case 'update_rule':
+                ApplicationSettingsScreen::saveRule($slug, (int) ($_POST['rule_id'] ?? 0));
+                break;
+            case 'delete_rule':
+                ApplicationSettingsScreen::deleteRule($slug);
+                break;
+            case 'toggle_rule':
+                ApplicationSettingsScreen::toggleRule($slug);
+                break;
+            case 'duplicate_rule':
+                ApplicationSettingsScreen::duplicateRule($slug);
+                break;
+            case 'move_rule':
+                ApplicationSettingsScreen::moveRule($slug);
+                break;
+            case 'try_rule':
+                ApplicationSettingsScreen::tryRule($slug, false);
+                break;
+            case 'run_rule':
+                ApplicationSettingsScreen::tryRule($slug, true);
+                break;
+            case 'rules':
+            default:
+                Page::current()->setBody(ApplicationSettingsScreen::rulesHtml($slug));
+                break;
+        }
+    }
+
     public static function showApplications(): void
     {
         $rows = [];
