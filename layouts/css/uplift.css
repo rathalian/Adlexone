@@ -71,6 +71,7 @@ html[data-mode="dark"]{
     --neutral:#94a3b8; --neutral-ink:#cbd5e1;
     --logo-ground:color-mix(in srgb, var(--inlay, #3b6fb0) 45%, #0b0f17);
     --logo-piece:#e9eef7;
+    --logo-piece-ink:#16243a;
     --logo-joint:#9fb4d4;
     --shadow-1:0 1px 2px rgba(0,0,0,.4);
     --shadow-2:0 6px 16px rgba(0,0,0,.35);

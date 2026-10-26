@@ -40,7 +40,7 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
                     <span class="login-board__rule login-board__rule--short"></span>
                 </div>
                 <div class="login-board__piece login-board__piece--stone">
-                    <span class="login-board__label">Information</span>
+                    <span class="login-board__label">Records</span>
                     <span class="login-board__rule"></span>
                     <span class="login-board__rule login-board__rule--short"></span>
                 </div>

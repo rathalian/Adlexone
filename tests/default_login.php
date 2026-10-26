@@ -38,6 +38,14 @@ $login = (string) file_get_contents(dirname(__DIR__) . '/layouts/pages/login.php
 $check(str_contains($login, 'DefaultAccount::stillInUse()'), 'application login pre-fills only while the default account is unchanged');
 $check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::USERNAME)'), 'application login pre-fills the default username conditionally');
 $check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::PASSWORD)'), 'application login pre-fills the default password conditionally');
+$check(str_contains($login, 'Business applications for records and work'), 'login describes the product as business applications for records and work');
+$check(str_contains($login, '>Applications</span>') && str_contains($login, '>Work</span>') && str_contains($login, '>Records</span>'), 'login board names applications, work, and records');
+$check(!str_contains($login, '>Information</span>'), 'login board does not use the broader information label');
+
+$baseCss = (string) file_get_contents(dirname(__DIR__) . '/layouts/css/base.css');
+$upliftCss = (string) file_get_contents(dirname(__DIR__) . '/layouts/css/uplift.css');
+$check(str_contains($baseCss, 'color:var(--logo-piece-ink, var(--ink));'), 'light Work tile follows its theme text colour');
+$check(str_contains($upliftCss, '--logo-piece-ink:#16243a;'), 'dark Work tile has contrasting text');
 
 foreach (['localhost:8000' => true, '127.0.0.1' => true, '192.168.1.20' => true, 'inlay.local' => true, 'health.example.com' => false, '203.0.113.9' => false] as $host => $expected) {
     $_SERVER['HTTP_HOST'] = $host;

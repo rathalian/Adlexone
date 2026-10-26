@@ -1056,7 +1056,7 @@ input[type="datetime-local"].input{
 }
 .login-board__piece--bone{
     background:var(--logo-piece, #fff);
-    color:var(--ink);
+    color:var(--logo-piece-ink, var(--ink));
     border:1px solid color-mix(in srgb, var(--ink) 8%, transparent);
 }
 .login-board__piece--stone{
