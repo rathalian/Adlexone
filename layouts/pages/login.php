@@ -25,7 +25,7 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
             <div class="login-atmosphere__copy">
                 <div class="login-atmosphere__brand">
                     <div class="brandwrap">
-                        <?php View::partial('brand_lockup', ['descriptor' => 'Build business applications to manage records and the work around them.']); ?>
+                        <?php View::partial('brand_lockup', ['descriptor' => 'Practical business tools for the processes your organisation runs.']); ?>
                     </div>
                 </div>
             </div>
@@ -50,7 +50,7 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
         <div class="login-center">
             <div class="login-brand login-brand--mobile">
                 <div class="brandwrap">
-                    <?php View::partial('brand_lockup', ['descriptor' => 'Build business applications to manage records and the work around them.']); ?>
+                    <?php View::partial('brand_lockup', ['descriptor' => 'Practical business tools for the processes your organisation runs.']); ?>
                 </div>
             </div>
             <div class="login-card">
