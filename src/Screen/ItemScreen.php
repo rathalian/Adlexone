@@ -2590,11 +2590,13 @@ final class ItemScreen
     public static function deleteItem($itemID)
     {
         $itemID = (int) $itemID;
-        Database::run('DELETE FROM items WHERE item_id = ' . (int) $itemID);
-        Database::run('DELETE FROM core_log WHERE item_id = ' . (int) $itemID);
-        Database::run('DELETE FROM item_attachments WHERE item_id = ' . (int) $itemID);
-        ItemFields::deleteForItem($itemID);
-        GroupMembership::setItemGroups($itemID, []);
+        Database::transaction(static function () use ($itemID): void {
+            Database::run('DELETE FROM items WHERE item_id = ' . $itemID);
+            Database::run('DELETE FROM core_log WHERE item_id = ' . $itemID);
+            Database::run('DELETE FROM item_attachments WHERE item_id = ' . $itemID);
+            ItemFields::deleteForItem($itemID);
+            GroupMembership::setItemGroups($itemID, []);
+        });
         if (Page::current()->inApplication()) {
             View::flash('The record has been deleted.');
             header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));

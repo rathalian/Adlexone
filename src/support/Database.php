@@ -241,6 +241,36 @@ class Database
     }
 
     /**
+     * Run a group of writes so they all take effect or none do.
+     *
+     * A call made while a transaction is already open joins it, so helpers that
+     * wrap their own writes are safe to nest. The connection is rolled back if the
+     * callback throws, and the exception is rethrown.
+     *
+     * @template T
+     * @param callable(): T $callback
+     * @return T
+     */
+    public static function transaction(callable $callback, ?string $dsn = null): mixed
+    {
+        $pdo = self::pdo($dsn);
+        if ($pdo->inTransaction()) {
+            return $callback();
+        }
+        $pdo->beginTransaction();
+        try {
+            $result = $callback();
+            $pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Allocate the next integer for sequenced columns (e.g. log_item_sequence).
      *
      * Prefer omitting INTEGER PRIMARY KEY on insert and using insert()'s lastInsertId

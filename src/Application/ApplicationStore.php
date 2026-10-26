@@ -260,25 +260,27 @@ final class ApplicationStore
         }
         $typeIds = array_values(array_unique($typeIds));
 
-        Permission::revokeApp($slug);
-        if (Database::tableExists('saved_searches')) {
-            Database::delete('saved_searches', 'application = ?', [$slug]);
-        }
-        if (Database::tableExists('users')) {
-            Database::run(
-                'UPDATE users SET home_controller = ? WHERE home_controller = ?',
-                ['', 'application:' . $slug]
-            );
-        }
-        Rules::deleteForApplication($id);
-        Database::delete('application_nav', 'application_id = ?', [$id]);
-        Database::delete('applications', 'application_id = ?', [$id]);
-
-        foreach ($typeIds as $typeId) {
-            if (!self::itemTypeUsedByOtherApps($typeId, $id)) {
-                self::deleteExclusiveItemType($typeId);
+        Database::transaction(function () use ($id, $slug, $typeIds): void {
+            Permission::revokeApp($slug);
+            if (Database::tableExists('saved_searches')) {
+                Database::delete('saved_searches', 'application = ?', [$slug]);
             }
-        }
+            if (Database::tableExists('users')) {
+                Database::run(
+                    'UPDATE users SET home_controller = ? WHERE home_controller = ?',
+                    ['', 'application:' . $slug]
+                );
+            }
+            Rules::deleteForApplication($id);
+            Database::delete('application_nav', 'application_id = ?', [$id]);
+            Database::delete('applications', 'application_id = ?', [$id]);
+
+            foreach ($typeIds as $typeId) {
+                if (!self::itemTypeUsedByOtherApps($typeId, $id)) {
+                    self::deleteExclusiveItemType($typeId);
+                }
+            }
+        });
     }
 
     private static function itemTypeUsedByOtherApps(int $typeId, int $exceptApplicationId): bool
