@@ -25,7 +25,7 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
             <div class="login-atmosphere__copy">
                 <div class="login-atmosphere__brand">
                     <div class="brandwrap">
-                        <?php View::partial('brand_lockup', ['descriptor' => 'Business applications for records and work']); ?>
+                        <?php View::partial('brand_lockup', ['descriptor' => 'Build business applications to manage records and the work around them.']); ?>
                     </div>
                 </div>
             </div>
@@ -35,12 +35,12 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
                     <span class="login-board__rule"></span>
                 </div>
                 <div class="login-board__piece login-board__piece--bone">
-                    <span class="login-board__label">Work</span>
+                    <span class="login-board__label">Records</span>
                     <span class="login-board__rule"></span>
                     <span class="login-board__rule login-board__rule--short"></span>
                 </div>
                 <div class="login-board__piece login-board__piece--stone">
-                    <span class="login-board__label">Records</span>
+                    <span class="login-board__label">Work</span>
                     <span class="login-board__rule"></span>
                     <span class="login-board__rule login-board__rule--short"></span>
                 </div>
@@ -50,7 +50,7 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
         <div class="login-center">
             <div class="login-brand login-brand--mobile">
                 <div class="brandwrap">
-                    <?php View::partial('brand_lockup', ['descriptor' => 'Business applications for records and work']); ?>
+                    <?php View::partial('brand_lockup', ['descriptor' => 'Build business applications to manage records and the work around them.']); ?>
                 </div>
             </div>
             <div class="login-card">
