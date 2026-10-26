@@ -28,7 +28,9 @@ $formHtml = $formHtml ?? '';
         <aside class="login-atmosphere">
             <div class="login-atmosphere__copy">
                 <div class="login-atmosphere__brand">
-                    <?php View::partial('brand_lockup'); ?>
+                    <div class="brandwrap">
+                        <?php View::partial('brand_lockup'); ?>
+                    </div>
                 </div>
                 <div class="setup-help">
                     <?php echo $helpHtml; ?>

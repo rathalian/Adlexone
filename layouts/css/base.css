@@ -80,8 +80,8 @@ body{
     background:none; box-shadow:none; margin-right:0;
 }
 .logoA svg{ width:40px; height:40px; display:block; }
-.logo-mark__top{ fill:var(--logo-bar, var(--brand)); }
-.logo-mark__row{ fill:var(--ink); }
+.logo-mark__accent{ fill:var(--logo-bar, var(--brand)); }
+.logo-mark__tile{ fill:var(--ink); }
 .brandtext{
     display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px;
     font-weight:700; letter-spacing:-0.03em; font-size:22px; line-height:1; white-space:nowrap; margin-left:0; color:var(--ink);

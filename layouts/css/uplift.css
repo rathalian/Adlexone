@@ -80,7 +80,7 @@ html[data-mode="dark"]{
 html[data-mode="dark"] body{
     background:var(--page-bg);
 }
-html[data-mode="dark"] .logo-mark__top{ fill:var(--brand); }
+html[data-mode="dark"] .logo-mark__accent{ fill:var(--brand); }
 html[data-mode="dark"] img.empty-state__art,
 html[data-mode="dark"] .desk__art,
 html[data-mode="dark"] .panel__empty img{ filter:brightness(.88) saturate(.9); }

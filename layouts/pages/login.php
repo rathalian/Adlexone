@@ -27,7 +27,9 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
         <aside class="login-atmosphere" aria-hidden="true">
             <div class="login-atmosphere__copy">
                 <div class="login-atmosphere__brand">
-                    <?php View::partial('brand_lockup'); ?>
+                    <div class="brandwrap">
+                        <?php View::partial('brand_lockup'); ?>
+                    </div>
                 </div>
                 <p class="login-atmosphere__lead"><?php echo Html::e($homeLead); ?></p>
             </div>
