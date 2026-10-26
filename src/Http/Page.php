@@ -262,11 +262,43 @@ final class Page
         }
         $this->sent = true;
 
+        self::sendSecurityHeaders();
+
         $vars = $this->layoutVars + ['page' => $this];
         if ($this->layout === self::SHELL) {
             $vars['nav'] = TopNav::build();
         }
         View::render($this->layout, $vars);
+    }
+
+    /**
+     * Response headers sent with every rendered page.
+     *
+     * Everything the pages load — styles, scripts, fonts, images, the SVG sprite — is
+     * served from this origin, so the policy is self only. Inline scripts and the
+     * javascript: links the legacy screens still emit need 'unsafe-inline'; tightening
+     * that to a nonce is template work tracked separately.
+     */
+    private static function sendSecurityHeaders(): void
+    {
+        if (headers_sent()) {
+            return;
+        }
+        header_remove('X-Powered-By');
+        header(
+            "Content-Security-Policy: default-src 'self'; "
+            . "script-src 'self' 'unsafe-inline'; "
+            . "style-src 'self' 'unsafe-inline'; "
+            . "img-src 'self' data:; "
+            . "font-src 'self'; "
+            . "object-src 'none'; "
+            . "base-uri 'self'; "
+            . "form-action 'self'; "
+            . "frame-ancestors 'none'"
+        );
+        header('X-Frame-Options: DENY');
+        header('X-Content-Type-Options: nosniff');
+        header('Referrer-Policy: same-origin');
     }
 
     /** Text for the document <title>. */
