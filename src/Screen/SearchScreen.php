@@ -603,11 +603,12 @@ final class SearchScreen
     			$origSQL = $sql;
     		}
 
-    		if (isset($_POST['currsort']) && trim($_POST['currsort'] != "")) {
-    			if ($_POST['currsort'] == substr($currsort,0,strpos($currsort," "))) {
-    				$newsort = (strpos($currsort,"DESC") == 0) ? $currsort . " DESC " : $_POST['currsort'] . " ";
+    		$postedOrder = Database::orderBy(is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '');
+    		if ($postedOrder !== '' && isset($currsort)) {
+    			if ($postedOrder == substr($currsort,0,strpos($currsort," "))) {
+    				$newsort = (strpos($currsort,"DESC") == 0) ? $currsort . " DESC " : $postedOrder . " ";
     			} else {
-    				$newsort = (strpos($currsort,"DESC") == 0) ? $_POST['currsort'] . " DESC " : $_POST['currsort'] . " ";
+    				$newsort = (strpos($currsort,"DESC") == 0) ? $postedOrder . " DESC " : $postedOrder . " ";
     			}
     			$origSQL = str_replace("ORDER BY " . $currsort,"ORDER BY " . $newsort,$origSQL);
     		}
@@ -1050,9 +1051,14 @@ final class SearchScreen
             $sql = Database::sqlSelect('items', $columnArray, $condition);
         }
 
-        // Execute sql query only if user is admin and sql query field is used
+        // Direct SQL is off unless the site turns it on. The box stays on the form.
         if ((isset($_POST['sql_query']) and $_POST['sql_query'] != '') and $_SESSION['access_role_id'] == 0) {
-            $sql = html_entity_decode($_POST['sql_query'], ENT_COMPAT, 'UTF-8');
+            if (defined('SET_ALLOW_RAW_SQL') && SET_ALLOW_RAW_SQL === 'Yes') {
+                $sql = html_entity_decode($_POST['sql_query'], ENT_COMPAT, 'UTF-8');
+            } else {
+                View::respond('Direct SQL search is turned off.');
+                return;
+            }
         } else {
             if (isset($_SESSION['item_search_sql']) and (@$_GET['option'] == 'show_search_results')) {
                 $sql = $_SESSION['item_search_sql'];

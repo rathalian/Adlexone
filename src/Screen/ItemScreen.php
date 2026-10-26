@@ -837,7 +837,10 @@ final class ItemScreen
         $countBoolean = (($countrecs / SET_ITEMS_PAGE) > 1);
 
         if ($orderSQL == '') {
-            $orderSQL = @$_POST['currsort'];
+            $posted = is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '';
+            $orderSQL = Database::orderBy($posted);
+        } else {
+            $orderSQL = Database::orderBy((string) $orderSQL);
         }
 
         if ($orderSQL != '') {
@@ -878,11 +881,12 @@ final class ItemScreen
             $origSQL = $sql;
         }
 
-        if (isset($_POST['currsort']) && $_POST['currsort'] != '') {
-            if ($_POST['currsort'] == substr($currsort, 0, strpos($currsort, " "))) {
-                $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $_POST['currsort'] . " ";
+        $postedOrder = Database::orderBy(is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '');
+        if ($postedOrder !== '') {
+            if ($postedOrder == substr($currsort, 0, strpos($currsort, " "))) {
+                $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $postedOrder . " ";
             } else {
-                $newsort = (strpos($currsort, "DESC") == 0 && strpos($_POST['currsort'], "DESC") == 0) ? $_POST['currsort'] . " DESC " : $_POST['currsort'] . " ";
+                $newsort = (strpos($currsort, "DESC") == 0 && strpos($postedOrder, "DESC") == 0) ? $postedOrder . " DESC " : $postedOrder . " ";
             }
             $origSQL = str_replace("ORDER BY " . $currsort, "ORDER BY " . $newsort, $origSQL);
         }

@@ -284,6 +284,24 @@ class Database
         return isset($row['next_id']) ? (int) $row['next_id'] : 1;
     }
 
+    /**
+     * An ORDER BY expression from a request: one column, optionally ASC or DESC.
+     * A second expression, a function, or any other text comes back empty.
+     */
+    public static function orderBy(string $posted): string
+    {
+        $posted = trim((string) (preg_replace('/\s+/', ' ', $posted) ?? ''));
+        if ($posted === '') {
+            return '';
+        }
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(ASC|DESC))?$/i', $posted, $match) !== 1) {
+            return '';
+        }
+        $direction = isset($match[2]) ? ' ' . strtoupper($match[2]) : '';
+
+        return $match[1] . $direction;
+    }
+
     public static function escape(string $value): string
     {
         $value = str_replace(["\0"], '', $value);
