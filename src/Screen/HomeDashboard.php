@@ -478,14 +478,6 @@ final class HomeDashboard
         foreach ($apps as $index => $app) {
             $apps[$index]['assigned'] = $assigned[(string) $app['name']] ?? 0;
         }
-        usort($apps, static function (array $left, array $right): int {
-            $byAssigned = (int) ($right['assigned'] ?? 0) <=> (int) ($left['assigned'] ?? 0);
-            if ($byAssigned !== 0) {
-                return $byAssigned;
-            }
-
-            return (int) ($right['touched'] ?? 0) <=> (int) ($left['touched'] ?? 0);
-        });
         $cards = '';
         foreach ($apps as $app) {
             $stat = $app['type'] > 0 ? self::plural((int) $app['count'], 'record') : '';
