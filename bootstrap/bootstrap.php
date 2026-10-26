@@ -122,7 +122,7 @@ if (isset($_GET['action'])) {
 }
 if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     // Set random secure id
-    $_SESSION['secure_id'] = md5(substr(md5(uniqid(rand(), true)), 0, 20));
+    $_SESSION['secure_id'] = bin2hex(random_bytes(16));
     SharedMethods::loadConstantFromIni(SET_INSTALL_PATH . 'translations/' . SET_DEFAULT_LANGUAGE . '.lang.php');
     define('SET_THEME', \Adlexone\Theme\Theme::forLogin());
     Router::open('login');
