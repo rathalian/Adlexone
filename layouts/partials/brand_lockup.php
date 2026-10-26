@@ -5,9 +5,14 @@ use Adlexone\Html\Html;
 $descriptor = trim((string) ($descriptor ?? ''));
 ?>
 <span class="logoA">
-    <svg class="logo-mark" viewBox="8 8 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M15 51 L32 14 L49 51" fill="none" class="logo-mark__stroke" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M24 41 L30 47 L41 34" fill="none" class="logo-mark__accent" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <svg class="logo-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="6" y="6" width="52" height="52" rx="11" fill="none" class="logo-mark__stroke" stroke-width="4"/>
+        <path d="M15 20H45" fill="none" class="logo-mark__stroke" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="50" cy="20" r="2.5" class="logo-mark__stroke-fill"/>
+        <path d="M15 32H34" fill="none" class="logo-mark__accent" stroke-width="5" stroke-linecap="round"/>
+        <path d="M40 31.5L44.5 36L52 27.5" fill="none" class="logo-mark__accent" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 45H39" fill="none" class="logo-mark__stroke" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="46" cy="45" r="2.5" class="logo-mark__stroke-fill"/>
     </svg>
 </span>
 <span class="brandtext">

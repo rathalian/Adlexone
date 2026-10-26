@@ -81,6 +81,7 @@ body{
 }
 .logoA svg{ width:40px; height:40px; display:block; }
 .logo-mark__stroke{ stroke:var(--ink); }
+.logo-mark__stroke-fill{ fill:var(--ink); }
 .logo-mark__accent{ stroke:var(--logo-bar, var(--brand)); }
 .brandtext{
     display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px;
