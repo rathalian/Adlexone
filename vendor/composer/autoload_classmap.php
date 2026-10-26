@@ -51,6 +51,7 @@ return array(
     'Adlexone\\Http\\TopNav' => $baseDir . '/src/Http/TopNav.php',
     'Adlexone\\Http\\View' => $baseDir . '/src/Http/View.php',
     'Adlexone\\Platform\\DefaultAccount' => $baseDir . '/src/Platform/DefaultAccount.php',
+    'Adlexone\\Platform\\ErrorHandler' => $baseDir . '/src/Platform/ErrorHandler.php',
     'Adlexone\\Platform\\HelpText' => $baseDir . '/src/Platform/HelpText.php',
     'Adlexone\\Platform\\OperatorScreen' => $baseDir . '/src/Platform/OperatorScreen.php',
     'Adlexone\\Platform\\PlatformDb' => $baseDir . '/src/Platform/PlatformDb.php',

@@ -63,6 +63,10 @@ if (defined('SET_DEBUG_MODE') && SET_DEBUG_MODE == 'Yes') {
     ini_set('log_errors', '1');
 }
 
+// Turn an uncaught exception or a fatal error into a logged, generic page rather
+// than a blank response or a stack trace. Details are shown only in debug mode.
+\Adlexone\Platform\ErrorHandler::register();
+
 Runtime::startSession();
 
 if (Runtime::mode() === Runtime::OPERATOR) {
