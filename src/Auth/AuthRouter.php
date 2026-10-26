@@ -67,15 +67,24 @@ final class AuthRouter
                 usleep(400000);
                 throw new AuthException('The sign-in form expired. Please try again.');
             }
+            $username = (string) ($_POST['access_user_name'] ?? '');
+            $keys = LoginThrottle::keysFor($username);
+            $retryAfter = LoginThrottle::retryAfter($keys);
+            if ($retryAfter > 0) {
+                usleep(400000);
+                throw new AuthException(LoginThrottle::waitMessage($retryAfter));
+            }
             try {
                 $user = LocalAuthenticator::authenticate(
-                    (string) ($_POST['access_user_name'] ?? ''),
+                    $username,
                     (string) ($_POST['access_password'] ?? '')
                 );
             } catch (AuthException $e) {
+                LoginThrottle::registerFailure($keys);
                 usleep(400000);
                 throw $e;
             }
+            LoginThrottle::clear($keys);
             AuthSession::establish($user);
             AuthSession::redirectHome();
         }

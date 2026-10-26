@@ -24,6 +24,7 @@ return array(
     'Adlexone\\Auth\\AuthSession' => $baseDir . '/src/Auth/AuthSession.php',
     'Adlexone\\Auth\\Csrf' => $baseDir . '/src/Auth/Csrf.php',
     'Adlexone\\Auth\\LocalAuthenticator' => $baseDir . '/src/Auth/LocalAuthenticator.php',
+    'Adlexone\\Auth\\LoginThrottle' => $baseDir . '/src/Auth/LoginThrottle.php',
     'Adlexone\\Auth\\OauthClient' => $baseDir . '/src/Auth/OauthClient.php',
     'Adlexone\\Auth\\OauthConnection' => $baseDir . '/src/Auth/OauthConnection.php',
     'Adlexone\\Auth\\Permission' => $baseDir . '/src/Auth/Permission.php',

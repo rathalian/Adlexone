@@ -43,6 +43,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Auth\\AuthSession' => __DIR__ . '/../..' . '/src/Auth/AuthSession.php',
         'Adlexone\\Auth\\Csrf' => __DIR__ . '/../..' . '/src/Auth/Csrf.php',
         'Adlexone\\Auth\\LocalAuthenticator' => __DIR__ . '/../..' . '/src/Auth/LocalAuthenticator.php',
+        'Adlexone\\Auth\\LoginThrottle' => __DIR__ . '/../..' . '/src/Auth/LoginThrottle.php',
         'Adlexone\\Auth\\OauthClient' => __DIR__ . '/../..' . '/src/Auth/OauthClient.php',
         'Adlexone\\Auth\\OauthConnection' => __DIR__ . '/../..' . '/src/Auth/OauthConnection.php',
         'Adlexone\\Auth\\Permission' => __DIR__ . '/../..' . '/src/Auth/Permission.php',
