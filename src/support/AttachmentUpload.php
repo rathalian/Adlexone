@@ -11,6 +11,14 @@ use Adlexone\Http\View;
  */
 class AttachmentUpload
 {
+    private const ABSOLUTE_MAX_MB = 256;
+
+    /** @var list<string> */
+    private const BLOCKED = [
+        'php', 'phtml', 'phar', 'php3', 'php4', 'php5', 'php7', 'php8', 'pht',
+        'cgi', 'pl', 'exe', 'sh', 'shtml', 'htaccess',
+    ];
+
     /**
      * @return array<string, mixed>
      */
@@ -21,21 +29,24 @@ class AttachmentUpload
             Page::current()->send();
             exit;
         }
-        $maximum = (int) $maximumSize * 1000000;
-        if ($maximum > 0 && (int) ($_FILES[$inputName]['size'] ?? 0) > $maximum) {
-            View::respond('The file is larger than the maximum attachment size of ' . (int) $maximumSize . ' MB.');
+        $maximumSize = (int) $maximumSize;
+        if ($maximumSize <= 0 || $maximumSize > self::ABSOLUTE_MAX_MB) {
+            $maximumSize = self::ABSOLUTE_MAX_MB;
+        }
+        $maximum = $maximumSize * 1000000;
+        if ((int) ($_FILES[$inputName]['size'] ?? 0) > $maximum) {
+            View::respond('The file is larger than the maximum attachment size of ' . $maximumSize . ' MB.');
             Page::current()->send();
             exit;
         }
         $original = basename((string) ($_FILES[$inputName]['name'] ?? ''));
-        $ext = strtolower((string) pathinfo($original, PATHINFO_EXTENSION));
-        $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?? '';
-        $blocked = ['php', 'phtml', 'phar', 'php3', 'php4', 'php5', 'pht', 'cgi', 'pl', 'exe', 'sh', 'shtml'];
-        if ($ext !== '' && in_array($ext, $blocked, true)) {
+        if (self::blockedName($original)) {
             View::respond('This file type cannot be uploaded.');
             Page::current()->send();
             exit;
         }
+        $ext = strtolower((string) pathinfo($original, PATHINFO_EXTENSION));
+        $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?? '';
         $base = (string) pathinfo($original, PATHINFO_FILENAME);
         $base = preg_replace('/[^A-Za-z0-9._-]/', '', $base) ?? '';
         if ($base === '') {
@@ -53,6 +64,12 @@ class AttachmentUpload
             $result = move_uploaded_file($_FILES[$inputName]['tmp_name'], $uploadfile);
             if (!$result) {
                 View::respond('There is a problem moving the uploaded file to ' . $uploadDirectory . '.  Please check the directory exists and permissions are set as per the install documentation.');
+                Page::current()->send();
+                exit;
+            }
+            if (self::blockedContents($uploadfile)) {
+                unlink($uploadfile);
+                View::respond('This file type cannot be uploaded.');
                 Page::current()->send();
                 exit;
             }
@@ -85,5 +102,33 @@ class AttachmentUpload
         }
         $_FILES[$inputName]['time_name'] = $storedName;
         return $_FILES[$inputName];
+    }
+
+    /**
+     * True when the name is an executable type, including a type hidden before the last dot.
+     */
+    public static function blockedName(string $original): bool
+    {
+        if (str_contains($original, "\0")) {
+            return true;
+        }
+        $parts = preg_split('/[^a-z0-9]+/', strtolower($original)) ?: [];
+        foreach ($parts as $part) {
+            if ($part !== '' && in_array($part, self::BLOCKED, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function blockedContents(string $path): bool
+    {
+        $head = (string) file_get_contents($path, false, null, 0, 64);
+        if (preg_match('/^\s*<\?(php|=)/i', $head) === 1) {
+            return true;
+        }
+
+        return str_starts_with($head, "\x7fELF");
     }
 }
