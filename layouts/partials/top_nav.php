@@ -13,7 +13,7 @@ $apps = $nav['apps'];
 $account = $nav['account'];
 ?>
     <div class="brandrow">
-        <a class="brandhome" href="./" aria-label="Inlay home">
+        <a class="brandhome" href="./" aria-label="Adlexone home">
         <div class="brandwrap">
             <?php View::partial('brand_lockup'); ?>
         </div>

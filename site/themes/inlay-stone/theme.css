@@ -1,4 +1,4 @@
-/* Inlay Stone — warm paper with a brass accent. */
+/* Stone — warm paper with a brass accent. */
 :root{
     --ink:#1c1917;
     --inlay:#8a6432;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(138, 100, 50, 0.22);
     --page-bg:#f7f5f1;
     --brandbar-border:#e8e2da;
-    --brandmaker:#57534e;
     --logo-ground:#1c1917;
     --logo-bar:#8a6432;
     --logo-piece:#f7f3ea;

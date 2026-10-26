@@ -45,7 +45,7 @@ final class SetupScreen
             'title' => 'Set up this site',
             'lead' => $label !== ''
                 ? $label . ' does not have an administrator yet. Create the first account. The files below are only for this customer.'
-                : 'Create the first administrator. Inlay will create the database and settings in the folders listed here, outside the web root.',
+                : 'Create the first administrator. Adlexone will create the database and settings in the folders listed here, outside the web root.',
             'error' => $error,
             'helpHtml' => HelpText::customer($paths),
             'formHtml' => self::form($label),
@@ -134,7 +134,7 @@ final class SetupScreen
             'text',
             (string) ($_POST['public_url'] ?? ''),
             false,
-            'Optional. For example, https://health.example.com. Leave this blank and Inlay uses the address in the browser. Set it when the site sits behind a proxy.'
+            'Optional. For example, https://health.example.com. Leave this blank and Adlexone uses the address in the browser. Set it when the site sits behind a proxy.'
         );
         $html .= '<button type="submit" class="btn btn--primary login-submit">Create the site</button>';
         $html .= '</form>';

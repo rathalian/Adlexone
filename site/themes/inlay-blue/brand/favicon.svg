@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#0f2340"/>
-  <rect x="4.5" y="4.5" width="23" height="7.5" rx="1.5" fill="#1a4f8b"/>
-  <rect x="4.5" y="13.5" width="14" height="14" rx="1.5" fill="#f4f7fb"/>
-  <rect x="20" y="13.5" width="7.5" height="14" rx="1.5" fill="#d9e6f5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0f2340"/>
+  <g transform="translate(32 32) scale(.74) translate(-32 -32)">
+    <polygon points="27.00,6.00 37.00,6.00 40.23,14.00 23.77,14.00" fill="#1a4f8b"/>
+    <polygon points="22.56,17.00 41.44,17.00 44.67,25.00 19.33,25.00" fill="#f4f7fb"/>
+    <polygon points="18.12,28.00 45.88,28.00 49.12,36.00 14.88,36.00" fill="#f4f7fb"/>
+    <polygon points="13.67,39.00 28.67,39.00 25.44,47.00 10.44,47.00" fill="#f4f7fb"/>
+    <polygon points="35.33,39.00 50.33,39.00 53.56,47.00 38.56,47.00" fill="#f4f7fb"/>
+    <polygon points="9.23,50.00 24.23,50.00 21.00,58.00 6.00,58.00" fill="#f4f7fb"/>
+    <polygon points="39.77,50.00 54.77,50.00 58.00,58.00 43.00,58.00" fill="#f4f7fb"/>
+  </g>
 </svg>

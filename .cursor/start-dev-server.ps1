@@ -1,4 +1,4 @@
-# Start Inlay's PHP built-in server on port 8000 (idempotent).
+# Start Adlexone's PHP built-in server on port 8000 (idempotent).
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
@@ -40,7 +40,7 @@ function Resolve-PhpExe {
 $port = 8000
 $existing = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
 if ($existing) {
-    Write-Host "Inlay already listening on port $port"
+    Write-Host "Adlexone already listening on port $port"
     exit 0
 }
 
@@ -51,5 +51,5 @@ if (-not $php) {
 }
 
 Write-Host "Using PHP: $php"
-Write-Host "Starting Inlay at http://127.0.0.1:$port/"
+Write-Host "Starting Adlexone at http://127.0.0.1:$port/"
 & $php -S 0.0.0.0:$port

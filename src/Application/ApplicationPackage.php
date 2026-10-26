@@ -166,7 +166,7 @@ final class ApplicationPackage
     public static function import(array $package, string $slugOverride = ''): array
     {
         if (($package['format'] ?? '') !== self::FORMAT) {
-            throw new \InvalidArgumentException('Not an Inlay solution package.');
+            throw new \InvalidArgumentException('Not an Adlexone application package.');
         }
         $appMeta = $package['application'] ?? null;
         if (!is_array($appMeta)) {

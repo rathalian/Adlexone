@@ -1,4 +1,4 @@
-/* Inlay Rose — warm paper, a deep rose for the work. */
+/* Rose — warm paper, a deep rose for the work. */
 :root{
     --ink:#3c1424;
     --inlay:#be185d;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(190, 24, 93, 0.20);
     --page-bg:#fbf5f7;
     --brandbar-border:#f0e4ea;
-    --brandmaker:#7a5362;
     --logo-ground:#3c1424;
     --logo-bar:#be185d;
     --logo-piece:#fbf5f7;

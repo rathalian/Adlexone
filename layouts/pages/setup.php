@@ -19,7 +19,7 @@ $formHtml = $formHtml ?? '';
 <!doctype html>
 <html lang="en">
 <head>
-<?php View::partial('head', ['title' => $title . ' — Inlay']); ?>
+<?php View::partial('head', ['title' => $title . ' — Adlexone']); ?>
 </head>
 <body class="page-login page-setup">
     <a class="skip-link" href="#content">Skip to the page content</a>

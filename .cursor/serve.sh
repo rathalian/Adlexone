@@ -11,7 +11,7 @@ CONFDIR=/tmp/inlay-web
 mkdir -p "$CONFDIR"
 
 if [[ -f "$CONFDIR/nginx.pid" ]] && kill -0 "$(cat "$CONFDIR/nginx.pid")" 2>/dev/null; then
-  echo "Inlay already listening on port 8000"
+  echo "Adlexone already listening on port 8000"
   exit 0
 fi
 rm -f "$CONFDIR/nginx.pid"

@@ -1169,7 +1169,7 @@ final class ItemScreen
         }
         $itemTypeName = $row['item_type_name'];
         $inApplication = Page::current()->inApplication();
-        if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin have write access
+        if ($_SESSION['access_role_id'] <= 2) {//Admin, Adlexone Admin, Global Adlexone Admin have write access
             $itemRole = 2;
         } else {
             $itemRole = 5;
@@ -1459,7 +1459,7 @@ final class ItemScreen
                 }
                 $html = '';
                 //Override at a user level if we have to
-                if ($_SESSION['access_role_id'] <= 2) {//Admin, Inlay Admin, Global Inlay Admin and owners have write access
+                if ($_SESSION['access_role_id'] <= 2) {//Admin, Adlexone Admin, Global Adlexone Admin and owners have write access
                     $itemRole = $_SESSION['access_role_id'];
                     //they are the administrator so give them administrator rights
                 }

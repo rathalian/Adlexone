@@ -1,5 +1,5 @@
 /* =========================================================
-   Inlay layout — shared structure. Skins set tokens in each theme's theme.css
+   Adlexone layout — shared structure. Skins set tokens in each theme's theme.css
    Newsreader is licensed under the SIL Open Font License. See layouts/fonts/OFL.txt.
    ========================================================= */
 
@@ -49,10 +49,8 @@ body{
     color:var(--body);
     background:var(--page-bg);
 }
-.brandtext .title-static,
 .pagehead__title,
 .login-title,
-.login-atmosphere__brand .title-static,
 .builder__title,
 .empty-state__title,
 .sectionbar__name,
@@ -82,18 +80,13 @@ body{
     background:none; box-shadow:none; margin-right:0;
 }
 .logoA svg{ width:40px; height:40px; display:block; }
-.logo-mark__ground{ fill:var(--logo-ground, var(--ink)); }
-.logo-mark__bar{ fill:var(--logo-bar, var(--brand)); }
-.logo-mark__piece{ fill:var(--logo-piece, #fff); }
-.logo-mark__joint{ fill:var(--logo-joint, var(--stone)); }
+.logo-mark__top{ fill:var(--logo-bar, var(--brand)); }
+.logo-mark__row{ fill:var(--ink); }
 .brandtext{
     display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px;
     font-weight:700; letter-spacing:-0.03em; font-size:22px; line-height:1; white-space:nowrap; margin-left:0; color:var(--ink);
 }
-.brandtext .title-static{ color:var(--ink); }
-.brandmaker{
-    font-size:11px; font-weight:600; letter-spacing:.11em; text-transform:uppercase; line-height:1; color:var(--brandmaker);
-}
+.brandtext .title-static{ color:var(--ink); font-family:inherit; }
 
 /* ---------- Top navigation ---------- */
 .topnav{
@@ -185,7 +178,6 @@ body{
 .appbar .logoA{ width:36px; height:36px; }
 .appbar .logoA svg{ width:36px; height:36px; }
 .appbar .brandtext{ font-size:18px; gap:3px; letter-spacing:-0.03em; }
-.appbar .brandmaker{ font-size:10px; letter-spacing:.14em; font-weight:700; }
 .appbar .topnav .menu__button{
     min-height:36px;
     padding:0 10px;
@@ -685,9 +677,6 @@ input[type="datetime-local"].input{
 .launchpad__brand .brandtext{
     font-size:2rem; gap:5px; letter-spacing:-0.035em; color:var(--ink);
 }
-.launchpad__brand .brandmaker{
-    font-size:12px; letter-spacing:.16em; font-weight:700; color:var(--brandmaker);
-}
 .empty-state--brand .empty-state__copy{ text-align:left; max-width:32rem; }
 .launchpad__intro-title{
     margin:0 0 6px;
@@ -1040,12 +1029,6 @@ input[type="datetime-local"].input{
     gap:8px;
     letter-spacing:-0.04em;
 }
-.login-atmosphere__brand .brandmaker{
-    color:var(--brandmaker);
-    font-size:clamp(0.85rem, 1.4vw, 1rem);
-    letter-spacing:.18em;
-    font-weight:700;
-}
 .login-atmosphere__lead{
     margin:22px 0 0; font-size:16px; line-height:1.5; color:var(--title); max-width:22rem;
 }
@@ -1125,7 +1108,6 @@ input[type="datetime-local"].input{
 .login-brand .logoA,
 .login-brand .logoA svg{ width:52px; height:52px; }
 .login-brand .brandtext{ font-size:28px; gap:5px; letter-spacing:-0.03em; }
-.login-brand .brandmaker{ font-size:11px; letter-spacing:.16em; font-weight:700; }
 .login-card {
     box-sizing: border-box;
     width: 100%;

@@ -1,4 +1,4 @@
-/* Inlay Violet — pale paper, a clear violet for the work. */
+/* Violet — pale paper, a clear violet for the work. */
 :root{
     --ink:#2a1248;
     --inlay:#6d28d9;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(109, 40, 217, 0.22);
     --page-bg:#f6f3fb;
     --brandbar-border:#e8e0f2;
-    --brandmaker:#6b5484;
     --logo-ground:#2a1248;
     --logo-bar:#6d28d9;
     --logo-piece:#f6f3fb;

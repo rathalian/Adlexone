@@ -29,7 +29,7 @@ if (!defined('PHP_VERSION_ID') || PHP_VERSION_ID < 80100) {
     if (!headers_sent()) {
         header('Content-Type: text/plain; charset=UTF-8', true, 500);
     }
-    exit("Inlay needs PHP 8.1 or later. This server is running PHP " . PHP_VERSION . ".\n");
+    exit("Adlexone needs PHP 8.1 or later. This server is running PHP " . PHP_VERSION . ".\n");
 }
 $missingExtensions = array();
 foreach (array('pdo', 'pdo_sqlite', 'dom', 'libxml', 'ctype') as $extension) {
@@ -42,7 +42,7 @@ if ($missingExtensions !== array()) {
         header('Content-Type: text/plain; charset=UTF-8', true, 500);
     }
     exit(
-        "Inlay cannot start. PHP " . PHP_VERSION . " is missing: " . implode(', ', $missingExtensions) . ".\n\n"
+        "Adlexone cannot start. PHP " . PHP_VERSION . " is missing: " . implode(', ', $missingExtensions) . ".\n\n"
         . "Turn these extensions on for this site, then reload the page. In cPanel, open Select PHP Version and tick them under Extensions. "
         . "On a server you manage, install the matching PHP packages, for example php-sqlite3 and php-xml on Debian or Ubuntu.\n"
     );

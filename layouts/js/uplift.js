@@ -1,4 +1,4 @@
-/* Inlay interface behaviour: colour mode, search and commands, list filters, figures, and tab overflow. */
+/* Adlexone interface behaviour: colour mode, search and commands, list filters, figures, and tab overflow. */
 
 (() => {
     const root = document.documentElement;

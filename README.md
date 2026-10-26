@@ -1,4 +1,4 @@
-# Adlexone Inlay
+# Adlexone
 
 PHP 8.1+ / SQLite action and information management system. The database is a **shared platform schema** (users, items, fields, applications registry). Application packs consume shared data and may store an application slug on shared rows — they must not own private tables.
 
@@ -15,13 +15,13 @@ Point the domain’s document root at the `public/` folder. The SQLite file, `co
 
 2. **Settings.** `bootstrap/bootstrap.php` loads every `*.json` in `config/` (and one level of subfolders) as constants, except `platform.json`, and the first definition wins. Do not put the templates themselves in `config/`.
 
-   Public URL (redirects / OAuth): leave `SET_PUBLIC_BASE_URL` empty for automatic detection from the request Host. For production, set it to the site origin (e.g. `https://inlay.example.com`). Optionally set `SET_ALLOWED_HOSTS` (comma-separated) and `SET_TRUSTED_PROXIES` (IPs/CIDRs) when behind a reverse proxy — forwarded headers are ignored unless the client IP is trusted.
+   Public URL (redirects / OAuth): leave `SET_PUBLIC_BASE_URL` empty for automatic detection from the request Host. For production, set it to the site origin (e.g. `https://health.example.com`). Optionally set `SET_ALLOWED_HOSTS` (comma-separated) and `SET_TRUSTED_PROXIES` (IPs/CIDRs) when behind a reverse proxy — forwarded headers are ignored unless the client IP is trusted.
 
 3. **Updates.** Replace the code and leave `config/` and `storage/` in place. On boot, `Adlexone\Database\SchemaMigrator` upgrades the live file. Reference DDL: `storage/database/shared_schema.sql`.
 
 ## Release zip for shared Apache hosting
 
-`php bin/build-release.php` builds `dist/inlay-{version}-{commit}.zip` from the last commit. It needs PHP 8.1+ with `phar` and `zlib`, and git. The zip holds the code only. It never holds `config/*.json`, a SQLite file, or attachments.
+`php bin/build-release.php` builds `dist/adlexone-{version}-{commit}.zip` from the last commit. It needs PHP 8.1+ with `phar` and `zlib`, and git. The zip holds the code only. It never holds `config/*.json`, a SQLite file, or attachments.
 
 1. Unzip it into the domain's document root. The file manager on most hosts can do this. Apache needs `mod_rewrite` and `AllowOverride All`.
 2. Open the site and follow the setup page. It names the folders PHP must be able to write: `config/`, `storage/database/`, and `storage/attachments/`.

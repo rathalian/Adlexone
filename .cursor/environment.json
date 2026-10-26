@@ -7,7 +7,7 @@
   "start": "bash .cursor/prepare-runtime.sh",
   "ports": [
     {
-      "name": "Inlay",
+      "name": "Adlexone",
       "port": 8000
     }
   ]

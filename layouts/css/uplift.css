@@ -1,5 +1,5 @@
 /* =========================================================
-   Inlay interface layer. Loads after base.css and before the theme.
+   Adlexone interface layer. Loads after base.css and before the theme.
    Depth, colour mode, the home page, application headers, figures, timeline,
    search, and motion. Themes keep setting the brand tokens.
    ========================================================= */
@@ -61,7 +61,6 @@ html[data-mode="dark"]{
     --form-border:color-mix(in srgb, var(--tint) 16%, #3a3d44);
     --field-border:color-mix(in srgb, var(--tint) 18%, #43464e);
     --brandbar-border:color-mix(in srgb, var(--tint) 12%, #202228);
-    --brandmaker:#aaa59c;
     --brand:color-mix(in srgb, var(--inlay, #3b6fb0) 76%, #fff);
     --brand2:color-mix(in srgb, var(--inlay, #3b6fb0) 38%, #fff);
     --btn-primary-hover:color-mix(in srgb, var(--inlay, #3b6fb0) 64%, #fff);
@@ -81,7 +80,7 @@ html[data-mode="dark"]{
 html[data-mode="dark"] body{
     background:var(--page-bg);
 }
-html[data-mode="dark"] .logo-mark__ground{ stroke:color-mix(in srgb, var(--brand) 40%, transparent); stroke-width:1; }
+html[data-mode="dark"] .logo-mark__top{ fill:var(--brand); }
 html[data-mode="dark"] img.empty-state__art,
 html[data-mode="dark"] .desk__art,
 html[data-mode="dark"] .panel__empty img{ filter:brightness(.88) saturate(.9); }
@@ -704,7 +703,6 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
 @media (max-width:640px){
     .appbar .brandrow{ padding:0 4px 0 12px; gap:6px; }
     .appbar .brandhome{ flex:0 0 auto; }
-    .appbar .brandmaker{ display:none; }
     .appbar .topnav{ flex:1 1 auto; gap:0; }
     .appbar .topnav .menu__button{ min-height:44px; padding:0 8px; }
     .appbar .topnav__search{ width:44px; height:44px; min-height:44px; min-width:0; margin:0; padding:0; justify-content:center; border-color:transparent; background:transparent; color:var(--body); }

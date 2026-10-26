@@ -18,7 +18,7 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
 <!doctype html>
 <html lang="en">
 <head>
-<?php View::partial('head', ['title' => 'Sign in — Inlay']); ?>
+<?php View::partial('head', ['title' => 'Sign in — Adlexone']); ?>
 </head>
 <body class="page-login">
     <a class="skip-link" href="#content">Skip to the page content</a>

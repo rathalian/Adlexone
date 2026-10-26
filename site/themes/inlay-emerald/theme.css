@@ -1,4 +1,4 @@
-/* Inlay Emerald — quiet paper, a deep emerald for the work. */
+/* Emerald — quiet paper, a deep emerald for the work. */
 :root{
     --ink:#052e24;
     --inlay:#047857;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(4, 120, 87, 0.20);
     --page-bg:#f3f7f5;
     --brandbar-border:#e0ebe6;
-    --brandmaker:#4d6b60;
     --logo-ground:#052e24;
     --logo-bar:#047857;
     --logo-piece:#f3f7f5;

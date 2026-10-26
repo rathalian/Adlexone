@@ -1,4 +1,4 @@
-/* Inlay Indigo — cool paper, a deep indigo for the work. */
+/* Indigo — cool paper, a deep indigo for the work. */
 :root{
     --ink:#1c1a3a;
     --inlay:#3d3a9e;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(61, 58, 158, 0.22);
     --page-bg:#f4f4fb;
     --brandbar-border:#e4e3f0;
-    --brandmaker:#5c5980;
     --logo-ground:#1c1a3a;
     --logo-bar:#5c59c6;
     --logo-piece:#f4f4fb;

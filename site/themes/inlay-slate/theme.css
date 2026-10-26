@@ -1,4 +1,4 @@
-/* Inlay Slate — cool gray paper, graphite for the work. */
+/* Slate — cool gray paper, graphite for the work. */
 :root{
     --ink:#0f172a;
     --inlay:#334155;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(51, 65, 85, 0.18);
     --page-bg:#f4f6f8;
     --brandbar-border:#e4e8ee;
-    --brandmaker:#475569;
     --logo-ground:#0f172a;
     --logo-bar:#64748b;
     --logo-piece:#f4f6f8;

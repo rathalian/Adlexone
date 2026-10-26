@@ -48,7 +48,7 @@ final class PrintScreen
     	}
 
     	$i = 0;
-    	if ($_SESSION['access_role_id'] <=2){//Admin, Inlay Admin, Global Inlay Admin have access
+    	if ($_SESSION['access_role_id'] <=2){//Admin, Adlexone Admin, Global Adlexone Admin have access
     		$i++;
     	}else{
     		if (\Adlexone\Data\GroupMembership::userSharesItemGroup((int) $_SESSION['access_user_id'], (int) $itemID)

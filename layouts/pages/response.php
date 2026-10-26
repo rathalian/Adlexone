@@ -6,7 +6,7 @@ use Adlexone\Http\View;
 <!doctype html>
 <html lang="en">
 <head>
-<?php View::partial('head', ['title' => $page->title() !== '' ? $page->title() : 'Inlay']); ?>
+<?php View::partial('head', ['title' => $page->title() !== '' ? $page->title() : 'Adlexone']); ?>
 </head>
 <body>
     <a class="skip-link" href="#content">Skip to the page content</a>

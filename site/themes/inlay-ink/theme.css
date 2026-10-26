@@ -1,4 +1,4 @@
-/* Inlay Ink — ink ground, bone pieces, a brass joint. */
+/* Ink — ink ground, bone pieces, a brass joint. */
 :root{
     --ink:#1c1917;
     --inlay:#1c1917;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(176, 137, 88, 0.28);
     --page-bg:#f6f3ee;
     --brandbar-border:#e8e2da;
-    --brandmaker:#57534e;
     --logo-ground:#1c1917;
     --logo-bar:#6f675e;
     --logo-piece:#f3efe6;

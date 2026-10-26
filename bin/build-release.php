@@ -172,10 +172,10 @@ if (!is_dir($outDir) && !mkdir($outDir, 0755, true) && !is_dir($outDir)) {
     fail("Cannot create {$outDir}.");
 }
 $outDir = realpath($outDir) ?: $outDir;
-$name = "inlay-{$version}-{$commit}" . ($withPublic ? '-public' : '');
+$name = "adlexone-{$version}-{$commit}" . ($withPublic ? '-public' : '');
 $zipPath = $outDir . DIRECTORY_SEPARATOR . $name . '.zip';
 
-$work = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'inlay-release-' . bin2hex(random_bytes(4));
+$work = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'adlexone-release-' . bin2hex(random_bytes(4));
 $staging = $work . DIRECTORY_SEPARATOR . 'site';
 mkdir($staging, 0755, true);
 
@@ -208,7 +208,7 @@ try {
 
     file_put_contents(
         $staging . '/bootstrap/RELEASE.txt',
-        "Inlay {$version}\nCommit {$commit} ({$branch})\nBuilt " . gmdate('Y-m-d H:i:s') . " UTC\n"
+        "Adlexone {$version}\nCommit {$commit} ({$branch})\nBuilt " . gmdate('Y-m-d H:i:s') . " UTC\n"
     );
 
     if (is_file($zipPath)) {

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * UTF-8 stand-ins for the five mbstring functions Inlay calls, so a host without
+ * UTF-8 stand-ins for the five mbstring functions Adlexone calls, so a host without
  * the mbstring extension still runs. Each is defined only when the extension is
  * absent. They handle UTF-8 only, and invalid UTF-8 is treated as single bytes.
  * mb_strtoupper covers ASCII, Latin-1, Latin Extended-A, Greek, and the basic

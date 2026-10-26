@@ -10,14 +10,14 @@ namespace Adlexone\Theme;
 final class Theme
 {
     private const KNOWN_LABELS = [
-        'inlay-stone' => 'Inlay Stone',
-        'inlay-ink' => 'Inlay Ink',
-        'inlay-blue' => 'Inlay Blue',
-        'inlay-indigo' => 'Inlay Indigo',
-        'inlay-slate' => 'Inlay Slate',
-        'inlay-violet' => 'Inlay Violet',
-        'inlay-rose' => 'Inlay Rose',
-        'inlay-emerald' => 'Inlay Emerald',
+        'inlay-stone' => 'Stone',
+        'inlay-ink' => 'Ink',
+        'inlay-blue' => 'Blue',
+        'inlay-indigo' => 'Indigo',
+        'inlay-slate' => 'Slate',
+        'inlay-violet' => 'Violet',
+        'inlay-rose' => 'Rose',
+        'inlay-emerald' => 'Emerald',
     ];
 
     /** Former slug kept so saved user/settings values still resolve. */

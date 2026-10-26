@@ -245,10 +245,10 @@ final class Page
             }
         }
         if ($parts === []) {
-            return 'Inlay';
+            return 'Adlexone';
         }
 
-        return implode(' · ', $parts) . ' — Inlay';
+        return implode(' · ', $parts) . ' — Adlexone';
     }
 
     private static function plain(string $value): string

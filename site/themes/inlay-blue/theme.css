@@ -1,4 +1,4 @@
-/* Inlay Blue — cool paper, one clear blue for the work. */
+/* Blue — cool paper, one clear blue for the work. */
 :root{
     --ink:#0f2340;
     --inlay:#1a4f8b;
@@ -25,7 +25,6 @@
     --form-hover-shadow:0 0 0 3px rgba(26, 79, 139, 0.22);
     --page-bg:#f4f7fb;
     --brandbar-border:#e3ebf4;
-    --brandmaker:#4a6280;
     --logo-ground:#0f2340;
     --logo-bar:#1a4f8b;
     --logo-piece:#f4f7fb;
