@@ -765,6 +765,12 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
     .work-bulk__status{ flex:1 1 11rem; min-height:44px; }
 }
 @media (max-width:640px){
+    .card:not(.card--work) .record-list__tablewrap td.record-list__manage{
+        flex:1 1 100%;
+        width:100%;
+        margin-top:8px;
+        text-align:left;
+    }
     .card .kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
     .card .kpi{ padding:12px; }
     .card .kpi__value{ font-size:26px; }
