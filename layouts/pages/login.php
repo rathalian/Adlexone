@@ -61,7 +61,6 @@ $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
                 <?php if ($mode === 'local'): ?>
                     <section class="login-panel">
                         <h1 class="login-title">Sign in</h1>
-                        <p class="login-lead">Use your username and password.</p>
                     <form method="post" action="?action=local" class="login-form">
                         <?php echo \Adlexone\Auth\Csrf::field(); ?>
                         <div class="field">

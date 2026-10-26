@@ -52,6 +52,7 @@ $check(
     'login board orders applications, records, and work'
 );
 $check(!str_contains($login, '>Information</span>'), 'login board does not use the broader information label');
+$check(!str_contains($login, 'Use your username and password.'), 'username sign-in does not repeat the field labels');
 
 $baseCss = (string) file_get_contents(dirname(__DIR__) . '/layouts/css/base.css');
 $upliftCss = (string) file_get_contents(dirname(__DIR__) . '/layouts/css/uplift.css');
