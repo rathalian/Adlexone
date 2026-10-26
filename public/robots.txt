@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Adlexone pages send a noindex directive in their HTML. Crawlers must be
+# allowed to fetch a page before they can read that directive and remove it
+# from search results.
