@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Http;
 
+use Adlexone\Html\Breadcrumb;
+
 /**
  * The page being built for this request.
  *
@@ -26,6 +28,8 @@ final class Page
     private ?string $eyebrow = null;
     private ?string $sectionNav = null;
     private string $appHero = '';
+    /** @var list<array{label: string, href?: string}> */
+    private array $crumbs = [];
     private ?string $navLabel = null;
     private string $navOption = '';
     private ?string $body = null;
@@ -87,7 +91,7 @@ final class Page
 
     public function sectionNav(): string
     {
-        return $this->sectionNav ?? '';
+        return Breadcrumb::fill($this->sectionNav ?? '', $this->crumbs);
     }
 
     public function setSectionNav(string $html): void
@@ -98,7 +102,54 @@ final class Page
     /** Banner shown above the section tabs when a screen belongs to an application. */
     public function appHero(): string
     {
-        return $this->appHero;
+        return Breadcrumb::fill($this->appHero, $this->crumbs);
+    }
+
+    /** @return list<array{label: string, href?: string}> */
+    public function crumbs(): array
+    {
+        return $this->crumbs;
+    }
+
+    /**
+     * Sets the breadcrumb trail, Home first. Use Breadcrumb::trail() to build one.
+     *
+     * @param list<array{label: string, href?: string}> $trail
+     */
+    public function setCrumbs(array $trail): void
+    {
+        $this->crumbs = $trail;
+    }
+
+    /** Adds the current page to the end of the trail. Does nothing when no trail has been set. */
+    public function addCrumb(string $label, string $href = ''): void
+    {
+        $label = self::plain($label);
+        if ($this->crumbs === [] || $label === '') {
+            return;
+        }
+        $last = count($this->crumbs) - 1;
+        if (strcasecmp((string) $this->crumbs[$last]['label'], $label) === 0) {
+            return;
+        }
+        $crumb = ['label' => $label];
+        if ($href !== '') {
+            $crumb['href'] = $href;
+        }
+        $this->crumbs[] = $crumb;
+    }
+
+    /**
+     * The trail on its own line, for a page that has neither an application band nor a section bar.
+     * Empty when the trail is drawn elsewhere.
+     */
+    public function standaloneCrumbs(): string
+    {
+        if ($this->crumbs === [] || $this->appHero !== '' || ($this->sectionNav ?? '') !== '') {
+            return '';
+        }
+
+        return Breadcrumb::render($this->crumbs, 'page');
     }
 
     public function setAppHero(string $html): void

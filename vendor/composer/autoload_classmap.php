@@ -35,6 +35,7 @@ return array(
     'Adlexone\\Html\\Accent' => $baseDir . '/src/Html/Accent.php',
     'Adlexone\\Html\\AppHero' => $baseDir . '/src/Html/AppHero.php',
     'Adlexone\\Html\\Blocks' => $baseDir . '/src/Html/Blocks.php',
+    'Adlexone\\Html\\Breadcrumb' => $baseDir . '/src/Html/Breadcrumb.php',
     'Adlexone\\Html\\Charts' => $baseDir . '/src/Html/Charts.php',
     'Adlexone\\Html\\FieldControl' => $baseDir . '/src/Html/FieldControl.php',
     'Adlexone\\Html\\Form' => $baseDir . '/src/Html/Form.php',

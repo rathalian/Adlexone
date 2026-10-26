@@ -25,6 +25,10 @@ $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
 </div>
 <?php echo $page->appHero(); ?>
 <?php echo $sectionNav; ?>
+<?php $standaloneCrumbs = $page->standaloneCrumbs(); ?>
+<?php if ($standaloneCrumbs !== ''): ?>
+<div class="crumbbar"><?php echo $standaloneCrumbs; ?></div>
+<?php endif; ?>
 
 <?php if ($sectionNav !== '' && $heading !== ''): ?>
 <h1 class="pagehead__title pagehead__title--sr"><?php echo Html::e($heading); ?></h1>

@@ -415,7 +415,12 @@ final class Capabilities
             }
         }
         $hero = \Adlexone\Html\AppHero::render($app, $createHref, $section, (int) ($_GET['item'] ?? 0));
-        RenderNavigation::applySectionNav((string) $app['name'], $html, $hero);
+        RenderNavigation::applySectionNav(
+            (string) $app['name'],
+            $html,
+            $hero,
+            \Adlexone\Html\Breadcrumb::forApplication($app, $section, (int) ($_GET['item'] ?? 0))
+        );
     }
 
     /**

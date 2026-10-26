@@ -10,6 +10,7 @@ use Adlexone\Http\Page;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Breadcrumb;
 use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
@@ -40,7 +41,9 @@ final class SecurityScreen
                 }
             }
             $groupPage = in_array($securityOption, $groupSectionOptions, true);
-            RenderNavigation::applyConfigureNav([['label' => $groupPage ? 'Groups' : 'People']]);
+            RenderNavigation::applyConfigureNav([$groupPage
+                ? ['label' => 'Groups', 'href' => '?manage=security&option=manage_groups']
+                : ['label' => 'People', 'href' => '?manage=security&option=manage_users']]);
         }
 
 
@@ -285,6 +288,9 @@ final class SecurityScreen
         $heading = $userID !== '' ? ($adminEdit ? 'Edit person' : 'My profile') : 'Add person';
         if (Page::current()->hasSectionNav()) {
             Page::current()->suggestTitle($heading);
+            Page::current()->addCrumb($heading);
+        } else {
+            Page::current()->setCrumbs(Breadcrumb::trail([['label' => $heading]]));
         }
 
         Page::current()->setBody(Form::form(
@@ -337,6 +343,7 @@ final class SecurityScreen
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
         $heading = $isNew ? 'Add group' : 'Edit group';
         Page::current()->suggestTitle($heading);
+        Page::current()->addCrumb($heading);
         Page::current()->setBody(Form::form(
             $heading,
             $action,

@@ -54,6 +54,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Html\\Accent' => __DIR__ . '/../..' . '/src/Html/Accent.php',
         'Adlexone\\Html\\AppHero' => __DIR__ . '/../..' . '/src/Html/AppHero.php',
         'Adlexone\\Html\\Blocks' => __DIR__ . '/../..' . '/src/Html/Blocks.php',
+        'Adlexone\\Html\\Breadcrumb' => __DIR__ . '/../..' . '/src/Html/Breadcrumb.php',
         'Adlexone\\Html\\Charts' => __DIR__ . '/../..' . '/src/Html/Charts.php',
         'Adlexone\\Html\\FieldControl' => __DIR__ . '/../..' . '/src/Html/FieldControl.php',
         'Adlexone\\Html\\Form' => __DIR__ . '/../..' . '/src/Html/Form.php',

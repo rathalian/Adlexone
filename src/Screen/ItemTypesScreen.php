@@ -24,7 +24,7 @@ final class ItemTypesScreen
     {
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applyConfigureNav([['label' => 'Record types']]);
+        RenderNavigation::applyConfigureNav([['label' => 'Record types', 'href' => '?manage=item-types']]);
         $scope = trim((string) ($_GET['application'] ?? ''));
         define('ITEM_TYPES_BASE_URL', '?manage=item-types' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 
@@ -235,6 +235,7 @@ final class ItemTypesScreen
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
         $heading = $isNew ? 'Add type' : 'Edit type';
         Page::current()->suggestTitle($heading);
+        Page::current()->addCrumb($heading);
 
         Page::current()->setBody(Form::form(
             $heading,

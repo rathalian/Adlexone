@@ -24,7 +24,7 @@ final class FieldsScreen
     {
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applyConfigureNav([['label' => 'Fields']]);
+        RenderNavigation::applyConfigureNav([['label' => 'Fields', 'href' => '?manage=fields']]);
         $scope = trim((string) ($_GET['application'] ?? ''));
         define('FIELDS_BASE_URL', '?manage=fields' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 
@@ -186,6 +186,7 @@ final class FieldsScreen
         $jsRequiredArray = "[true]";
         $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
         Page::current()->suggestTitle($title);
+        Page::current()->addCrumb($title);
 
         Page::current()->setBody(Form::form(
             $title,

@@ -28,6 +28,9 @@ final class SearchScreen
         } elseif (!Access::can(Permission::ADMIN_ITEMS)) {
             Access::deny();
         }
+        if (!Page::current()->inApplication()) {
+            Page::current()->setCrumbs(\Adlexone\Html\Breadcrumb::trail([['label' => 'Search']]));
+        }
 
 
 

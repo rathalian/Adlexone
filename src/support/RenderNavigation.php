@@ -12,6 +12,7 @@ use function libxml_clear_errors;
 use function libxml_use_internal_errors;
 use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
+use Adlexone\Html\Breadcrumb;
 use Adlexone\Html\Html;
 
 final class RenderNavigation
@@ -345,8 +346,8 @@ final class RenderNavigation
      * Call this once at the top of a controller, before the page is rendered.
      */
     /**
-     * @param list<array{label: string, href?: string}> $crumbs Replaces the label with a breadcrumb trail
-     *        ending at the current page. Only the last crumb is not a link.
+     * @param list<array{label: string, href?: string}> $crumbs The page trail, Home first. It is drawn in the
+     *        application band when there is one, otherwise at the start of the section bar.
      */
     public static function applySectionNav(string $label, string $linksHtml, string $hero = '', array $crumbs = []): void
     {
@@ -358,21 +359,25 @@ final class RenderNavigation
         $built = self::build([$label => $linksHtml]);
         $page->setAppHero($hero);
         $links = $built[$label] ?? [];
-        if ($crumbs !== [] && $links === []) {
-            $page->suggestNavLabel((string) end($crumbs)['label']);
+        if ($crumbs !== []) {
+            $page->setCrumbs($crumbs);
+            if ($links === []) {
+                $page->suggestNavLabel((string) end($crumbs)['label']);
+            }
         }
-        $page->setSectionNav(self::sectionNav($links, $label, $hero === '', $crumbs));
+        $page->setSectionNav(self::sectionNav($links, $label, $hero === '', $crumbs !== [] && $hero === ''));
     }
 
     /**
-     * Section bar for a Configure screen: a breadcrumb that starts at Configure, then the tabs
+     * Section bar for a Configure screen: a breadcrumb that starts at Home and Configure, then the tabs
      * that belong to this screen only.
      *
-     * @param list<array{label: string, href?: string}> $trail the crumbs after Configure
+     * @param list<array{label: string, href?: string}> $trail the crumbs after Configure. Give each one an
+     *        href so a deeper screen can add a crumb after it with Page::addCrumb().
      */
     public static function applyConfigureNav(array $trail, string $linksHtml = ''): void
     {
-        self::applySectionNav('Configure', $linksHtml, '', array_merge([['label' => 'Configure']], $trail));
+        self::applySectionNav('Configure', $linksHtml, '', Breadcrumb::trail(array_merge([['label' => 'Configure']], $trail)));
     }
 
     /**
@@ -380,16 +385,16 @@ final class RenderNavigation
      *
      * @param array<int, array{label: ?string, html: ?string, href: string, target: ?string, rel: ?string}> $links
      */
-    public static function sectionNav(array $links, string $label, bool $named = true, array $crumbs = []): string
+    public static function sectionNav(array $links, string $label, bool $named = true, bool $crumbs = false): string
     {
-        if ($links === [] && $crumbs === []) {
+        if ($links === [] && !$crumbs) {
             return '';
         }
 
         $html = '<div class="sectionbar' . ($named ? '' : ' sectionbar--tabs') . ($links === [] ? ' sectionbar--crumbs' : '') . '">';
-        if ($crumbs !== []) {
-            $html .= self::breadcrumb($crumbs);
-            $label = (string) end($crumbs)['label'];
+        if ($crumbs) {
+            $html .= Breadcrumb::BAR_SLOT;
+            $label = (string) (Page::current()->crumbs()[count(Page::current()->crumbs()) - 1]['label'] ?? $label);
         } elseif ($named) {
             $html .= '<p class="sectionbar__name">' . self::sectionMark() . Html::e($label) . '</p>';
         }
@@ -417,26 +422,6 @@ final class RenderNavigation
         $html .= '</nav></div>';
 
         return $html;
-    }
-
-    /** @param list<array{label: string, href?: string}> $crumbs */
-    private static function breadcrumb(array $crumbs): string
-    {
-        $last = count($crumbs) - 1;
-        $html = '<nav class="sectionbar__name sectionbar__crumbs" aria-label="Breadcrumb"><ol class="crumbs">';
-        foreach ($crumbs as $i => $crumb) {
-            $label = Html::e((string) $crumb['label']);
-            $href = (string) ($crumb['href'] ?? '');
-            if ($i === $last) {
-                $html .= '<li class="crumbs__item" aria-current="page">' . $label . '</li>';
-            } elseif ($href !== '') {
-                $html .= '<li class="crumbs__item"><a href="' . Html::e($href) . '">' . $label . '</a></li>';
-            } else {
-                $html .= '<li class="crumbs__item">' . $label . '</li>';
-            }
-        }
-
-        return $html . '</ol></nav>';
     }
 
     private static function sectionMark(): string

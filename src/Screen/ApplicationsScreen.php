@@ -33,7 +33,7 @@ final class ApplicationsScreen
         $option = (string) ($_GET['option'] ?? '');
 
         $section = '';
-        $trail = [['label' => 'Applications']];
+        $trail = [['label' => 'Applications', 'href' => APPLICATIONS_MANAGE_URL]];
         $applicationOptions = [
             'edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav',
             'rules', 'new_rule', 'add_rule', 'edit_rule', 'update_rule', 'delete_rule',
@@ -51,7 +51,10 @@ final class ApplicationsScreen
                 $sectionName = ApplicationStore::find($sectionApp);
                 $trail = [
                     ['label' => 'Applications', 'href' => APPLICATIONS_MANAGE_URL],
-                    ['label' => is_array($sectionName) ? (string) $sectionName['name'] : 'Application'],
+                    [
+                        'label' => is_array($sectionName) ? (string) $sectionName['name'] : 'Application',
+                        'href' => APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp,
+                    ],
                 ];
             }
         }

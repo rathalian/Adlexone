@@ -1709,6 +1709,8 @@ final class ItemScreen
                     }
                     $html .= '<p class="record-back"><a href="' . Html::e((string) MAN_BASE_URL) . '">Back to '
                         . Html::e($backLabel) . '</a></p>';
+                } else {
+                    Page::current()->setCrumbs(\Adlexone\Html\Breadcrumb::trail([['label' => $formTitle]]));
                 }
                 $html .= Form::form($formTitle, MAN_BASE_URL . '&option=update_item', $itemField, $buttons, $formOptions);
 

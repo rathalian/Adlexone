@@ -133,7 +133,7 @@ final class SiteSettingsScreen
             return;
         }
 
-        RenderNavigation::applyConfigureNav([['label' => 'Settings']], RenderNavigation::systemSettingsURLs());
+        RenderNavigation::applyConfigureNav([['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings']], RenderNavigation::systemSettingsURLs());
 
 
 
@@ -524,6 +524,7 @@ final class SiteSettingsScreen
             header('Location: ?manage=settings&option=my_theme');
             exit;
         }
+        Page::current()->setCrumbs(\Adlexone\Html\Breadcrumb::trail([['label' => 'My theme']]));
         $own = Database::first('users', ['theme'], 'user_id = ?', [$userId]);
         $current = \Adlexone\Theme\Theme::canonicalize((string) ($own['theme'] ?? ''));
         if (!isset($themes[$current])) {
