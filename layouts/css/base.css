@@ -1469,7 +1469,9 @@ th[aria-sort="descending"] .record-list__sortmark::after{ content:"↓"; color:v
 .record-list__tablewrap{ overflow-x:auto; }
 .record-list .table{ margin:0; }
 .record-list td, .record-list th{ vertical-align:middle; }
-.record-list__actions{ display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; }
+.record-list__actions,
+.record-list__order-actions{ display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; }
+.record-list__order-actions{ margin-right:6px; }
 .record-list__meta{ margin-top:2px; color:var(--placeholder); font-size:12.5px; line-height:1.35; }
 .record-list__name{ display:flex; align-items:center; gap:10px; min-width:0; }
 .record-list__title{ min-width:0; }

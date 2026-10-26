@@ -193,7 +193,9 @@ final class ApplicationsScreen
     public static function showApplications(): void
     {
         $rows = [];
-        foreach (ApplicationStore::all() as $app) {
+        $applications = ApplicationStore::all();
+        $last = count($applications) - 1;
+        foreach ($applications as $index => $app) {
             $id = (int) $app['application_id'];
             $rows[] = [
                 'name' => (string) $app['name'],
@@ -212,12 +214,20 @@ final class ApplicationsScreen
                         'label' => 'Export',
                     ],
                     [
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=up',
+                        'href' => $index > 0
+                            ? APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=up'
+                            : '',
                         'label' => 'Up',
+                        'inline' => true,
+                        'disabled' => $index === 0,
                     ],
                     [
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=down',
+                        'href' => $index < $last
+                            ? APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=down'
+                            : '',
                         'label' => 'Down',
+                        'inline' => true,
+                        'disabled' => $index === $last,
                     ],
                     [
                         'href' => APPLICATIONS_MANAGE_URL . '&option=delete&application_id=' . $id,

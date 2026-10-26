@@ -502,7 +502,7 @@ final class Blocks
     }
 
     /**
-     * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, cells?: array<string, string>, actions?: array<int, array{href: string, label: string, tone?: string, confirm?: string, target?: string}>} $row
+     * @param array{name: string, href: string, meta?: string, metaTitle?: string, search?: string, cells?: array<string, string>, actions?: array<int, array{href?: string, label: string, tone?: string, confirm?: string, target?: string, inline?: bool, disabled?: bool}>} $row
      * @param list<array{key: string, label: string, wrap?: bool, sortHref?: string, ariaSort?: string}> $columns
      */
     private static function recordListRow(
@@ -571,7 +571,7 @@ final class Blocks
     }
 
     /**
-     * @param array<int, array{href?: string, label?: string, tone?: string, confirm?: string, target?: string}> $actions
+     * @param array<int, array{href?: string, label?: string, tone?: string, confirm?: string, target?: string, inline?: bool, disabled?: bool}> $actions
      */
     private static function recordListActions(array $actions, string $name, bool $asMenu): string
     {
@@ -608,10 +608,43 @@ final class Blocks
             return '<span class="record-list__actions">' . $buttons . '</span>';
         }
 
-        return '<details class="rowmenu">'
+        $inline = '';
+        $menu = '';
+        $splitDanger = false;
+        foreach ($actions as $action) {
+            $label = (string) ($action['label'] ?? '');
+            $aria = ' aria-label="' . Html::e($label . ': ' . $name) . '"';
+            if (!empty($action['inline'])) {
+                if (!empty($action['disabled']) || (string) ($action['href'] ?? '') === '') {
+                    $inline .= '<button class="btn btn--sm btn--quiet" type="button" disabled' . $aria . '>'
+                        . Html::e($label) . '</button>';
+                } else {
+                    $inline .= '<a class="btn btn--sm btn--quiet" href="' . Html::e((string) $action['href']) . '"' . $aria . '>'
+                        . Html::e($label) . '</a>';
+                }
+                continue;
+            }
+            $danger = ($action['tone'] ?? '') === 'danger';
+            if ($danger && !$splitDanger && $menu !== '') {
+                $menu .= '<div class="rowmenu__divider" role="separator"></div>';
+                $splitDanger = true;
+            }
+            $confirm = Form::confirmData((string) ($action['confirm'] ?? ''));
+            $target = (string) ($action['target'] ?? '');
+            $targetAttr = $target !== '' ? ' target="' . Html::e($target) . '"' : '';
+            $menu .= '<a class="rowmenu__item' . ($danger ? ' rowmenu__item--danger' : '') . '" role="menuitem" href="'
+                . Html::e((string) ($action['href'] ?? '')) . '"' . $targetAttr . $confirm . $aria . '>'
+                . Html::e($label) . '</a>';
+        }
+        $inlineHtml = $inline !== '' ? '<span class="record-list__order-actions">' . $inline . '</span>' : '';
+        if ($menu === '') {
+            return $inlineHtml;
+        }
+
+        return $inlineHtml . '<details class="rowmenu">'
             . '<summary class="btn btn--sm btn--quiet" aria-label="' . Html::e($manageLabel . ': ' . $name) . '">'
             . Html::e($manageLabel) . '</summary>'
-            . '<div class="rowmenu__panel" role="menu">' . $buttons . '</div>'
+            . '<div class="rowmenu__panel" role="menu">' . $menu . '</div>'
             . '</details>';
     }
 
