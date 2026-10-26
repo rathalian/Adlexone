@@ -214,65 +214,6 @@ namespace Adlexone\support {
              );
          }
 //        /**
-//         * @param string $text Text for conversion
-//         */
-//        public static function stripScripts($text): string
-//        {
-//            return htmlentities($text, ENT_COMPAT, "UTF-8");
-//        }
-
-//        /**
-//         * SharedMethods::stripScriptsRecursive()
-//         *
-//         * @param array $array Array
-//         * @return array stripped of html scripts
-//         */
-//        public static function stripScriptsRecursive($array): array
-//        {
-//            $newArray = [];
-//            foreach ($array as $key => $value) {
-//                $value = SharedMethods::stripScripts($value);
-//                $newArray[$key] = $value;
-//            }
-//            return $newArray;
-//        }
-//        /**
-//         * SharedMethods::addslashesRecursive()
-//         *
-//         * @param array $arr Array
-//         * @param string $databaseType Database type
-//         * @return Array with slashes added (database escaping)
-//         */
-////        public static function addslashesRecursive($arr): array
-//        {
-//            if (is_array($arr)) {
-//                foreach ($arr as $index => $val) {
-//                    $arr[$index] = SharedMethods::addslashesRecursive($val);
-//                }
-//                return $arr;
-//            } else {
-//                return SharedMethods::customAddSlashes($arr);
-//            }
-//        }
-//        /**
-//         * SharedMethods::stripMagicQuotes()
-//         *
-//         * @param array $arr Array
-//         * @return Array with escaping remove where magic quotes is enabled
-//         */
-//        public static function stripMagicQuotes($arr): array
-//        {
-//            foreach ($arr as $k => $v) {
-//                if (is_array($v)) {
-//                    $arr[$k] = SharedMethods::stripMagicQuotes($v);
-//                } else {
-//                    $arr[$k] = stripslashes($v);
-//                }
-//            }
-//            return $arr;
-//        }
-
-//        /**
 //         * Unset session array
 //         *
 //         * @param array $sessionArray SESSION array

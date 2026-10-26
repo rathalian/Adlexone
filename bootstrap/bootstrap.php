@@ -106,13 +106,6 @@ if (!defined('SET_HOME_LEAD')) {
     define('SET_HOME_LEAD', 'This site keeps the applications, records, and rules for the work.');
 }
 
-// Apply addslashesRecursive() to all data and strip scripts
-//$_GET = SharedMethods::stripScriptsRecursive(SharedMethods::addslashesRecursive($_GET));
-//$_POST = SharedMethods::stripScriptsRecursive(SharedMethods::addslashesRecursive($_POST));
-//$_COOKIE = SharedMethods::stripScriptsRecursive(SharedMethods::addslashesRecursive($_COOKIE));
-//$_REQUEST = SharedMethods::stripScriptsRecursive(SharedMethods::addslashesRecursive($_REQUEST));
-
-
 // Set the required controller using the 'controller' GET variable or load the
 // logon page if the user has not logged on
 if (isset($_GET['action'])) {
