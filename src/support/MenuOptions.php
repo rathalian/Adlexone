@@ -254,9 +254,8 @@ final class MenuOptions
     {
         self::prepare();
         $row = Database::row(
-            "SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId
-            . " AND parent_menu_value_id = " . $parentId
-            . " AND menu_value = '" . Database::escape($value) . "'"
+            'SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = ? AND parent_menu_value_id = ? AND menu_value = ?',
+            [$fieldId, $parentId, $value]
         );
         return $row !== null;
     }
@@ -501,9 +500,8 @@ final class MenuOptions
     private static function findOrCreate(int $fieldId, int $parentId, string $label): int
     {
         $existing = Database::row(
-            "SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId
-            . " AND parent_menu_value_id = " . $parentId
-            . " AND menu_value = '" . Database::escape($label) . "'"
+            'SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = ? AND parent_menu_value_id = ? AND menu_value = ?',
+            [$fieldId, $parentId, $label]
         );
         if ($existing !== null) {
             return (int)$existing['menu_value_id'];
@@ -741,7 +739,8 @@ final class MenuOptions
         Database::update(
             'items',
             [$column => $new],
-            "WHERE " . $column . " = '" . Database::escape($old) . "'"
+            $column . ' = ?',
+            [$old]
         );
     }
 
