@@ -1029,9 +1029,6 @@ input[type="datetime-local"].input{
     gap:8px;
     letter-spacing:-0.04em;
 }
-.login-atmosphere__lead{
-    margin:22px 0 0; font-size:16px; line-height:1.5; color:var(--title); max-width:22rem;
-}
 .login-board{
     display:grid;
     grid-template-columns:14fr 7.5fr;

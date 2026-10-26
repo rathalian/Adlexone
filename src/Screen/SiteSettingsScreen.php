@@ -414,7 +414,7 @@ final class SiteSettingsScreen
                 . '<p class="form-help">Greetings, dates, and times are shown in this zone. The offset listed includes daylight saving where it applies today.</p>',
             'Home application' => Form::select('SET_DEFAULT_APPLICATION', $baseURLArray, $nameArray, @SET_DEFAULT_APPLICATION),
             'Group for new accounts' => Form::select('USER_REG_ACTION', $groupValues, $groupLabels, USER_REG_ACTION),
-            'Sign-in sentence' => Form::textarea('SET_HOME_LEAD', $homeLead, '3'),
+            'Home introduction' => Form::textarea('SET_HOME_LEAD', $homeLead, '3'),
         ];
         Page::current()->setBody(Form::form(
             'Site',

@@ -11,9 +11,6 @@ use Adlexone\Theme\Theme;
  * @var bool $showOauth
  */
 $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
-$homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
-    ? (string) SET_HOME_LEAD
-    : 'This site keeps the applications, records, and rules for the work.';
 ?>
 <!doctype html>
 <html lang="en">
@@ -31,7 +28,6 @@ $homeLead = defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
                         <?php View::partial('brand_lockup'); ?>
                     </div>
                 </div>
-                <p class="login-atmosphere__lead"><?php echo Html::e($homeLead); ?></p>
             </div>
             <div class="login-board">
                 <div class="login-board__piece login-board__piece--ink">
