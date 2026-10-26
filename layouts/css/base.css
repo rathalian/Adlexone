@@ -1039,6 +1039,8 @@ input[type="datetime-local"].input{
 }
 .login-atmosphere__brand .brand-descriptor{
     font-size:15px;
+    max-width:28rem;
+    white-space:normal;
 }
 .login-board{
     display:grid;
@@ -1116,6 +1118,7 @@ input[type="datetime-local"].input{
 .login-brand .logoA,
 .login-brand .logoA svg{ width:52px; height:52px; }
 .login-brand .brandtext{ font-size:28px; gap:5px; letter-spacing:-0.03em; }
+.login-brand .brand-descriptor{ white-space:normal; }
 .login-card {
     box-sizing: border-box;
     width: 100%;

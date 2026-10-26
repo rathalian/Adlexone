@@ -55,6 +55,8 @@ $check(!str_contains($login, '>Information</span>'), 'login board does not use t
 
 $baseCss = (string) file_get_contents(dirname(__DIR__) . '/layouts/css/base.css');
 $upliftCss = (string) file_get_contents(dirname(__DIR__) . '/layouts/css/uplift.css');
+$check(str_contains($baseCss, '.login-atmosphere__brand .brand-descriptor{')
+    && str_contains($baseCss, 'white-space:normal;'), 'login descriptor can wrap without being clipped');
 $check(str_contains($baseCss, 'color:var(--logo-piece-ink, var(--ink));'), 'light Records tile follows its theme text colour');
 $check(str_contains($upliftCss, '--logo-piece-ink:#16243a;'), 'dark Records tile has contrasting text');
 
