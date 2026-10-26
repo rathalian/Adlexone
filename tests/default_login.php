@@ -61,10 +61,18 @@ $check(str_contains($baseCss, '.login-atmosphere__brand .brand-descriptor{')
 $check(str_contains($baseCss, 'color:var(--logo-piece-ink, var(--ink));'), 'light Records tile follows its theme text colour');
 $check(str_contains($upliftCss, '--logo-piece-ink:#16243a;'), 'dark Records tile has contrasting text');
 
+unset($_SERVER['REMOTE_ADDR']);
 foreach (['localhost:8000' => true, '127.0.0.1' => true, '192.168.1.20' => true, 'inlay.local' => true, 'health.example.com' => false, '203.0.113.9' => false] as $host => $expected) {
     $_SERVER['HTTP_HOST'] = $host;
     $check(DefaultAccount::allowed() === $expected, 'default account on ' . $host . ' is ' . ($expected ? 'allowed' : 'refused'));
 }
+$_SERVER['REMOTE_ADDR'] = '203.0.113.9';
+$_SERVER['HTTP_HOST'] = 'localhost';
+$check(DefaultAccount::allowed() === false, 'a public address cannot enable the default password by naming localhost');
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+$_SERVER['HTTP_HOST'] = 'health.example.com';
+$check(DefaultAccount::allowed() === false, 'a local proxy serving a public hostname does not keep the default password');
+unset($_SERVER['REMOTE_ADDR']);
 $_SERVER['HTTP_HOST'] = 'health.example.com';
 $check(DefaultAccount::postedPassword('') === '', 'a public host gets no default password');
 foreach (['admin', 'short-pass'] as $weak) {
