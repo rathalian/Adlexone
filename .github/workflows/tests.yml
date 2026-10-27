@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: pdo_sqlite, dom, libxml, ctype
+          coverage: none
+      - name: Syntax
+        run: find src layouts bootstrap public bin site -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Tests
+        run: |
+          set -e
+          for f in tests/*.php; do
+            php "$f"
+          done
+      - name: PHPStan
+        run: |
+          curl -fsSL -o /tmp/phpstan.phar https://github.com/phpstan/phpstan/releases/download/2.1.22/phpstan.phar
+          php /tmp/phpstan.phar analyse --no-progress --memory-limit=1G

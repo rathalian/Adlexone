@@ -118,8 +118,11 @@ final class OauthClient
 
         $json = self::httpPost($tokenEndpoint, $body, 'application/x-www-form-urlencoded');
         $data = json_decode($json, true);
-        if (!is_array($data) || isset($data['error'])) {
-            $detail = is_array($data) ? (string) ($data['error_description'] ?? $data['error'] ?? 'token error') : 'token error';
+        if (!is_array($data)) {
+            throw new AuthException('OAuth token exchange failed: token error');
+        }
+        if (isset($data['error'])) {
+            $detail = (string) ($data['error_description'] ?? $data['error'] ?? 'token error');
             throw new AuthException('OAuth token exchange failed: ' . $detail);
         }
         return $data;

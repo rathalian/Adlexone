@@ -383,7 +383,7 @@ final class RenderNavigation
     /**
      * Horizontal section links for the top navigation card.
      *
-     * @param array<int, array{label: ?string, html: ?string, href: string, target: ?string, rel: ?string}> $links
+     * @param array<int, array{label?: ?string, html?: ?string, href: string, target?: ?string, rel?: ?string}> $links
      */
     public static function sectionNav(array $links, string $label, bool $named = true, bool $crumbs = false): string
     {

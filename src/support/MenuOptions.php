@@ -515,6 +515,7 @@ final class MenuOptions
         return $id;
     }
 
+    /** @phpstan-ignore void.pure */
     private static function ensureItemColumn(int $fieldId): void
     {
         // Values are stored in item_field_values; items has a fixed core schema.

@@ -1,0 +1,12 @@
+parameters:
+    level: 5
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    paths:
+        - src/Http
+        - src/Auth
+        - src/Database
+        - src/support
+    excludePaths:
+        - src/support/SharedMethods.php
+    treatPhpDocTypesAsCertain: false

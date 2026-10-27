@@ -263,8 +263,10 @@ class Database
             $pdo->commit();
             return $result;
         } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) {
+            try {
                 $pdo->rollBack();
+            } catch (\Throwable) {
+                // The driver has already closed the transaction.
             }
             throw $e;
         }

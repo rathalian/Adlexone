@@ -15,6 +15,7 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
+    /** @phpstan-ignore classConstant.unused */
     private const VERSION = 11;
 
     private static bool $done = false;
