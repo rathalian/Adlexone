@@ -343,12 +343,23 @@ final class Router
 
     /**
      * Options that write data are accepted only on a form submission, so a link or an image cannot trigger them.
+     * The same names are posted by layouts/js/app.js when the control is still a link.
      */
+    public static function writesData(string $option): bool
+    {
+        if (preg_match('/^(add|update|delete|move)_[a-z_]+$/', $option) === 1) {
+            return true;
+        }
+
+        return in_array($option, [
+            'add', 'update', 'delete', 'move', 'create', 'import',
+            'toggle_rule', 'duplicate_rule', 'try_rule', 'run_rule',
+        ], true);
+    }
+
     private static function changesData(): bool
     {
-        $option = Request::query('option');
-
-        return preg_match('/^(add|update|delete|move)_[a-z_]+$/', $option) === 1;
+        return self::writesData(Request::query('option'));
     }
 
     private static function handler(string $canonical): ?callable

@@ -281,7 +281,7 @@
         } catch (e) {
             return false;
         }
-        if (!/^(add|update|delete|move)_[a-z_]+$/.test(option)) return false;
+        if (!/^(?:(?:add|update|delete|move)_[a-z_]+|add|update|delete|move|create|import|toggle_rule|duplicate_rule|try_rule|run_rule)$/.test(option)) return false;
         const meta = document.querySelector('meta[name="csrf-token"]');
         const form = document.createElement('form');
         form.method = 'post';

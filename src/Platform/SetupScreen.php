@@ -31,6 +31,7 @@ final class SetupScreen
                         $paths['attachments'],
                         $admin
                     );
+                    SetupToken::clear();
                     header('Location: ./');
                     exit;
                 } catch (\Throwable $e) {
@@ -40,6 +41,7 @@ final class SetupScreen
         }
 
         $paths = Runtime::paths();
+        SetupToken::issue();
         $label = trim((string) ($paths['store_label'] ?? ''));
         Page::current()->useLayout('setup', [
             'title' => 'Set up this site',
@@ -82,6 +84,9 @@ final class SetupScreen
         if ($public !== '' && preg_match('#^https?://#', $public) !== 1) {
             throw new \RuntimeException('The public URL should start with https:// or http://, or be left blank.');
         }
+        if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''))) {
+            throw new \RuntimeException('The setup token does not match the file beside the database. Open that file on the server and enter the value.');
+        }
 
         return [
             'site_name' => $site,
@@ -99,6 +104,14 @@ final class SetupScreen
         $site = (string) ($_POST['site_name'] ?? $label);
         $html = '<form method="post" action="" class="login-form">';
         $html .= Csrf::field();
+        $html .= self::field(
+            'Setup token',
+            'setup_token',
+            'text',
+            '',
+            true,
+            'Open ' . SetupToken::path() . ' on the server and enter the value. This page does not show it.'
+        );
         $html .= self::field('Organisation name', 'site_name', 'text', $site, true, 'The name people see for this site.');
         $html .= self::field('Your name', 'first_name', 'text', (string) ($_POST['first_name'] ?? ''), false);
         $html .= self::field('Last name', 'last_name', 'text', (string) ($_POST['last_name'] ?? ''), false);

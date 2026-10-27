@@ -57,6 +57,8 @@ final class HelpText
             self::p('If the host cannot change the document root, unzip Adlexone into the document root itself. The .htaccess file there refuses requests for config, storage, and code, and only index.php runs. This needs Apache with mod_rewrite and AllowOverride All.'),
             self::h('Secrets'),
             self::p('SMTP passwords and OAuth client secrets are written into the settings folder above when an administrator saves them later. Leave the password field blank on that screen to keep the current value. Do not commit that folder or the SQLite file to git.'),
+            self::h('Setup token'),
+            self::p('Opening this page writes a setup token beside the database, at ' . self::code(SetupToken::path()) . '. Enter that value in the form. The page does not show it. The file is removed when the first administrator is created.'),
             self::h('First sign-in'),
             self::p('The first administrator defaults to username ' . Html::e(DefaultAccount::USERNAME) . ' and password ' . Html::e(DefaultAccount::PASSWORD) . '.'),
         ]);

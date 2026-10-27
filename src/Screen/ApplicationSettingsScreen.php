@@ -567,6 +567,7 @@ final class ApplicationSettingsScreen
             }
             if (($result['matches'] ?? false) === true && ($result['ran'] ?? false) !== true) {
                 $html .= '<form method="post" action="' . Html::e(self::rulesFormAction($slug, 'run_rule') . '&rule_id=' . $ruleId) . '">'
+                    . \Adlexone\Auth\Csrf::field()
                     . Form::hidden('rule_id', (string) $ruleId)
                     . Form::hidden('item_id', (string) $itemId)
                     . Form::button('submit', 'submit_button', 'Run it now')

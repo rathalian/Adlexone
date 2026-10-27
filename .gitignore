@@ -1,5 +1,6 @@
 # Live databases, journals, and settings stay on the server. Templates are in config.example/.
 storage/database/*.sqlite
+storage/database/setup-token.txt
 storage/database/*.sqlite-wal
 storage/database/*.sqlite-shm
 storage/database/backup-*/
