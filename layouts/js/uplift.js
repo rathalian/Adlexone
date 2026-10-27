@@ -91,6 +91,23 @@
             load(panel, url);
         }
     };
+    document.querySelectorAll('details[data-minimise]').forEach((panel) => {
+        const key = 'inlay.min.' + panel.getAttribute('data-minimise');
+        try { if (localStorage.getItem(key) === '1') panel.open = false; } catch (e) { /* storage is off */ }
+        panel.addEventListener('toggle', () => {
+            try { localStorage.setItem(key, panel.open ? '0' : '1'); } catch (e) { /* storage is off */ }
+        });
+        const summary = panel.querySelector('summary');
+        if (!summary) return;
+        summary.addEventListener('click', (event) => {
+            const link = event.target.closest('a');
+            if (!link || !summary.contains(link)) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+            event.preventDefault();
+            if (link.hasAttribute('data-open-panel')) return;
+            window.location.assign(link.href);
+        });
+    });
     panels.forEach((panel) => {
         try { if (localStorage.getItem(stored(panel)) === '1') panel.open = true; } catch (e) { /* storage is off */ }
         panel.addEventListener('toggle', () => {

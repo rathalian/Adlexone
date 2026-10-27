@@ -272,7 +272,7 @@ html[data-mode="dark"] .sectionnav__link[aria-current="page"]{ color:color-mix(i
 .home{ display:flex; flex-direction:column; gap:24px; }
 .homehero{
     position:relative; overflow:hidden; isolation:isolate;
-    display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap;
+    display:block;
     padding:24px 26px; border-radius:var(--radius-l); color:#fff;
     background:color-mix(in srgb, var(--inlay, var(--brand)) 82%, #000);
     box-shadow:var(--shadow-1);
@@ -282,11 +282,44 @@ html[data-mode="dark"] .homehero{
     border:1px solid var(--border);
 }
 .homehero::before{ display:none; }
-.homehero__date{ margin:0 0 6px; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; opacity:.8; }
+.homehero__date, .homehero__dateline{ margin:0; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; opacity:.8; }
+.homehero__summary{ list-style:none; }
+.homehero__summary::-webkit-details-marker{ display:none; }
+.homehero__summary:focus-visible{ outline:2px solid #fff; outline-offset:3px; border-radius:8px; }
+.homehero[open] > .homehero__summary{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:6px; pointer-events:none;
+}
+.homehero[open] .homehero__brief{ display:none; }
+.homehero__switch{
+    pointer-events:auto; cursor:pointer; display:inline-flex; align-items:center;
+    padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.28); font-size:12px; font-weight:700;
+}
+.homehero__switch-show{ display:none; }
+.homehero:not([open]){ padding:8px 14px; }
+.homehero:not([open]) > .homehero__body{ display:none; }
+.homehero:not([open]) > .homehero__summary{
+    display:flex; align-items:center; gap:10px 14px; width:100%; cursor:pointer;
+}
+.homehero:not([open]) .homehero__dateline,
+.homehero:not([open]) .homehero__switch-hide{ display:none; }
+.homehero:not([open]) .homehero__switch-show{ display:inline; }
+.homehero__brief{
+    display:flex; flex-wrap:wrap; align-items:baseline; flex:1 1 auto; min-width:0;
+    font-size:14px; line-height:1.35;
+}
+.homehero__brief > * + *::before{ content:"·"; margin:0 8px; opacity:.65; }
+.homehero__hello{ font-family:var(--serif); font-size:17px; font-weight:600; letter-spacing:-.01em; }
+.homehero__nextline{
+    color:inherit; font-weight:600; text-decoration:none; min-width:0; max-width:20rem;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.homehero__nextline:hover{ text-decoration:underline; }
+.homehero__body{ display:flex; flex-wrap:wrap; align-items:stretch; gap:20px; flex:1 1 100%; min-width:0; }
 .homehero__title{ margin:0; font-family:var(--serif); font-size:clamp(28px, 3.4vw, 40px); line-height:1.1; font-weight:600; letter-spacing:-.015em; }
 .homehero__lead{ margin:10px 0 0; max-width:40rem; font-size:15px; line-height:1.5; opacity:.9; }
 .homehero__link{ color:inherit; font-weight:600; text-decoration:underline; text-underline-offset:3px; }
-.homehero{ align-items:stretch; }
 .homehero__copy{ flex:1 1 420px; min-width:0; align-self:flex-end; }
 .homehero__tiles{ list-style:none; margin:18px 0 0; padding:0; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; max-width:44rem; }
 .homehero__tile{
@@ -801,7 +834,13 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
     .home > .home__section--apps{ order:5; }
     .home .panel--activity{ order:6; }
 
-    .homehero{ padding:18px 16px; gap:12px; border-radius:var(--radius-m); }
+    .homehero{ padding:18px 16px; border-radius:var(--radius-m); }
+    .homehero[open] > .homehero__summary{ margin-bottom:12px; }
+    .homehero:not([open]){ padding:8px 12px; }
+    .homehero:not([open]) > .homehero__summary{ display:block; position:relative; }
+    .homehero:not([open]) .homehero__switch{ position:absolute; top:0; right:0; }
+    .homehero:not([open]) .homehero__hello{ flex-basis:100%; min-height:32px; padding-right:4.5rem; box-sizing:border-box; }
+    .homehero__body{ gap:12px; }
     .homehero__title{ font-size:26px; }
     .homehero__lead{ margin-top:8px; font-size:14px; }
     .homehero__tiles{ grid-template-columns:1fr 1fr; margin-top:14px; gap:8px; }

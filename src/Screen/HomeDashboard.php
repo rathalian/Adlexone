@@ -202,13 +202,51 @@ final class HomeDashboard
                 . '<span class="homehero__nextgo">Open the record' . Charts::icon('ic-arrow-right') . '</span></a>';
         }
 
-        return '<header class="homehero">'
+        $words = [
+            'overdue' => 'overdue',
+            'soon' => 'due this week',
+            'changed' => 'changed',
+            'quiet' => 'with no change',
+        ];
+        $facts = [];
+        if ($assigned === 0) {
+            $facts[] = '<span>Nothing assigned</span>';
+        } else {
+            $facts[] = '<a class="homehero__link" href="#assigned" data-open-panel="assigned">' . Html::e(self::plural($assigned, 'record') . ' assigned') . '</a>';
+            $noted = false;
+            foreach (array_keys(self::REASONS) as $key) {
+                $n = count($attention['groups'][$key] ?? []);
+                if ($n === 0) {
+                    continue;
+                }
+                $noted = true;
+                $facts[] = '<a class="homehero__link" href="#assigned" data-open-panel="assigned" data-panel-focus="?controller=' . self::ASSIGNED . '&focus=' . $key . '">'
+                    . Html::e($n . ' ' . $words[$key]) . '</a>';
+            }
+            if (!$noted) {
+                $facts[] = '<span>none need attention</span>';
+            }
+        }
+        $brief = '<span class="homehero__hello">' . Html::e($greeting . ($first !== '' ? ', ' . $first : '')) . '</span>'
+            . '<span class="homehero__when">' . Html::e(date('l j F')) . '</span>'
+            . implode('', $facts);
+        if ($pick !== null) {
+            $brief .= '<a class="homehero__nextline" href="' . Html::e((string) $pick['href']) . '">'
+                . Html::e(($kicker === 'Up next' ? 'Up next' : 'Continue') . ' · ' . (string) $pick['title']) . '</a>';
+        }
+
+        return '<details class="homehero" open data-minimise="home.welcome">'
+            . '<summary class="homehero__summary">'
+            . '<span class="homehero__dateline">' . Html::e(date('l j F')) . '</span>'
+            . '<span class="homehero__brief">' . $brief . '</span>'
+            . '<span class="homehero__switch"><span class="homehero__switch-hide">Minimise</span><span class="homehero__switch-show">Show</span></span>'
+            . '</summary>'
+            . '<div class="homehero__body">'
             . '<div class="homehero__copy">'
-            . '<p class="homehero__date">' . Html::e(date('l j F')) . '</p>'
             . '<h1 class="homehero__title">' . Html::e($greeting . ($first !== '' ? ', ' . $first : '')) . '</h1>'
             . '<p class="homehero__lead">' . $lead . '</p>' . $tiles . '</div>'
             . $card
-            . '</header>';
+            . '</div></details>';
     }
 
     /**
