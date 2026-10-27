@@ -26,9 +26,9 @@ A file rule runs when a file matters at that status. It does not run on every fi
 
 ## How to use
 
-The guide is shown from How to use. It is three short paragraphs.
+The guide is shown from How to use. Write it in the same shape as `publishingGuide()`.
 
-The first says what one record is, what the title of the record is, and who is named on the card. The second says what each status means. The third says what the person does, what the application does, and which outcome is posted.
+The first paragraph says what one record is, what the title of the record is, and who is named on the card. The next says what each status means. The last says what the person does, what the application does, and which outcome is posted. A notice that stays off the wall has its own short paragraph, as a decline does in Publishing.
 
 Leave the guide empty only on Blank. An empty guide hides the button.
 

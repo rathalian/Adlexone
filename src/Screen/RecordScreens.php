@@ -1028,18 +1028,23 @@ final class RecordScreens
     }
 
     /**
-     * @param array{type_id: int, ids: list<int>, fields: list<array{id: int, plain: string, type: string, values: list<string>}>} $loaded
-     * @param array<string, mixed> $config
-     * @return list<string>|null
-     */
-    /**
+     * Open statuses named on this screen, or the ones stored with the application.
+     * A screen with no list of its own uses the blueprint endings, so both Approved
+     * and Declined stay off the diary.
+     *
      * @param array{type_id: int} $loaded
      * @param array<string, mixed> $config
      * @return list<string>|null
      */
     private static function openSet(array $loaded, array $config): ?array
     {
-        return RecordQuery::openValues($config, WorkScreen::workStatusField($loaded['type_id']));
+        $status = WorkScreen::workStatusField((int) $loaded['type_id']);
+        if (RecordQuery::strings($config['open_statuses'] ?? []) !== []) {
+            return RecordQuery::openValues($config, $status);
+        }
+        $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
+
+        return WorkflowFields::openValues($slug, (int) $loaded['type_id'], $status);
     }
 
     /**

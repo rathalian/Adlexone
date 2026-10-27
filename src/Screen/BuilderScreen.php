@@ -56,10 +56,10 @@ final class BuilderScreen
         $hintRaw = (string) ($_POST['hint'] ?? '');
         $recordRaw = (string) ($_POST['record_type_name'] ?? '');
         $icon = (string) ($_POST['icon'] ?? 'ic-grid');
-        $blueprint = (string) ($_POST['blueprint'] ?? ApplicationBuilder::BLUEPRINT_MATTERS);
+        $blueprint = (string) ($_POST['blueprint'] ?? ApplicationBuilder::BLUEPRINT_PUBLISHING);
         $blueprints = ApplicationBuilder::blueprints();
         if (!isset($blueprints[$blueprint])) {
-            $blueprint = ApplicationBuilder::BLUEPRINT_MATTERS;
+            $blueprint = ApplicationBuilder::BLUEPRINT_PUBLISHING;
         }
         $guideRaw = array_key_exists('guide', $_POST)
             ? (string) $_POST['guide']

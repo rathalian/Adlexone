@@ -59,190 +59,6 @@ final class ApplicationBuilder
         };
 
         return [
-            self::BLUEPRINT_MATTERS => self::shape(
-                'Matters',
-                'Waiting on us, or waiting on them.',
-                'Matter',
-                'ic-briefcase',
-                'Kind',
-                'Stamps the closed date when a matter is done.',
-                [$status(['Waiting on us', 'Waiting on them', 'Done']), self::text('Client'), self::menu('Kind', ['Contract', 'Dispute', 'Advice', 'Property']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Closed on')],
-                [
-                    self::when('Note that a matter was opened', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Opened ITEM_TITLE.')]),
-                    self::when('Tell the owner a matter is waiting on us', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Waiting on us', [self::email('Waiting on us: ITEM_TITLE', 'ITEM_TITLE is waiting on us.')]),
-                    $close('Close a finished matter', 'Done', 'Closed on', 'Closed ITEM_TITLE.'),
-                ],
-                $work,
-                self::search('Waiting on us', 'Matters that are with us.', 'Waiting on us')
-            ),
-            self::BLUEPRINT_CONVEYANCING => self::shape(
-                'Conveyancing',
-                'A sale or a purchase, from instruction to completion.',
-                'Transaction',
-                'ic-home',
-                'Side',
-                'Stamps the completed date when a transaction completes.',
-                [$status(['Instructed', 'Searches', 'Enquiries', 'Exchange', 'Complete']), self::text('Client'), self::text('Place'), self::menu('Side', ['Sale', 'Purchase']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Completed on')],
-                [
-                    self::when('Note the instruction', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Instructed ITEM_TITLE.')]),
-                    self::when('Tell the owner enquiries have started', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Enquiries', [self::email('Enquiries: ITEM_TITLE', 'ITEM_TITLE is in enquiries.')]),
-                    $close('Complete the transaction', 'Complete', 'Completed on', 'Completed ITEM_TITLE.'),
-                ],
-                $work,
-                self::search('Enquiries', 'Transactions in enquiries.', 'Enquiries')
-            ),
-            self::BLUEPRINT_CLAIMS => self::shape(
-                'Claims',
-                'A claim from the first notification through to settlement.',
-                'Claim',
-                'ic-shield',
-                'Insurer',
-                'Stamps the settled date and writes the log when a claim is settled.',
-                [$status(['Notified', 'With the insurer', 'Waiting on them', 'Settled']), self::text('Client'), self::text('Insurer'), self::menu('Kind', ['Property', 'Motor', 'Liability', 'Travel']), self::text('Reference'), self::number('Reserve'), self::text('Next step'), self::note(), self::date('Settled on')],
-                [
-                    self::when('Note the notification', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Notified ITEM_TITLE.')]),
-                    self::when('Tell the owner the claim is with the insurer', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the insurer', [
-                        self::email('With the insurer: ITEM_TITLE', 'ITEM_TITLE is with the insurer.'),
-                        self::logLine('Sent ITEM_TITLE to the insurer.'),
-                    ]),
-                    $close('Settle the claim', 'Settled', 'Settled on', 'Settled ITEM_TITLE.'),
-                    self::when('Note a file was added', Rules::EVENT_ATTACHMENT, '', Rules::OP_ALWAYS, '', [self::logLine('A file was added to ITEM_TITLE.')]),
-                ],
-                $work,
-                self::search('With the insurer', 'Claims sent to the insurer.', 'With the insurer')
-            ),
-            self::BLUEPRINT_REPAIRS => self::shape(
-                'Repairs',
-                'A repair from the report through to completion.',
-                'Repair',
-                'ic-wrench',
-                'Trade',
-                'Emails the owner when a repair is on site.',
-                [$status(['Reported', 'Booked', 'On site', 'Done']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::date('Done on')],
-                [
-                    self::when('Note the report', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Reported ITEM_TITLE.')]),
-                    self::when('Tell the owner someone is on site', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'On site', [self::email('On site: ITEM_TITLE', 'ITEM_TITLE is on site.')]),
-                    $close('Finish the repair', 'Done', 'Done on', 'Finished ITEM_TITLE.'),
-                ],
-                array_merge($work, $intake),
-                self::search('On site', 'Repairs where someone is there now.', 'On site')
-            ),
-            self::BLUEPRINT_COMPLAINTS => self::shape(
-                'Complaints',
-                'A complaint from opening through to closure.',
-                'Complaint',
-                'ic-complaint',
-                'Channel',
-                'Posts a notice when a complaint is opened, and stamps the closed date.',
-                [$status(['Opened', 'With us', 'Their response', 'Closed']), self::text('Client'), self::menu('Channel', ['Letter', 'Phone', 'Email', 'Web']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Response due'), self::date('Closed on')],
-                [
-                    self::when('Open the complaint', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
-                        self::logLine('Opened ITEM_TITLE.'),
-                        self::email('Opened: ITEM_TITLE', 'ITEM_TITLE has been opened.'),
-                        self::notice('Opened: ITEM_TITLE', 'ITEM_TITLE has been opened.'),
-                    ]),
-                    self::when('Tell the owner it is with us', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With us', [self::email('With us: ITEM_TITLE', 'ITEM_TITLE is with us.')]),
-                    $close('Close the complaint', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
-                ],
-                array_merge($wall, $diary, $intake),
-                self::search('With us', 'Complaints that are with us.', 'With us')
-            ),
-            self::BLUEPRINT_COMMITTEE => self::shape(
-                'Committee',
-                'A paper from receipt through to the decision.',
-                'Paper',
-                'ic-landmark',
-                'Amount',
-                'Stamps the decided date and posts a notice when a paper is decided.',
-                [$status(['In', 'Reading', 'Asking', 'Decided']), self::text('Applicant'), self::menu('Kind', ['Grant', 'Credit', 'Award']), self::number('Amount'), self::text('Next step'), self::note(), self::date('Decided on')],
-                [
-                    self::when('Note the paper arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Received ITEM_TITLE.')]),
-                    self::when('Tell the owner more is being asked', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Asking', [
-                        self::email('Asking: ITEM_TITLE', 'ITEM_TITLE needs a further question.'),
-                        self::logLine('Asking for more on ITEM_TITLE.'),
-                    ]),
-                    self::when('Record the decision', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Decided', [
-                        self::stamp('Decided on'),
-                        self::logLine('Decided ITEM_TITLE.'),
-                        self::notice('Decided: ITEM_TITLE', 'ITEM_TITLE has been decided.'),
-                        self::setField('Next step', ''),
-                    ]),
-                ],
-                $wall,
-                self::search('Asking', 'Papers waiting on a further question.', 'Asking')
-            ),
-            self::BLUEPRINT_AUDIT => self::shape(
-                'Audit',
-                'A finding from when it is raised until it is closed.',
-                'Finding',
-                'ic-audit',
-                'Rating',
-                'Emails the owner when a finding is accepted.',
-                [$status(['Raised', 'Accepted', 'In progress', 'Closed']), self::text('Place'), self::menu('Rating', ['High', 'Medium', 'Low']), self::text('Next step'), self::note(), self::date('Due'), self::date('Closed on')],
-                [
-                    self::when('Note the finding', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Raised ITEM_TITLE.')]),
-                    self::when('Tell the owner the finding was accepted', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Accepted', [self::email('Accepted: ITEM_TITLE', 'ITEM_TITLE has been accepted.')]),
-                    $close('Close the finding', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
-                ],
-                array_merge($work, $diary),
-                self::search('In progress', 'Findings being worked on.', 'In progress')
-            ),
-            self::BLUEPRINT_INCIDENTS => self::shape(
-                'Incidents',
-                'An incident from the report through to closure.',
-                'Incident',
-                'ic-alert',
-                'Kind',
-                'Posts a notice when an incident is reported.',
-                [$status(['Reported', 'Investigating', 'Actions', 'Closed']), self::text('Place'), self::menu('Kind', ['Injury', 'Near miss', 'Damage', 'Environment']), self::text('Reported by'), self::text('Next step'), self::note(), self::date('Closed on')],
-                [
-                    self::when('Report the incident', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
-                        self::email('Reported: ITEM_TITLE', 'ITEM_TITLE has been reported.'),
-                        self::logLine('Reported ITEM_TITLE.'),
-                        self::notice('Reported: ITEM_TITLE', 'ITEM_TITLE has been reported.'),
-                    ]),
-                    self::when('Note the investigation', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Investigating', [self::logLine('Investigation opened on ITEM_TITLE.')]),
-                    self::when('Note a file was added', Rules::EVENT_ATTACHMENT, '', Rules::OP_ALWAYS, '', [self::logLine('A file was added to ITEM_TITLE.')]),
-                    $close('Close the incident', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
-                ],
-                array_merge($wall, $intake),
-                self::search('Investigating', 'Incidents under investigation.', 'Investigating')
-            ),
-            self::BLUEPRINT_CANDIDATES => self::shape(
-                'Candidates',
-                'A candidate from the longlist through to placement.',
-                'Candidate',
-                'ic-user',
-                'Role',
-                'Emails the owner when a candidate reaches the shortlist.',
-                [$status(['Longlist', 'Shortlist', 'Met', 'Offer', 'Placed']), self::text('Client'), self::text('Role'), self::text('Next step'), self::note(), self::date('Placed on')],
-                [
-                    self::when('Note the candidate', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Added ITEM_TITLE to the longlist.')]),
-                    self::when('Tell the owner they are on the shortlist', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Shortlist', [self::email('Shortlist: ITEM_TITLE', 'ITEM_TITLE is on the shortlist.')]),
-                    $close('Place the candidate', 'Placed', 'Placed on', 'Placed ITEM_TITLE.'),
-                ],
-                $work,
-                self::search('Shortlist', 'Candidates on the shortlist.', 'Shortlist')
-            ),
-            self::BLUEPRINT_CONTRACTS => self::shape(
-                'Contracts',
-                'A contract from receipt through to signature.',
-                'Contract',
-                'ic-contract',
-                'Kind',
-                'Hands a contract back to the person who opened it, and stamps the signed date.',
-                [$status(['In', 'Review', 'With the business', 'Signed']), self::text('Client'), self::menu('Kind', ['Customer', 'Supplier', 'Employment', 'NDA']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Signed on')],
-                [
-                    self::when('Note the contract arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [self::logLine('Received ITEM_TITLE for review.')]),
-                    self::when('Hand it back to the person who opened it', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the business', [
-                        self::setOwner(Rules::OWNER_CREATOR),
-                        self::email('With the business: ITEM_TITLE', 'ITEM_TITLE is back with the person who opened it.', Rules::TO_CREATOR),
-                    ]),
-                    $close('Sign the contract', 'Signed', 'Signed on', 'Signed ITEM_TITLE.'),
-                ],
-                $work,
-                self::search('In review', 'Contracts being read.', 'Review')
-            ),
             self::BLUEPRINT_PUBLISHING => self::shape(
                 'Publishing',
                 'A manuscript from the day it arrives until it is approved or declined.',
@@ -301,6 +117,352 @@ final class ApplicationBuilder
                 self::search('With the writer', 'Manuscripts waiting on a rewrite.', 'With the writer'),
                 ['Approved', 'Declined'],
                 self::publishingGuide()
+            ),
+            self::BLUEPRINT_MATTERS => self::shape(
+                'Client matters',
+                'A matter from the instruction until it is done.',
+                'Matter',
+                'ic-briefcase',
+                'Opened on',
+                'Stamps the closed date when a matter is done.',
+                [$status(['Waiting on us', 'Waiting on them', 'Done']), self::text('Client'), self::menu('Kind', ['Contract', 'Dispute', 'Advice', 'Property']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Opened on'), self::date('Closed on')],
+                [
+                    self::when('Note that a matter was opened', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Opened on'),
+                        self::logLine('Opened ITEM_TITLE.'),
+                    ]),
+                    self::when('Tell the owner a matter is waiting on us', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Waiting on us', [
+                        self::email('Waiting on us: ITEM_TITLE', 'ITEM_TITLE is waiting on us.'),
+                        self::logLine('ITEM_TITLE is waiting on us.'),
+                        self::setField('Next step', 'Take the next action.'),
+                    ]),
+                    self::when('Note that a matter is waiting on them', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Waiting on them', [
+                        self::email('Waiting on them: ITEM_TITLE', 'ITEM_TITLE is waiting on them.'),
+                        self::logLine('ITEM_TITLE is waiting on them.'),
+                        self::setField('Next step', 'Waiting on their reply.'),
+                    ]),
+                    $close('Close a finished matter', 'Done', 'Closed on', 'Closed ITEM_TITLE.'),
+                ],
+                array_merge($work, $diary),
+                self::search('Waiting on us', 'Matters that are waiting on us.', 'Waiting on us'),
+                ['Done'],
+                self::mattersGuide()
+            ),
+            self::BLUEPRINT_CONVEYANCING => self::shape(
+                'Conveyancing',
+                'A sale or a purchase, from instruction to completion.',
+                'Conveyance',
+                'ic-home',
+                'Instructed on',
+                'Stamps the completed date when a conveyance is complete.',
+                [$status(['Instructed', 'Searches', 'Enquiries', 'Exchange', 'Complete']), self::text('Client'), self::text('Place'), self::menu('Side', ['Sale', 'Purchase']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Instructed on'), self::date('Completed on')],
+                [
+                    self::when('Note the instruction', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Instructed on'),
+                        self::logLine('Instructed ITEM_TITLE.'),
+                    ]),
+                    self::when('Start the searches', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Searches', [
+                        self::logLine('Searches ordered on ITEM_TITLE.'),
+                        self::setField('Next step', 'Follow up the searches.'),
+                    ]),
+                    self::when('Tell the owner enquiries have started', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Enquiries', [
+                        self::email('Enquiries: ITEM_TITLE', 'ITEM_TITLE is in enquiries.'),
+                        self::logLine('Enquiries opened on ITEM_TITLE.'),
+                        self::setField('Next step', 'Reply on the enquiries.'),
+                    ]),
+                    self::when('Note that exchange is ready', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Exchange', [
+                        self::logLine('ITEM_TITLE is ready to exchange.'),
+                        self::setField('Next step', 'Book exchange.'),
+                    ]),
+                    $close('Complete the conveyance', 'Complete', 'Completed on', 'Completed ITEM_TITLE.'),
+                ],
+                array_merge($work, $diary),
+                self::search('Enquiries', 'Conveyances in enquiries.', 'Enquiries'),
+                ['Complete'],
+                self::conveyancingGuide()
+            ),
+            self::BLUEPRINT_CLAIMS => self::shape(
+                'Insurance claims',
+                'An insurance claim from the first notification until it is settled or withdrawn.',
+                'Claim',
+                'ic-shield',
+                'Notified on',
+                'Posts a notice and stamps the settled date when a claim is settled.',
+                [$status(['Notified', 'With the insurer', 'Waiting on them', 'Settled', 'Withdrawn']), self::text('Client'), self::text('Insurer'), self::menu('Kind', ['Property', 'Motor', 'Liability', 'Travel']), self::text('Reference'), self::number('Reserve'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Notified on'), self::date('Settled on'), self::date('Withdrawn on')],
+                [
+                    self::when('Note the notification', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Notified on'),
+                        self::logLine('Notified ITEM_TITLE.'),
+                    ]),
+                    self::when('Tell the owner the claim is with the insurer', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the insurer', [
+                        self::email('With the insurer: ITEM_TITLE', 'ITEM_TITLE is with the insurer.'),
+                        self::logLine('Sent ITEM_TITLE to the insurer.'),
+                        self::setField('Next step', 'With the insurer.'),
+                    ]),
+                    self::when('Note a file while it is with the insurer', Rules::EVENT_ATTACHMENT, 'Status', Rules::OP_EQ, 'With the insurer', [
+                        self::email('A file on ITEM_TITLE', 'A file was added to ITEM_TITLE while it is with the insurer.'),
+                        self::logLine('A file was added to ITEM_TITLE.'),
+                    ]),
+                    self::when('Note that a claim is waiting on them', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Waiting on them', [
+                        self::email('Waiting on them: ITEM_TITLE', 'ITEM_TITLE is waiting on them.'),
+                        self::logLine('ITEM_TITLE is waiting on them.'),
+                        self::setField('Next step', 'Waiting on them.'),
+                    ]),
+                    self::when('Settle the claim', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Settled', [
+                        self::stamp('Settled on'),
+                        self::logLine('Settled ITEM_TITLE.'),
+                        self::notice('Settled: ITEM_TITLE', 'ITEM_TITLE has been settled.'),
+                        self::email('Settled: ITEM_TITLE', 'ITEM_TITLE has been settled.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    $close('Withdraw the claim', 'Withdrawn', 'Withdrawn on', 'Withdrew ITEM_TITLE.'),
+                ],
+                array_merge($wall, $diary),
+                self::search('With the insurer', 'Claims with the insurer.', 'With the insurer'),
+                ['Settled', 'Withdrawn'],
+                self::claimsGuide()
+            ),
+            self::BLUEPRINT_REPAIRS => self::shape(
+                'Repairs',
+                'A repair from the report until it is done.',
+                'Repair',
+                'ic-wrench',
+                'Booked for',
+                'Emails the owner when a repair is on site.',
+                [$status(['Reported', 'Booked', 'On site', 'Done']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::date('Booked for'), self::date('Reported on'), self::date('Done on')],
+                [
+                    self::when('Note the report', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Reported on'),
+                        self::logLine('Reported ITEM_TITLE.'),
+                    ]),
+                    self::when('Note the booking', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Booked', [
+                        self::logLine('Booked ITEM_TITLE.'),
+                        self::setField('Next step', 'Attend on the booked day.'),
+                    ]),
+                    self::when('Tell the owner someone is on site', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'On site', [
+                        self::email('On site: ITEM_TITLE', 'ITEM_TITLE is on site.'),
+                        self::logLine('ITEM_TITLE is on site.'),
+                        self::setField('Next step', 'On site.'),
+                    ]),
+                    $close('Finish the repair', 'Done', 'Done on', 'Finished ITEM_TITLE.'),
+                ],
+                array_merge($work, $diary, $intake),
+                self::search('On site', 'Repairs where someone is there now.', 'On site'),
+                ['Done'],
+                self::repairsGuide()
+            ),
+            self::BLUEPRINT_COMPLAINTS => self::shape(
+                'Complaints',
+                'A complaint from the day it is opened until it is upheld or not upheld.',
+                'Complaint',
+                'ic-complaint',
+                'Upheld on',
+                'Posts a notice and stamps the date when a complaint is upheld.',
+                [$status(['Opened', 'With us', 'With them', 'Upheld', 'Not upheld']), self::text('Client'), self::menu('Channel', ['Letter', 'Phone', 'Email', 'Web']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Response due'), self::date('Opened on'), self::date('Upheld on'), self::date('Not upheld on')],
+                [
+                    self::when('Open the complaint', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Opened on'),
+                        self::logLine('Opened ITEM_TITLE.'),
+                    ]),
+                    self::when('Tell the owner it is with us', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With us', [
+                        self::email('With us: ITEM_TITLE', 'ITEM_TITLE is with us.'),
+                        self::logLine('ITEM_TITLE is with us.'),
+                        self::setField('Next step', 'Deal with the complaint.'),
+                    ]),
+                    self::when('Note that a complaint is with them', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With them', [
+                        self::email('With them: ITEM_TITLE', 'ITEM_TITLE is with them.'),
+                        self::logLine('ITEM_TITLE is with them.'),
+                        self::setField('Next step', 'Waiting on their reply.'),
+                    ]),
+                    self::when('Uphold the complaint', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Upheld', [
+                        self::stamp('Upheld on'),
+                        self::logLine('Upheld ITEM_TITLE.'),
+                        self::notice('Upheld: ITEM_TITLE', 'ITEM_TITLE has been upheld.'),
+                        self::email('Upheld: ITEM_TITLE', 'ITEM_TITLE has been upheld.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    $close('Do not uphold the complaint', 'Not upheld', 'Not upheld on', 'Did not uphold ITEM_TITLE.'),
+                ],
+                array_merge($wall, $diary, $intake),
+                self::search('With us', 'Complaints that are with us.', 'With us'),
+                ['Upheld', 'Not upheld'],
+                self::complaintsGuide()
+            ),
+            self::BLUEPRINT_COMMITTEE => self::shape(
+                'Committee papers',
+                'A paper from the day it arrives until it is awarded or refused.',
+                'Paper',
+                'ic-landmark',
+                'Sitting due',
+                'Posts a notice and stamps the awarded date when a paper is awarded.',
+                [$status(['Received', 'Reading', 'With the applicant', 'Awarded', 'Refused']), self::text('Applicant'), self::menu('Kind', ['Grant', 'Credit', 'Award']), self::number('Amount'), self::text('Next step'), self::note(), self::date('Sitting due'), self::date('Received on'), self::date('Awarded on'), self::date('Refused on')],
+                [
+                    self::when('Note the paper arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Received on'),
+                        self::logLine('Received ITEM_TITLE.'),
+                    ]),
+                    self::when('Start the reading', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Reading', [
+                        self::logLine('Reading ITEM_TITLE.'),
+                        self::setField('Next step', 'Finish the reading.'),
+                    ]),
+                    self::when('Ask the applicant', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the applicant', [
+                        self::email('With the applicant: ITEM_TITLE', 'ITEM_TITLE is with the applicant.'),
+                        self::logLine('Asked the applicant for more on ITEM_TITLE.'),
+                        self::setField('Next step', 'Waiting on the applicant.'),
+                    ]),
+                    self::when('Award the paper', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Awarded', [
+                        self::stamp('Awarded on'),
+                        self::logLine('Awarded ITEM_TITLE.'),
+                        self::notice('Awarded: ITEM_TITLE', 'ITEM_TITLE has been awarded.'),
+                        self::email('Awarded: ITEM_TITLE', 'ITEM_TITLE has been awarded.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    $close('Refuse the paper', 'Refused', 'Refused on', 'Refused ITEM_TITLE.'),
+                ],
+                array_merge($wall, $diary),
+                self::search('With the applicant', 'Papers waiting on the applicant.', 'With the applicant'),
+                ['Awarded', 'Refused'],
+                self::committeeGuide()
+            ),
+            self::BLUEPRINT_AUDIT => self::shape(
+                'Audit findings',
+                'A finding from the day it is raised until it is closed.',
+                'Finding',
+                'ic-audit',
+                'Raised on',
+                'Emails the owner when a finding is accepted.',
+                [$status(['Raised', 'Accepted', 'In progress', 'Closed']), self::text('Place'), self::menu('Rating', ['High', 'Medium', 'Low']), self::text('Next step'), self::note(), self::date('Due'), self::date('Raised on'), self::date('Closed on')],
+                [
+                    self::when('Note the finding', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Raised on'),
+                        self::logLine('Raised ITEM_TITLE.'),
+                    ]),
+                    self::when('Tell the owner the finding was accepted', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Accepted', [
+                        self::email('Accepted: ITEM_TITLE', 'ITEM_TITLE has been accepted.'),
+                        self::logLine('Accepted ITEM_TITLE.'),
+                        self::setField('Next step', 'Start the work.'),
+                    ]),
+                    self::when('Note that the work is underway', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'In progress', [
+                        self::logLine('Work is underway on ITEM_TITLE.'),
+                        self::setField('Next step', 'Finish the work.'),
+                    ]),
+                    $close('Close the finding', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
+                ],
+                array_merge($work, $diary),
+                self::search('In progress', 'Findings being worked on.', 'In progress'),
+                ['Closed'],
+                self::auditGuide()
+            ),
+            self::BLUEPRINT_INCIDENTS => self::shape(
+                'Incidents',
+                'An incident from the report until it is closed.',
+                'Incident',
+                'ic-alert',
+                'Action due',
+                'Posts a notice when an incident is reported.',
+                [$status(['Reported', 'Investigating', 'Actions underway', 'Closed']), self::text('Place'), self::menu('Kind', ['Injury', 'Near miss', 'Damage', 'Environment']), self::text('Reported by'), self::text('Next step'), self::note(), self::date('Action due'), self::date('Reported on'), self::date('Closed on')],
+                [
+                    self::when('Report the incident', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Reported on'),
+                        self::email('Reported: ITEM_TITLE', 'ITEM_TITLE has been reported.'),
+                        self::logLine('Reported ITEM_TITLE.'),
+                        self::notice('Reported: ITEM_TITLE', 'ITEM_TITLE has been reported.'),
+                    ]),
+                    self::when('Note the investigation', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Investigating', [
+                        self::logLine('Investigation opened on ITEM_TITLE.'),
+                        self::setField('Next step', 'Speak to the people who were there.'),
+                    ]),
+                    self::when('Note a file while it is being investigated', Rules::EVENT_ATTACHMENT, 'Status', Rules::OP_EQ, 'Investigating', [
+                        self::logLine('A file was added to ITEM_TITLE.'),
+                    ]),
+                    self::when('Note that the actions are underway', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Actions underway', [
+                        self::logLine('Actions underway on ITEM_TITLE.'),
+                        self::setField('Next step', 'Finish the actions.'),
+                    ]),
+                    $close('Close the incident', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
+                ],
+                array_merge($wall, $diary, $intake),
+                self::search('Investigating', 'Incidents under investigation.', 'Investigating'),
+                ['Closed'],
+                self::incidentsGuide()
+            ),
+            self::BLUEPRINT_CANDIDATES => self::shape(
+                'Recruitment',
+                'A candidate from the first approach until they are placed or withdrawn.',
+                'Candidate',
+                'ic-user',
+                'Listed on',
+                'Posts a notice and stamps the placed date when a candidate is placed.',
+                [$status(['Listed', 'Shortlist', 'Interviewed', 'Offer', 'Placed', 'Withdrawn']), self::text('Client'), self::text('Role'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Listed on'), self::date('Placed on'), self::date('Withdrawn on')],
+                [
+                    self::when('Note the candidate', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Listed on'),
+                        self::logLine('Added ITEM_TITLE.'),
+                    ]),
+                    self::when('Tell the owner they are on the shortlist', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Shortlist', [
+                        self::email('Shortlist: ITEM_TITLE', 'ITEM_TITLE is on the shortlist.'),
+                        self::logLine('ITEM_TITLE is on the shortlist.'),
+                        self::setField('Next step', 'Arrange the meeting.'),
+                    ]),
+                    self::when('Note the interview', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Interviewed', [
+                        self::logLine('Interviewed ITEM_TITLE.'),
+                        self::setField('Next step', 'Write up the meeting.'),
+                    ]),
+                    self::when('Note the offer', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Offer', [
+                        self::email('Offer: ITEM_TITLE', 'An offer is out for ITEM_TITLE.'),
+                        self::logLine('An offer is out for ITEM_TITLE.'),
+                        self::setField('Next step', 'Waiting on the offer.'),
+                    ]),
+                    self::when('Place the candidate', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Placed', [
+                        self::stamp('Placed on'),
+                        self::logLine('Placed ITEM_TITLE.'),
+                        self::notice('Placed: ITEM_TITLE', 'ITEM_TITLE has been placed.'),
+                        self::email('Placed: ITEM_TITLE', 'ITEM_TITLE has been placed.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    $close('Withdraw the candidate', 'Withdrawn', 'Withdrawn on', 'Withdrew ITEM_TITLE.'),
+                ],
+                array_merge($wall, $diary),
+                self::search('Shortlist', 'Candidates on the shortlist.', 'Shortlist'),
+                ['Placed', 'Withdrawn'],
+                self::recruitmentGuide()
+            ),
+            self::BLUEPRINT_CONTRACTS => self::shape(
+                'Contracts',
+                'A contract from the day it arrives until it is signed or declined.',
+                'Contract',
+                'ic-contract',
+                'Received on',
+                'Hands a contract back to the person who opened it, and posts a notice when it is signed.',
+                [$status(['Received', 'In review', 'With the business', 'Signed', 'Declined']), self::text('Client'), self::menu('Kind', ['Customer', 'Supplier', 'Employment', 'NDA']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Received on'), self::date('Signed on'), self::date('Declined on')],
+                [
+                    self::when('Note the contract arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Received on'),
+                        self::logLine('Received ITEM_TITLE.'),
+                    ]),
+                    self::when('Start the review', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'In review', [
+                        self::logLine('Reviewing ITEM_TITLE.'),
+                        self::setField('Next step', 'Read it.'),
+                    ]),
+                    self::when('Hand it back to the person who opened it', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the business', [
+                        self::setOwner(Rules::OWNER_CREATOR),
+                        self::email('With the business: ITEM_TITLE', 'ITEM_TITLE is back with the person who opened it.', Rules::TO_CREATOR),
+                        self::logLine('Handed ITEM_TITLE back to the person who opened it.'),
+                        self::setField('Next step', 'Back with the person who opened it.'),
+                    ]),
+                    self::when('Sign the contract', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Signed', [
+                        self::stamp('Signed on'),
+                        self::logLine('Signed ITEM_TITLE.'),
+                        self::notice('Signed: ITEM_TITLE', 'ITEM_TITLE has been signed.'),
+                        self::email('Signed: ITEM_TITLE', 'ITEM_TITLE has been signed.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    $close('Decline the contract', 'Declined', 'Declined on', 'Declined ITEM_TITLE.'),
+                ],
+                array_merge($wall, $diary),
+                self::search('In review', 'Contracts being read.', 'In review'),
+                ['Signed', 'Declined'],
+                self::contractsGuide()
             ),
             self::BLUEPRINT_BLANK => self::shape(
                 'Blank',
@@ -400,6 +562,7 @@ final class ApplicationBuilder
         $statusId = 0;
         $stepId = 0;
         $dueId = 0;
+        $dueFallback = 0;
         $openStatuses = [];
         $closed = array_values(array_filter(array_map('strval', $blueprints[$blueprint]['closed'] ?? [])));
         foreach ($fieldDefs as $field) {
@@ -421,7 +584,16 @@ final class ApplicationBuilder
                 $stepId = $fieldId;
             } elseif ($dueId === 0 && str_contains($plain, 'due')) {
                 $dueId = $fieldId;
+            } elseif (
+                $dueFallback === 0
+                && (string) ($field['type'] ?? '') === FieldTypes::DATE
+                && !str_ends_with($plain, ' on')
+            ) {
+                $dueFallback = $fieldId;
             }
+        }
+        if ($dueId === 0) {
+            $dueId = $dueFallback;
         }
         $applicationSettings = WorkflowFields::store([
             'default_item_type_id' => (string) $itemTypeId,
@@ -662,6 +834,7 @@ final class ApplicationBuilder
                 self::dropSlug($slug);
             }
         }
+        self::deleteUnlinkedFields();
         foreach (self::showcase() as $slug => $spec) {
             if (self::slugExists($slug)) {
                 continue;
@@ -718,50 +891,54 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_MATTERS,
                 'sort' => 10,
                 'cards' => [
-                    ['title' => 'Reid lease', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Reid', 'Kind' => 'Contract', 'Reference' => 'R-1044', 'Next step' => 'Follow up the draft', 'Note' => 'The break clause is to come out.']],
-                    ['title' => 'Nguyen dispute', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Nguyen', 'Kind' => 'Dispute', 'Reference' => 'N-220', 'Next step' => 'Contact their solicitor']],
-                    ['title' => 'Campbell advice', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Campbell', 'Kind' => 'Advice', 'Reference' => 'C-18', 'Next step' => 'Call on Thursday']],
-                    ['title' => 'Walsh licence', 'fields' => ['Status' => 'Done', 'Client' => 'Walsh', 'Kind' => 'Property', 'Reference' => 'W-7', 'Next step' => 'File the copy', 'Closed on' => '02-10-2026']],
+                    ['title' => 'Reid lease', 'fields' => ['Status' => 'Waiting on us', 'Client' => 'Reid', 'Kind' => 'Contract', 'Reference' => 'R-1044', 'Next step' => 'Take the next action.', 'Note' => 'The break clause is to come out.', 'Opened on' => '02-09-2026']],
+                    ['title' => 'Reid advice', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Reid', 'Kind' => 'Advice', 'Reference' => 'R-1102', 'Next step' => 'Waiting on their reply.', 'Note' => 'Asked for the lease note.', 'Reply due' => '12-11-2026', 'Opened on' => '20-09-2026']],
+                    ['title' => 'Nguyen dispute', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Nguyen', 'Kind' => 'Dispute', 'Reference' => 'N-220', 'Next step' => 'Waiting on their reply.', 'Reply due' => '06-11-2026', 'Opened on' => '14-08-2026']],
+                    ['title' => 'Walsh licence', 'fields' => ['Status' => 'Done', 'Client' => 'Walsh', 'Kind' => 'Property', 'Reference' => 'W-7', 'Note' => 'The file is complete.', 'Opened on' => '01-06-2026', 'Closed on' => '02-10-2026']],
                 ],
             ],
             'conveyancing' => [
                 'blueprint' => self::BLUEPRINT_CONVEYANCING,
                 'sort' => 20,
                 'cards' => [
-                    ['title' => 'Barton Street sale', 'fields' => ['Status' => 'Enquiries', 'Client' => 'Reid', 'Place' => '14 Barton Street', 'Side' => 'Sale', 'Reference' => 'C-441', 'Next step' => 'Reply on the boundary']],
-                    ['title' => 'Nguyen purchase', 'fields' => ['Status' => 'Searches', 'Client' => 'Nguyen', 'Place' => 'Kingston', 'Side' => 'Purchase', 'Reference' => 'C-442', 'Next step' => 'Follow up the local search']],
-                    ['title' => 'Campbell unit', 'fields' => ['Status' => 'Instructed', 'Client' => 'Campbell', 'Place' => '8 Civic', 'Side' => 'Purchase', 'Reference' => 'C-450', 'Next step' => 'Take instructions']],
-                    ['title' => 'Walsh leasehold', 'fields' => ['Status' => 'Exchange', 'Client' => 'Walsh', 'Place' => '2 Braddon', 'Side' => 'Sale', 'Reference' => 'C-438', 'Next step' => 'Book exchange']],
+                    ['title' => 'Barton Street sale', 'fields' => ['Status' => 'Enquiries', 'Client' => 'Reid', 'Place' => '14 Barton Street', 'Side' => 'Sale', 'Reference' => 'C-441', 'Next step' => 'Reply on the enquiries.', 'Note' => 'The boundary is the open point.', 'Reply due' => '14-11-2026', 'Instructed on' => '04-08-2026']],
+                    ['title' => 'Reid purchase', 'fields' => ['Status' => 'Searches', 'Client' => 'Reid', 'Place' => 'Kingston', 'Side' => 'Purchase', 'Reference' => 'C-460', 'Next step' => 'Follow up the searches.', 'Instructed on' => '01-10-2026']],
+                    ['title' => 'Campbell unit', 'fields' => ['Status' => 'Instructed', 'Client' => 'Campbell', 'Place' => '8 Civic', 'Side' => 'Purchase', 'Reference' => 'C-450', 'Note' => 'Instructions are still to come.', 'Instructed on' => '20-10-2026']],
+                    ['title' => 'Walsh leasehold', 'fields' => ['Status' => 'Complete', 'Client' => 'Walsh', 'Place' => '2 Braddon', 'Side' => 'Sale', 'Reference' => 'C-438', 'Note' => 'Exchange and completion are done.', 'Instructed on' => '02-06-2026', 'Completed on' => '18-09-2026']],
                 ],
             ],
             'claims' => [
                 'blueprint' => self::BLUEPRINT_CLAIMS,
                 'sort' => 30,
                 'cards' => [
-                    ['title' => 'Reid roof', 'fields' => ['Status' => 'With the insurer', 'Client' => 'Reid', 'Insurer' => 'QBE', 'Kind' => 'Property', 'Reference' => 'CL-19', 'Reserve' => '18000', 'Next step' => 'Send the photos']],
-                    ['title' => 'Nguyen motor', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Nguyen', 'Insurer' => 'Allianz', 'Kind' => 'Motor', 'Reference' => 'CL-22', 'Reserve' => '6400', 'Next step' => 'Waiting on the engineer\'s report']],
-                    ['title' => 'Civic stock', 'fields' => ['Status' => 'Notified', 'Client' => 'Campbell', 'Insurer' => 'QBE', 'Kind' => 'Liability', 'Reference' => 'CL-30', 'Reserve' => '25000', 'Next step' => 'Open the file']],
-                    ['title' => 'Walsh flood', 'fields' => ['Status' => 'Settled', 'Client' => 'Walsh', 'Insurer' => 'QBE', 'Kind' => 'Property', 'Reference' => 'CL-11', 'Reserve' => '9100', 'Next step' => 'File the settlement', 'Settled on' => '28-09-2026']],
+                    ['title' => 'Reid roof', 'fields' => ['Status' => 'With the insurer', 'Client' => 'Reid', 'Insurer' => 'QBE', 'Kind' => 'Property', 'Reference' => 'CL-19', 'Reserve' => '18000', 'Next step' => 'With the insurer.', 'Note' => 'The photos are still to go.', 'Reply due' => '20-11-2026', 'Notified on' => '12-09-2026']],
+                    ['title' => 'Reid motor', 'fields' => ['Status' => 'Waiting on them', 'Client' => 'Reid', 'Insurer' => 'Allianz', 'Kind' => 'Motor', 'Reference' => 'CL-31', 'Reserve' => '4200', 'Next step' => 'Waiting on them.', 'Reply due' => '05-11-2026', 'Notified on' => '02-08-2026']],
+                    ['title' => 'Civic stock', 'fields' => ['Status' => 'Notified', 'Client' => 'Campbell', 'Insurer' => 'QBE', 'Kind' => 'Liability', 'Reference' => 'CL-30', 'Reserve' => '25000', 'Note' => 'The file is just opened.', 'Notified on' => '20-10-2026']],
+                    ['title' => 'Walsh flood', 'fields' => ['Status' => 'Settled', 'Client' => 'Walsh', 'Insurer' => 'QBE', 'Kind' => 'Property', 'Reference' => 'CL-11', 'Reserve' => '9100', 'Note' => 'The settlement is on the file.', 'Notified on' => '01-07-2026', 'Settled on' => '28-09-2026']],
+                ],
+                'notice' => [
+                    'subject' => 'Walsh flood',
+                    'message' => 'Walsh flood has been settled.',
                 ],
             ],
             'repairs' => [
                 'blueprint' => self::BLUEPRINT_REPAIRS,
                 'sort' => 40,
                 'cards' => [
-                    ['title' => 'Boiler, flat 4', 'fields' => ['Status' => 'On site', 'Place' => 'Flat 4', 'Trade' => 'Plumbing', 'Reported by' => 'Porter', 'Next step' => 'Keys from the porter', 'Urgent' => 'Yes']],
-                    ['title' => 'West stair light', 'fields' => ['Status' => 'Booked', 'Place' => 'West stair', 'Trade' => 'Electrical', 'Reported by' => 'Office', 'Next step' => 'Thursday morning']],
-                    ['title' => 'Gate latch', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Trade' => 'Joinery', 'Reported by' => 'Reid', 'Next step' => 'Visit the site']],
-                    ['title' => 'Roof, block C', 'fields' => ['Status' => 'Done', 'Place' => 'Block C', 'Trade' => 'Roof', 'Reported by' => 'Estate', 'Next step' => 'File the invoice', 'Done on' => '11-10-2026']],
+                    ['title' => 'Boiler, flat 4', 'fields' => ['Status' => 'On site', 'Place' => 'Flat 4', 'Trade' => 'Plumbing', 'Reported by' => 'Porter', 'Next step' => 'On site.', 'Urgent' => 'Yes', 'Booked for' => '27-10-2026', 'Reported on' => '22-10-2026']],
+                    ['title' => 'Tap, flat 4', 'fields' => ['Status' => 'Booked', 'Place' => 'Flat 4', 'Trade' => 'Plumbing', 'Reported by' => 'Porter', 'Next step' => 'Attend on the booked day.', 'Booked for' => '30-10-2026', 'Reported on' => '25-10-2026']],
+                    ['title' => 'Gate latch', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Trade' => 'Joinery', 'Reported by' => 'Reid', 'Note' => 'The latch does not catch.', 'Reported on' => '26-10-2026']],
+                    ['title' => 'Roof, block C', 'fields' => ['Status' => 'Done', 'Place' => 'Block C', 'Trade' => 'Roof', 'Reported by' => 'Estate', 'Note' => 'The invoice is on the file.', 'Reported on' => '01-10-2026', 'Done on' => '11-10-2026']],
                 ],
             ],
             'complaints' => [
                 'blueprint' => self::BLUEPRINT_COMPLAINTS,
                 'sort' => 50,
                 'cards' => [
-                    ['title' => 'Missed appointment', 'fields' => ['Status' => 'With us', 'Client' => 'Reid', 'Channel' => 'Phone', 'Reference' => 'CO-12', 'Next step' => 'Call them back', 'Response due' => '01-12-2026']],
-                    ['title' => 'Charge on the account', 'fields' => ['Status' => 'Their response', 'Client' => 'Nguyen', 'Channel' => 'Letter', 'Reference' => 'CO-9', 'Next step' => 'Wait for the letter', 'Response due' => '18-11-2026']],
-                    ['title' => 'Website form', 'fields' => ['Status' => 'Opened', 'Client' => 'Campbell', 'Channel' => 'Web', 'Reference' => 'CO-14', 'Next step' => 'Acknowledge today', 'Response due' => '14-12-2026']],
-                    ['title' => 'Late refund', 'fields' => ['Status' => 'Closed', 'Client' => 'Walsh', 'Channel' => 'Email', 'Reference' => 'CO-4', 'Next step' => 'File the reply', 'Closed on' => '20-09-2026']],
+                    ['title' => 'Missed appointment', 'fields' => ['Status' => 'With us', 'Client' => 'Reid', 'Channel' => 'Phone', 'Reference' => 'CO-12', 'Next step' => 'Deal with the complaint.', 'Response due' => '01-12-2026', 'Opened on' => '10-10-2026']],
+                    ['title' => 'Reid letter', 'fields' => ['Status' => 'With them', 'Client' => 'Reid', 'Channel' => 'Letter', 'Reference' => 'CO-15', 'Next step' => 'Waiting on their reply.', 'Response due' => '18-11-2026', 'Opened on' => '01-10-2026']],
+                    ['title' => 'Website form', 'fields' => ['Status' => 'Opened', 'Client' => 'Campbell', 'Channel' => 'Web', 'Reference' => 'CO-14', 'Note' => 'The form came in overnight.', 'Response due' => '14-12-2026', 'Opened on' => '24-10-2026']],
+                    ['title' => 'Late refund', 'fields' => ['Status' => 'Upheld', 'Client' => 'Walsh', 'Channel' => 'Email', 'Reference' => 'CO-4', 'Note' => 'The refund was paid.', 'Opened on' => '01-08-2026', 'Upheld on' => '20-09-2026']],
                 ],
                 'notice' => [
                     'subject' => 'Eight weeks',
@@ -772,10 +949,10 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_COMMITTEE,
                 'sort' => 60,
                 'cards' => [
-                    ['title' => 'Barton fund', 'fields' => ['Status' => 'Asking', 'Applicant' => 'Barton trust', 'Kind' => 'Grant', 'Amount' => '40000', 'Next step' => 'Ask for the budget']],
-                    ['title' => 'Kingston bursary', 'fields' => ['Status' => 'Reading', 'Applicant' => 'Kingston school', 'Kind' => 'Award', 'Amount' => '8000', 'Next step' => 'Read the statement']],
-                    ['title' => 'Campbell facility', 'fields' => ['Status' => 'In', 'Applicant' => 'Campbell', 'Kind' => 'Credit', 'Amount' => '120000', 'Next step' => 'Check the security']],
-                    ['title' => 'Walsh award', 'fields' => ['Status' => 'Decided', 'Applicant' => 'Walsh', 'Kind' => 'Award', 'Amount' => '5000', 'Next step' => 'Write the letter', 'Decided on' => '03-10-2026']],
+                    ['title' => 'Barton fund', 'fields' => ['Status' => 'With the applicant', 'Applicant' => 'Barton trust', 'Kind' => 'Grant', 'Amount' => '40000', 'Next step' => 'Waiting on the applicant.', 'Note' => 'The budget was asked for.', 'Sitting due' => '05-11-2026', 'Received on' => '12-09-2026']],
+                    ['title' => 'Barton hall', 'fields' => ['Status' => 'Reading', 'Applicant' => 'Barton trust', 'Kind' => 'Grant', 'Amount' => '15000', 'Next step' => 'Finish the reading.', 'Sitting due' => '05-11-2026', 'Received on' => '02-10-2026']],
+                    ['title' => 'Campbell facility', 'fields' => ['Status' => 'Received', 'Applicant' => 'Campbell', 'Kind' => 'Credit', 'Amount' => '120000', 'Note' => 'The security is still to be checked.', 'Received on' => '20-10-2026']],
+                    ['title' => 'Walsh award', 'fields' => ['Status' => 'Awarded', 'Applicant' => 'Walsh', 'Kind' => 'Award', 'Amount' => '5000', 'Note' => 'The letter is on the file.', 'Received on' => '01-08-2026', 'Awarded on' => '03-10-2026']],
                 ],
                 'notice' => [
                     'subject' => 'Thursday',
@@ -786,20 +963,20 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_AUDIT,
                 'sort' => 70,
                 'cards' => [
-                    ['title' => 'Cash handling', 'fields' => ['Status' => 'Accepted', 'Place' => 'Front office', 'Rating' => 'High', 'Next step' => 'Count the till weekly', 'Due' => '30-10-2026']],
-                    ['title' => 'Access cards', 'fields' => ['Status' => 'In progress', 'Place' => 'Plant room', 'Rating' => 'Medium', 'Next step' => 'Reissue the lost cards', 'Due' => '14-11-2026']],
-                    ['title' => 'Supplier list', 'fields' => ['Status' => 'Raised', 'Place' => 'Accounts', 'Rating' => 'Low', 'Next step' => 'Pull the last twelve', 'Due' => '28-11-2026']],
-                    ['title' => 'Fire doors', 'fields' => ['Status' => 'Closed', 'Place' => 'West stair', 'Rating' => 'High', 'Next step' => 'File the check', 'Closed on' => '19-09-2026']],
+                    ['title' => 'Cash handling', 'fields' => ['Status' => 'Accepted', 'Place' => 'Front office', 'Rating' => 'High', 'Next step' => 'Start the work.', 'Due' => '30-10-2026', 'Raised on' => '01-10-2026']],
+                    ['title' => 'Petty cash', 'fields' => ['Status' => 'In progress', 'Place' => 'Front office', 'Rating' => 'Medium', 'Next step' => 'Finish the work.', 'Due' => '14-11-2026', 'Raised on' => '15-09-2026']],
+                    ['title' => 'Supplier list', 'fields' => ['Status' => 'Raised', 'Place' => 'Accounts', 'Rating' => 'Low', 'Note' => 'The last twelve months are still to be pulled.', 'Due' => '28-11-2026', 'Raised on' => '20-10-2026']],
+                    ['title' => 'Fire doors', 'fields' => ['Status' => 'Closed', 'Place' => 'West stair', 'Rating' => 'High', 'Note' => 'The check is on the file.', 'Raised on' => '01-08-2026', 'Closed on' => '19-09-2026']],
                 ],
             ],
             'incidents' => [
                 'blueprint' => self::BLUEPRINT_INCIDENTS,
                 'sort' => 80,
                 'cards' => [
-                    ['title' => 'Slip, west stair', 'fields' => ['Status' => 'Investigating', 'Place' => 'West stair', 'Kind' => 'Injury', 'Reported by' => 'Porter', 'Next step' => 'Speak to the witness']],
-                    ['title' => 'Near miss, yard', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Kind' => 'Near miss', 'Reported by' => 'Reid', 'Next step' => 'Write the note']],
-                    ['title' => 'Flood, store', 'fields' => ['Status' => 'Actions', 'Place' => 'Store', 'Kind' => 'Damage', 'Reported by' => 'Estate', 'Next step' => 'Dry the stock']],
-                    ['title' => 'Cut, kitchen', 'fields' => ['Status' => 'Closed', 'Place' => 'Kitchen', 'Kind' => 'Injury', 'Reported by' => 'Chef', 'Next step' => 'File the note', 'Closed on' => '07-10-2026']],
+                    ['title' => 'Slip, west stair', 'fields' => ['Status' => 'Investigating', 'Place' => 'West stair', 'Kind' => 'Injury', 'Reported by' => 'Porter', 'Next step' => 'Speak to the people who were there.', 'Action due' => '31-10-2026', 'Reported on' => '21-10-2026']],
+                    ['title' => 'Rail, west stair', 'fields' => ['Status' => 'Actions underway', 'Place' => 'West stair', 'Kind' => 'Near miss', 'Reported by' => 'Porter', 'Next step' => 'Finish the actions.', 'Action due' => '07-11-2026', 'Reported on' => '18-10-2026']],
+                    ['title' => 'Flood, store', 'fields' => ['Status' => 'Reported', 'Place' => 'Store', 'Kind' => 'Damage', 'Reported by' => 'Estate', 'Note' => 'The stock is still wet.', 'Reported on' => '26-10-2026']],
+                    ['title' => 'Cut, kitchen', 'fields' => ['Status' => 'Closed', 'Place' => 'Kitchen', 'Kind' => 'Injury', 'Reported by' => 'Chef', 'Note' => 'The note is on the file.', 'Reported on' => '01-10-2026', 'Closed on' => '07-10-2026']],
                 ],
                 'notice' => [
                     'subject' => 'Before the end of the shift',
@@ -810,20 +987,28 @@ final class ApplicationBuilder
                 'blueprint' => self::BLUEPRINT_CANDIDATES,
                 'sort' => 90,
                 'cards' => [
-                    ['title' => 'A. Reid', 'fields' => ['Status' => 'Shortlist', 'Client' => 'Campbell', 'Role' => 'Finance lead', 'Next step' => 'Arrange the meeting']],
-                    ['title' => 'J. Nguyen', 'fields' => ['Status' => 'Longlist', 'Client' => 'Campbell', 'Role' => 'Finance lead', 'Next step' => 'Read the brief']],
-                    ['title' => 'M. Walsh', 'fields' => ['Status' => 'Met', 'Client' => 'Barton', 'Role' => 'Operations', 'Next step' => 'Their note is due']],
-                    ['title' => 'S. Campbell', 'fields' => ['Status' => 'Offer', 'Client' => 'Nguyen', 'Role' => 'Counsel', 'Next step' => 'Wait on the offer']],
+                    ['title' => 'A. Reid', 'fields' => ['Status' => 'Shortlist', 'Client' => 'Campbell', 'Role' => 'Finance lead', 'Next step' => 'Arrange the meeting.', 'Listed on' => '01-10-2026']],
+                    ['title' => 'J. Nguyen', 'fields' => ['Status' => 'Listed', 'Client' => 'Campbell', 'Role' => 'Finance lead', 'Note' => 'The brief is still to be read.', 'Listed on' => '20-10-2026']],
+                    ['title' => 'M. Walsh', 'fields' => ['Status' => 'Offer', 'Client' => 'Barton', 'Role' => 'Operations', 'Next step' => 'Waiting on the offer.', 'Reply due' => '06-11-2026', 'Listed on' => '12-09-2026']],
+                    ['title' => 'S. Campbell', 'fields' => ['Status' => 'Placed', 'Client' => 'Nguyen', 'Role' => 'Counsel', 'Note' => 'The placement is confirmed.', 'Listed on' => '01-08-2026', 'Placed on' => '15-10-2026']],
+                ],
+                'notice' => [
+                    'subject' => 'S. Campbell',
+                    'message' => 'S. Campbell has been placed.',
                 ],
             ],
             'contracts' => [
                 'blueprint' => self::BLUEPRINT_CONTRACTS,
                 'sort' => 100,
                 'cards' => [
-                    ['title' => 'Reid services', 'fields' => ['Status' => 'Review', 'Client' => 'Reid', 'Kind' => 'Customer', 'Reference' => 'K-100', 'Next step' => 'Mark the liability cap']],
-                    ['title' => 'Nguyen supply', 'fields' => ['Status' => 'With the business', 'Client' => 'Nguyen', 'Kind' => 'Supplier', 'Reference' => 'K-88', 'Next step' => 'They have the draft']],
-                    ['title' => 'Campbell NDA', 'fields' => ['Status' => 'In', 'Client' => 'Campbell', 'Kind' => 'NDA', 'Reference' => 'K-110', 'Next step' => 'Read it']],
-                    ['title' => 'Walsh employment', 'fields' => ['Status' => 'Signed', 'Client' => 'Walsh', 'Kind' => 'Employment', 'Reference' => 'K-74', 'Next step' => 'File the copy', 'Signed on' => '15-09-2026']],
+                    ['title' => 'Reid services', 'fields' => ['Status' => 'In review', 'Client' => 'Reid', 'Kind' => 'Customer', 'Reference' => 'K-100', 'Next step' => 'Read it.', 'Note' => 'The liability cap is the open point.', 'Received on' => '10-10-2026']],
+                    ['title' => 'Reid schedule', 'fields' => ['Status' => 'With the business', 'Client' => 'Reid', 'Kind' => 'Customer', 'Reference' => 'K-112', 'Next step' => 'Back with the person who opened it.', 'Reply due' => '13-11-2026', 'Received on' => '01-09-2026']],
+                    ['title' => 'Campbell NDA', 'fields' => ['Status' => 'Received', 'Client' => 'Campbell', 'Kind' => 'NDA', 'Reference' => 'K-110', 'Note' => 'It arrived this week.', 'Received on' => '22-10-2026']],
+                    ['title' => 'Walsh employment', 'fields' => ['Status' => 'Signed', 'Client' => 'Walsh', 'Kind' => 'Employment', 'Reference' => 'K-74', 'Note' => 'The copy is on the file.', 'Received on' => '01-08-2026', 'Signed on' => '15-09-2026']],
+                ],
+                'notice' => [
+                    'subject' => 'Walsh employment',
+                    'message' => 'Walsh employment has been signed.',
                 ],
             ],
         ];
@@ -939,6 +1124,128 @@ Move Status as the book moves. Received means it has arrived. Reading means an e
 When you ask for a rewrite, set Reply due to the day you expect it, then write to the writer yourself. The application records the request and sends you an email. Parties lists every manuscript under the writer's name. The diary shows a rewrite that is overdue.
 
 A notice is posted when a manuscript is approved. A decline is written in the log and stays off the wall.
+TEXT;
+    }
+
+    private static function mattersGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one matter. The name of the matter is the name of the record. The client is named on the card, and the person who has the file is the owner.
+
+Move Status as the file moves. Waiting on us means the next action is ours. Waiting on them means a reply has been asked for. Done means the matter is finished.
+
+Set Reply due when you are waiting on them. The application stamps Opened on when the matter is created, writes the log, and emails you when the status moves. You still write to the client yourself. Parties lists every matter under the client's name. The diary shows a reply that is overdue. A finished matter is stamped Closed on.
+TEXT;
+    }
+
+    private static function conveyancingGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one conveyance. The name of the record is the property. The client is named on the card, and the person who has the file is the owner.
+
+Move Status as the file moves. Instructed means the work has been taken on. Searches means the searches are out. Enquiries means questions are being asked. Exchange means the parties are ready to exchange. Complete means the transaction has finished.
+
+Set Reply due while the file is in enquiries, then write to the other side yourself. The application stamps Instructed on when the record is created, writes the log, and emails you when enquiries start. Parties lists every conveyance under the client's name. The diary shows a reply that is overdue. A completed conveyance is stamped Completed on.
+TEXT;
+    }
+
+    private static function claimsGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one insurance claim. The name of the claim is the name of the record. The client is named on the card, and the person handling the claim is the owner.
+
+Move Status as the claim moves. Notified means it has been reported. With the insurer means it has been sent to the insurer. Waiting on them means a reply has been asked for. Settled means the claim has been paid. Withdrawn means it will not proceed.
+
+Set Reply due while you are waiting, and send the papers yourself. The application stamps Notified on when the claim is created, writes the log, and emails you when it goes to the insurer. A file added while it is with the insurer is written in the log. Parties lists every claim under the client's name. The diary shows a reply that is overdue.
+
+A notice is posted when a claim is settled. A withdrawal is written in the log and stays off the wall.
+TEXT;
+    }
+
+    private static function repairsGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one repair. The name of the repair is the name of the record. The place is named on the card, and the person arranging the repair is the owner.
+
+Move Status as the job moves. Reported means it has been raised. Booked means a day has been set. On site means someone is there. Done means the repair is finished.
+
+Set Booked for to the day of the visit. Report a repair from Intake, or add the record yourself. The application stamps Reported on when the record is created, writes the log, and emails you when someone is on site. An urgent repair is attended first. Parties lists every repair under the place. The diary shows a booking that is due. A finished repair is stamped Done on.
+TEXT;
+    }
+
+    private static function complaintsGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one complaint. The name of the complaint is the name of the record. The client is named on the card, and the person dealing with it is the owner.
+
+Move Status as the complaint moves. Opened means it has arrived. With us means we are dealing with it. With them means a reply has been asked for. Upheld means the complaint is accepted. Not upheld means it is not.
+
+Set Response due to the day a reply is required, then write the reply yourself. The application stamps Opened on when the complaint is created and writes the log. A response is due within eight weeks of opening. Parties lists every complaint under the client's name. The diary shows a response that is overdue.
+
+A notice is posted when a complaint is upheld. A complaint that is not upheld is written in the log and stays off the wall.
+TEXT;
+    }
+
+    private static function committeeGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one paper. The name of the paper is the name of the record. The applicant is named on the card, and the person reading it is the owner.
+
+Move Status as the paper moves. Received means it has arrived. Reading means it is being read. With the applicant means a further question has been asked. Awarded means the paper is granted. Refused means it is not.
+
+Set Sitting due to the day the committee sits. Ask the applicant yourself when you need more. The application stamps Received on when the paper is created, writes the log, and emails you when it is with the applicant. Parties lists every paper under the applicant's name. The diary shows a sitting that is due.
+
+A notice is posted when a paper is awarded. A refusal is written in the log and stays off the wall.
+TEXT;
+    }
+
+    private static function auditGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one finding. The name of the finding is the name of the record. The place is named on the card, and the person responsible for it is the owner.
+
+Move Status as the finding moves. Raised means it has been recorded. Accepted means the finding is agreed and the work has not started. In progress means the work is underway. Closed means the finding is finished.
+
+Set Due to the day the work should be finished. The application stamps Raised on when the finding is created, writes the log, and emails you when it is accepted. Parties lists every finding under the place. The diary shows work that is overdue. A closed finding is stamped Closed on.
+TEXT;
+    }
+
+    private static function incidentsGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one incident. The name of the incident is the name of the record. The place is named on the card, and the person following it up is the owner.
+
+Move Status as the incident moves. Reported means it has been raised. Investigating means the facts are being gathered. Actions underway means the work to put it right has started. Closed means the incident is finished.
+
+Set Action due to the day the actions should be finished. Report an incident from Intake, or add the record yourself. The application stamps Reported on when the record is created, emails you, and writes the log. A file added while it is being investigated is written in the log. Parties lists every incident under the place. The diary shows an action that is overdue.
+
+A notice is posted when an incident is reported.
+TEXT;
+    }
+
+    private static function recruitmentGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one candidate. The candidate's name is the name of the record. The client is named on the card, and the person handling the search is the owner.
+
+Move Status as the search moves. Listed means the candidate is on the list. Shortlist means they have been chosen to meet. Interviewed means the meeting has happened. Offer means an offer is out. Placed means they have been placed. Withdrawn means they will not proceed.
+
+Set Reply due when you make an offer, then write to the candidate yourself. The application stamps Listed on when the record is created, writes the log, and emails you when they reach the shortlist. Parties lists every candidate under the client's name. The diary shows an offer that is overdue.
+
+A notice is posted when a candidate is placed. A withdrawal is written in the log and stays off the wall.
+TEXT;
+    }
+
+    private static function contractsGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one contract. The name of the contract is the name of the record. The client is named on the card, and the person who has it is the owner.
+
+Move Status as the contract moves. Received means it has arrived. In review means it is being read. With the business means it has gone back to the person who opened it. Signed means it is signed. Declined means it will not proceed.
+
+Set Reply due while it is with the business. The application stamps Received on when the contract is created and writes the log. When it moves to With the business, it is handed back to the person who opened it and that person is emailed. Parties lists every contract under the client's name. The diary shows a reply that is overdue.
+
+A notice is posted when a contract is signed. A decline is written in the log and stays off the wall.
 TEXT;
     }
 
