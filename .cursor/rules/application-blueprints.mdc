@@ -1,0 +1,37 @@
+---
+description: Publishing is the exemplar application. Match it when adding or changing a blueprint.
+globs: src/Application/ApplicationBuilder.php
+alwaysApply: false
+---
+
+# Application blueprints
+
+Publishing is the exemplar application. A blueprint in `ApplicationBuilder::blueprints()` is written to the same standard as the `publishing` entry, `publishingGuide()`, and the `publishing` showcase.
+
+Blank stays empty. It is an application with no fields yet.
+
+## Title and description
+
+The title is the name of the work, in words a person would use for that work. The description is one sentence. It names the record, where the work starts, and where it ends. When the work can end in two ways, the description names both.
+
+The record type is the thing one record stands for. Status values are the words used while doing that work. A status says what is happening, or who has the record. "In" and "Their response" do not.
+
+## What the application does
+
+Each move of Status has a rule. The rule writes the log line, sets or clears Next step, and stamps the date for that move. A date the person is waiting on is named as a due date, and the blueprint includes the diary. The arrival is stamped when the record is created.
+
+When the work can finish in two ways, both endings are listed in `closed`. A notice is posted for the outcome the rest of the organisation needs to see. The other ending is written in the log and stays off the wall. An email tells the owner what the application recorded. The guide says when the person still writes to someone themselves.
+
+A file rule runs when a file matters at that status. It does not run on every file.
+
+## How to use
+
+The guide is shown from How to use. It is three short paragraphs.
+
+The first says what one record is, what the title of the record is, and who is named on the card. The second says what each status means. The third says what the person does, what the application does, and which outcome is posted.
+
+Leave the guide empty only on Blank. An empty guide hides the button.
+
+## Showcase
+
+The sample records sit in different statuses, including one that has finished. The next step and the dates on a sample are what the rules would have written. One named party has more than one record, so Parties has a list to open.
