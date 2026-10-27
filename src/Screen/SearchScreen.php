@@ -845,10 +845,10 @@ final class SearchScreen
                 $_POST['item_title_operator'] = 'LIKE';
                 break;
             case 'log_entries':
-                $sql = 'SELECT ' . 'items.item_id, item_title, ' . 'items.create_date, item_type_id FROM ' .
-                    'items JOIN ' . 'core_log ON ' . 'items.item_id = ' .
-                    "core_log.item_id WHERE log_text LIKE '%" . Database::escape($value) . "%'";
-                break;
+                $sql = 'SELECT items.item_id, item_title, items.create_date, item_type_id FROM '
+                    . 'items JOIN core_log ON items.item_id = core_log.item_id WHERE log_text LIKE ? ESCAPE \'\\\'';
+                self::searchResults($sql, ['%' . Database::escapeLike($value) . '%']);
+                return;
             default:
                 View::respond(TXT_548);
                 return;
@@ -893,11 +893,6 @@ final class SearchScreen
         return is_scalar($_POST[$key] ?? null) ? (string) $_POST[$key] : '';
     }
 
-    private static function literal(string $value): string
-    {
-        return "'" . Database::escape($value) . "'";
-    }
-
     /**
      * Seconds since the epoch for a posted date, or null when it is not a date.
      */
@@ -937,7 +932,7 @@ final class SearchScreen
      *
      * Creates a table with results from a search
      */
-    public static function searchResults($sql = '')
+    public static function searchResults($sql = '', array $params = [])
     {
 
         // Handling accessing the page from option=show_search_results with no POSTed data
@@ -975,7 +970,8 @@ final class SearchScreen
                 if (self::operator($_POST['id_operator'] ?? '=') === '=') {
                     $condition .= $andOr . " item_id = " . (ctype_digit($itemIdText) ? $itemIdText : '0') . " ";
                 } else {
-                    $condition .= $andOr . " item_id LIKE " . self::literal('%' . Database::escapeLike($itemIdText) . '%') . " ESCAPE '\\' ";
+                    $condition .= $andOr . " item_id LIKE ? ESCAPE '\\' ";
+                    $params[] = '%' . Database::escapeLike($itemIdText) . '%';
                 }
                 $andOr = self::joiner($_POST['id_andor'] ?? '');
             }
@@ -1017,9 +1013,11 @@ final class SearchScreen
             if (!empty($_POST['item_title'])) {
                 $titleText = self::postedText('item_title');
                 if (self::operator($_POST['item_title_operator'] ?? 'LIKE', 'LIKE') === '=') {
-                    $condition .= $andOr . " item_title = " . self::literal($titleText) . " ";
+                    $condition .= $andOr . ' item_title = ? ';
+                    $params[] = $titleText;
                 } else {
-                    $condition .= $andOr . " item_title LIKE " . self::literal('%' . Database::escapeLike($titleText) . '%') . " ESCAPE '\\' ";
+                    $condition .= $andOr . " item_title LIKE ? ESCAPE '\\' ";
+                    $params[] = '%' . Database::escapeLike($titleText) . '%';
                 }
                 $andOr = self::joiner($_POST['title_andor'] ?? '');
             }
@@ -1032,7 +1030,11 @@ final class SearchScreen
                     $fieldId = (int) self::postedText('custom_field_' . $i);
                     $op = self::operator($_POST['custom_field_operator_' . $i] ?? '');
                     $val = self::postedText('custom_field_value_' . $i);
-                    $condition .= $andOr . ' ' . \Adlexone\Data\ItemFields::matchSql($fieldId, $op, $val) . ' ';
+                    $part = \Adlexone\Data\ItemFields::matchSql($fieldId, $op, $val);
+                    $condition .= $andOr . ' ' . $part->sql . ' ';
+                    foreach ($part->params as $param) {
+                        $params[] = $param;
+                    }
                     $andOr = self::joiner($_POST['custom_field_andor_' . $i] ?? '');
                 }
                 $i++;
@@ -1051,32 +1053,23 @@ final class SearchScreen
             $sql = Database::sqlSelect('items', $columnArray, $condition);
         }
 
-        // Direct SQL is off unless the site turns it on. The box stays on the form.
-        if ((isset($_POST['sql_query']) and $_POST['sql_query'] != '') and $_SESSION['access_role_id'] == 0) {
-            if (defined('SET_ALLOW_RAW_SQL') && SET_ALLOW_RAW_SQL === 'Yes') {
-                $sql = html_entity_decode($_POST['sql_query'], ENT_COMPAT, 'UTF-8');
+        if (isset($_SESSION['item_search_sql']) and (@$_GET['option'] == 'show_search_results')) {
+            $sql = $_SESSION['item_search_sql'];
+            $sql = str_replace("\'", "'", $sql);
+            $params = is_array($_SESSION['item_search_params'] ?? null) ? $_SESSION['item_search_params'] : [];
+            if (isset($_POST['pageset']) && $_POST['pageset'] != 1) {
+                $condition = (($_POST['pageset'] - 1) * SET_ITEMS_PAGE) . ",";
             } else {
-                View::respond('Direct SQL search is turned off.');
-                return;
+                $condition = "";
             }
-        } else {
-            if (isset($_SESSION['item_search_sql']) and (@$_GET['option'] == 'show_search_results')) {
-                $sql = $_SESSION['item_search_sql'];
-                $sql = str_replace("\'", "'", $sql);
-                if (isset($_POST['pageset']) && $_POST['pageset'] != 1) {
-                    $condition = (($_POST['pageset'] - 1) * SET_ITEMS_PAGE) . ",";
-                } else {
-                    $condition = "";
-                }
-                $condition .= SET_ITEMS_PAGE;
-                if (strpos($sql, "LIMIT") > 0) {
-                    $sql = substr($sql, 0, strpos($sql, 'LIMIT')) . ' LIMIT ' . $condition;
-                }
-                if (isset($_POST['pageset'])) {
-                    $currsort = substr($sql, strpos($sql, 'ORDER BY') + 9, strpos($sql, 'LIMIT') - strpos($sql, 'ORDER BY') - 9);
-                } else {
-                    $currsort = substr($sql, strpos($sql, 'ORDER BY') + 9, strlen($sql));
-                }
+            $condition .= SET_ITEMS_PAGE;
+            if (strpos($sql, "LIMIT") > 0) {
+                $sql = substr($sql, 0, strpos($sql, 'LIMIT')) . ' LIMIT ' . $condition;
+            }
+            if (isset($_POST['pageset'])) {
+                $currsort = substr($sql, strpos($sql, 'ORDER BY') + 9, strpos($sql, 'LIMIT') - strpos($sql, 'ORDER BY') - 9);
+            } else {
+                $currsort = substr($sql, strpos($sql, 'ORDER BY') + 9, strlen($sql));
             }
         }
 
@@ -1102,8 +1095,8 @@ final class SearchScreen
         // Show search results or move to save search page
         if (isset($_POST['search'])) {
             $sql = str_replace('session_user',(string) $_SESSION['access_user_id'], $sql);
-            $sql = \Adlexone\Data\ItemFields::rewriteLegacySql($sql);
-            self::showItems(Database::rows($sql), '', $newsort, $_SESSION['access_user_id']);
+            $rewritten = \Adlexone\Data\ItemFields::rewriteLegacySql($sql);
+            self::showItems(Database::rows($rewritten->sql, array_merge($params, $rewritten->params)), '', $newsort, $_SESSION['access_user_id']);
         } elseif (isset($_POST['new_favourite'])) {
             $sql = addslashes($sql);
             self::addSavedSearch(
@@ -1280,8 +1273,9 @@ final class SearchScreen
                 }
             }
 
-            $savedSql = \Adlexone\Data\SavedSearch::resolveSql($row);
-            $built = Database::rows($savedSql);
+            $savedQuery = \Adlexone\Data\SavedSearch::resolveSql($row);
+            $savedSql = $savedQuery->sql;
+            $built = Database::rows($savedQuery->sql, $savedQuery->params);
 
             // Normalize to flat list of item IDs when buildArray returned rows
             if (is_array($built) && count($built) > 0 && is_array($built[0])) {
@@ -1296,7 +1290,8 @@ final class SearchScreen
         } else {
             //Prep for output of XML RSS feed
             ob_clean();
-            $itemArray = Database::rows(\Adlexone\Data\SavedSearch::resolveSql($row));
+            $savedQuery = \Adlexone\Data\SavedSearch::resolveSql($row);
+            $itemArray = Database::rows($savedQuery->sql, $savedQuery->params);
             foreach ($itemArray as $id) {
                 $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
                 $row = $result[0] ?? null;
@@ -1640,10 +1635,6 @@ final class SearchScreen
 
         $fields[TXT_350] = self::searchApplicationMenu((string)($_GET['controller'] ?? ''));
 
-        if ($_SESSION['access_role_id'] == 0) {
-            $fields[TXT_421] = Form::textarea('sql_query', '', SET_FORM_FIELD_HEIGHT);
-        }
-
         $jsFieldNameArray = "['search_name']";
         $jsTestTypeArray = "['']";
         $jsErrorMsgArray = "['']";
@@ -1679,7 +1670,6 @@ final class SearchScreen
         $action = \Adlexone\Http\Router::continueUrl('search') . '&option=update_saved_search&id=' . $id;
         $fields = [
             TXT_627 => Form::text('search_name', $row['search_name']),
-            TXT_628 => Form::textarea('saved_search_sql', $row['saved_search_sql'], SET_FORM_FIELD_HEIGHT),
         ];
         Page::current()->setBody(Form::form(
             TXT_628 . ' - ' . $row['search_name'],
@@ -1699,19 +1689,12 @@ final class SearchScreen
             View::respond(TXT_115);
             return;
         }
-        $sql = html_entity_decode(self::postedText('saved_search_sql'), ENT_COMPAT, 'UTF-8');
         $name = trim(html_entity_decode(self::postedText('search_name'), ENT_COMPAT, 'UTF-8'));
         if ($name === '') {
             View::respond(TXT_367);
             return;
         }
-        $columnArray['saved_search_sql'] = $sql;
-        $columnArray['search_name'] = $name;
-        $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode([
-            'version' => 1,
-            'legacy_sql' => $sql,
-        ]);
-        Database::update('saved_searches', $columnArray, 'search_id = ?', [$id]);
+        Database::update('saved_searches', ['search_name' => $name], 'search_id = ?', [$id]);
         // Success messagae
         View::respond(TXT_628,TXT_629);
     }

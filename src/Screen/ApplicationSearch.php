@@ -283,7 +283,7 @@ final class ApplicationSearch
     private static function matches(array $state, array $types): array
     {
         $inner = SavedSearch::compile(self::criteria($state), 'item_id');
-        $where = 'item_id IN (' . $inner . ')';
+        $where = 'item_id IN (' . $inner->sql . ')';
         if ($types !== []) {
             $where .= ' AND item_type_id IN (' . implode(',', array_map('intval', $types)) . ')';
         }
@@ -297,7 +297,7 @@ final class ApplicationSearch
         $allowed = array_flip(WorkScreen::applicationAccessibleItemIds());
 
         $ids = [];
-        foreach (Database::rows("SELECT item_id FROM items WHERE {$where} ORDER BY {$column} {$dir}, item_id DESC") as $row) {
+        foreach (Database::rows("SELECT item_id FROM items WHERE {$where} ORDER BY {$column} {$dir}, item_id DESC", $inner->params) as $row) {
             $id = (int) $row['item_id'];
             if (isset($allowed[$id])) {
                 $ids[] = $id;
@@ -908,7 +908,7 @@ final class ApplicationSearch
                 'user' => $everyone ? 'all' : $userId,
                 'search_name' => mb_substr($name, 0, 80),
                 'search_description' => '',
-                'saved_search_sql' => SavedSearch::compile($criteria),
+                'saved_search_sql' => SavedSearch::compile($criteria)->sql,
                 'application' => ApplicationStore::scopeKey($app),
                 'criteria_json' => SavedSearch::encode($criteria),
             ]);

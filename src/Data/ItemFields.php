@@ -162,45 +162,50 @@ final class ItemFields
 
     /**
      * SQL fragment matching items by one custom field predicate.
+     * The value is a placeholder. The column and the comparison are fixed text.
      */
-    public static function matchSql(int $fieldId, string $operator, string $value): string
+    public static function matchSql(int $fieldId, string $operator, string $value): BoundQuery
     {
         $fieldId = (int) $fieldId;
         $op = strtoupper(trim($operator));
-        $escaped = Database::escape($value);
         $from = "item_id IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND ";
 
         if (in_array($op, ['DATE=', 'DATE>=', 'DATE<='], true)) {
             $day = FieldValidation::parseDate($value);
             if ($day === null) {
-                return '0';
+                return new BoundQuery('0');
             }
             $compare = $op === 'DATE=' ? '=' : substr($op, 4);
 
-            return $from . self::storedDay() . " {$compare} '" . $day->format('Y-m-d') . "')";
+            return new BoundQuery($from . self::storedDay() . " {$compare} ?)", [$day->format('Y-m-d')]);
         }
         if ($op === 'TICKED') {
-            return $from . "TRIM(value) NOT IN ('', '0'))";
+            return new BoundQuery($from . "TRIM(value) NOT IN ('', '0'))");
         }
         if ($op === 'UNTICKED') {
-            return "item_id NOT IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND TRIM(value) NOT IN ('', '0'))";
+            return new BoundQuery("item_id NOT IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND TRIM(value) NOT IN ('', '0'))");
         }
         if (in_array($op, ['>', '>=', '<', '<='], true) && is_numeric($value)) {
-            return $from . "TRIM(value) <> '' AND CAST(value AS REAL) {$op} " . (float) $value . ')';
+            return new BoundQuery($from . "TRIM(value) <> '' AND CAST(value AS REAL) {$op} ?)", [(float) $value]);
         }
 
-        if ($op === 'CONTAINS') {
-            return $from . "value LIKE '%" . Database::escape(Database::escapeLike($value)) . "%' ESCAPE '\\')";
+        if ($op === 'CONTAINS' || $op === 'LIKE') {
+            return new BoundQuery(
+                $from . "value LIKE ? ESCAPE '\\')",
+                ['%' . Database::escapeLike($value) . '%']
+            );
         }
         if ($op === 'NOT') {
-            return "item_id NOT IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value = '{$escaped}')";
+            return new BoundQuery(
+                "item_id NOT IN (SELECT item_id FROM item_field_values WHERE custom_field_id = {$fieldId} AND value = ?)",
+                [$value]
+            );
         }
 
         return match ($op) {
-            'LIKE' => $from . "value LIKE '%{$escaped}%')",
-            '<>', '!=' => $from . "value <> '{$escaped}')",
-            '>', '>=', '<', '<=' => $from . "value {$op} '{$escaped}')",
-            default => $from . "value = '{$escaped}')",
+            '<>', '!=' => new BoundQuery($from . 'value <> ?)', [$value]),
+            '>', '>=', '<', '<=' => new BoundQuery($from . "value {$op} ?", [$value]),
+            default => new BoundQuery($from . 'value = ?)', [$value]),
         };
     }
 
@@ -220,12 +225,18 @@ final class ItemFields
     /**
      * Rewrite legacy SQL that still references items.custom_field_N.
      */
-    public static function rewriteLegacySql(string $sql): string
+    public static function rewriteLegacySql(string $sql): BoundQuery
     {
+        $params = [];
         $sql = preg_replace_callback(
             '/\b(?:items\.)?custom_field_(\d+)\s*(=|<>|!=|LIKE|>|<)\s*\'([^\']*)\'/i',
-            static function (array $m): string {
-                return self::matchSql((int) $m[1], $m[2], $m[3]);
+            static function (array $m) use (&$params): string {
+                $part = self::matchSql((int) $m[1], $m[2], $m[3]);
+                foreach ($part->params as $param) {
+                    $params[] = $param;
+                }
+
+                return $part->sql;
             },
             $sql
         ) ?? $sql;
@@ -234,7 +245,7 @@ final class ItemFields
         $sql = preg_replace('/,\s*(?:items\.)?custom_field_\d+\b/i', '', $sql) ?? $sql;
         $sql = preg_replace('/\b(?:items\.)?custom_field_\d+\s*,\s*/i', '', $sql) ?? $sql;
 
-        return $sql;
+        return new BoundQuery($sql, $params);
     }
 
     public static function fieldIdFromKey(string $key): ?int

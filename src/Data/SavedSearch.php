@@ -134,15 +134,16 @@ final class SavedSearch
     /**
      * @param array<string, mixed> $criteria
      */
-    public static function compile(array $criteria, string $select = 'item_id, item_type_id, item_title'): string
+    public static function compile(array $criteria, string $select = 'item_id, item_type_id, item_title'): BoundQuery
     {
         $filters = $criteria['filters'] ?? [];
         if (!is_array($filters) || $filters === []) {
-            return 'SELECT ' . $select . ' FROM items';
+            return new BoundQuery('SELECT ' . $select . ' FROM items');
         }
 
         $sql = 'SELECT ' . $select . ' FROM items WHERE ';
         $parts = [];
+        $params = [];
         $first = true;
         foreach ($filters as $filter) {
             if (!is_array($filter)) {
@@ -156,23 +157,23 @@ final class SavedSearch
                 $andor = 'AND';
             }
             $clause = self::clause($field, $op, $value);
-            if ($clause === '') {
+            if ($clause->sql === '') {
                 continue;
             }
-            if ($first) {
-                $parts[] = $clause;
-                $first = false;
-            } else {
-                $parts[] = $andor . ' ' . $clause;
+            $parts[] = $first ? $clause->sql : $andor . ' ' . $clause->sql;
+            $first = false;
+            foreach ($clause->params as $param) {
+                $params[] = $param;
             }
         }
         if ($parts === []) {
-            return 'SELECT ' . $select . ' FROM items';
+            return new BoundQuery('SELECT ' . $select . ' FROM items');
         }
-        return $sql . implode(' ', $parts);
+
+        return new BoundQuery($sql . implode(' ', $parts), $params);
     }
 
-    private static function clause(string $field, string $op, string $value): string
+    private static function clause(string $field, string $op, string $value): BoundQuery
     {
         if (preg_match('/^custom_field_(\d+)$/', $field, $m)) {
             return ItemFields::matchSql((int) $m[1], $op, $value);
@@ -183,17 +184,19 @@ final class SavedSearch
         if ($field === 'create_date_days' || $field === 'core_log_updated_days') {
             $days = (int) $value;
             if ($days <= 0) {
-                return '';
+                return new BoundQuery('');
             }
             $column = $field === 'create_date_days' ? 'create_date' : 'COALESCE(core_log_updated, create_date)';
-            return $column . ' >= ' . (time() - $days * 86400);
+
+            return new BoundQuery($column . ' >= ' . (time() - $days * 86400));
         }
         if ($field === 'group_id') {
             $id = (int) $value;
             if ($op === '<>' || $op === '!=') {
-                return "item_id NOT IN (SELECT item_id FROM item_groups WHERE group_id = {$id})";
+                return new BoundQuery("item_id NOT IN (SELECT item_id FROM item_groups WHERE group_id = {$id})");
             }
-            return "item_id IN (SELECT item_id FROM item_groups WHERE group_id = {$id})";
+
+            return new BoundQuery("item_id IN (SELECT item_id FROM item_groups WHERE group_id = {$id})");
         }
 
         $allowed = [
@@ -201,19 +204,23 @@ final class SavedSearch
             'creator_security', 'user_security',
         ];
         if (!in_array($field, $allowed, true)) {
-            return '';
+            return new BoundQuery('');
         }
-        $op = html_entity_decode($op, ENT_COMPAT, 'UTF-8');
+        $op = strtoupper(trim(html_entity_decode($op, ENT_COMPAT, 'UTF-8')));
+        if (!in_array($op, ['=', '<>', '!=', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE'], true)) {
+            $op = '=';
+        }
         if ($value === 'session_user' && in_array($field, ['creator_security', 'user_security'], true)) {
             $value = (string) (int) ($_SESSION['access_user_id'] ?? 0);
         }
-        $escaped = Database::escape($value);
-        return match (strtoupper($op)) {
-            'LIKE' => "{$field} LIKE '%{$escaped}%'",
-            '<>', '!=' => "{$field} <> '{$escaped}'",
-            '>', '>=', '<', '<=' => "{$field} {$op} '{$escaped}'",
-            default => "{$field} = '{$escaped}'",
-        };
+        if ($op === 'LIKE' || $op === 'NOT LIKE') {
+            return new BoundQuery(
+                "{$field} {$op} ? ESCAPE '\\'",
+                ['%' . Database::escapeLike($value) . '%']
+            );
+        }
+
+        return new BoundQuery("{$field} {$op} ?", [$value]);
     }
 
     /**
@@ -236,25 +243,33 @@ final class SavedSearch
     /**
      * Every term must appear in the name, the number, a field value, or a note.
      */
-    private static function textClause(string $text): string
+    private static function textClause(string $text): BoundQuery
     {
         $clauses = [];
+        $params = [];
         foreach (self::terms($text) as $term) {
-            $like = "'%" . Database::escape(Database::escapeLike($term)) . "%' ESCAPE '\\'";
-            $number = ctype_digit($term) ? " OR item_id = {$term}" : '';
-            $clauses[] = "(item_title LIKE {$like}{$number}"
-                . " OR item_id IN (SELECT item_id FROM item_field_values WHERE value LIKE {$like}"
+            $like = '%' . Database::escapeLike($term) . '%';
+            $number = ctype_digit($term) ? ' OR item_id = ' . (int) $term : '';
+            $clauses[] = "(item_title LIKE ? ESCAPE '\\'{$number}"
+                . " OR item_id IN (SELECT item_id FROM item_field_values WHERE value LIKE ? ESCAPE '\\'"
                 . " AND custom_field_id NOT IN (SELECT custom_field_id FROM custom_fields WHERE field_type IN ('password', 'hidden')))"
-                . " OR item_id IN (SELECT item_id FROM core_log WHERE log_text LIKE {$like}))";
+                . " OR item_id IN (SELECT item_id FROM core_log WHERE log_text LIKE ? ESCAPE '\\'))";
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
         }
 
-        return $clauses === [] ? '' : '(' . implode(' AND ', $clauses) . ')';
+        if ($clauses === []) {
+            return new BoundQuery('');
+        }
+
+        return new BoundQuery('(' . implode(' AND ', $clauses) . ')', $params);
     }
 
     /**
      * @param array<string, mixed> $row
      */
-    public static function resolveSql(array $row): string
+    public static function resolveSql(array $row): BoundQuery
     {
         $json = trim((string) ($row['criteria_json'] ?? ''));
         if ($json !== '' && $json !== '{}') {
@@ -265,13 +280,15 @@ final class SavedSearch
                         str_replace('session_user', (string) ($_SESSION['access_user_id'] ?? ''), $criteria['legacy_sql'])
                     );
                 }
+
                 return self::compile($criteria);
             }
         }
         $legacy = (string) ($row['saved_search_sql'] ?? '');
         if ($legacy === '') {
-            return 'SELECT item_id, item_type_id, item_title FROM items WHERE 0';
+            return new BoundQuery('SELECT item_id, item_type_id, item_title FROM items WHERE 0');
         }
+
         return ItemFields::rewriteLegacySql(
             str_replace('session_user', (string) ($_SESSION['access_user_id'] ?? ''), $legacy)
         );

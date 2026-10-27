@@ -1,6 +1,5 @@
 {
     "SET_DEBUG_MODE":  "No",
     "SET_SHOW_SQL":  "No",
-    "SET_ALLOW_RAW_SQL": "No",
     "SET_ERROR_REPORTING_LEVEL":  "6143"
 }

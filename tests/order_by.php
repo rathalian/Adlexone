@@ -29,7 +29,8 @@ check(Database::orderBy('(SELECT CASE WHEN 1=1 THEN 1 END)') === '', 'a function
 check(Database::orderBy('item_id DESC --') === '', 'a comment is dropped');
 
 $search = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchScreen.php');
-check(str_contains($search, "SET_ALLOW_RAW_SQL") && str_contains($search, 'Direct SQL search is turned off.'), 'direct SQL search stays off unless the site allows it');
+check(!str_contains($search, 'sql_query'), 'the search form has no raw SQL field');
+check(!str_contains($search, "Form::textarea('saved_search_sql'"), 'editing a saved search does not take a SQL statement');
 
 if ($failed > 0) {
     fwrite(STDERR, $failed . " checks failed\n");

@@ -61,7 +61,8 @@ Database::exec("INSERT INTO core_log VALUES (1, 1, 'Rang the insurer on Thursday
 function found(array $filters): array
 {
     $criteria = ['filters' => array_map(static fn (array $f): array => $f + ['andor' => 'AND'], $filters)];
-    $ids = array_map(static fn (array $row): int => (int) $row['item_id'], Database::rows(SavedSearch::compile($criteria, 'item_id') . ' ORDER BY item_id'));
+    $query = SavedSearch::compile($criteria, 'item_id');
+    $ids = array_map(static fn (array $row): int => (int) $row['item_id'], Database::rows($query->sql . ' ORDER BY item_id', $query->params));
 
     return $ids;
 }
@@ -108,11 +109,15 @@ same(found([
 same(found([['field' => 'user_security', 'op' => '=', 'value' => '0']]), [3], 'not assigned');
 
 same(
-    array_map('intval', array_column(Database::rows(SavedSearch::resolveSql([
-        'criteria_json' => SavedSearch::encode(['version' => 1, 'filters' => [
-            ['field' => 'custom_field_1', 'op' => 'LIKE', 'value' => 'otif', 'andor' => 'AND'],
-        ]]),
-    ]) . ' ORDER BY item_id'), 'item_id')),
+    array_map('intval', array_column((static function (): array {
+        $query = SavedSearch::resolveSql([
+            'criteria_json' => SavedSearch::encode(['version' => 1, 'filters' => [
+                ['field' => 'custom_field_1', 'op' => 'LIKE', 'value' => 'otif', 'andor' => 'AND'],
+            ]]),
+        ]);
+
+        return Database::rows($query->sql . ' ORDER BY item_id', $query->params);
+    })(), 'item_id')),
     [1, 3],
     'the older contains operator still works'
 );
