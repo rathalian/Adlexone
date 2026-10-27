@@ -813,6 +813,8 @@ final class Rules
             $groupId = (int) ($step['group_id'] ?? 0);
         } elseif ($outcome === self::OUTCOME_LOG) {
             $body = trim((string) ($step['body'] ?? ''));
+            $groupId = (int) ($step['group_id'] ?? 0);
+            $roleId = 5;
             $recipient = self::TO_OWNER;
         } elseif ($outcome === self::OUTCOME_SET_FIELD) {
             $actionField = trim((string) ($step['action_field'] ?? ''));
@@ -1548,7 +1550,7 @@ final class Rules
         }
         $sequence = Database::newID('core_log', 'log_item_sequence', 'item_id = ' . $itemId);
         $now = time();
-        Database::insert('core_log', [
+        $entry = [
             'item_id' => $itemId,
             'create_date' => (string) $now,
             'item_identifier' => 'rule-' . (int) ($rule['id'] ?? 0),
@@ -1556,7 +1558,11 @@ final class Rules
             'log_text' => $text,
             'security_id' => (int) ($_SESSION['access_user_id'] ?? 0),
             'role_id' => (int) ($step['role_id'] ?? 5),
-        ]);
+        ];
+        if (Database::columnExists('core_log', 'group_id')) {
+            $entry['group_id'] = (int) ($step['group_id'] ?? 0);
+        }
+        Database::insert('core_log', $entry);
         Database::update('items', ['core_log_updated' => $now], 'item_id = ?', [$itemId]);
         return true;
     }

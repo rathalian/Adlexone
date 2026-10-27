@@ -125,41 +125,29 @@ final class PrintScreen
     		// Get item log information from database
     		$columnArray = array ('*');
     		foreach (Database::select('core_log', $columnArray, 'item_id = ?', [$itemID], 'log_item_sequence DESC') as $row) {
-    			//Restrict log viewing
-    			if ($_SESSION['access_role_id'] <= $row['role_id']){
-    				// Get user name if applicable
-    				if ($row['security_id'] != '') {
-    					$columnArray = array ('user_name', 'first_name', 'last_name');
-    					$rowUser = Database::first('users', $columnArray, 'user_id = ?', [$row['security_id']]);
-    				}
-    				$role = '';
-    				switch ($row['role_id']) {
-    					case 0:
-    						$role = TXT_190;
-    						break;
-    					case 1:
-    						$role = TXT_191;
-    						break;
-    					case 2:
-    						$role = TXT_192;
-    						break;
-    					case 3:
-    						$role = TXT_193;
-    						break;
-    					case 4:
-    						$role = TXT_194;
-    						break;
-    					case 5:
-    						$role = TXT_303;
-    						break;
-    				}
-    				$userName = Html::e((string)($rowUser['user_name'] ?? ''));
-    				$firstName = Html::e((string)($rowUser['first_name'] ?? ''));
-    				$lastName = Html::e((string)($rowUser['last_name'] ?? ''));
-    				$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ' - ' . Html::e((string)$role) . ')</i></strong>';
-    				$text = nl2br(Html::e((string)$row['log_text']));
-    				$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
+    			if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($row['group_id'] ?? 0), (int) ($row['role_id'] ?? 5))) {
+    				continue;
     			}
+    			$rowUser = ['user_name' => '', 'first_name' => '', 'last_name' => ''];
+    			if ($row['security_id'] != '') {
+    				$columnArray = array ('user_name', 'first_name', 'last_name');
+    				$found = Database::first('users', $columnArray, 'user_id = ?', [$row['security_id']]);
+    				if (is_array($found)) {
+    					$rowUser = $found;
+    				}
+    			}
+    			$audience = '';
+    			$groupId = (int) ($row['group_id'] ?? 0);
+    			if ($groupId > 0) {
+    				$group = Database::first('groups', ['group_name'], 'group_id = ?', [$groupId]);
+    				$audience = trim((string) ($group['group_name'] ?? ''));
+    			}
+    			$userName = Html::e((string)($rowUser['user_name'] ?? ''));
+    			$firstName = Html::e((string)($rowUser['first_name'] ?? ''));
+    			$lastName = Html::e((string)($rowUser['last_name'] ?? ''));
+    			$heading = '<strong><i>' . date(SET_DATE_FORMAT, $row['create_date']) . ' ' . TXT_260 . ' ' . $userName . ' (' . $firstName . ' ' . $lastName . ($audience !== '' ? ' — ' . Html::e($audience) : '') . ')</i></strong>';
+    			$text = nl2br(Html::e((string)$row['log_text']));
+    			$logHtml .= '<div class="log-item"><div class="log-heading">' . $heading . '</div><div class="log-text">' . $text . '</div></div>';
     		}
     		Page::current()->setBody(Blocks::vertical([
     			['title' => TXT_624 . ': ' . $itemFields['item_id'] . ' - ' . $itemTypeName, 'html' => $html],

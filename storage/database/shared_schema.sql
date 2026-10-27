@@ -149,7 +149,8 @@ CREATE TABLE IF NOT EXISTS core_log (
   log_item_sequence INTEGER NOT NULL,
   log_text TEXT,
   security_id INTEGER,
-  role_id INTEGER
+  role_id INTEGER,
+  group_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS item_attachments (

@@ -426,28 +426,13 @@ final class SiteSettingsScreen
 
     public static function showAdvancedSettings(): void
     {
-        $menuValue = (@SET_OWNER_MENU == '') ? 5 : SET_OWNER_MENU;
-        $typeValues = [];
-        $typeLabels = [];
-        $owners = \Adlexone\Application\ApplicationSettings::typeOwners();
-        foreach (Database::select('item_types', ['item_type_id', 'item_type_name'], '', [], 'item_type_name ASC') as $row) {
-            $id = (int) $row['item_type_id'];
-            if (!isset($owners[$id]) && (string) $id !== (string) SET_DEFAULT_ITEM_TYPE) {
-                continue;
-            }
-            $typeValues[] = $row['item_type_id'];
-            $typeLabels[] = $row['item_type_name'];
-        }
         $fields = [
             'Search fields to include' => Form::select('SET_CUSTOM_FIELDS_IN_SEARCH', [2, 5, 10, 15], [2, 5, 10, 15], SET_CUSTOM_FIELDS_IN_SEARCH),
-            'Role shown on a record' => Form::select('SET_OWNER_MENU', [5, 4, 3, 2, 1, 0], [TXT_303, TXT_194, TXT_193, TXT_192, TXT_191, TXT_190], $menuValue),
             'Note height' => Form::text('SET_FORM_FIELD_HEIGHT', SET_FORM_FIELD_HEIGHT),
-            'Ask which record type when creating' => Form::select('SET_SECURE_TYPE', ['yes', 'no'], [TXT_93, TXT_94], SET_SECURE_TYPE),
             'Show the log on a record' => Form::select('SET_LOG_ENTRY', ['yes', 'no'], [TXT_93, TXT_94], SET_LOG_ENTRY),
             'Show files on a record' => Form::select('SET_ATTACHMENTS', ['yes', 'no'], [TXT_93, TXT_94], SET_ATTACHMENTS),
             'Allow a file when creating' => Form::select('ADD_ATTACHMENTS', ['yes', 'no'], [TXT_93, TXT_94], ADD_ATTACHMENTS),
             'Largest file (MB)' => Form::text('SET_MAX_ATTACHMENT', SET_MAX_ATTACHMENT),
-            'Default record type' => Form::select('SET_DEFAULT_ITEM_TYPE', $typeValues, $typeLabels, SET_DEFAULT_ITEM_TYPE),
             'Debugging' => Form::select('SET_DEBUG_MODE', ['Yes', 'No'], [TXT_93, TXT_94], SET_DEBUG_MODE),
             'Show SQL queries' => Form::select('SET_SHOW_SQL', ['Yes', 'No'], [TXT_93, TXT_94], SET_SHOW_SQL),
             'PHP error reporting' => Form::select('SET_ERROR_REPORTING_LEVEL', ['6135', '6143'], [TXT_504, TXT_207], SET_ERROR_REPORTING_LEVEL),

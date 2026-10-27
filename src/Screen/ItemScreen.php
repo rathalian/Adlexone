@@ -694,19 +694,38 @@ final class ItemScreen
 
         $events = [];
         $lines = Database::rows(
-            'SELECT log_text, CAST(create_date AS INTEGER) AS at, security_id FROM core_log WHERE item_id = ? ORDER BY CAST(create_date AS INTEGER) DESC LIMIT 30',
+            'SELECT log_text, CAST(create_date AS INTEGER) AS at, security_id, role_id'
+            . (Database::columnExists('core_log', 'group_id') ? ', group_id' : '')
+            . ' FROM core_log WHERE item_id = ? ORDER BY CAST(create_date AS INTEGER) DESC LIMIT 30',
             [$itemId]
         );
         $authors = \Adlexone\Application\RecordQuery::userNames(array_map(static fn (array $line): int => (int) ($line['security_id'] ?? 0), $lines));
+        $audiences = [];
         foreach ($lines as $line) {
+            $audienceId = (int) ($line['group_id'] ?? 0);
+            if ($audienceId > 0) {
+                $audiences[$audienceId] = '';
+            }
+        }
+        if ($audiences !== []) {
+            foreach (Database::select('groups', ['group_id', 'group_name'], 'group_id IN (' . implode(',', array_map('intval', array_keys($audiences))) . ')') as $row) {
+                $audiences[(int) $row['group_id']] = (string) $row['group_name'];
+            }
+        }
+        foreach ($lines as $line) {
+            if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($line['group_id'] ?? 0), (int) ($line['role_id'] ?? 5))) {
+                continue;
+            }
             $text = trim((string) ($line['log_text'] ?? ''));
             if ($text === '' || (int) $line['at'] <= 0) {
                 continue;
             }
+            $audienceId = (int) ($line['group_id'] ?? 0);
             $events[] = [
                 'text' => $text,
                 'when' => (int) $line['at'],
                 'who' => $authors[(int) ($line['security_id'] ?? 0)] ?? '',
+                'detail' => $audienceId > 0 ? 'Visible to ' . ($audiences[$audienceId] ?? '') : '',
                 'icon' => 'ic-note',
             ];
         }
@@ -771,13 +790,22 @@ final class ItemScreen
 
     private static function noteComposer(int $itemId): string
     {
+        $groupIds = ['0'];
+        $groupLabels = ['Everyone'];
+        foreach (\Adlexone\Application\Rules::groups() as $id => $name) {
+            $groupIds[] = (string) $id;
+            $groupLabels[] = $name;
+        }
+
         return '<form class="composer" method="post" action="' . Html::e(MAN_BASE_URL . '&option=add_log_entry') . '">'
             . \Adlexone\Auth\Csrf::field()
             . Form::hidden('item_id', (string) $itemId) . Form::hidden('role_id', '5') . Form::hidden('from_timeline', '1')
             . '<label class="sr-only" for="composer-note">Add a note to the timeline</label>'
             . '<textarea class="textarea composer__input" id="composer-note" name="log_entry" rows="2" placeholder="Add a note"></textarea>'
+            . '<div class="composer__bar">'
+            . '<label class="composer__audience">Visible to ' . Form::select('group_id', $groupIds, $groupLabels, '0') . '</label>'
             . '<button class="btn btn--primary btn--sm composer__send" type="submit" name="submit_button" value="Add">Add note</button>'
-            . '</form>';
+            . '</div></form>';
     }
 
     /**
@@ -1737,7 +1765,7 @@ final class ItemScreen
                 $formOptions = self::withFormErrors($formOptions);
                 $buttons = [];
                 if ($_SESSION['access_role_id'] <= 4) {
-                    $buttons[] = Form::button('submit', 'submit_button', TXT_56, $javascript);
+                    $buttons[] = Form::button('submit', 'submit_button', 'Save', $javascript);
                 }
 
                 $itemField[''] = Form::hidden('item_type_id', $itemFields['item_type_id']) . Form::hidden('item_id', $itemFields['item_id']) . $peopleHidden;
@@ -2148,10 +2176,14 @@ final class ItemScreen
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
         $backHref = MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $showLog . $attachments;
         $logField[Wording::get('LA_244', 'TXT_244')] = Form::textarea('log_entry', '', SET_FORM_FIELD_HEIGHT);
-        $roleIDs = array(2, 3, 4, 5);
-        $roleNames = array(TXT_192, TXT_193, TXT_194, TXT_303);
-        $logField[TXT_469] = '<div>' . Form::select('role_id', $roleIDs, $roleNames, 5)
-            . '<div class="field-picker-type">' . Html::e(TXT_470) . '</div></div>';
+        $groupIds = ['0'];
+        $groupLabels = ['Everyone'];
+        foreach (\Adlexone\Application\Rules::groups() as $id => $name) {
+            $groupIds[] = (string) $id;
+            $groupLabels[] = $name;
+        }
+        $logField['Visible to'] = '<div>' . Form::select('group_id', $groupIds, $groupLabels, '0')
+            . '<div class="field-picker-type">Everyone means anyone who can open the record.</div></div>';
 
         $columnArray = array('*');
         $condition = 'WHERE item_id = ' . (int) $itemID;
@@ -2203,7 +2235,10 @@ final class ItemScreen
         }
         $columnArray['log_text'] = $logText;
         $columnArray['security_id'] = $_SESSION['access_user_id'];
-        $columnArray['role_id'] = $_POST['role_id'] ?? 5;
+        $columnArray['role_id'] = 5;
+        if (\Adlexone\support\Database::columnExists('core_log', 'group_id')) {
+            $columnArray['group_id'] = (int) ($_POST['group_id'] ?? 0);
+        }
         // Insert into log table
         Database::insert('core_log', $columnArray);
         // Update entry in item table
@@ -2267,7 +2302,7 @@ final class ItemScreen
         $result = Database::select('core_log', ['*'], 'WHERE item_id = :item_id ORDER BY log_item_sequence DESC', ['item_id' => $itemID]);
 
         foreach ($result as $row) {
-            if ($_SESSION['access_role_id'] > $row['role_id']) {
+            if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($row['group_id'] ?? 0), (int) ($row['role_id'] ?? 5))) {
                 continue;
             }
             $userName = '';
@@ -2275,23 +2310,17 @@ final class ItemScreen
                 $userRow = Database::first('users', ['user_name'], 'WHERE user_id = ' . (int) $row['security_id']);
                 $userName = is_array($userRow) ? (string) ($userRow['user_name'] ?? '') : '';
             }
-            $role = '';
-            if ($withRole) {
-                $role = match ((int) $row['role_id']) {
-                    0 => TXT_190,
-                    1 => TXT_191,
-                    2 => TXT_192,
-                    3 => TXT_193,
-                    4 => TXT_194,
-                    5 => TXT_303,
-                    default => ''
-                };
+            $audience = '';
+            $groupId = (int) ($row['group_id'] ?? 0);
+            if ($withRole && $groupId > 0) {
+                $group = Database::first('groups', ['group_name'], 'group_id = ?', [$groupId]);
+                $audience = trim((string) ($group['group_name'] ?? ''));
             }
 
             $heading = '<div class="log-heading"><strong>'
                 . Html::e(date(SET_DATE_FORMAT, (int) $row['create_date']))
                 . ($userName !== '' ? ' ' . Html::e((string) TXT_260) . ' ' . Html::e($userName) : '')
-                . ($role !== '' ? ' (' . Html::e($role) . ')' : '')
+                . ($audience !== '' ? ' (' . Html::e($audience) . ')' : '')
                 . '</strong></div>';
             $text = Html::e((string) $row['log_text']);
             $text = nl2br($text);

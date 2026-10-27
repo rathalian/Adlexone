@@ -451,8 +451,7 @@ final class HomeDashboard
             . 'EXISTS(SELECT 1 FROM items) AS records, (SELECT COUNT(*) FROM (SELECT 1 FROM users LIMIT 2)) AS people'
         )[0] ?? [];
         $steps = [
-            ['Create an application', 'An application groups the screens for one kind of work.', '?manage=builder', (int) ($seen['apps'] ?? 0) > 0],
-            ['Add fields to a record type', 'Fields hold the details a record keeps.', '?manage=fields', (int) ($seen['fields'] ?? 0) > 0],
+            ['Create an application', 'An application groups the screens for one kind of work. A blueprint brings the fields and the rules.', '?manage=builder', (int) ($seen['apps'] ?? 0) > 0],
             ['Create a record', 'Open an application and add the first record.', './', (int) ($seen['records'] ?? 0) > 0],
             ['Add people', 'Add the people who need to sign in, then place them in groups.', '?manage=security&option=manage_users', (int) ($seen['people'] ?? 0) > 1],
         ];
@@ -567,9 +566,13 @@ final class HomeDashboard
     {
         $rows = Database::rows(
             'SELECT item_id, item_title, item_type_id, create_date, core_log_updated FROM items WHERE user_security = ? AND item_type_id IN (' . $typeList . ') '
-            . 'ORDER BY CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END DESC LIMIT ' . $limit,
+            . 'ORDER BY CASE WHEN core_log_updated > create_date THEN core_log_updated ELSE create_date END DESC LIMIT ' . (self::ASSIGNED_LIMIT + 1),
             [$userId]
         );
+        $rows = self::openRows($rows, $typeToApp, $apps);
+        if (count($rows) > $limit) {
+            $rows = array_slice($rows, 0, $limit);
+        }
         $items = [];
         foreach ($rows as $row) {
             $index = $typeToApp[(int) $row['item_type_id']] ?? -1;
@@ -617,7 +620,7 @@ final class HomeDashboard
             ? self::assignedItems($userId, implode(',', array_map('intval', array_keys($typeToApp))), $typeToApp, $apps, self::ASSIGNED_LIMIT + 1)
             : [];
         if ($items === []) {
-            return '<p class="timeline__empty">Nothing is assigned to you. Records you own are listed here.</p>';
+            return '<p class="timeline__empty">Nothing is assigned to you. Open records you own are listed here.</p>';
         }
         $capped = count($items) > self::ASSIGNED_LIMIT;
         $items = array_slice($items, 0, self::ASSIGNED_LIMIT);
@@ -677,7 +680,7 @@ final class HomeDashboard
             $art = Theme::illustrationHref('empty-assigned');
             $body = '<div class="panel__empty">'
                 . ($art !== '' ? '<img src="' . Html::e($art) . '" alt="" width="88" height="66" loading="lazy">' : '')
-                . '<p>Nothing is assigned to you. Records you own are listed here.</p></div>';
+                . '<p>Nothing is assigned to you. Open records you own are listed here.</p></div>';
         } else {
             $body = '<ul class="rows">';
             foreach ($items as $item) {
@@ -898,6 +901,40 @@ final class HomeDashboard
     }
 
     /**
+     * Owned rows that are still open. A record with no status counts as open.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @param array<int, int> $typeToApp
+     * @param list<array<string, mixed>> $apps
+     * @return list<array<string, mixed>>
+     */
+    private static function openRows(array $rows, array $typeToApp, array $apps): array
+    {
+        $byType = [];
+        foreach ($rows as $row) {
+            $byType[(int) $row['item_type_id']][] = $row;
+        }
+        $open = [];
+        foreach ($byType as $typeId => $typed) {
+            $app = $apps[$typeToApp[$typeId] ?? -1] ?? null;
+            if ($app === null) {
+                continue;
+            }
+            $ids = array_map(static fn (array $row): int => (int) $row['item_id'], $typed);
+            $status = WorkScreen::workStatusField($typeId, (string) $app['slug']);
+            $allowed = WorkflowFields::openValues((string) $app['slug'], $typeId, $status);
+            $stand = $status !== null ? RecordQuery::values($ids, $status['id']) : [];
+            foreach ($typed as $row) {
+                if (RecordQuery::isOpen($allowed, (string) ($stand[(int) $row['item_id']] ?? ''))) {
+                    $open[] = $row;
+                }
+            }
+        }
+
+        return $open;
+    }
+
+    /**
      * @param array<int, int> $typeToApp
      * @param list<array<string, mixed>> $apps
      * @return array{total: int, items: list<array{item_id: int, title: string, app: string, accent: string, href: string, when: int}>, byApp: list<array{name: string, href: string, count: int}>}
@@ -910,16 +947,20 @@ final class HomeDashboard
         $list = implode(',', array_map('intval', array_keys($typeToApp)));
         $total = 0;
         $byApp = [];
-        $counts = Database::rows(
-            'SELECT item_type_id, COUNT(*) AS n FROM items WHERE user_security = ? AND item_type_id IN (' . $list . ') GROUP BY item_type_id',
+        $owned = Database::rows(
+            'SELECT item_id, item_type_id FROM items WHERE user_security = ? AND item_type_id IN (' . $list . ')',
             [$userId]
         );
-        foreach ($counts as $row) {
-            $app = $apps[$typeToApp[(int) $row['item_type_id']] ?? -1] ?? null;
+        $counts = [];
+        foreach (self::openRows($owned, $typeToApp, $apps) as $row) {
+            $typeId = (int) $row['item_type_id'];
+            $counts[$typeId] = ($counts[$typeId] ?? 0) + 1;
+        }
+        foreach ($counts as $typeId => $n) {
+            $app = $apps[$typeToApp[(int) $typeId] ?? -1] ?? null;
             if ($app === null) {
                 continue;
             }
-            $n = (int) $row['n'];
             $total += $n;
             $href = (string) $app['href'];
             $byApp[] = [

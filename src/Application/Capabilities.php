@@ -218,7 +218,7 @@ final class Capabilities
         self::applyDefaults($capability, $config, ApplicationStore::scopeKey($app));
 
         if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'saved_search') {
-            View::respond('Choose a saved search for this link in Manage.');
+            View::respond('Choose a saved search for this link under Configure, Applications.');
             return;
         }
 

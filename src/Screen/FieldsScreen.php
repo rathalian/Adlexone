@@ -372,6 +372,7 @@ final class FieldsScreen
             $appName = $app === null ? '' : (string) $app['name'];
         }
         $unused = ($_GET['unused'] ?? '') === '1' && $appName === '';
+        $typeNames = \Adlexone\Application\ApplicationSettings::fieldTypeNames();
         $groups = [];
         foreach (Database::select('custom_fields', '*', '', [], 'custom_field_name ASC') as $row) {
             $id = (int) $row['custom_field_id'];
@@ -388,6 +389,8 @@ final class FieldsScreen
                 continue;
             }
             $record = self::customFieldRecord($row);
+            $types = $typeNames[$id] ?? [];
+            $record['cells']['types'] = $types === [] ? '' : implode(', ', $types);
             $label = $apps === [] ? 'Not used by an application' : implode(', ', $apps);
             $groups[$label][] = $record;
         }
@@ -420,6 +423,7 @@ final class FieldsScreen
             'column' => 'Field',
             'columns' => [
                 ['key' => 'type', 'label' => 'Type'],
+                ['key' => 'types', 'label' => 'Record types'],
                 ['key' => 'enabled', 'label' => 'Enabled'],
             ],
             'searchLabel' => TXT_3,

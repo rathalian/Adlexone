@@ -38,8 +38,7 @@ $login = (string) file_get_contents(dirname(__DIR__) . '/layouts/pages/login.php
 $check(str_contains($login, 'DefaultAccount::stillInUse()'), 'application login pre-fills only while the default account is unchanged');
 $check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::USERNAME)'), 'application login pre-fills the default username conditionally');
 $check(str_contains($login, '$defaultsInUse ? Html::e(\\Adlexone\\Platform\\DefaultAccount::PASSWORD)'), 'application login pre-fills the default password conditionally');
-$descriptor = 'Business tools to get your work sorted.';
-$check(substr_count($login, $descriptor) === 2, 'desktop and mobile login branding describe the product purpose');
+$check(!str_contains($login, 'Business tools to get your work sorted.'), 'sign-in does not carry a slogan');
 $applicationsPosition = strpos($login, '>Applications</span>');
 $recordsPosition = strpos($login, '>Records</span>');
 $workPosition = strpos($login, '>Work</span>');

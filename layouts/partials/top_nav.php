@@ -68,14 +68,14 @@ $account = $nav['account'];
                     <div class="menu__divider" role="separator"></div>
                     <a role="menuitem" class="menu__item" href="?action=logoff">
                         <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-logoff"></use></svg>
-                        <span>Logout</span>
+                        <span>Sign out</span>
                     </a>
                 </div>
             </div>
             <?php else: ?>
-            <a class="topnav__logout" href="?action=logoff" aria-label="Logout">
+            <a class="topnav__logout" href="?action=logoff" aria-label="Sign out">
                 <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-logoff"></use></svg>
-                <span class="topnav__logout-label">Logout</span>
+                <span class="topnav__logout-label">Sign out</span>
             </a>
             <?php endif; ?>
         </nav>

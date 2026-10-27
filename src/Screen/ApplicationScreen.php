@@ -43,7 +43,7 @@ final class ApplicationScreen
             }
         }
         if ($visible === []) {
-            View::respond('This application has no navigation yet. Add links in Manage.');
+            View::respond('This application has no navigation yet. Add links under Configure, Applications.');
             return;
         }
 

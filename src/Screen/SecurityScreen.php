@@ -382,7 +382,7 @@ final class SecurityScreen
     {
         $apps = Permission::applicationChoices();
         if ($apps === []) {
-            return '<p class="form-help">No applications yet. Create one from Design, then choose who can open it here.</p>';
+            return '<p class="form-help">No applications yet. Create one under Configure, then choose who can open it here.</p>';
         }
         $levels = [
             'open' => 'Open',

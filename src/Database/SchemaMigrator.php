@@ -16,7 +16,7 @@ use Adlexone\support\Database;
 final class SchemaMigrator
 {
     /** @phpstan-ignore classConstant.unused */
-    private const VERSION = 12;
+    private const VERSION = 13;
 
     private static bool $done = false;
 
@@ -93,6 +93,11 @@ final class SchemaMigrator
         if ($current < 12) {
             self::applyV12();
             self::mark(12);
+            $current = 12;
+        }
+        if ($current < 13) {
+            self::applyV13();
+            self::mark(13);
         }
     }
 
@@ -1029,5 +1034,17 @@ final class SchemaMigrator
         }
         $first = Database::first('applications', ['application_id'], '', [], 'application_id ASC');
         return (int) ($first['application_id'] ?? 0);
+    }
+
+    /**
+     * Log lines can name a group. Showcase applications pick up the current
+     * blueprint screens, guides, and field labels.
+     */
+    private static function applyV13(): void
+    {
+        if (Database::tableExists('core_log') && !Database::columnExists('core_log', 'group_id')) {
+            Database::exec('ALTER TABLE core_log ADD COLUMN group_id INTEGER NOT NULL DEFAULT 0');
+        }
+        \Adlexone\Application\ApplicationBuilder::alignInstalled();
     }
 }

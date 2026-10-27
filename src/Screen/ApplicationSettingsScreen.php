@@ -310,8 +310,7 @@ final class ApplicationSettingsScreen
             'Name' => self::ruleText('name', (string) ($rule['name'] ?? ''), 'Email the owner when priority is high'),
             'Enabled' => self::ruleSelect('enabled', ['Yes' => 'Yes', 'No' => 'No'], $enabled),
             'Record type' => self::ruleSelect('item_type_id', $typeNames, $selectedType, 'rule-type'),
-            'When' => self::ruleSelect('event', Rules::events(), (string) ($rule['event'] ?? Rules::EVENT_UPDATE), 'rule-event')
-                . '<span class="rule-log-role"> ' . self::ruleSelect('min_log_role', Rules::logRoles(), (string) (int) ($rule['min_log_role'] ?? 0)) . '</span>',
+            'When' => self::ruleSelect('event', Rules::events(), (string) ($rule['event'] ?? Rules::EVENT_UPDATE), 'rule-event'),
             'If' => self::ruleSelect('operator', Rules::operators(), (string) ($rule['operator'] ?? Rules::OP_BECOMES), 'rule-operator')
                 . ' <span class="rule-field">' . self::ruleFieldSelect('field_key', $fields, (string) ($rule['field_key'] ?? ''), true) . '</span>'
                 . ' <span class="rule-from">from ' . self::ruleValueControl('match_from', $fields, (string) ($rule['field_key'] ?? ''), (string) ($rule['match_from'] ?? '')) . '</span>'
@@ -446,9 +445,10 @@ final class ApplicationSettingsScreen
                 . '<div>Subject ' . self::ruleText($prefix . '[subject]', (string) ($step['subject'] ?? ''), 'ITEM_TITLE') . '</div>'
                 . '<div>Message ' . self::ruleArea($prefix . '[body]', (string) ($step['body'] ?? '')) . '</div>'
                 . '</div>';
+            $audience = ['0' => 'Everyone'] + $groups;
             $html .= '<div class="rule-step-panel" data-for="log">'
                 . '<div>Message ' . self::ruleArea($prefix . '[body]', (string) ($step['body'] ?? '')) . '</div>'
-                . '<div>Visible to ' . self::ruleSelect($prefix . '[role_id]', [5 => 'Everyone', 4 => 'Users', 3 => 'Managers', 2 => 'Administrators'], (string) (int) ($step['role_id'] ?? 5)) . '</div>'
+                . '<div>Visible to ' . self::ruleSelect($prefix . '[group_id]', $audience, (string) (int) ($step['group_id'] ?? 0)) . '</div>'
                 . '</div>';
             $html .= '<div class="rule-step-panel" data-for="set_field">'
                 . '<div>Field ' . self::ruleFieldSelect($prefix . '[action_field]', $fields, (string) ($step['action_field'] ?? ''), false) . '</div>'

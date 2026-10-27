@@ -71,6 +71,22 @@ final class GroupMembership
     }
 
     /**
+     * A note with a group is for that group. A note with no group stays on the
+     * older role check: a lower role number is a narrower audience.
+     */
+    public static function canSeeLogLine(int $groupId, int $roleId): bool
+    {
+        if ($groupId > 0) {
+            $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+
+            return in_array($groupId, self::userGroupIds($userId), true);
+        }
+        $session = (int) ($_SESSION['access_role_id'] ?? 5);
+
+        return $roleId <= 0 || $session <= $roleId;
+    }
+
+    /**
      * @return list<int>
      */
     public static function userGroupIds(int $userId): array

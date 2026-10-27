@@ -34,21 +34,6 @@ final class ApplicationBuilder
      */
     public static function blueprints(): array
     {
-        $plain = [ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::SEARCH_LIST];
-        $extra = [
-            ScreenCatalog::COUNTS,
-            ScreenCatalog::OWNERS,
-            ScreenCatalog::STEPS,
-            ScreenCatalog::PARTIES,
-            ScreenCatalog::ACTIVITY,
-            ScreenCatalog::FILES,
-            ScreenCatalog::AGE,
-            ScreenCatalog::REGISTER,
-        ];
-        $work = array_merge($plain, $extra);
-        $wall = array_merge([ScreenCatalog::WORK, ScreenCatalog::CREATE, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::ANNOUNCEMENTS, ScreenCatalog::SEARCH_LIST], $extra);
-        $diary = [ScreenCatalog::DIARY];
-        $intake = [ScreenCatalog::INTAKE];
         $status = static fn (array $values): array => self::menu('Status', $values);
         $close = static function (string $name, string $status, string $date, string $line): array {
             return self::when($name, Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, $status, [
@@ -113,7 +98,7 @@ final class ApplicationBuilder
                         self::setField('Next step', ''),
                     ]),
                 ],
-                array_merge($wall, $diary),
+                self::workScreens(true, true, true, false),
                 self::search('With the writer', 'Manuscripts waiting on a rewrite.', 'With the writer'),
                 ['Approved', 'Declined'],
                 self::publishingGuide()
@@ -143,7 +128,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Close a finished matter', 'Done', 'Closed on', 'Closed ITEM_TITLE.'),
                 ],
-                array_merge($work, $diary),
+                self::workScreens(true, true, false, false),
                 self::search('Waiting on us', 'Matters that are waiting on us.', 'Waiting on us'),
                 ['Done'],
                 self::mattersGuide()
@@ -176,7 +161,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Complete the conveyance', 'Complete', 'Completed on', 'Completed ITEM_TITLE.'),
                 ],
-                array_merge($work, $diary),
+                self::workScreens(true, true, false, false),
                 self::search('Enquiries', 'Conveyances in enquiries.', 'Enquiries'),
                 ['Complete'],
                 self::conveyancingGuide()
@@ -217,7 +202,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Withdraw the claim', 'Withdrawn', 'Withdrawn on', 'Withdrew ITEM_TITLE.'),
                 ],
-                array_merge($wall, $diary),
+                self::workScreens(true, true, true, false),
                 self::search('With the insurer', 'Claims with the insurer.', 'With the insurer'),
                 ['Settled', 'Withdrawn'],
                 self::claimsGuide()
@@ -246,7 +231,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Finish the repair', 'Done', 'Done on', 'Finished ITEM_TITLE.'),
                 ],
-                array_merge($work, $diary, $intake),
+                self::workScreens(true, true, false, true),
                 self::search('On site', 'Repairs where someone is there now.', 'On site'),
                 ['Done'],
                 self::repairsGuide()
@@ -283,7 +268,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Do not uphold the complaint', 'Not upheld', 'Not upheld on', 'Did not uphold ITEM_TITLE.'),
                 ],
-                array_merge($wall, $diary, $intake),
+                self::workScreens(true, true, true, true),
                 self::search('With us', 'Complaints that are with us.', 'With us'),
                 ['Upheld', 'Not upheld'],
                 self::complaintsGuide()
@@ -319,7 +304,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Refuse the paper', 'Refused', 'Refused on', 'Refused ITEM_TITLE.'),
                 ],
-                array_merge($wall, $diary),
+                self::workScreens(true, true, true, false),
                 self::search('With the applicant', 'Papers waiting on the applicant.', 'With the applicant'),
                 ['Awarded', 'Refused'],
                 self::committeeGuide()
@@ -348,7 +333,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Close the finding', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
                 ],
-                array_merge($work, $diary),
+                self::workScreens(true, true, false, false),
                 self::search('In progress', 'Findings being worked on.', 'In progress'),
                 ['Closed'],
                 self::auditGuide()
@@ -381,7 +366,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Close the incident', 'Closed', 'Closed on', 'Closed ITEM_TITLE.'),
                 ],
-                array_merge($wall, $diary, $intake),
+                self::workScreens(true, true, true, true),
                 self::search('Investigating', 'Incidents under investigation.', 'Investigating'),
                 ['Closed'],
                 self::incidentsGuide()
@@ -422,7 +407,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Withdraw the candidate', 'Withdrawn', 'Withdrawn on', 'Withdrew ITEM_TITLE.'),
                 ],
-                array_merge($wall, $diary),
+                self::workScreens(true, true, true, false),
                 self::search('Shortlist', 'Candidates on the shortlist.', 'Shortlist'),
                 ['Placed', 'Withdrawn'],
                 self::recruitmentGuide()
@@ -459,7 +444,7 @@ final class ApplicationBuilder
                     ]),
                     $close('Decline the contract', 'Declined', 'Declined on', 'Declined ITEM_TITLE.'),
                 ],
-                array_merge($wall, $diary),
+                self::workScreens(true, true, true, false),
                 self::search('In review', 'Contracts being read.', 'In review'),
                 ['Signed', 'Declined'],
                 self::contractsGuide()
@@ -473,7 +458,7 @@ final class ApplicationBuilder
                 '',
                 [],
                 [],
-                $plain,
+                self::workScreens(false, false, false, false),
                 null
             ),
         ];
@@ -751,18 +736,9 @@ final class ApplicationBuilder
 
     private static function uniqueFieldName(string $desired, string $appName): string
     {
-        if (Database::first('custom_fields', ['custom_field_id'], 'custom_field_name = ?', [$desired]) === null) {
-            return $desired;
-        }
-        $candidate = $desired . ' (' . $appName . ')';
-        if (Database::first('custom_fields', ['custom_field_id'], 'custom_field_name = ?', [$candidate]) === null) {
-            return $candidate;
-        }
-        $n = 2;
-        while (Database::first('custom_fields', ['custom_field_id'], 'custom_field_name = ?', [$candidate . ' ' . $n]) !== null) {
-            $n++;
-        }
-        return $candidate . ' ' . $n;
+        unset($appName);
+
+        return $desired;
     }
 
     /**
@@ -865,6 +841,148 @@ final class ApplicationBuilder
                 ]);
             }
         }
+    }
+
+    /**
+     * Bring showcase applications already on a site up to the current blueprints:
+     * the screens the work uses, the guide, and the field labels.
+     * Runs once, from the schema migration. A later edit on that site is left in place.
+     */
+    public static function alignInstalled(): void
+    {
+        if (!Database::tableExists('applications')) {
+            return;
+        }
+        $blueprints = self::blueprints();
+        foreach (self::showcase() as $slug => $spec) {
+            $blueprint = (string) $spec['blueprint'];
+            if (!isset($blueprints[$blueprint])) {
+                continue;
+            }
+            self::alignOne($slug, $blueprints[$blueprint]);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private static function alignOne(string $slug, array $meta): void
+    {
+        $app = Database::first('applications', ['application_id', 'settings_json'], 'slug = ?', [$slug]);
+        if ($app === null) {
+            return;
+        }
+        $applicationId = (int) $app['application_id'];
+        $settings = json_decode((string) ($app['settings_json'] ?? ''), true);
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+        $typeId = (int) ($settings['default_item_type_id'] ?? 0);
+        Database::update('applications', [
+            'guide' => trim((string) ($meta['guide'] ?? '')),
+        ], 'application_id = ?', [$applicationId]);
+        if ($typeId <= 0) {
+            return;
+        }
+        self::canonicalFieldNames($typeId, $meta['fields'] ?? []);
+        self::alignNavigation($applicationId, $typeId, $meta['screens'] ?? []);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $fields
+     */
+    private static function canonicalFieldNames(int $typeId, array $fields): void
+    {
+        foreach ($fields as $field) {
+            $canonical = trim((string) ($field['name'] ?? ''));
+            if ($canonical === '') {
+                continue;
+            }
+            $id = self::fieldIdOnType($typeId, $canonical);
+            if ($id <= 0) {
+                continue;
+            }
+            $row = Database::first('custom_fields', ['custom_field_name'], 'custom_field_id = ?', [$id]);
+            if ($row !== null && (string) $row['custom_field_name'] !== $canonical) {
+                Database::update('custom_fields', ['custom_field_name' => $canonical], 'custom_field_id = ?', [$id]);
+            }
+        }
+    }
+
+    /**
+     * @param list<string> $screens
+     */
+    private static function alignNavigation(int $applicationId, int $typeId, array $screens): void
+    {
+        if (!Database::tableExists('application_nav') || $screens === []) {
+            return;
+        }
+        $labels = ScreenCatalog::builderScreens();
+        $known = array_keys($labels);
+        $navs = Database::select('application_nav', '*', 'application_id = ?', [$applicationId], 'sort_order ASC, nav_id ASC');
+        $keep = [];
+        foreach ($navs as $nav) {
+            $capability = ScreenCatalog::resolve((string) $nav['capability']);
+            if (!in_array($capability, $known, true)) {
+                continue;
+            }
+            if (!in_array($capability, $screens, true) || isset($keep[$capability])) {
+                Database::delete('application_nav', 'nav_id = ?', [(int) $nav['nav_id']]);
+                continue;
+            }
+            $keep[$capability] = $nav;
+        }
+        $order = 10;
+        $typeConfig = json_encode(['item_type_id' => (string) $typeId], JSON_UNESCAPED_SLASHES) ?: '{}';
+        foreach ($screens as $capability) {
+            if (!is_string($capability) || !isset($labels[$capability])) {
+                continue;
+            }
+            if (isset($keep[$capability])) {
+                Database::update('application_nav', [
+                    'label' => $labels[$capability],
+                    'sort_order' => $order,
+                    'icon' => self::screenIcon($capability),
+                ], 'nav_id = ?', [(int) $keep[$capability]['nav_id']]);
+            } else {
+                Database::insert('application_nav', [
+                    'application_id' => $applicationId,
+                    'label' => $labels[$capability],
+                    'capability' => $capability,
+                    'permission' => '',
+                    'icon' => self::screenIcon($capability),
+                    'config_json' => self::screenNeedsType($capability) ? $typeConfig : '{}',
+                    'sort_order' => $order,
+                ]);
+            }
+            $order += 10;
+        }
+    }
+
+    private static function screenNeedsType(string $capability): bool
+    {
+        return in_array($capability, [
+            ScreenCatalog::WORK,
+            ScreenCatalog::CREATE,
+            ScreenCatalog::SEARCH_ADVANCED,
+            ScreenCatalog::DIARY,
+            ScreenCatalog::PARTIES,
+            ScreenCatalog::INTAKE,
+        ], true);
+    }
+
+    private static function screenIcon(string $capability): string
+    {
+        return [
+            ScreenCatalog::WORK => 'ic-work',
+            ScreenCatalog::CREATE => 'ic-plus',
+            ScreenCatalog::SEARCH_ADVANCED => 'ic-search',
+            ScreenCatalog::SEARCH_LIST => 'ic-saved',
+            ScreenCatalog::ANNOUNCEMENTS => 'ic-announce',
+            ScreenCatalog::DIARY => 'ic-diary',
+            ScreenCatalog::PARTIES => 'ic-parties',
+            ScreenCatalog::INTAKE => 'ic-intake',
+        ][$capability] ?? '';
     }
 
     /**
@@ -1075,6 +1193,32 @@ final class ApplicationBuilder
         $row = Database::first('users', ['user_id'], '', [], 'user_id ASC');
 
         return (int) ($row['user_id'] ?? 0);
+    }
+
+    /**
+     * Work, New, then the screens this work uses, then Search and Saved.
+     *
+     * @return list<string>
+     */
+    private static function workScreens(bool $diary, bool $parties, bool $announcements, bool $intake): array
+    {
+        $screens = [ScreenCatalog::WORK, ScreenCatalog::CREATE];
+        if ($diary) {
+            $screens[] = ScreenCatalog::DIARY;
+        }
+        if ($parties) {
+            $screens[] = ScreenCatalog::PARTIES;
+        }
+        if ($announcements) {
+            $screens[] = ScreenCatalog::ANNOUNCEMENTS;
+        }
+        if ($intake) {
+            $screens[] = ScreenCatalog::INTAKE;
+        }
+        $screens[] = ScreenCatalog::SEARCH_ADVANCED;
+        $screens[] = ScreenCatalog::SEARCH_LIST;
+
+        return $screens;
     }
 
     /**

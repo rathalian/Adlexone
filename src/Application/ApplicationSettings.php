@@ -146,4 +146,36 @@ final class ApplicationSettings
 
         return $lists;
     }
+
+    /**
+     * Record types that use each custom field.
+     *
+     * @return array<int, list<string>>
+     */
+    public static function fieldTypeNames(): array
+    {
+        if (!Database::tableExists('item_type_custom_fields') || !Database::tableExists('item_types')) {
+            return [];
+        }
+        $types = [];
+        foreach (Database::select('item_types', ['item_type_id', 'item_type_name']) as $row) {
+            $types[(int) $row['item_type_id']] = (string) $row['item_type_name'];
+        }
+        $owners = [];
+        foreach (Database::select('item_type_custom_fields', ['item_type_id', 'custom_field_id']) as $row) {
+            $name = $types[(int) $row['item_type_id']] ?? '';
+            if ($name === '') {
+                continue;
+            }
+            $owners[(int) $row['custom_field_id']][$name] = $name;
+        }
+        $lists = [];
+        foreach ($owners as $fieldId => $names) {
+            $values = array_values($names);
+            sort($values);
+            $lists[(int) $fieldId] = $values;
+        }
+
+        return $lists;
+    }
 }

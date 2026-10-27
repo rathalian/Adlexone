@@ -88,8 +88,14 @@ final class RecordScreens
         if ($capability === ScreenCatalog::ACTIVITY) {
             $html['Days'] = Form::text('days', (string) ($config['days'] ?? ''))
                 . '<p class="form-help">How many days of log lines to show. Blank is 30.</p>';
-            $roles = Rules::logRoles();
-            $html['Log lines'] = Form::select('role_id', array_map('strval', array_keys($roles)), array_values($roles), (string) ($config['role_id'] ?? '0'));
+            $groupIds = ['0'];
+            $groupLabels = ['Everyone'];
+            foreach (\Adlexone\Application\Rules::groups() as $id => $name) {
+                $groupIds[] = (string) $id;
+                $groupLabels[] = $name;
+            }
+            $html['Visible to'] = Form::select('group_id', $groupIds, $groupLabels, (string) ($config['group_id'] ?? '0'))
+                . '<p class="form-help">Everyone includes a note that was not limited to a group.</p>';
         }
         if ($capability === ScreenCatalog::INTAKE) {
             $status = WorkScreen::workStatusField($typeId, $slug);
@@ -128,9 +134,9 @@ final class RecordScreens
             if ($days > 0) {
                 $config['days'] = (string) min($days, 365);
             }
-            $role = (int) ($_POST['role_id'] ?? 0);
-            if ($role > 0 && array_key_exists($role, Rules::logRoles())) {
-                $config['role_id'] = (string) $role;
+            $groupId = (int) ($_POST['group_id'] ?? 0);
+            if ($groupId > 0 && array_key_exists($groupId, \Adlexone\Application\Rules::groups())) {
+                $config['group_id'] = (string) $groupId;
             }
         }
         if ($capability === ScreenCatalog::INTAKE) {
@@ -584,20 +590,25 @@ final class RecordScreens
             $days = 30;
         }
         $days = min($days, 365);
-        $role = (int) ($config['role_id'] ?? 0);
+        $groupId = (int) ($config['group_id'] ?? 0);
         $rows = [];
         $lines = [];
         $names = [];
         if ($loaded['ids'] !== []) {
-            $sql = 'SELECT item_id, log_text, create_date, security_id, role_id FROM core_log WHERE item_id IN ('
+            $sql = 'SELECT item_id, log_text, create_date, security_id, role_id'
+                . (Database::columnExists('core_log', 'group_id') ? ', group_id' : '')
+                . ' FROM core_log WHERE item_id IN ('
                 . RecordQuery::intList($loaded['ids']) . ') AND CAST(create_date AS INTEGER) >= ?';
             $params = [time() - ($days * 86400)];
-            if ($role > 0) {
-                $sql .= ' AND role_id >= ?';
-                $params[] = $role;
+            if ($groupId > 0 && Database::columnExists('core_log', 'group_id')) {
+                $sql .= ' AND (group_id = 0 OR group_id = ?)';
+                $params[] = $groupId;
             }
             $sql .= ' ORDER BY CAST(create_date AS INTEGER) DESC LIMIT 200';
-            $lines = Database::rows($sql, $params);
+            $lines = array_values(array_filter(
+                Database::rows($sql, $params),
+                static fn (array $line): bool => \Adlexone\Data\GroupMembership::canSeeLogLine((int) ($line['group_id'] ?? 0), (int) ($line['role_id'] ?? 5))
+            ));
             $names = RecordQuery::userNames(array_map(static fn (array $row): int => (int) ($row['security_id'] ?? 0), $lines));
             foreach ($lines as $line) {
                 $itemId = (int) $line['item_id'];
@@ -889,7 +900,7 @@ final class RecordScreens
     {
         $typeId = RecordQuery::typeId($config);
         if ($typeId <= 0) {
-            self::missing('Choose a record type for this link in Manage.');
+            self::missing('Choose a record type for this link under Configure, Applications.');
             return;
         }
         if (!ItemScreen::applicationAllowsItemType($typeId)) {
@@ -958,7 +969,7 @@ final class RecordScreens
     {
         $typeId = RecordQuery::typeId($config);
         if ($typeId <= 0 || !ItemScreen::applicationAllowsItemType($typeId)) {
-            self::missing('Choose a record type for this link in Manage.');
+            self::missing('Choose a record type for this link under Configure, Applications.');
             return;
         }
         if (self::intakeErrors($typeId) !== []) {
@@ -1019,7 +1030,7 @@ final class RecordScreens
     {
         $loaded = RecordQuery::load($config);
         if ($loaded === null) {
-            self::missing('Choose a record type for this link in Manage.');
+            self::missing('Choose a record type for this link under Configure, Applications.');
             return null;
         }
         $loaded['fields'] = RecordQuery::fields($loaded['type_id']);

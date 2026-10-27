@@ -177,9 +177,21 @@ final class WorkScreen
                 'user_security = ? AND item_id IN (' . implode(',', $ids) . ')',
                 [$userId]
             );
+            $slug = self::applicationSlug();
+            $typeId = 0;
+            $sample = Database::first('items', ['item_type_id'], 'item_id = ?', [$ids[0]]);
+            if ($sample !== null) {
+                $typeId = (int) $sample['item_type_id'];
+            }
+            $status = self::workStatusField($typeId > 0 ? $typeId : null, $slug);
+            $open = WorkflowFields::openValues($slug, $typeId, $status);
             $keep = [];
             foreach ($owned as $row) {
-                $keep[] = (int) $row['item_id'];
+                $id = (int) $row['item_id'];
+                if (!RecordQuery::isOpen($open, (string) ($values[$id] ?? ''))) {
+                    continue;
+                }
+                $keep[] = $id;
             }
             rsort($keep);
             return $keep;
