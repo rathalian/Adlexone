@@ -45,6 +45,7 @@ final class Router
         'add_log_entry',
         'delete_log',
         'update_item',
+        'update_owner',
         'change_security',
         'update_security',
         'show_attachments',

@@ -596,6 +596,11 @@ a.columns__col:hover .columns__bar{ filter:brightness(1.1); }
 .facts dd{ margin:0; display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; color:var(--ink); font-weight:600; min-width:0; }
 .facts dd small{ flex-basis:100%; color:var(--placeholder); font-weight:500; font-size:12px; }
 .facts dd .mark{ width:22px; height:22px; font-size:10px; }
+.facts__row--assign{ align-items:start; }
+.facts__row--assign dt{ padding-top:8px; }
+.owner-assign{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:100%; min-width:0; }
+.owner-assign .select{ flex:1 1 8rem; width:auto; min-width:0; font-weight:600; }
+.owner-assign__hint{ flex-basis:100%; margin:0; color:var(--placeholder); font-size:12px; font-weight:500; line-height:1.4; }
 .sidecard .timeline__day{ margin-left:0; }
 .sidecard .timeline__event{ padding-bottom:12px; }
 @media (max-width:1100px){

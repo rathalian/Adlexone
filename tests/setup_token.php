@@ -44,6 +44,7 @@ foreach ([
     'run_rule' => true,
     'create' => true,
     'import' => true,
+    'update_owner' => true,
     'show_item' => false,
     'edit' => false,
     'export' => false,

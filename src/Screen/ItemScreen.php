@@ -5,7 +5,10 @@ use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
+use Adlexone\Application\RecordQuery;
+use Adlexone\Application\Rules;
 use Adlexone\Application\WorkflowFields;
+use Adlexone\Auth\Csrf;
 use Adlexone\support\Database;
 use Adlexone\support\Actions;
 use Adlexone\support\AttachmentUpload;
@@ -199,6 +202,10 @@ final class ItemScreen
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
                 self::updateItem($_POST['item_id']);
                 break;
+            case 'update_owner' :
+                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 3);
+                self::updateOwner();
+                break;
             case 'change_security' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 3);
                 self::returnToItem($_GET['item_id'], '', 'access');
@@ -250,6 +257,7 @@ final class ItemScreen
         'add_log_entry' => 4,
         'add_attachment' => 4,
         'update_item' => 4,
+        'update_owner' => 3,
         'change_security' => 3,
         'update_security' => 3,
         'delete_attachment' => 2,
@@ -271,7 +279,7 @@ final class ItemScreen
         if ($option === 'download_attachment' || $option === 'delete_attachment') {
             $attachment = Database::first('item_attachments', ['item_id'], 'id = ?', [(int) ($_GET['id'] ?? 0)]);
             $itemId = $attachment === null ? 0 : (int) $attachment['item_id'];
-        } elseif (in_array($option, ['add_log_entry', 'update_item', 'transform_item'], true)) {
+        } elseif (in_array($option, ['add_log_entry', 'update_item', 'update_owner', 'transform_item'], true)) {
             $itemId = (int) ($_POST['item_id'] ?? 0);
         } else {
             $itemId = (int) ($_GET['item_id'] ?? 0);
@@ -670,9 +678,13 @@ final class ItemScreen
         $files = Database::count('item_attachments', 'item_id = ?', [$itemId]);
         $groups = self::groupNames($groupIds);
 
+        $ownerRow = $canWrite
+            ? '<div class="facts__row facts__row--assign"><dt>Owner</dt><dd>'
+                . self::ownerAssign($itemId, $ownerId, $names[$ownerId] ?? '') . '</dd></div>'
+            : $row('Owner', $person($names[$ownerId] ?? ''));
         $facts = '<dl class="facts">'
             . $row('Status', $stand !== '' ? \Adlexone\Html\Presence::pill($stand) : '')
-            . $row('Owner', $person($names[$ownerId] ?? ''))
+            . $ownerRow
             . $row('Opened by', $creatorId !== $ownerId ? $person($names[$creatorId] ?? '') : '')
             . $row('Opened', $when($opened))
             . $row('Last change', $updated > $opened ? $when($updated) : '')
@@ -715,6 +727,46 @@ final class ItemScreen
             . ($canWrite && defined('SET_LOG_ENTRY') && SET_LOG_ENTRY === 'yes' ? self::noteComposer($itemId) : '')
             . \Adlexone\Html\Timeline::render($events, 'Nothing has been written on this record.') . '</section>'
             . '</aside>';
+    }
+
+    /**
+     * A short form that sets the owner and runs the update rules.
+     */
+    private static function ownerAssign(int $itemId, int $ownerId, string $ownerName): string
+    {
+        $scarce = count(Rules::people()) < 2;
+
+        return '<form class="owner-assign" method="post" action="' . Html::e(MAN_BASE_URL . '&option=update_owner') . '">'
+            . Csrf::field()
+            . Form::hidden('item_id', (string) $itemId)
+            . '<label class="sr-only" for="record-owner">Owner</label>'
+            . self::ownerSelect($ownerId, $ownerName, false, 'id="record-owner"')
+            . '<button class="btn btn--primary btn--sm" type="submit">Assign</button>'
+            . ($scarce ? '<p class="owner-assign__hint">Add a person under People and groups.</p>' : '')
+            . '</form>';
+    }
+
+    /**
+     * People who can hold a record, with no owner as the first choice.
+     */
+    private static function ownerSelect(int $ownerId, string $ownerName = '', bool $hint = false, string $attributes = ''): string
+    {
+        $people = Rules::people();
+        $values = ['0'];
+        $labels = ['No owner'];
+        if ($ownerId > 0 && !isset($people[$ownerId])) {
+            $people[$ownerId] = $ownerName !== '' ? $ownerName : ('Owner ' . $ownerId);
+        }
+        foreach ($people as $id => $name) {
+            $values[] = (string) $id;
+            $labels[] = $name;
+        }
+        $html = Form::select('user_security', $values, $labels, (string) $ownerId, $attributes);
+        if ($hint && count($people) < 2) {
+            $html .= '<p class="form-help">Add a person under People and groups.</p>';
+        }
+
+        return $html;
     }
 
     private static function noteComposer(int $itemId): string
@@ -1173,31 +1225,19 @@ final class ItemScreen
         }
         $itemTypeName = $row['item_type_name'];
         $inApplication = Page::current()->inApplication();
-        if ($_SESSION['access_role_id'] <= 2) {//Admin, Adlexone Admin, Global Adlexone Admin have write access
-            $itemRole = 2;
-        } else {
-            $itemRole = 5;
-            $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
-            $typeGroupIds = GroupMembership::itemTypeGroupIds((int) ($itemTypeFields['item_type_id'] ?? 0));
-            foreach (array_intersect($userGroupIds, $typeGroupIds) as $groupId) {
-                $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
-                if ($groupRow !== null) {
-                    $itemRole = ((int) $groupRow['role'] < $itemRole) ? (int) $groupRow['role'] : $itemRole;
-                }
-            }
-        }
+        $itemRole = self::typeRole((int) ($itemTypeFields['item_type_id'] ?? 0));
         $peopleHidden = '';
         if ($itemRole < 4) {//Admins and manager can set
             // If the item type does not specify a default user use the logged in user
             if (!isset($values['user_security'])) {
-                if (!isset($itemTypeFields['user_security'])) {
+                if ((string) ($itemTypeFields['user_security'] ?? '') === '') {
                     $itemTypeFields['user_security'] = $_SESSION['access_user_id'];
                 }
                 $itemTypeFields['creator_security'] = $_SESSION['access_user_id'];
             }
             if ($inApplication) {
-                $peopleHidden = Form::hidden('creator_security', (string) $itemTypeFields['creator_security'])
-                    . Form::hidden('user_security', (string) $itemTypeFields['user_security']);
+                $peopleHidden = Form::hidden('creator_security', (string) $itemTypeFields['creator_security']);
+                $fields['Owner'] = self::ownerSelect((int) ($itemTypeFields['user_security'] ?? 0), '', true);
             } else {
                 // Security is setup by default from the item
                 $columnArray = array('user_id', 'user_name');
@@ -1769,6 +1809,26 @@ final class ItemScreen
     }
 
     /**
+     * The signed-in person's role on a record type. An administrator stays an administrator.
+     */
+    private static function typeRole(int $typeId): int
+    {
+        if ((int) ($_SESSION['access_role_id'] ?? 5) <= 2) {
+            return 2;
+        }
+        $itemRole = 5;
+        $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
+        foreach (array_intersect($userGroupIds, GroupMembership::itemTypeGroupIds($typeId)) as $groupId) {
+            $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
+            if ($groupRow !== null) {
+                $itemRole = min($itemRole, (int) $groupRow['role']);
+            }
+        }
+
+        return $itemRole;
+    }
+
+    /**
      * The items columns a person may set when creating an item.
      *
      * @param array<string, mixed> $post
@@ -1777,14 +1837,46 @@ final class ItemScreen
     private static function newItemColumns(array $post): array
     {
         $me = (int) ($_SESSION['access_user_id'] ?? 0);
-        $owner = $post['user_security'] ?? '';
-        $canAssign = (int) ($_SESSION['access_role_id'] ?? 5) < 4;
+        $owner = trim((string) ($post['user_security'] ?? ''));
+        $canAssign = (int) ($_SESSION['access_role_id'] ?? 5) < 4
+            || self::typeRole((int) ($post['item_type_id'] ?? 0)) < 4;
+        if ($canAssign && $owner === '0') {
+            $chosen = 0;
+        } elseif ($canAssign && self::personExists($owner)) {
+            $chosen = (int) $owner;
+        } else {
+            $chosen = $me;
+        }
+
         return [
             'item_type_id' => (int) ($post['item_type_id'] ?? 0),
             'item_title' => trim((string) ($post['item_title'] ?? '')),
             'creator_security' => $me,
-            'user_security' => ($canAssign && self::personExists($owner)) ? (int) $owner : $me,
+            'user_security' => $chosen,
         ];
+    }
+
+    /**
+     * Sets the owner from the record side panel and returns to the record.
+     */
+    private static function updateOwner(): void
+    {
+        $itemId = (int) ($_POST['item_id'] ?? 0);
+        $next = trim((string) ($_POST['user_security'] ?? ''));
+        $allowed = array_map('strval', array_keys(Rules::people()));
+        $allowed[] = '0';
+        $notice = '';
+        if (in_array($next, $allowed, true)) {
+            $row = Database::first('items', ['user_security'], 'item_id = ?', [$itemId]);
+            if ((int) $next !== (int) ($row['user_security'] ?? 0)) {
+                RecordQuery::saveOwner($itemId, (int) $next);
+                $notice = 'Owner updated.';
+            }
+        }
+        if (self::returnToItem($itemId, $notice)) {
+            return;
+        }
+        self::showItem((string) $itemId);
     }
 
     /**
