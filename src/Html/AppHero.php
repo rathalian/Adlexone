@@ -45,6 +45,16 @@ final class AppHero
         }
 
         $hint = trim((string) ($app['hint'] ?? ''));
+        $guide = trim((string) ($app['guide'] ?? ''));
+        $tools = '';
+        if ($guide !== '') {
+            $tools .= '<button type="button" class="btn btn--glass apphero__help" data-sheet-pop aria-haspopup="dialog" aria-controls="app-guide">'
+                . Charts::icon('ic-info')
+                . '<span class="apphero__help-label">How to use</span></button>';
+        }
+        if ($createHref !== '') {
+            $tools .= '<a class="btn btn--glass apphero__action' . ($itemId === 0 && $section !== 'New' ? ' apphero__action--fab' : '') . '" href="' . Html::e($createHref) . '">' . Charts::icon('ic-plus') . 'New record</a>';
+        }
 
         return '<header class="apphero" style="' . Html::e(Accent::style($accent)) . '">'
             . '<div class="apphero__inner">'
@@ -53,7 +63,31 @@ final class AppHero
             . '<p class="apphero__name">' . Html::e((string) $app['name']) . '</p>'
             . ($hint !== '' ? '<p class="apphero__hint">' . Html::e($hint) . '</p>' : '') . '</div>'
             . ($facts !== '' ? '<ul class="apphero__facts">' . $facts . '</ul>' : '')
-            . ($createHref !== '' ? '<a class="btn btn--glass apphero__action' . ($itemId === 0 && $section !== 'New' ? ' apphero__action--fab' : '') . '" href="' . Html::e($createHref) . '">' . Charts::icon('ic-plus') . 'New record</a>' : '')
-            . '</div></header>';
+            . ($tools !== '' ? '<div class="apphero__tools">' . $tools . '</div>' : '')
+            . '</div></header>'
+            . self::guideDialog($guide);
+    }
+
+    private static function guideDialog(string $guide): string
+    {
+        if ($guide === '') {
+            return '';
+        }
+        $body = '';
+        foreach (preg_split("/\n\s*\n/", $guide) ?: [] as $block) {
+            $block = trim($block);
+            if ($block === '') {
+                continue;
+            }
+            $body .= '<p class="guide__p">' . nl2br(Html::e($block), false) . '</p>';
+        }
+
+        return '<dialog class="sheet-pop" id="app-guide" aria-labelledby="app-guide-title">'
+            . '<div class="sheet-pop__panel">'
+            . '<div class="sheet-pop__head"><h2 class="sheet-pop__title" id="app-guide-title">How to use</h2>'
+            . '<button type="button" class="btn btn--quiet btn--sm sheet-pop__close" data-sheet-pop-close>Close</button></div>'
+            . '<div class="sheet-pop__body">' . $body . '</div>'
+            . '<div class="sheet-pop__actions"><button type="button" class="btn btn--primary" data-sheet-pop-close>Done</button></div>'
+            . '</div></dialog>';
     }
 }

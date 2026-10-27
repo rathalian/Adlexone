@@ -292,6 +292,8 @@ final class ApplicationsScreen
             'Name' => Form::text('name', Html::e((string) ($app['name'] ?? ''))),
             'Slug' => Form::text('slug', Html::e((string) ($app['slug'] ?? '')), 'complaints'),
             'Description' => Form::text('hint', Html::e((string) ($app['hint'] ?? ''))),
+            'How to use' => Form::textarea('guide', (string) ($app['guide'] ?? ''), '8')
+                . '<p class="form-help">Shown when someone opens this application and chooses How to use. Leave this blank to hide the button.</p>',
             'Record type' => self::recordTypeSelect($recordType),
             'Icon' => self::iconSelect('icon', (string) ($app['icon'] ?? 'ic-grid')),
             'Who can open it' => self::groupAccessField((string) ($app['slug'] ?? '')),
@@ -337,6 +339,7 @@ final class ApplicationsScreen
             'slug' => $slug,
             'name' => $name,
             'hint' => trim((string) ($_POST['hint'] ?? '')),
+            'guide' => trim((string) ($_POST['guide'] ?? '')),
             'icon' => $icon,
             'permission' => Permission::appUse($slug),
             'enabled' => isset($_POST['enabled']) ? 1 : 0,

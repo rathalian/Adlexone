@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS applications (
   slug TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   hint TEXT NOT NULL DEFAULT '',
+  guide TEXT NOT NULL DEFAULT '',
   icon TEXT NOT NULL DEFAULT 'ic-launch',
   permission TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,

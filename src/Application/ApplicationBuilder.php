@@ -27,6 +27,7 @@ final class ApplicationBuilder
     public const BLUEPRINT_INCIDENTS = 'incidents';
     public const BLUEPRINT_CANDIDATES = 'candidates';
     public const BLUEPRINT_CONTRACTS = 'contracts';
+    public const BLUEPRINT_PUBLISHING = 'publishing';
 
     /**
      * @return array<string, array{label: string, hint: string, record: string, icon: string, rule: string, fields: list<array<string, mixed>>, screens: list<string>}>
@@ -242,6 +243,65 @@ final class ApplicationBuilder
                 $work,
                 self::search('In review', 'Contracts being read.', 'Review')
             ),
+            self::BLUEPRINT_PUBLISHING => self::shape(
+                'Publishing',
+                'A manuscript from the day it arrives until it is approved or declined.',
+                'Manuscript',
+                'ic-book',
+                'Writer',
+                'Posts a notice and stamps the approved date when a manuscript is approved.',
+                [
+                    $status(['Received', 'Reading', 'With the writer', 'Editing', 'Approved', 'Declined']),
+                    self::text('Writer'),
+                    self::menu('Kind', ['Novel', 'Stories', 'Memoir', 'Poetry', 'Essays']),
+                    self::number('Word count'),
+                    self::text('Next step'),
+                    self::note(),
+                    self::date('Reply due'),
+                    self::date('Received on'),
+                    self::date('Approved on'),
+                    self::date('Declined on'),
+                ],
+                [
+                    self::when('Note the arrival', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Received on'),
+                        self::logLine('Received ITEM_TITLE.'),
+                    ]),
+                    self::when('Start the reading', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Reading', [
+                        self::logLine('Reading ITEM_TITLE.'),
+                        self::setField('Next step', 'Finish the reading.'),
+                    ]),
+                    self::when('Ask for a rewrite', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'With the writer', [
+                        self::email('With the writer: ITEM_TITLE', 'ITEM_TITLE is with the writer for a rewrite.'),
+                        self::logLine('Asked the writer to revise ITEM_TITLE.'),
+                        self::setField('Next step', 'Waiting on the rewrite.'),
+                    ]),
+                    self::when('Note a file while it is with the writer', Rules::EVENT_ATTACHMENT, 'Status', Rules::OP_EQ, 'With the writer', [
+                        self::email('A file on ITEM_TITLE', 'A file was added to ITEM_TITLE while it is with the writer.'),
+                        self::logLine('A file was added to ITEM_TITLE.'),
+                    ]),
+                    self::when('Start the edit', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Editing', [
+                        self::logLine('Editing ITEM_TITLE.'),
+                        self::setField('Next step', 'Finish the edit.'),
+                    ]),
+                    self::when('Approve the manuscript', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Approved', [
+                        self::stamp('Approved on'),
+                        self::logLine('Approved ITEM_TITLE for publication.'),
+                        self::notice('Approved: ITEM_TITLE', 'ITEM_TITLE has been approved for publication.'),
+                        self::email('Approved: ITEM_TITLE', 'ITEM_TITLE has been approved for publication.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    self::when('Decline the manuscript', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Declined', [
+                        self::stamp('Declined on'),
+                        self::logLine('Declined ITEM_TITLE.'),
+                        self::setField('Next step', ''),
+                    ]),
+                ],
+                array_merge($wall, $diary),
+                self::search('With the writer', 'Manuscripts waiting on a rewrite.', 'With the writer'),
+                ['Approved', 'Declined'],
+                self::publishingGuide()
+            ),
             self::BLUEPRINT_BLANK => self::shape(
                 'Blank',
                 'An empty application and one record type. Add fields when you are ready.',
@@ -272,7 +332,8 @@ final class ApplicationBuilder
         string $recordTypeName,
         ?array $screens = null,
         array $groupIds = [],
-        array $permLevels = []
+        array $permLevels = [],
+        ?string $guide = null
     ): array {
         $name = trim($name);
         $slug = self::slugify($slug, $name);
@@ -340,6 +401,7 @@ final class ApplicationBuilder
         $stepId = 0;
         $dueId = 0;
         $openStatuses = [];
+        $closed = array_values(array_filter(array_map('strval', $blueprints[$blueprint]['closed'] ?? [])));
         foreach ($fieldDefs as $field) {
             $fieldName = trim((string) ($field['name'] ?? ''));
             $fieldId = (int) ($fieldIdsByName[$fieldName] ?? 0);
@@ -347,7 +409,12 @@ final class ApplicationBuilder
             if ($plain === 'status') {
                 $statusId = $fieldId;
                 $openStatuses = array_values(array_filter(array_map('strval', $field['values'] ?? [])));
-                if (count($openStatuses) > 1) {
+                if ($closed !== []) {
+                    $openStatuses = array_values(array_filter(
+                        $openStatuses,
+                        static fn (string $value): bool => !in_array($value, $closed, true)
+                    ));
+                } elseif (count($openStatuses) > 1) {
                     array_pop($openStatuses);
                 }
             } elseif ($plain === 'next step') {
@@ -364,6 +431,7 @@ final class ApplicationBuilder
             'slug' => $slug,
             'name' => $name,
             'hint' => $hint !== '' ? $hint : $blueprints[$blueprint]['hint'],
+            'guide' => $guide === null ? trim((string) ($blueprints[$blueprint]['guide'] ?? '')) : trim($guide),
             'icon' => $icon,
             'permission' => $usePerm,
             'enabled' => 1,
@@ -561,7 +629,7 @@ final class ApplicationBuilder
     }
 
     /**
-     * The ten case-file applications, with work already on the board.
+     * The case-file applications, with work already on the board.
      * An application is left alone once its mark field is present.
      */
     public static function installShowcase(): void
@@ -632,6 +700,20 @@ final class ApplicationBuilder
     private static function showcase(): array
     {
         return [
+            'publishing' => [
+                'blueprint' => self::BLUEPRINT_PUBLISHING,
+                'sort' => 5,
+                'cards' => [
+                    ['title' => 'Home to Roost', 'fields' => ['Status' => 'Approved', 'Writer' => 'Carole Hocking', 'Kind' => 'Novel', 'Word count' => '86000', 'Note' => 'Accepted for publication. The line is ready.', 'Received on' => '02-06-2026', 'Approved on' => '18-10-2026']],
+                    ['title' => 'A Place In Time', 'fields' => ['Status' => 'Editing', 'Writer' => 'Carole Hocking', 'Kind' => 'Novel', 'Word count' => '91000', 'Next step' => 'Finish the edit.', 'Note' => 'The rewrite is in. The last chapters hold.', 'Received on' => '14-07-2026']],
+                    ['title' => 'Old Farts On A Bus', 'fields' => ['Status' => 'With the writer', 'Writer' => 'Carole Hocking', 'Kind' => 'Novel', 'Word count' => '72000', 'Next step' => 'Waiting on the rewrite.', 'Note' => 'The journey is the book. A new last chapter was asked for.', 'Reply due' => '19-11-2026', 'Received on' => '03-09-2026']],
+                    ['title' => 'Damaged Good', 'fields' => ['Status' => 'Reading', 'Writer' => 'Carole Hocking', 'Kind' => 'Novel', 'Word count' => '68000', 'Next step' => 'Finish the reading.', 'Note' => 'A clear opening. The reading is underway.', 'Received on' => '06-10-2026']],
+                ],
+                'notice' => [
+                    'subject' => 'Home to Roost',
+                    'message' => 'Home to Roost has been approved for publication.',
+                ],
+            ],
             'matters' => [
                 'blueprint' => self::BLUEPRINT_MATTERS,
                 'sort' => 10,
@@ -827,7 +909,9 @@ final class ApplicationBuilder
         array $fields,
         array $rules,
         array $screens,
-        ?array $search
+        ?array $search,
+        array $closed = [],
+        string $guide = ''
     ): array {
         return [
             'label' => $label,
@@ -840,7 +924,22 @@ final class ApplicationBuilder
             'rules' => $rules,
             'screens' => $screens,
             'search' => $search,
+            'closed' => $closed,
+            'guide' => $guide,
         ];
+    }
+
+    private static function publishingGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one manuscript. The title of the book is the name of the record. The writer is named on the card, and the editor who has it is the owner.
+
+Move Status as the book moves. Received means it has arrived. Reading means an editor has it. With the writer means a rewrite has been asked for. Editing means the rewrite is back and the house is editing. Approved means the book will be published. Declined means it will not.
+
+When you ask for a rewrite, set Reply due to the day you expect it, then write to the writer yourself. The application records the request and sends you an email. Parties lists every manuscript under the writer's name. The diary shows a rewrite that is overdue.
+
+A notice is posted when a manuscript is approved. A decline is written in the log and stays off the wall.
+TEXT;
     }
 
     /**

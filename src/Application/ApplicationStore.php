@@ -43,6 +43,7 @@ final class ApplicationStore
                 slug TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 hint TEXT NOT NULL DEFAULT "",
+                guide TEXT NOT NULL DEFAULT "",
                 icon TEXT NOT NULL DEFAULT "ic-launch",
                 permission TEXT NOT NULL,
                 enabled INTEGER NOT NULL DEFAULT 1,
@@ -55,6 +56,9 @@ final class ApplicationStore
         );
         if (self::tableExists('applications') && !Database::columnExists('applications', 'settings_json')) {
             Database::exec('ALTER TABLE applications ADD COLUMN settings_json TEXT NOT NULL DEFAULT "{}"');
+        }
+        if (self::tableExists('applications') && !Database::columnExists('applications', 'guide')) {
+            Database::exec('ALTER TABLE applications ADD COLUMN guide TEXT NOT NULL DEFAULT ""');
         }
         Database::exec(
             'CREATE TABLE IF NOT EXISTS application_nav (
@@ -157,6 +161,9 @@ final class ApplicationStore
             'legacy_controller' => $fields['legacy_controller'] ?? '',
             'legacy_key' => $fields['legacy_key'] ?? '',
         ];
+        if (Database::columnExists('applications', 'guide')) {
+            $row['guide'] = (string) ($fields['guide'] ?? '');
+        }
         if (Database::columnExists('applications', 'settings_json')) {
             $row['settings_json'] = $fields['settings_json'] ?? '{}';
         }
@@ -188,14 +195,18 @@ final class ApplicationStore
             }
             $fields['permission'] = Permission::appUse($newSlug);
         }
-        Database::update('applications', [
+        $update = [
             'slug' => $newSlug,
             'name' => $fields['name'],
             'hint' => $fields['hint'] ?? '',
             'icon' => $fields['icon'] ?? 'ic-grid',
             'permission' => $fields['permission'],
             'enabled' => (int) ($fields['enabled'] ?? 0),
-        ], 'application_id = ?', [$id]);
+        ];
+        if (Database::columnExists('applications', 'guide')) {
+            $update['guide'] = (string) ($fields['guide'] ?? '');
+        }
+        Database::update('applications', $update, 'application_id = ?', [$id]);
     }
 
     /**
@@ -747,6 +758,7 @@ final class ApplicationStore
             'slug' => (string) $row['slug'],
             'name' => (string) $row['name'],
             'hint' => (string) $row['hint'],
+            'guide' => (string) ($row['guide'] ?? ''),
             'icon' => (string) $row['icon'],
             'permission' => (string) $row['permission'],
             'enabled' => (int) $row['enabled'] === 1,

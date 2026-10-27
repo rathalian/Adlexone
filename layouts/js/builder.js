@@ -7,7 +7,9 @@ if(!form)return;
 var nameEl=document.getElementById("builder-name");
 var slugEl=document.getElementById("builder-slug");
 var hintEl=document.getElementById("builder-hint");
+var guideEl=document.getElementById("builder-guide");
 var typeEl=document.getElementById("builder-type");
+var guideDirty=false;
 var slugDirty=slugEl&&slugEl.value.trim()!=="";
 var typeDirty=typeEl&&typeEl.value.trim()!=="";
 function slugify(v){return String(v||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
@@ -52,10 +54,12 @@ text("builder-preview-access",(groups.filter(Boolean).join(", ")||"Administrator
 if(nameEl)nameEl.addEventListener("input",function(){if(!slugDirty&&slugEl)slugEl.value=slugify(nameEl.value);render();});
 if(slugEl)slugEl.addEventListener("input",function(){slugDirty=slugEl.value.trim()!=="";if(!slugDirty&&nameEl)slugEl.value=slugify(nameEl.value);render();});
 if(hintEl)hintEl.addEventListener("input",render);
+if(guideEl)guideEl.addEventListener("input",function(){guideDirty=true;});
 if(typeEl)typeEl.addEventListener("input",function(){typeDirty=typeEl.value.trim()!=="";render();});
 form.addEventListener("change",function(e){if(e.target&&e.target.name==="blueprint"){var bp=data.blueprints&&data.blueprints[e.target.value];
 if(bp){form.querySelectorAll("input[name=\"screens[]\"]").forEach(function(input){input.checked=bp.screens.indexOf(input.value)!==-1;});
-if(bp.icon){var iconInput=form.querySelector("input[name=icon][value=\""+bp.icon+"\"]");if(iconInput)iconInput.checked=true;}}}render();});
+if(bp.icon){var iconInput=form.querySelector("input[name=icon][value=\""+bp.icon+"\"]");if(iconInput)iconInput.checked=true;}
+if(guideEl&&!guideDirty)guideEl.value=bp.guide||"";}}render();});
 render();
 var preview=document.querySelector(".builder__preview");
 function placePreview(){

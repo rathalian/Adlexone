@@ -16,7 +16,7 @@ use Adlexone\support\Database;
 final class SchemaMigrator
 {
     /** @phpstan-ignore classConstant.unused */
-    private const VERSION = 11;
+    private const VERSION = 12;
 
     private static bool $done = false;
 
@@ -88,6 +88,11 @@ final class SchemaMigrator
         if ($current < 11) {
             self::applyV11();
             self::mark(11);
+            $current = 11;
+        }
+        if ($current < 12) {
+            self::applyV12();
+            self::mark(12);
         }
     }
 
@@ -770,6 +775,16 @@ final class SchemaMigrator
             Database::run(
                 "UPDATE applications SET permission = replace(permission, '.announce', '.use') WHERE permission GLOB 'app.*.announce'"
             );
+        }
+    }
+
+    /**
+     * A guide the application creator writes for the people who open it.
+     */
+    private static function applyV12(): void
+    {
+        if (Database::tableExists('applications') && !Database::columnExists('applications', 'guide')) {
+            Database::exec('ALTER TABLE applications ADD COLUMN guide TEXT NOT NULL DEFAULT ""');
         }
     }
 

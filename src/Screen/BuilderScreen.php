@@ -61,6 +61,9 @@ final class BuilderScreen
         if (!isset($blueprints[$blueprint])) {
             $blueprint = ApplicationBuilder::BLUEPRINT_MATTERS;
         }
+        $guideRaw = array_key_exists('guide', $_POST)
+            ? (string) $_POST['guide']
+            : (string) ($blueprints[$blueprint]['guide'] ?? '');
         if (($_POST['icon'] ?? '') === '') {
             $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-grid');
         }
@@ -122,6 +125,7 @@ final class BuilderScreen
             }
             $clientBlueprints[$key] = [
                 'hint' => (string) $meta['hint'],
+                'guide' => (string) ($meta['guide'] ?? ''),
                 'record' => (string) ($meta['record'] ?? ''),
                 'icon' => (string) ($meta['icon'] ?? 'ic-grid'),
                 'screens' => array_values($meta['screens']),
@@ -268,6 +272,9 @@ final class BuilderScreen
             . '<p class="form-help">This follows the name until you change it.</p></div>'
             . '<div class="field field--wide"><label class="label" for="builder-hint">Description</label>'
             . '<input class="text" id="builder-hint" name="hint" value="' . $h($hintRaw) . '" autocomplete="off" placeholder="What this application is for"></div>'
+            . '<div class="field field--wide"><label class="label" for="builder-guide">How to use</label>'
+            . '<textarea class="text textarea" id="builder-guide" name="guide" rows="8">' . $h($guideRaw) . '</textarea>'
+            . '<p class="form-help">Shown when someone opens this application and chooses How to use. Leave this blank to hide the button.</p></div>'
             . '<div class="field field--wide"><span class="label" id="builder-icon-label">Icon</span>' . $iconsHtml . '</div>'
             . '</div></section>'
             . '<section class="builder__section">'
@@ -343,6 +350,7 @@ final class BuilderScreen
         if (!is_array($levels)) {
             $levels = [];
         }
+        $guide = trim((string) ($_POST['guide'] ?? ''));
         try {
             $created = ApplicationBuilder::create(
                 (string) ($_POST['name'] ?? ''),
@@ -353,7 +361,8 @@ final class BuilderScreen
                 (string) ($_POST['record_type_name'] ?? ''),
                 array_map('strval', $screens),
                 array_map('intval', $groups),
-                array_map('strval', $levels)
+                array_map('strval', $levels),
+                $guide === '' ? null : $guide
             );
         } catch (\InvalidArgumentException $e) {
             self::showBuilderForm($e->getMessage());
