@@ -222,32 +222,6 @@ final class ItemFields
             . ' ELSE NULL END)';
     }
 
-    /**
-     * Rewrite legacy SQL that still references items.custom_field_N.
-     */
-    public static function rewriteLegacySql(string $sql): BoundQuery
-    {
-        $params = [];
-        $sql = preg_replace_callback(
-            '/\b(?:items\.)?custom_field_(\d+)\s*(=|<>|!=|LIKE|>|<)\s*\'([^\']*)\'/i',
-            static function (array $m) use (&$params): string {
-                $part = self::matchSql((int) $m[1], $m[2], $m[3]);
-                foreach ($part->params as $param) {
-                    $params[] = $param;
-                }
-
-                return $part->sql;
-            },
-            $sql
-        ) ?? $sql;
-
-        // SELECT list: drop custom_field_N projections (callers that need values hydrate later).
-        $sql = preg_replace('/,\s*(?:items\.)?custom_field_\d+\b/i', '', $sql) ?? $sql;
-        $sql = preg_replace('/\b(?:items\.)?custom_field_\d+\s*,\s*/i', '', $sql) ?? $sql;
-
-        return new BoundQuery($sql, $params);
-    }
-
     public static function fieldIdFromKey(string $key): ?int
     {
         if (preg_match('/^custom_field_(\d+)$/', $key, $m)) {

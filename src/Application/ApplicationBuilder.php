@@ -1603,7 +1603,6 @@ TEXT;
             'user' => 'all',
             'search_name' => $name,
             'search_description' => (string) ($search['description'] ?? ''),
-            'saved_search_sql' => '',
             'application' => $slug,
             'criteria_json' => json_encode($criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}',
         ]);

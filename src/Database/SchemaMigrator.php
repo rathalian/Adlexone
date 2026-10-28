@@ -5,6 +5,7 @@ namespace Adlexone\Database;
 
 use Adlexone\Application\Rules;
 use Adlexone\Data\GroupMembership;
+use Adlexone\Data\SavedSearch;
 use Adlexone\support\Database;
 
 /**
@@ -16,7 +17,7 @@ use Adlexone\support\Database;
 final class SchemaMigrator
 {
     /** @phpstan-ignore classConstant.unused */
-    private const VERSION = 13;
+    private const VERSION = 14;
 
     private static bool $done = false;
 
@@ -98,6 +99,11 @@ final class SchemaMigrator
         if ($current < 13) {
             self::applyV13();
             self::mark(13);
+            $current = 13;
+        }
+        if ($current < 14) {
+            self::applyV14();
+            self::mark(14);
         }
     }
 
@@ -765,8 +771,38 @@ final class SchemaMigrator
     }
 
     /**
-     * Announcements are part of opening an application, not a separate permission.
+     * Saved searches keep filters only. A statement that was stored on the row is discarded.
      */
+    private static function applyV14(): void
+    {
+        if (!Database::tableExists('saved_searches')) {
+            return;
+        }
+        $columns = ['search_id', 'criteria_json'];
+        $hasSql = Database::columnExists('saved_searches', 'saved_search_sql');
+        if ($hasSql) {
+            $columns[] = 'saved_search_sql';
+        }
+        foreach (Database::select('saved_searches', $columns) as $row) {
+            $decoded = json_decode((string) ($row['criteria_json'] ?? ''), true);
+            $criteria = is_array($decoded) ? $decoded : [];
+            $stored = $hasSql ? (string) ($row['saved_search_sql'] ?? '') : '';
+            $next = SavedSearch::withoutStoredSql($criteria, $stored);
+            if ($next === $criteria) {
+                continue;
+            }
+            Database::update(
+                'saved_searches',
+                ['criteria_json' => SavedSearch::encode($next)],
+                'search_id = ?',
+                [(int) $row['search_id']]
+            );
+        }
+        if ($hasSql) {
+            Database::exec('ALTER TABLE saved_searches DROP COLUMN saved_search_sql');
+        }
+    }
+
     private static function applyV11(): void
     {
         $where = "permission GLOB 'app.*.announce' OR permission = 'servicecentre.announce'";

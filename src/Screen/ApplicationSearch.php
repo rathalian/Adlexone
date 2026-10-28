@@ -908,9 +908,8 @@ final class ApplicationSearch
                 'user' => $everyone ? 'all' : $userId,
                 'search_name' => mb_substr($name, 0, 80),
                 'search_description' => '',
-                'saved_search_sql' => SavedSearch::compile($criteria)->sql,
                 'application' => ApplicationStore::scopeKey($app),
-                'criteria_json' => SavedSearch::encode($criteria),
+                'criteria_json' => SavedSearch::encode(SavedSearch::withoutStoredSql($criteria)),
             ]);
             View::flash('Saved "' . mb_substr($name, 0, 80) . '".');
         }

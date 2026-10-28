@@ -258,7 +258,7 @@ final class SearchScreen
      * Parameters mirror the original showItems for compatibility.
      *
      * - Accepts:
-     *   - $itemIDArray: array of ids, array of rows (with item_id), or a SQL string that Database::buildArray can resolve
+     *   - $itemIDArray: array of ids, or array of rows with item_id
      *   - $itemID: optional single id filter
      *   - $orderSQL: optional ORDER BY clause (pass column(s) only)
      *   - $userID, $savedSearch: kept for signature compatibility (not used here)
@@ -270,11 +270,7 @@ final class SearchScreen
     public static function showItems($itemIDArray, $itemID = '', $orderSQL = '', $userID = '', $savedSearch = ''): void
     {
         // Normalize input: if a SQL string was passed, build an array using Database helper
-        if (is_string($itemIDArray) && trim($itemIDArray) !== '') {
-            $built = Database::rows($itemIDArray);
-        } else {
-            $built = (array)$itemIDArray;
-        }
+        $built = is_array($itemIDArray) ? $itemIDArray : [];
 
         // Normalize to a flat list of integer IDs
         $ids = [];
@@ -371,9 +367,7 @@ final class SearchScreen
      */
     public static function showItems1($itemIDArray, $itemID = '', $orderSQL = '',  $userID = '', $savedSearch='')
     {
-    	if ((@$_GET['option'] != 'show_search_results')){
-    		unset($_SESSION['item_search_sql']);
-    	}
+    	unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
 
     	$knowledgeArticlesArray = array();
 
@@ -583,35 +577,6 @@ final class SearchScreen
     			$condition .= " LIMIT " . SET_ITEMS_PAGE;
     		}
     		$result = Database::select('items', $columnArray, $condition);
-    		if (isset($_SESSION['item_search_sql'])){
-    			$origSQL = $_SESSION['item_search_sql'];
-    			$origSQL = str_replace("\'","'",$origSQL);
-    			$condition = '';
-    			if (isset($_POST['pageset']) && $_POST['pageset'] !=1) {
-    				$condition = (($_POST['pageset'] - 1) * SET_ITEMS_PAGE) . ",";
-    			}
-    			$condition .= SET_ITEMS_PAGE;
-    			if (strpos($origSQL,"LIMIT") > 0) {
-    				$origSQL = substr($origSQL,0,strpos($origSQL,'LIMIT')) . ' LIMIT ' . $condition;
-    			}
-    			if (isset($_POST['pageset'])) {
-    				$currsort = substr($origSQL,strpos($origSQL,'ORDER BY') + 9,strpos($origSQL,'LIMIT') - strpos($origSQL,'ORDER BY') - 9);
-    			} else {
-    				$currsort = substr($origSQL,strpos($origSQL,'ORDER BY') + 9,strlen($origSQL));
-    			}
-    		} else {
-    			$origSQL = $sql;
-    		}
-
-    		$postedOrder = Database::orderBy(is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '');
-    		if ($postedOrder !== '' && isset($currsort)) {
-    			if ($postedOrder == substr($currsort,0,strpos($currsort," "))) {
-    				$newsort = (strpos($currsort,"DESC") == 0) ? $currsort . " DESC " : $postedOrder . " ";
-    			} else {
-    				$newsort = (strpos($currsort,"DESC") == 0) ? $postedOrder . " DESC " : $postedOrder . " ";
-    			}
-    			$origSQL = str_replace("ORDER BY " . $currsort,"ORDER BY " . $newsort,$origSQL);
-    		}
 
     		// Create Table and populate with data (and formatting)
     		// Set required style info
@@ -805,7 +770,7 @@ final class SearchScreen
     			$html .= Form::hidden('pageset',$pageset);
     		}
     		$html .= Form::hidden('currsort','');
-    		$_SESSION['item_search_sql'] = $origSQL;
+    		unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
     		$html .= Form::hidden('search',@$pageset);
     		$html .= Form::hidden('countrecs',$countrecs);
     		$html .= Form::hidden('search_type',$_GET['option']);
@@ -1053,25 +1018,7 @@ final class SearchScreen
             $sql = Database::sqlSelect('items', $columnArray, $condition);
         }
 
-        if (isset($_SESSION['item_search_sql']) and (@$_GET['option'] == 'show_search_results')) {
-            $sql = $_SESSION['item_search_sql'];
-            $sql = str_replace("\'", "'", $sql);
-            $params = is_array($_SESSION['item_search_params'] ?? null) ? $_SESSION['item_search_params'] : [];
-            if (isset($_POST['pageset']) && $_POST['pageset'] != 1) {
-                $condition = (($_POST['pageset'] - 1) * SET_ITEMS_PAGE) . ",";
-            } else {
-                $condition = "";
-            }
-            $condition .= SET_ITEMS_PAGE;
-            if (strpos($sql, "LIMIT") > 0) {
-                $sql = substr($sql, 0, strpos($sql, 'LIMIT')) . ' LIMIT ' . $condition;
-            }
-            if (isset($_POST['pageset'])) {
-                $currsort = substr($sql, strpos($sql, 'ORDER BY') + 9, strpos($sql, 'LIMIT') - strpos($sql, 'ORDER BY') - 9);
-            } else {
-                $currsort = substr($sql, strpos($sql, 'ORDER BY') + 9, strlen($sql));
-            }
-        }
+        unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
 
         $sortColumn = self::sortColumn(substr(self::postedText('sort_field'), 5));
         if (isset($_POST['sortOrder']) && $sortColumn !== '') {
@@ -1079,29 +1026,14 @@ final class SearchScreen
             $newsort .= ($_POST['sortOrder'] == "descending") ? "DESC" : "";
             $sql .= " ORDER BY " . $newsort;
         } else {
-            $newsort = "";
-            $postedSort = self::sortColumn(self::postedText('currsort'));
-            if ($postedSort !== '' && isset($currsort)) {
-                if ($postedSort == trim(substr($currsort, 0, (int) strpos($currsort, " ")))) {
-                    $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $postedSort . " ";
-                } else {
-                    $newsort = (strpos($currsort, "DESC") == 0) ? $postedSort . " DESC " : $postedSort . " ";
-                }
-                $sql = str_replace("ORDER BY " . $currsort, "ORDER BY " . $newsort, $sql);
-            } else {
-                $newsort = (isset($currsort)) ? $currsort : "";
-            }
+            $newsort = '';
         }
         // Show search results or move to save search page
         if (isset($_POST['search'])) {
-            $sql = str_replace('session_user',(string) $_SESSION['access_user_id'], $sql);
-            $rewritten = \Adlexone\Data\ItemFields::rewriteLegacySql($sql);
-            self::showItems(Database::rows($rewritten->sql, array_merge($params, $rewritten->params)), '', $newsort, $_SESSION['access_user_id']);
+            self::showItems(Database::rows($sql, $params), '', $newsort, $_SESSION['access_user_id']);
         } elseif (isset($_POST['new_favourite'])) {
-            $sql = addslashes($sql);
             self::addSavedSearch(
                 $_SESSION['access_user_id'],
-                $sql,
                 $_POST['search_name'],
                 $_POST['search_description'],
                 $_POST['application'],
@@ -1208,7 +1140,7 @@ final class SearchScreen
         ]));
     }
 
-    public static function addSavedSearch($userID, $savedSearchSQL, $searchName, $searchDescription, $application, $security, array $criteria = [])
+    public static function addSavedSearch($userID, $searchName, $searchDescription, $application, $security, array $criteria = [])
     {
         // Check for duplicate and respond with a return message if exists
         $searchName = trim((string) $searchName);
@@ -1230,12 +1162,10 @@ final class SearchScreen
             }
             $columnArray['search_name'] = $searchName;
             $columnArray['search_description'] = $searchDescription;
-            $columnArray['saved_search_sql'] = $savedSearchSQL;
             $columnArray['application'] = $application;
-            if ($criteria === []) {
-                $criteria = ['version' => 1, 'legacy_sql' => stripslashes((string) $savedSearchSQL)];
-            }
-            $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode($criteria);
+            $columnArray['criteria_json'] = \Adlexone\Data\SavedSearch::encode(
+                \Adlexone\Data\SavedSearch::withoutStoredSql($criteria)
+            );
             Database::insert('saved_searches', $columnArray);
             // Success messagae
         View::respond(TXT_25, Blocks::link('javascript: history.go(-1)', TXT_404, 'URL'));
@@ -1243,9 +1173,9 @@ final class SearchScreen
 
     public static function savedSearch($searchID, $userID, $global = false, $rss = false)
     {
-        unset($_SESSION['item_search_sql']);
+        unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
 
-        // Show item search based based on stored sql
+        // Show the records that match the saved filters.
         $searchID = (int) $searchID;
         if (@$_GET['global'] == true) {
             $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND user = 'all'", [$searchID]);
@@ -1273,8 +1203,7 @@ final class SearchScreen
                 }
             }
 
-            $savedQuery = \Adlexone\Data\SavedSearch::resolveSql($row);
-            $savedSql = $savedQuery->sql;
+            $savedQuery = \Adlexone\Data\SavedSearch::resolve($row);
             $built = Database::rows($savedQuery->sql, $savedQuery->params);
 
             // Normalize to flat list of item IDs when buildArray returned rows
@@ -1286,11 +1215,11 @@ final class SearchScreen
                 $itemIDs = [];
             }
 
-            self::showItems($itemIDs, '', 'item_id DESC', $_SESSION['access_user_id'], $savedSql);
+            self::showItems($itemIDs, '', 'item_id DESC', $_SESSION['access_user_id']);
         } else {
             //Prep for output of XML RSS feed
             ob_clean();
-            $savedQuery = \Adlexone\Data\SavedSearch::resolveSql($row);
+            $savedQuery = \Adlexone\Data\SavedSearch::resolve($row);
             $itemArray = Database::rows($savedQuery->sql, $savedQuery->params);
             foreach ($itemArray as $id) {
                 $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
@@ -1524,9 +1453,7 @@ final class SearchScreen
     {
         $filter = self::constrainSearchTypeFilter($filter);
         // Clear previous search SQL if not showing search results
-        if ((@$_GET['option'] != 'show_search_results')) {
-            unset($_SESSION['item_search_sql']);
-        }
+        unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
 
         // Define operator and logical values for dropdowns
         $operatorValues = array('=', 'LIKE', '<>');
@@ -1658,7 +1585,7 @@ final class SearchScreen
     public static function editSavedSearch($id)
     {
         $id = (int) $id;
-        $columnArray = ['search_name', 'saved_search_sql'];
+        $columnArray = ['search_name'];
         $row = Database::first('saved_searches', $columnArray, 'search_id = ?', [$id]);
 
         if (!$row) {

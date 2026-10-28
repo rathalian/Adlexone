@@ -882,6 +882,35 @@ final class ItemScreen
     }
 
     /**
+     * Column and direction for a record list. The previous choice is a column name, not a statement.
+     */
+    private static function listOrder(string $fallback, bool $remember): string
+    {
+        unset($_SESSION['item_sql']);
+        $posted = Database::orderBy(is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '');
+        $previous = Database::orderBy((string) ($_SESSION['item_sort'] ?? ''));
+        if ($posted !== '') {
+            $postedColumn = explode(' ', $posted)[0];
+            $previousColumn = $previous === '' ? '' : explode(' ', $previous)[0];
+            $order = ($postedColumn === $previousColumn && !str_contains($previous, 'DESC'))
+                ? $postedColumn . ' DESC'
+                : $postedColumn;
+        } elseif ($remember && $previous !== '' && isset($_POST['search_type'])) {
+            $order = $previous;
+        } else {
+            $order = Database::orderBy($fallback);
+            if ($order === '') {
+                $order = 'item_id DESC';
+            }
+        }
+        if ($remember) {
+            $_SESSION['item_sort'] = $order;
+        }
+
+        return $order;
+    }
+
+    /**
      * Shows a list of items defined by item id, filtered by specific item where applicable
      *
      * @param integer $itemIDArray Item ID array
@@ -916,20 +945,8 @@ final class ItemScreen
         $countrecs = count((array)$itemIDArray);
         $countBoolean = (($countrecs / SET_ITEMS_PAGE) > 1);
 
-        if ($orderSQL == '') {
-            $posted = is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '';
-            $orderSQL = Database::orderBy($posted);
-        } else {
-            $orderSQL = Database::orderBy((string) $orderSQL);
-        }
-
-        if ($orderSQL != '') {
-            $condition .= " ORDER BY $orderSQL";
-            $currsort = $orderSQL;
-        } else {
-            $condition .= " ORDER BY item_id DESC";
-            $currsort = "item_id DESC";
-        }
+        $orderSQL = self::listOrder((string) $orderSQL, (string) $itemID === '');
+        $condition .= ' ORDER BY ' . $orderSQL;
 
         $condition .= " LIMIT ";
 
@@ -938,41 +955,7 @@ final class ItemScreen
         }
 
         $condition .= SET_ITEMS_PAGE;
-        $sql = Database::sqlSelect('items', $columnArray, $condition);
-
-        if (isset($_SESSION['item_sql']) and (@$_GET['option'] != 'add_item') and isset($_POST['search_type'])) {
-            $origSQL = $_SESSION['item_sql'];
-            unset($_SESSION['item_sql']);
-            $origSQL = str_replace("\'", "'", $origSQL);
-            $condition = ' ';
-            if (isset($_POST['pageset']) && $_POST['pageset'] != 1) {
-                $condition = (($_POST['pageset'] - 1) * SET_ITEMS_PAGE) . ",";
-            }
-            $condition .= SET_ITEMS_PAGE;
-            if (strpos($origSQL, "LIMIT") > 0) {
-                $origSQL = substr($origSQL, 0, strpos($origSQL, 'LIMIT')) . ' LIMIT ' . $condition;
-            }
-            if (isset($_POST['pageset'])) {
-                $currsort = substr($origSQL, strpos($origSQL, 'ORDER BY') + 9, strpos($origSQL, 'LIMIT') - strpos($origSQL, 'ORDER BY') - 9);
-            } else {
-                $currsort = substr($origSQL, strpos($origSQL, 'ORDER BY') + 9, strlen($origSQL));
-            }
-        } else {
-            $origSQL = $sql;
-        }
-
-        $postedOrder = Database::orderBy(is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '');
-        if ($postedOrder !== '') {
-            if ($postedOrder == substr($currsort, 0, strpos($currsort, " "))) {
-                $newsort = (strpos($currsort, "DESC") == 0) ? $currsort . " DESC " : $postedOrder . " ";
-            } else {
-                $newsort = (strpos($currsort, "DESC") == 0 && strpos($postedOrder, "DESC") == 0) ? $postedOrder . " DESC " : $postedOrder . " ";
-            }
-            $origSQL = str_replace("ORDER BY " . $currsort, "ORDER BY " . $newsort, $origSQL);
-        }
-
-        $newsort = "";
-            $result = Database::rows($origSQL);
+        $result = Database::rows(Database::sqlSelect('items', $columnArray, $condition));
 
         $listHtml = '';
         $sortLinks = '';
@@ -1068,8 +1051,7 @@ final class ItemScreen
             }
         }
         if ($itemID == '') {
-            $_SESSION['item_sql'] = $origSQL;
-            $hidden .= Form::hidden('currsort', (string)$newsort);
+            $hidden .= Form::hidden('currsort', '');
             $hidden .= Form::hidden('search', (string)($pageset ?? ''));
             $hidden .= Form::hidden('countrecs', (string)$countrecs);
             $hidden .= Form::hidden('search_type', (string)($_GET['option'] ?? ''));

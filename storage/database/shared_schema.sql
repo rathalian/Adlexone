@@ -216,7 +216,6 @@ CREATE TABLE IF NOT EXISTS saved_searches (
   "user" TEXT NOT NULL,
   search_name TEXT NOT NULL,
   search_description TEXT,
-  saved_search_sql TEXT,
   application TEXT,
   criteria_json TEXT NOT NULL DEFAULT '{}'
 );

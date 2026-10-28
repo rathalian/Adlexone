@@ -110,10 +110,11 @@ same(found([['field' => 'user_security', 'op' => '=', 'value' => '0']]), [3], 'n
 
 same(
     array_map('intval', array_column((static function (): array {
-        $query = SavedSearch::resolveSql([
+        $query = SavedSearch::resolve([
             'criteria_json' => SavedSearch::encode(['version' => 1, 'filters' => [
                 ['field' => 'custom_field_1', 'op' => 'LIKE', 'value' => 'otif', 'andor' => 'AND'],
             ]]),
+            'saved_search_sql' => 'SELECT item_id FROM items',
         ]);
 
         return Database::rows($query->sql . ' ORDER BY item_id', $query->params);
@@ -121,6 +122,24 @@ same(
     [1, 3],
     'the older contains operator still works'
 );
+
+$stored = SavedSearch::resolve([
+    'criteria_json' => SavedSearch::encode(['version' => 1, 'legacy_sql' => 'SELECT item_id FROM items WHERE item_title = \'Reid water damage\'']),
+    'saved_search_sql' => 'SELECT item_id FROM items',
+]);
+same(
+    array_map('intval', array_column(Database::rows($stored->sql, $stored->params), 'item_id')),
+    [],
+    'a stored statement is not run'
+);
+check(!str_contains($stored->sql, 'Reid'), 'a stored statement is not copied into the query');
+$kept = SavedSearch::withoutStoredSql([
+    'version' => 1,
+    'filters' => [['field' => 'item_title', 'op' => '=', 'value' => 'Walsh fence', 'andor' => 'AND']],
+    'legacy_sql' => 'SELECT item_id FROM items',
+], 'SELECT item_id FROM items');
+check(!array_key_exists('legacy_sql', $kept), 'a stored statement is dropped when filters exist');
+check($kept['filters'][0]['value'] === 'Walsh fence', 'filters are kept');
 
 @unlink($tmp);
 echo $failed === 0 ? "all checks passed\n" : "{$failed} checks failed\n";

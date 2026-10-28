@@ -8,8 +8,7 @@ use Adlexone\support\Database;
 /**
  * Saved search criteria (JSON) compiled to SQL against the shared schema.
  *
- * Legacy rows may still carry saved_search_sql; execution prefers criteria_json
- * and falls back to rewriting legacy SQL for custom_field_* columns.
+ * A saved search runs from its filters. A stored statement is not read and not written.
  */
 final class SavedSearch
 {
@@ -267,31 +266,45 @@ final class SavedSearch
     }
 
     /**
+     * Filters to keep. A stored statement is dropped. A search that was only a statement matches nothing.
+     *
+     * @param array<string, mixed> $criteria
+     * @return array<string, mixed>
+     */
+    public static function withoutStoredSql(array $criteria, string $storedSql = ''): array
+    {
+        $hadSql = trim($storedSql) !== ''
+            || (isset($criteria['legacy_sql']) && is_string($criteria['legacy_sql']) && trim($criteria['legacy_sql']) !== '');
+        unset($criteria['legacy_sql']);
+        $filters = $criteria['filters'] ?? [];
+        if (!is_array($filters)) {
+            $filters = [];
+        }
+        if ($hadSql && $filters === []) {
+            return [
+                'version' => 1,
+                'filters' => [
+                    ['field' => 'item_id', 'op' => '=', 'value' => '0', 'andor' => 'AND'],
+                ],
+            ];
+        }
+        $criteria['filters'] = $filters;
+        if (!isset($criteria['version'])) {
+            $criteria['version'] = 1;
+        }
+
+        return $criteria;
+    }
+
+    /**
      * @param array<string, mixed> $row
      */
-    public static function resolveSql(array $row): BoundQuery
+    public static function resolve(array $row): BoundQuery
     {
-        $json = trim((string) ($row['criteria_json'] ?? ''));
-        if ($json !== '' && $json !== '{}') {
-            $criteria = json_decode($json, true);
-            if (is_array($criteria)) {
-                if (isset($criteria['legacy_sql']) && is_string($criteria['legacy_sql'])) {
-                    return ItemFields::rewriteLegacySql(
-                        str_replace('session_user', (string) ($_SESSION['access_user_id'] ?? ''), $criteria['legacy_sql'])
-                    );
-                }
+        $decoded = json_decode(trim((string) ($row['criteria_json'] ?? '')), true);
+        $criteria = is_array($decoded) ? $decoded : [];
 
-                return self::compile($criteria);
-            }
-        }
-        $legacy = (string) ($row['saved_search_sql'] ?? '');
-        if ($legacy === '') {
-            return new BoundQuery('SELECT item_id, item_type_id, item_title FROM items WHERE 0');
-        }
-
-        return ItemFields::rewriteLegacySql(
-            str_replace('session_user', (string) ($_SESSION['access_user_id'] ?? ''), $legacy)
-        );
+        return self::compile(self::withoutStoredSql($criteria, (string) ($row['saved_search_sql'] ?? '')));
     }
 
     /**

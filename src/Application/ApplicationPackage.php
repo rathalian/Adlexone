@@ -144,7 +144,6 @@ final class ApplicationPackage
                 'search_name' => (string) $row['search_name'],
                 'search_description' => (string) ($row['search_description'] ?? ''),
                 'user' => (string) ($row['user'] ?? 'system'),
-                'saved_search_sql' => (string) ($row['saved_search_sql'] ?? ''),
                 'criteria_json' => (string) ($row['criteria_json'] ?? '{}'),
             ];
         }
@@ -388,13 +387,17 @@ final class ApplicationPackage
             if ($searchName === '') {
                 continue;
             }
+            $decoded = json_decode((string) ($search['criteria_json'] ?? ''), true);
+            $criteria = \Adlexone\Data\SavedSearch::withoutStoredSql(
+                is_array($decoded) ? $decoded : [],
+                (string) ($search['saved_search_sql'] ?? '')
+            );
             Database::insert('saved_searches', [
                 'user' => (string) ($search['user'] ?? 'system'),
                 'search_name' => $searchName,
                 'search_description' => (string) ($search['search_description'] ?? ''),
-                'saved_search_sql' => (string) ($search['saved_search_sql'] ?? ''),
                 'application' => $slug,
-                'criteria_json' => (string) ($search['criteria_json'] ?? '{}'),
+                'criteria_json' => \Adlexone\Data\SavedSearch::encode($criteria),
             ]);
         }
     }
