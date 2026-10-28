@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace Adlexone\support;
 
+use Adlexone\Html\Form;
+
 /**
- * Builds the fieldCheck() onclick used on item forms.
+ * Builds the data-field-check attribute used on item forms.
  */
 final class FieldCheck
 {
@@ -50,15 +52,14 @@ final class FieldCheck
     public function onclick(): string
     {
         $header = defined('TXT_468') ? (string) TXT_468 : 'Check the form';
-        $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
-        $call = 'return fieldCheck('
-            . json_encode($header, $flags) . ','
-            . json_encode($this->types, $flags) . ','
-            . json_encode($this->names, $flags) . ','
-            . json_encode($this->errors, $flags) . ','
-            . json_encode($this->requiredMessages, $flags) . ','
-            . json_encode($this->required, $flags)
-            . ')';
-        return 'onclick="' . htmlspecialchars($call, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"';
+
+        return Form::fieldCheck(
+            $header,
+            $this->types,
+            $this->names,
+            $this->errors,
+            $this->requiredMessages,
+            $this->required
+        );
     }
 }

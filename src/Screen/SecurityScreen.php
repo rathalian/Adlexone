@@ -273,17 +273,22 @@ final class SecurityScreen
         $fields[''] = Form::hidden('user_id', @$fieldValues['user_id']);
 
         if ($userID === '') {
-            $jsFieldNameArray = "['user_name','password_ftype','password_confirm','email','first_name','last_name']";
-            $jsRequiredMsgArray = "['" . TXT_471 . "','" . TXT_472 . "','" . TXT_473 . "','" . TXT_474 . "','" . TXT_549 . "','" . TXT_550 . "']";
-            $jsRequiredArray = "[true,true,true,true,true,true]";
+            $names = ['user_name', 'password_ftype', 'password_confirm', 'email', 'first_name', 'last_name'];
+            $requiredMessages = [TXT_471, TXT_472, TXT_473, TXT_474, TXT_549, TXT_550];
+            $required = [true, true, true, true, true, true];
         } else {
-            $jsFieldNameArray = "['user_name','','','email','first_name','last_name']";
-            $jsRequiredMsgArray = "['" . TXT_470 . "','','','" . TXT_474 . "','" . TXT_549 . "','" . TXT_550 . "']";
-            $jsRequiredArray = "[true,false,false,true,true,true]";
+            $names = ['user_name', '', '', 'email', 'first_name', 'last_name'];
+            $requiredMessages = [TXT_470, '', '', TXT_474, TXT_549, TXT_550];
+            $required = [true, false, false, true, true, true];
         }
-        $jsTestTypeArray = "['','','','email','','']";
-        $jsErrorMsgArray = "['','','','" . TXT_475 . "','','']";
-        $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $javascript = Form::fieldCheck(
+            TXT_468,
+            ['', '', '', 'email', '', ''],
+            $names,
+            ['', '', '', TXT_475, '', ''],
+            $requiredMessages,
+            $required
+        );
         $submitText = $userID !== '' ? TXT_74 : TXT_69;
         $heading = $userID !== '' ? ($adminEdit ? 'Edit person' : 'My profile') : 'Add person';
         if (Page::current()->hasSectionNav()) {
@@ -340,7 +345,7 @@ final class SecurityScreen
             'Application permissions' => self::applicationPermissionsField($selectedPermissions),
         ];
         $fields[] = Form::hidden('group_id', $fieldValues['group_id'] ?? '');
-        $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "',[''],['group_name'],[''],['" . TXT_197 . "'],[true]);\"";
+        $javascript = Form::fieldCheck(TXT_468, [''], ['group_name'], [''], [TXT_197], [true]);
         $heading = $isNew ? 'Add group' : 'Edit group';
         Page::current()->suggestTitle($heading);
         Page::current()->addCrumb($heading);

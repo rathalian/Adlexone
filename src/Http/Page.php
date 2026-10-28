@@ -274,10 +274,9 @@ final class Page
     /**
      * Response headers sent with every rendered page.
      *
-     * Everything the pages load — styles, scripts, fonts, images, the SVG sprite — is
-     * served from this origin, so the policy is self only. Inline scripts and the
-     * javascript: links the legacy screens still emit need 'unsafe-inline'; tightening
-     * that to a nonce is template work tracked separately.
+     * Scripts, styles, fonts, images, and the SVG sprite are served from this origin.
+     * script-src is this origin only. The theme mode script is layouts/js/mode.js.
+     * style-src still allows style attributes on the page.
      */
     private static function sendSecurityHeaders(): void
     {
@@ -287,7 +286,7 @@ final class Page
         header_remove('X-Powered-By');
         header(
             "Content-Security-Policy: default-src 'self'; "
-            . "script-src 'self' 'unsafe-inline'; "
+            . "script-src 'self'; "
             . "style-src 'self' 'unsafe-inline'; "
             . "img-src 'self' data:; "
             . "font-src 'self'; "

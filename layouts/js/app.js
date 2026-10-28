@@ -298,6 +298,38 @@
     };
 
     document.addEventListener('click', (event) => {
+        const sort = event.target.closest('[data-sort]');
+        if (sort) {
+            const form = sort.closest('form');
+            const input = form && form.querySelector('[name="currsort"]');
+            if (form && input) {
+                input.value = sort.getAttribute('data-sort') || '';
+                form.submit();
+            }
+            event.preventDefault();
+            return;
+        }
+        const page = event.target.closest('[data-page]');
+        if (page) {
+            const form = page.closest('form');
+            const input = form && form.querySelector('[name="pageset"]');
+            if (form && input) {
+                const current = parseInt(input.value, 10) || 1;
+                const token = page.getAttribute('data-page') || '';
+                if (token === 'prev') input.value = String(Math.max(1, current - 1));
+                else if (token === 'next') input.value = String(current + 1);
+                else if (/^\d+$/.test(token)) input.value = token;
+                form.submit();
+            }
+            event.preventDefault();
+            return;
+        }
+        const back = event.target.closest('[data-history="back"]');
+        if (back) {
+            event.preventDefault();
+            history.back();
+            return;
+        }
         const confirmNode = event.target.closest('[data-confirm]');
         if (confirmNode) {
             const message = confirmNode.getAttribute('data-confirm') || '';
@@ -349,8 +381,7 @@
     });
 })();
 
-/* Forms: inline validation behind the legacy fieldCheck() call, required markers, password reveal, busy submit.
-   Screens still attach onclick="return fieldCheck(header, tests, names, errors, requiredMessages, required)". */
+/* Forms: validation from data-field-check, required markers, password reveal, busy submit. */
 (() => {
     const trim = (value) => (value || '').trim();
 
@@ -562,28 +593,31 @@
         if (control instanceof HTMLElement && control.getAttribute('aria-invalid') === 'true') clearError(control);
     });
 
-    /* Mark the fields a legacy fieldCheck() call will insist on, by running its arguments through a stub. */
+    const fieldSpec = (node) => {
+        if (!(node instanceof Element)) return null;
+        const raw = node.getAttribute('data-field-check');
+        if (!raw) return null;
+        try {
+            const spec = JSON.parse(raw);
+            return spec && Array.isArray(spec.names) ? spec : null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    /* Mark the fields a data-field-check spec will insist on. */
     const markRequired = (control) => {
         control.setAttribute('aria-required', 'true');
         const label = labelOf(control);
         if (label) label.classList.add('is-required');
     };
 
-    document.querySelectorAll('form [onclick*="fieldCheck("]').forEach((button) => {
-        let args = null;
-        try {
-            new Function('fieldCheck', button.getAttribute('onclick'))((...captured) => {
-                args = captured;
-                return true;
-            });
-        } catch (e) {
-            return;
-        }
-        if (!args) return;
-        const [, , names, , , required] = args;
-        (names || []).forEach((name, i) => {
+    document.querySelectorAll('[data-field-check]').forEach((button) => {
+        const spec = fieldSpec(button);
+        if (!spec) return;
+        spec.names.forEach((name, i) => {
             const control = controlOf(name);
-            if (control && required && required[i]) markRequired(control);
+            if (control && spec.required && spec.required[i]) markRequired(control);
         });
     });
 
@@ -623,6 +657,18 @@
     document.addEventListener('submit', (event) => {
         const form = event.target;
         if (!(form instanceof HTMLFormElement)) return;
+        const spec = fieldSpec(event.submitter);
+        if (spec && window.fieldCheck(
+            spec.header,
+            spec.types,
+            spec.names,
+            spec.errors,
+            spec.requiredMessages,
+            spec.required
+        ) === false) {
+            event.preventDefault();
+            return;
+        }
         if (form.dataset.submitting === '1') {
             event.preventDefault();
             return;

@@ -133,7 +133,7 @@ final class Form
     }
 
     /**
-     * onclick value for a confirm dialog. Prefer data-confirm on new markup.
+     * Confirm-dialog expression kept for older call sites. New markup uses confirmData().
      */
     public static function confirm(string $message): string
     {
@@ -151,6 +151,59 @@ final class Form
         }
 
         return ' data-confirm="' . Html::e($message) . '"';
+    }
+
+    /**
+     * Validation spec read by layouts/js/app.js on submit.
+     *
+     * @param list<string> $types
+     * @param list<string> $names
+     * @param list<string> $errors
+     * @param list<string> $requiredMessages
+     * @param list<bool> $required
+     */
+    public static function fieldCheck(
+        string $header,
+        array $types,
+        array $names,
+        array $errors,
+        array $requiredMessages,
+        array $required
+    ): string {
+        $payload = [
+            'header' => $header,
+            'types' => array_values($types),
+            'names' => array_values($names),
+            'errors' => array_values($errors),
+            'requiredMessages' => array_values($requiredMessages),
+            'required' => array_map(static fn (mixed $flag): bool => (bool) $flag, array_values($required)),
+        ];
+        $json = json_encode(
+            $payload,
+            JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE
+        );
+        if (!is_string($json)) {
+            return '';
+        }
+
+        return ' data-field-check="' . Html::e($json) . '"';
+    }
+
+    public static function sortButton(string $column, string $label): string
+    {
+        return '<button type="button" class="URL" data-sort="' . Html::e($column) . '"><strong>'
+            . Html::e($label) . '</strong></button>';
+    }
+
+    public static function pageButton(string $page, string $label): string
+    {
+        return '<button type="button" class="URL" data-page="' . Html::e($page) . '">'
+            . Html::e($label) . '</button>';
+    }
+
+    public static function historyBack(string $label): string
+    {
+        return '<a class="link URL" href="#" data-history="back">' . Html::e($label) . '</a>';
     }
 
     /**

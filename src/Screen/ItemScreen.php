@@ -961,13 +961,13 @@ final class ItemScreen
         $sortLinks = '';
         if ($countrecs > 1) {
             $sortLinks = '<div>'
-                . Access::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4)
+                . Access::outputIfRoleAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), $_SESSION['access_role_id'], 4)
                 . ' '
-                . Access::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4)
+                . Access::outputIfRoleAllowed(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')), $_SESSION['access_role_id'], 4)
                 . ' '
-                . Access::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4)
+                . Access::outputIfRoleAllowed(Form::sortButton('create_date', TXT_225), $_SESSION['access_role_id'], 4)
                 . ' '
-                . Access::outputIfRoleAllowed('<a href="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4)
+                . Access::outputIfRoleAllowed(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')), $_SESSION['access_role_id'], 4)
                 . '</div>';
         }
 
@@ -999,7 +999,9 @@ final class ItemScreen
                         TXT_315,
                         '',
                         'URL',
-                        'onclick="' . Form::confirm(TXT_400) . '"'
+                        '',
+                        '_parent',
+                        TXT_400
                     ),
                     $_SESSION['access_role_id'],
                     2
@@ -1023,7 +1025,7 @@ final class ItemScreen
             $paginationHTML = '<div class="pagination pagination-centered "><ul>';
             $pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
             if ($pageset > 1) {
-                $paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value--; document.repform.submit()">Prev</a>', $_SESSION['access_role_id'], 5);
+                $paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton('prev', 'Prev') . '</li>', $_SESSION['access_role_id'], 5);
             } else {
                 $paginationHTML .= "";
             }
@@ -1037,13 +1039,13 @@ final class ItemScreen
                 if ($i == $pageset) {
                     $paginationHTML .= '<li class="active"><a href ="#">' . $i . '</a></li>';
                 } else {
-                    $paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value=' . $i . '; document.repform.submit()"> ' . $i . ' </a></li>', $_SESSION['access_role_id'], 5);
+                    $paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>', $_SESSION['access_role_id'], 5);
                 }
             }
             if ($pageset == $iend) {
                 $paginationHTML .= "";
             } else {
-                $paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value++; document.repform.submit()">Next</a></li>', $_SESSION['access_role_id'], 5);
+                $paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton('next', 'Next') . '</li>', $_SESSION['access_role_id'], 5);
             }
             if ($itemID == '') {
                 $paginationHTML .= '</ul></div>';
@@ -1787,7 +1789,7 @@ final class ItemScreen
                     $itemTypeMenu = Form::select('item_type_id', $valueArray, $displayArray, '');
                     $transformationTypeMenu = Form::select('transform_type', array('copy', 'transform'), array(TXT_443, TXT_444), '');
                     $hiddenItemID = Form::hidden('item_id', $itemID);
-                    $transformButton[] = Form::button('submit', 'submit_button', TXT_446,  'onClick="javascript:return confirm(\'' . TXT_448 . '\')"');
+                    $transformButton[] = Form::button('submit', 'submit_button', TXT_446, Form::confirmData(TXT_448));
 
                     $transinputArray[TXT_445] = $transformationTypeMenu;
                     $transinputArray[TXT_447] = $itemTypeMenu . $hiddenItemID;

@@ -498,6 +498,9 @@ input[type="datetime-local"].input{
 }
 .URL:hover::after, .URL:focus-visible::after{ opacity:1; }
 .URL.is-current{ font-weight:700; color:var(--brand2); }
+button.URL{
+    background:none; border:0; padding:0; font:inherit; color:inherit; cursor:pointer;
+}
 
 /* ---------- Horizontal tiles ---------- */
 .horizontal-content-container{

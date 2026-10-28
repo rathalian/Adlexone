@@ -179,12 +179,7 @@ final class FieldsScreen
             . '<p class="field-note">Date, time, email, number, and link fields check the value themselves. Use this for a text field that still needs a format.</p>';
         $fields[TXT_90] = Form::select('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
         $fields[''] = Form::hidden('custom_field_id', $customFieldID);
-        $jsFieldNameArray = "['custom_field_name']";
-        $jsTestTypeArray = "['']";
-        $jsErrorMsgArray = "['']";
-        $jsRequiredMsgArray = "['" . TXT_217 . "']";
-        $jsRequiredArray = "[true]";
-        $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $javascript = Form::fieldCheck(TXT_468, [''], ['custom_field_name'], [''], [TXT_217], [true]);
         Page::current()->suggestTitle($title);
         Page::current()->addCrumb($title);
 

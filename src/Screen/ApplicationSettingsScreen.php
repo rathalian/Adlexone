@@ -328,7 +328,7 @@ final class ApplicationSettingsScreen
             $formFields,
             [
                 Form::button('submit', 'submit_button', $editing ? 'Save' : 'Add rule'),
-                Form::button('button', '', 'Back', 'onclick="location.href=\'' . Html::e(self::rulesHomeUrl($slug)) . '\'"', 'secondary'),
+                '<a class="btn" href="' . Html::e(self::rulesHomeUrl($slug)) . '">Back</a>',
             ]
         );
         $html .= self::ruleEditorData($catalog);
@@ -554,7 +554,7 @@ final class ApplicationSettingsScreen
             ],
             [
                 Form::button('submit', 'submit_button', 'Preview'),
-                Form::button('button', '', 'Back', 'onclick="location.href=\'' . Html::e(self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId) . '\'"', 'secondary'),
+                '<a class="btn" href="' . Html::e(self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $ruleId) . '">Back</a>',
             ]
         );
         if (is_array($result)) {

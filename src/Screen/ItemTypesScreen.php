@@ -227,12 +227,7 @@ final class ItemTypesScreen
         $fields[TXT_222] = $pickerHtml;
         $fields[''] = Form::hidden('item_type_id', $itemTypeID);
 
-        $jsFieldNameArray = "['item_type_name']";
-        $jsTestTypeArray = "['']";
-        $jsErrorMsgArray = "['']";
-        $jsRequiredMsgArray = "['" . TXT_223 . "']";
-        $jsRequiredArray = "[true]";
-        $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $javascript = Form::fieldCheck(TXT_468, [''], ['item_type_name'], [''], [TXT_223], [true]);
         $heading = $isNew ? 'Add type' : 'Edit type';
         Page::current()->suggestTitle($heading);
         Page::current()->addCrumb($heading);

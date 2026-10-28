@@ -226,12 +226,7 @@ final class SearchScreen
      */
     public static function showQuickSearch()
     {
-        $jsFieldNameArray = "['search_value']";
-        $jsTestTypeArray = "['']";
-        $jsErrorMsgArray = "['']";
-        $jsRequiredMsgArray = "['" . TXT_206 . "']";
-        $jsRequiredArray = "[true]";
-        $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $javascript = Form::fieldCheck(TXT_468, [''], ['search_value'], [''], [TXT_206], [true]);
         $inApplication = Page::current()->inApplication();
         $typeLabels = $inApplication ? ['Name', 'ID', 'Notes'] : [TXT_84, TXT_102, TXT_601];
         $fields = [
@@ -400,23 +395,23 @@ final class SearchScreen
     				$headFields[] = "disp_" . $tmpvars1[1];
     				switch(trim($value)) {
     					case 'item_id':
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), $_SESSION['access_role_id'], 4);
     						break;
     					case 'item_title':
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')), $_SESSION['access_role_id'], 4);
     						break;
     					case 'create_date':
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('create_date', TXT_225), $_SESSION['access_role_id'], 4);
     						break;
     					case 'item_type_id':
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')), $_SESSION['access_role_id'], 4);
     						break;
 
     					case 'creator_security':
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'creator_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_551', 'TXT_551') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('creator_security', Wording::get('LA_551', 'TXT_551')), $_SESSION['access_role_id'], 4);
     						break;
     					case 'user_security':
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'user_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_269', 'TXT_269') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('user_security', Wording::get('LA_269', 'TXT_269')), $_SESSION['access_role_id'], 4);
     						break;
 
 
@@ -424,7 +419,7 @@ final class SearchScreen
     						$tmpvars = explode("_",$tmpvars1[1]);
     						$headsql = "SELECT custom_field_name FROM custom_fields WHERE custom_field_id = " . $tmpvars[count($tmpvars) - 1];
     												$headresult = Database::rows($headsql);
-    						$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'custom_field_' . $tmpvars[count($tmpvars) - 1] . ' \'; document.repform.submit()" class="URL"><strong>' . ($headresult[0]['custom_field_name'] ?? '') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('custom_field_' . (int) $tmpvars[count($tmpvars) - 1], (string) ($headresult[0]['custom_field_name'] ?? '')), $_SESSION['access_role_id'], 4);
     						unset($tmpvars1);
     						unset($tmpvars);
     				}
@@ -440,27 +435,27 @@ final class SearchScreen
     							$tmpvars = explode("_",$key);
     							$headsql = "SELECT custom_field_name FROM custom_fields WHERE custom_field_id = " . $tmpvars[count($tmpvars) - 1];
     														$headresult = Database::rows($headsql);
-    							$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'custom_field_' . $tmpvars[count($tmpvars) - 1] . '\'; document.repform.submit()" class="URL"><strong>' . ($headresult[0]['custom_field_name'] ?? '') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    							$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('custom_field_' . (int) $tmpvars[count($tmpvars) - 1], (string) ($headresult[0]['custom_field_name'] ?? '')), $_SESSION['access_role_id'], 4);
     							unset($tmpvars);
     						} else {
     							switch($key) {
     								case 'disp_item_id':
-    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_102', 'TXT_102') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_item_title':
-    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_title\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_84', 'TXT_84') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')), $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_create_date':
-    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'create_date\'; document.repform.submit()" class="URL"><strong>' . TXT_225 . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('create_date', TXT_225), $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_item_type_id':
-    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'item_type_id\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_226', 'TXT_226') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')), $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_creator_security':
-    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'creator_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_551', 'TXT_551') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('creator_security', Wording::get('LA_551', 'TXT_551')), $_SESSION['access_role_id'], 4);
     									break;
     								case 'disp_user_security':
-    									$headTitle[] = Access::outputIfRoleAllowed('<a href ="javascript:var fieldArray = document.getElementsByName(\'currsort\');fieldArray[0].value=\'user_security\'; document.repform.submit()" class="URL"><strong>' . Wording::get('LA_269', 'TXT_269') . '</strong></a>', $_SESSION['access_role_id'], 4);
+    									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('user_security', Wording::get('LA_269', 'TXT_269')), $_SESSION['access_role_id'], 4);
     									break;
 
     									break;
@@ -721,7 +716,9 @@ final class SearchScreen
     				        TXT_315,
     				        '', // spriteName
     				        'URL',
-    				        'onClick="return confirm(\'' . TXT_400 . '\')"'
+    				        '',
+    				        '_parent',
+    				        TXT_400
     				    ),
     				    $_SESSION['access_role_id'],
     				    2
@@ -743,7 +740,7 @@ final class SearchScreen
     			$paginationHTML = '<div class="pagination pagination-centered "><ul>';
     			$pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
     			if ($pageset > 1) {
-    				$paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value--; document.repform.submit()">Prev</a></li>', $_SESSION['access_role_id'], 5);
+    				$paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton('prev', 'Prev') . '</li>', $_SESSION['access_role_id'], 5);
     			} else {
     				$paginationHTML .= "";
     			}
@@ -757,13 +754,13 @@ final class SearchScreen
     				if ($i == $pageset) {
     					$paginationHTML .= '<li class="active"><a href ="#">'. $i .'</a></li>';
     				} else {
-    					$paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value=' . $i . '; document.repform.submit()">' . $i . ' </a></li>', $_SESSION['access_role_id'], 5);
+    					$paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>', $_SESSION['access_role_id'], 5);
     				}
     			}
     			if ($pageset == $iend) {
     				$paginationHTML .=  "";
     			} else {
-    				$paginationHTML .= Access::outputIfRoleAllowed('<li><a href ="javascript:var fieldArray = document.getElementsByName(\'pageset\');fieldArray[0].value++; document.repform.submit()">Next</a></li>', $_SESSION['access_role_id'], 5);
+    				$paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton('next', 'Next') . '</li>', $_SESSION['access_role_id'], 5);
     			}
     			$paginationHTML .= '</ul></div>';
     			$html .= $paginationHTML;
@@ -1146,11 +1143,11 @@ final class SearchScreen
         $searchName = trim((string) $searchName);
         $result = Database::rows('SELECT user FROM saved_searches WHERE search_name = ? AND user = ?', [$searchName, (string) $userID]);
         if (count($result) > 0) {
-            View::respond(TXT_311, Blocks::link('javascript: history.go(-1)', TXT_306, 'URL'));
+            View::respond(TXT_311, Form::historyBack(TXT_306));
             return;
         }
         if ($searchName === '') {
-            View::respond(TXT_367, Blocks::link('javascript: history.go(-1)', TXT_306, 'URL'));
+            View::respond(TXT_367, Form::historyBack(TXT_306));
             return;
         }
             if ($security == 'all') {
@@ -1168,7 +1165,7 @@ final class SearchScreen
             );
             Database::insert('saved_searches', $columnArray);
             // Success messagae
-        View::respond(TXT_25, Blocks::link('javascript: history.go(-1)', TXT_404, 'URL'));
+        View::respond(TXT_25, Form::historyBack(TXT_404));
     }
 
     public static function savedSearch($searchID, $userID, $global = false, $rss = false)
@@ -1562,12 +1559,7 @@ final class SearchScreen
 
         $fields[TXT_350] = self::searchApplicationMenu((string)($_GET['controller'] ?? ''));
 
-        $jsFieldNameArray = "['search_name']";
-        $jsTestTypeArray = "['']";
-        $jsErrorMsgArray = "['']";
-        $jsRequiredMsgArray = "['" . TXT_367 . "']";
-        $jsRequiredArray = "[true]";
-        $javascript = "onClick=\"javascript:return fieldCheck('" . TXT_468 . "'," . $jsTestTypeArray . "," . $jsFieldNameArray . "," . $jsErrorMsgArray . "," . $jsRequiredMsgArray . "," . $jsRequiredArray . ");\"";
+        $javascript = Form::fieldCheck(TXT_468, [''], ['search_name'], [''], [TXT_367], [true]);
 
         Page::current()->setBody(Form::form(
             Wording::application('TXT_61', (string)Wording::get('LA_96', 'TXT_96')),

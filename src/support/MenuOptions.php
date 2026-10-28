@@ -225,7 +225,9 @@ final class MenuOptions
                     TXT_47,
                     '',
                     'URL',
-                    'onClick="javascript:return confirm(\'' . TXT_400 . '\')"'
+                    '',
+                    '_parent',
+                    TXT_400
                 )
                 . '</div>';
         }

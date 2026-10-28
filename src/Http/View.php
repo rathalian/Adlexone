@@ -136,7 +136,13 @@ final class View
             return null;
         }
         $href = html_entity_decode($match[1], ENT_QUOTES, 'UTF-8');
-        if ($href === '' || str_starts_with($href, 'javascript:') || preg_match('#^https?://#i', $href) === 1) {
+        if (
+            $href === ''
+            || $href === '#'
+            || str_contains($detail, 'data-history="back"')
+            || str_starts_with($href, 'javascript:')
+            || preg_match('#^https?://#i', $href) === 1
+        ) {
             return null;
         }
 

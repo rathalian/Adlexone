@@ -74,10 +74,11 @@ check(is_string($numberMarkup) && str_contains($numberMarkup, 'type="number"'), 
 $textDateMarkup = FieldControl::render(FieldTypes::TEXT_BOX, 'custom_field_12', '2026-10-20', $textDate);
 check(is_string($textDateMarkup) && str_contains($textDateMarkup, 'type="date"'), 'text plus date validation still opens a date picker');
 
-$onclick = (new \Adlexone\support\FieldCheck())->withTitle()->onclick();
-$attribute = preg_match('/^onclick="([^"]*)"$/', $onclick, $match) === 1 ? html_entity_decode($match[1], ENT_QUOTES) : '';
-check($attribute !== '' && str_starts_with($attribute, 'return fieldCheck("'), 'fieldCheck onclick stays inside one attribute');
-check(str_contains($attribute, '["item_title"]'), 'fieldCheck onclick names the title field');
+$markup = (new \Adlexone\support\FieldCheck())->withTitle()->onclick();
+check(preg_match('/data-field-check="([^"]*)"/', $markup, $match) === 1, 'field check is a data attribute');
+check(!str_contains($markup, 'onclick='), 'field check does not use an event handler');
+$payload = json_decode(html_entity_decode($match[1] ?? '', ENT_QUOTES), true);
+check(is_array($payload) && in_array('item_title', $payload['names'] ?? [], true), 'field check names the title field');
 
 if ($failed > 0) {
     fwrite(STDERR, $failed . " checks failed\n");
