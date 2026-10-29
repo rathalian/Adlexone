@@ -86,11 +86,13 @@ final class Request
 
     /**
      * Fold the older parameter names into the ones the screens read. Safe to repeat.
+     * Absorb runs before a caller reads the screen name.
      */
     public static function prepare(): void
     {
         if (self::has('application')) {
             self::fill('app', self::query('application'));
         }
+        Router::absorb();
     }
 }

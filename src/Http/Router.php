@@ -26,8 +26,8 @@ use Adlexone\Screen\SiteSettingsScreen;
  *
  * Home is the site root. Manage pages use manage. An application uses
  * application and nav. item and search name the record on that page.
- * Older controller and subcontroller names open the same screens.
- * A name that is not in the map is not opened.
+ * Older controller, subcontroller, and screen names are copied onto manage
+ * before the screen is chosen. A name that is not in the map is not opened.
  */
 final class Router
 {
@@ -77,6 +77,10 @@ final class Router
     private const ALIASES = [
         'quick_launch' => 'home',
         'print' => 'full_page_view',
+        'records' => 'item_management_manage',
+        'search' => 'search_management_manage',
+        'activity' => 'home_activity',
+        'assigned' => 'home_assigned',
         'manage' => 'manage_main',
         'applications' => 'manage_applications',
         'builder' => 'manage_builder',
@@ -97,16 +101,27 @@ final class Router
         'administration_portal' => 'manage_portal',
     ];
 
+    /**
+     * Older screen names copied onto manage. The original query stays so the
+     * engine can still read subcontroller while callers move across.
+     *
+     * @var array<string, string>
+     */
+    private const LEGACY_MANAGE = [
+        'item_management_manage' => 'records',
+        'search_management_manage' => 'search',
+        'full_page_view' => 'print',
+        'home_activity' => 'activity',
+        'home_assigned' => 'assigned',
+        'palette' => 'palette',
+    ];
+
     public static function requested(): string
     {
         Request::prepare();
         $manage = self::queryName(Request::query('manage'));
         if ($manage !== '') {
             return $manage;
-        }
-        $screen = self::queryName(Request::query('screen'));
-        if ($screen !== '') {
-            return $screen;
         }
         $controller = self::queryName(Request::query('controller'));
         if ($controller !== '' && $controller !== 'application') {
@@ -260,22 +275,64 @@ final class Router
 
     /**
      * Address for the next action on the screen that is already open.
+     * Inside an application that is the application. Outside it is records or search.
      */
     public static function continueUrl(string $engine = ''): string
     {
         if (Page::current()->inApplication()) {
             return self::applicationUrl(Page::current()->applicationSlug(), Page::current()->navId());
         }
-
-        $controller = self::canonical(self::queryName(Request::query('controller', 'home')));
-        $url = '?controller=' . rawurlencode($controller);
-        if ($engine === 'items') {
-            $url .= '&subcontroller=' . self::ITEMS;
-        } elseif ($engine === 'search') {
-            $url .= '&subcontroller=' . self::SEARCH;
+        if ($engine === 'search') {
+            return self::manageUrl('search');
         }
 
-        return $url;
+        return self::manageUrl('records');
+    }
+
+    /**
+     * Copy an older address onto manage when the request has not named one.
+     * The original parameters stay in the query.
+     */
+    public static function absorb(): void
+    {
+        if (Request::has('manage')) {
+            return;
+        }
+        $controller = self::queryName(Request::query('controller'));
+        if ($controller === 'application' || Request::has('application') || Request::has('app')) {
+            return;
+        }
+        $screen = self::queryName(Request::query('screen'));
+        foreach ([$screen, $controller] as $name) {
+            if ($name === '') {
+                continue;
+            }
+            $manage = self::manageName($name);
+            if ($manage !== '') {
+                Request::set('manage', $manage);
+                return;
+            }
+        }
+        if ($screen !== '') {
+            Request::set('manage', $screen);
+            return;
+        }
+        if ($controller !== '') {
+            return;
+        }
+        $engine = Request::query('engine');
+        if ($engine === 'items') {
+            Request::set('manage', 'records');
+            return;
+        }
+        if ($engine === 'search') {
+            Request::set('manage', 'search');
+            return;
+        }
+        $sub = self::manageName(self::queryName(Request::query('subcontroller')));
+        if ($sub !== '') {
+            Request::set('manage', $sub);
+        }
     }
 
     public static function open(string $name): void
@@ -397,6 +454,38 @@ final class Router
         if ($canonical === 'full_page_view' && Request::has('item_id')) {
             Request::fill('option', 'print_item');
         }
+    }
+
+    /**
+     * Public manage name for an older screen key. Empty when the name is not one of those addresses.
+     */
+    private static function manageName(string $name): string
+    {
+        if (isset(self::LEGACY_MANAGE[$name])) {
+            return self::LEGACY_MANAGE[$name];
+        }
+        if (!isset(self::ALIASES[$name]) || $name === 'manage' || $name === 'quick_launch' || str_starts_with($name, 'administration_')) {
+            if (isset(self::ALIASES[$name])) {
+                return self::preferredManage(self::ALIASES[$name]);
+            }
+
+            return '';
+        }
+
+        return $name;
+    }
+
+    private static function preferredManage(string $canonical): string
+    {
+        foreach (self::ALIASES as $public => $target) {
+            if ($target !== $canonical || $public === 'manage' || $public === 'quick_launch' || str_starts_with($public, 'administration_')) {
+                continue;
+            }
+
+            return $public;
+        }
+
+        return '';
     }
 
     private static function canonical(string $name): string
