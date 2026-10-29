@@ -35,15 +35,15 @@ final class ApplicationsScreen
         $section = '';
         $trail = [['label' => 'Applications', 'href' => self::url()]];
         $applicationOptions = [
-            'edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav',
+            'details', 'update', 'navigation', 'new_nav', 'add_nav', 'edit_nav', 'update_nav',
             'rules', 'new_rule', 'add_rule', 'edit_rule', 'update_rule', 'delete_rule',
             'toggle_rule', 'duplicate_rule', 'move_rule', 'try_rule', 'run_rule',
         ];
         if (in_array($option, $applicationOptions, true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
-                $section = Blocks::link(self::url('option=edit&application_id=') . $sectionApp, 'Details', 'ic-sliders');
-                $section .= Blocks::link(self::url('option=nav&application_id=') . $sectionApp, 'Navigation', 'ic-list-tree');
+                $section = Blocks::link(self::url('option=details&application_id=') . $sectionApp, 'Details', 'ic-sliders');
+                $section .= Blocks::link(self::url('option=navigation&application_id=') . $sectionApp, 'Navigation', 'ic-list-tree');
                 $section .= Access::outputIfAllowed(
                     Blocks::link(self::url('option=rules&application_id=') . $sectionApp, 'Rules', 'ic-zap'),
                     Permission::ADMIN_ACTIONS
@@ -53,7 +53,7 @@ final class ApplicationsScreen
                     ['label' => 'Applications', 'href' => self::url()],
                     [
                         'label' => is_array($sectionName) ? (string) $sectionName['name'] : 'Application',
-                        'href' => self::url('option=edit&application_id=') . $sectionApp,
+                        'href' => self::url('option=details&application_id=') . $sectionApp,
                     ],
                 ];
             }
@@ -79,7 +79,7 @@ final class ApplicationsScreen
             case 'add':
                 self::saveApplication(0);
                 break;
-            case 'edit':
+            case 'details':
                 self::showApplicationForm((int) ($_GET['application_id'] ?? 0));
                 break;
             case 'update':
@@ -93,7 +93,7 @@ final class ApplicationsScreen
                 ApplicationStore::moveApplication((int) ($_GET['application_id'] ?? 0), (string) ($_GET['direction'] ?? ''));
                 header('Location: ' . self::url());
                 exit;
-            case 'nav':
+            case 'navigation':
                 self::showNavigation((int) ($_GET['application_id'] ?? 0));
                 break;
             case 'new_nav':
@@ -112,7 +112,7 @@ final class ApplicationsScreen
                 $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
                 if ($nav !== null) {
                     ApplicationStore::deleteNav((int) $nav['nav_id']);
-                    header('Location: ' . self::url('option=nav&application_id=') . (int) $nav['application_id']);
+                    header('Location: ' . self::url('option=navigation&application_id=') . (int) $nav['application_id']);
                     exit;
                 }
                 header('Location: ' . self::url());
@@ -121,7 +121,7 @@ final class ApplicationsScreen
                 $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
                 if ($nav !== null) {
                     ApplicationStore::moveNav((int) $nav['nav_id'], (string) ($_GET['direction'] ?? ''));
-                    header('Location: ' . self::url('option=nav&application_id=') . (int) $nav['application_id']);
+                    header('Location: ' . self::url('option=navigation&application_id=') . (int) $nav['application_id']);
                     exit;
                 }
                 header('Location: ' . self::url());
@@ -192,14 +192,14 @@ final class ApplicationsScreen
             $id = (int) $app['application_id'];
             $rows[] = [
                 'name' => (string) $app['name'],
-                'href' => self::url('option=edit&application_id=') . $id,
+                'href' => self::url('option=details&application_id=') . $id,
                 'cells' => [
                     'menu' => $app['enabled'] ? 'In the menu' : 'Not in the menu',
                 ],
                 'search' => (string) $app['slug'],
                 'actions' => [
                     [
-                        'href' => self::url('option=nav&application_id=') . $id,
+                        'href' => self::url('option=navigation&application_id=') . $id,
                         'label' => 'Navigation',
                     ],
                     [
@@ -313,11 +313,11 @@ final class ApplicationsScreen
         $recordType = self::postedRecordType();
         $groupIds = self::postedGroupIds();
         if ($recordType === false) {
-            View::respond('Choose a record type from the list.', Blocks::link(self::url($id > 0 ? 'option=edit&application_id=' . $id : 'option=new'), 'Back', 'URL'));
+            View::respond('Choose a record type from the list.', Blocks::link(self::url($id > 0 ? 'option=details&application_id=' . $id : 'option=new'), 'Back', 'URL'));
             return;
         }
         if ($groupIds === false) {
-            View::respond('Choose a group from the list.', Blocks::link(self::url($id > 0 ? 'option=edit&application_id=' . $id : 'option=new'), 'Back', 'URL'));
+            View::respond('Choose a group from the list.', Blocks::link(self::url($id > 0 ? 'option=details&application_id=' . $id : 'option=new'), 'Back', 'URL'));
             return;
         }
         if ($name === '' || $slug === '' || !in_array($icon, Capabilities::icons(), true)) {
@@ -353,7 +353,7 @@ final class ApplicationsScreen
                 self::saveWorkflowFields($slug, (int) $recordType);
             }
             Permission::setAppUseGroups($slug, $groupIds);
-            header('Location: ' . self::url('option=edit&application_id=') . $id);
+            header('Location: ' . self::url('option=details&application_id=') . $id);
             exit;
         }
         $max = 0;
@@ -368,7 +368,7 @@ final class ApplicationsScreen
         ], JSON_UNESCAPED_SLASHES);
         $newId = ApplicationStore::insertApplication($fields);
         Permission::setAppUseGroups($slug, $groupIds);
-        header('Location: ' . self::url('option=nav&application_id=') . $newId);
+        header('Location: ' . self::url('option=navigation&application_id=') . $newId);
         exit;
     }
 
@@ -484,7 +484,7 @@ final class ApplicationsScreen
         $permission = (string) ($_POST['permission'] ?? '');
         $icon = (string) ($_POST['icon'] ?? '');
         $catalog = Capabilities::catalog();
-        $back = self::url('option=nav&application_id=') . $applicationId;
+        $back = self::url('option=navigation&application_id=') . $applicationId;
         if ($app === null || $label === '' || !isset($catalog[$capability])) {
             View::respond('Enter a label and choose a screen.', Blocks::link($back, 'Navigation', 'URL'));
             return;

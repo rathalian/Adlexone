@@ -71,7 +71,7 @@ final class TopNav
         }
         if (Access::can(Permission::ADMIN_ITEMS)) {
             $add('Fields', 'fields', 'ic-fields', 'Fields used across the applications.');
-            $add('Record types', 'item-types', 'ic-layers', 'The record type each application keeps.');
+            $add('Record types', 'record-types', 'ic-layers', 'The record type each application keeps.');
         }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
             $add('Rules', 'rules', 'ic-zap', 'What runs when a record is created or updated.');

@@ -35,7 +35,7 @@ final class RenderNavigation
     public static function itemSettingsURLs()
     {
         $html = Access::outputIfAllowed(Blocks::link(Router::manageUrl('fields'), TXT_53, 'ic-fields'), Permission::ADMIN_ITEMS);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('item-types'), TXT_50, 'ic-layers'), Permission::ADMIN_ITEMS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('record-types'), TXT_50, 'ic-layers'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
@@ -283,8 +283,8 @@ final class RenderNavigation
         return str_contains($href, 'option=show_item_types')
             || str_contains($href, 'option=show_saved_searches')
             || str_contains($href, 'option=show_announcements')
-            || str_contains($href, 'option=edit&application_id=')
-            || str_contains($href, 'option=nav&application_id=')
+            || str_contains($href, 'option=details&application_id=')
+            || str_contains($href, 'option=navigation&application_id=')
             || str_contains($href, '&option=settings')
             || str_contains($href, 'option=knowledgebase_settings');
     }

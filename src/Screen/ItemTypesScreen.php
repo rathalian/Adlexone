@@ -511,6 +511,6 @@ final class ItemTypesScreen
             $query = 'application=' . rawurlencode($scope) . ($query !== '' ? '&' . ltrim($query, '&') : '');
         }
 
-        return Router::manageUrl('item-types', $query);
+        return Router::manageUrl('record-types', $query);
     }
 }

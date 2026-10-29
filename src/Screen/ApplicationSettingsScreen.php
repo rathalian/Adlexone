@@ -135,7 +135,7 @@ final class ApplicationSettingsScreen
         $html .= '<p class="form-help">'
             . Blocks::link(Router::manageUrl('fields', 'application=' . rawurlencode($slug)), 'Fields', '', 'URL')
             . ' · '
-            . Blocks::link(Router::manageUrl('item-types', 'application=' . rawurlencode($slug)), 'Record types', '', 'URL')
+            . Blocks::link(Router::manageUrl('record-types', 'application=' . rawurlencode($slug)), 'Record types', '', 'URL')
             . '</p>';
         $html .= self::rulesHtml($slug);
         Page::current()->setBody($html);

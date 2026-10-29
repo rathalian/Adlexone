@@ -82,7 +82,7 @@ final class Router
         'applications' => 'manage_applications',
         'builder' => 'manage_builder',
         'fields' => 'manage_fields',
-        'item-types' => 'manage_item_types',
+        'record-types' => 'manage_item_types',
         'items' => 'manage_items',
         'rules' => 'manage_actions',
         'security' => 'manage_security',
@@ -235,7 +235,7 @@ final class Router
                 'delete_item_type',
             ];
             if (in_array($option, $typeOptions, true)) {
-                Request::set('manage', 'item-types');
+                Request::set('manage', 'record-types');
                 self::open('manage_item_types');
                 return;
             }

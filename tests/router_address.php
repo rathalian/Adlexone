@@ -73,6 +73,11 @@ $load(['manage' => 'assigned', 'focus' => 'overdue']);
 $check(Router::matches('home_assigned'), 'manage=assigned opens assigned work');
 $check(Request::query('focus') === 'overdue', 'a screen filter stays on the query');
 
+$load(['manage' => 'record-types']);
+$check(Router::matches('manage_item_types'), 'manage=record-types opens record types');
+$load(['manage' => 'item-types']);
+$check(Router::requested() === 'home', 'manage=item-types does not open record types');
+
 $load(['manage' => 'palette']);
 $check(Router::requested() === 'palette', 'manage=palette asks for the palette');
 

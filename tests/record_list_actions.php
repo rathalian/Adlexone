@@ -24,11 +24,11 @@ $html = Blocks::recordList([
     'groups' => [[
         'rows' => [[
             'name' => 'Matters',
-            'href' => '?manage=applications&option=edit&application_id=1',
+            'href' => '?manage=applications&option=details&application_id=1',
             'actions' => [
                 ['href' => '', 'label' => 'Up', 'inline' => true, 'disabled' => true],
                 ['href' => '?manage=applications&option=move&application_id=1&direction=down', 'label' => 'Down', 'inline' => true],
-                ['href' => '?manage=applications&option=nav&application_id=1', 'label' => 'Navigation'],
+                ['href' => '?manage=applications&option=navigation&application_id=1', 'label' => 'Navigation'],
                 ['href' => '?manage=applications&option=export&application_id=1', 'label' => 'Export'],
                 ['href' => '?manage=applications&option=delete&application_id=1', 'label' => 'Delete', 'tone' => 'danger'],
             ],

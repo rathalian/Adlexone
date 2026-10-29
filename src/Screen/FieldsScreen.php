@@ -497,7 +497,7 @@ final class FieldsScreen
             $result = Database::select($table, '*', $column . " LIKE ? ESCAPE '\\'", ['%' . Database::escapeLike($criteria) . '%'], 'enabled DESC, ' . $column . ' ASC');
         }
         if ($table !== 'custom_fields') {
-            header('Location: ' . Router::manageUrl('item-types'));
+            header('Location: ' . Router::manageUrl('record-types'));
             exit;
         }
 
