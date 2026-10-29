@@ -30,7 +30,7 @@ final class HelpText
         ]);
 
         return self::article('Where this site keeps its data', [
-            self::p('The web server document root is only the public folder. The SQLite database, the JSON settings, and uploaded files sit beside that folder. A browser must not be able to download them by guessing a URL.'),
+            self::p('The SQLite database, the JSON settings, and uploaded files stay off the public folder. A browser must not be able to download them by guessing a URL.'),
             self::facts([
                 'Code' => $install,
                 'Document root' => $public,

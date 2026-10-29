@@ -7,6 +7,7 @@ storage/database/backup-*/
 config/*.json
 storage/attachments/*
 !storage/attachments/.gitkeep
+storage/config/*.json
 storage/writeable/
 
 # Logs

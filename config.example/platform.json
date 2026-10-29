@@ -1,5 +1,6 @@
 {
     "INLAY_STORES": "",
     "INLAY_OPERATOR_HOST": "",
-    "INLAY_PLATFORM_DB": ""
+    "INLAY_PLATFORM_DB": "",
+    "INLAY_STORAGE": ""
 }

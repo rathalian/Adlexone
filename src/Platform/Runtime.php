@@ -8,8 +8,10 @@ use Adlexone\Http\PublicBaseUrl;
 /**
  * Decides which database this request uses.
  *
- * One install is a single SQLite file under storage/. A SaaS host sets a stores
- * directory and an operator host. Each customer then has their own folder.
+ * One install keeps its SQLite file, settings, and uploads in a storage directory
+ * chosen at setup (INLAY_STORAGE), or in the original folders beside the code.
+ * INLAY_DATA still selects the older layout. A SaaS host sets a stores directory
+ * and an operator host. Each customer then has their own folder.
  */
 final class Runtime
 {
@@ -58,14 +60,10 @@ final class Runtime
             return;
         }
 
-        $data = self::env('INLAY_DATA');
-        $root = $data !== '' ? rtrim($data, '/\\') . DIRECTORY_SEPARATOR : $install;
-        $config = $root . 'config' . DIRECTORY_SEPARATOR;
-        $attachments = $root . 'storage' . DIRECTORY_SEPARATOR . 'attachments' . DIRECTORY_SEPARATOR;
-        $sqlite = $root . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'adlexone.sqlite';
-        self::constants($install, $config, $attachments, $sqlite);
-        self::$paths = self::pathSet($install, $config, $attachments, $sqlite, '', '', '');
-        self::$mode = self::needsSetup($sqlite) ? self::SETUP : self::APP;
+        $chosen = InstallLayout::resolve($install);
+        self::constants($install, $chosen['config'], $chosen['attachments'], $chosen['sqlite']);
+        self::$paths = self::pathSet($install, $chosen['config'], $chosen['attachments'], $chosen['sqlite'], '', '', '');
+        self::$mode = self::needsSetup($chosen['sqlite']) ? self::SETUP : self::APP;
     }
 
     public static function loadConfig(): void
