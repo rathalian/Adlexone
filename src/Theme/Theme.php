@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Theme;
 
+use Adlexone\Html\Accent;
+
 /**
  * Skin themes under site/themes/{name}/ — CSS tokens + brand assets only.
  * Shared HTML/JS/base CSS live under layouts/.
@@ -297,7 +299,7 @@ final class Theme
             $html .= '<label class="theme-swatch' . $active . '">'
                 . '<input type="radio" name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" value="'
                 . htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') . '"' . $checked . $change . '>'
-                . '<span class="theme-swatch__chip" style="background:' . htmlspecialchars(self::accent($slug), ENT_QUOTES, 'UTF-8') . '"></span>'
+                . '<span class="theme-swatch__chip ' . htmlspecialchars(Accent::channels(self::accent($slug)), ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></span>'
                 . '<span class="theme-swatch__name">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
                 . '</label>';
         }

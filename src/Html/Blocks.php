@@ -120,9 +120,8 @@ final class Blocks
      */
     public static function horizontal(array $blocks, ?int $columns = null): string
     {
-        $modeClass = $columns === null ? '-auto' : '-fixed';
-        $styleAttr = $columns === null ? '' : ' style="--cols: ' . (int) $columns . ';"';
-        $html = '<section class="launchpad-grid ' . $modeClass . '"' . $styleAttr . '>';
+        $modeClass = $columns === null ? '-auto' : '-fixed ' . Measure::columns($columns);
+        $html = '<section class="launchpad-grid ' . $modeClass . '">';
         foreach ($blocks as $block) {
             $title = Html::e($block['title'] ?? '');
             $body = $block['html'] ?? '';
@@ -137,16 +136,15 @@ final class Blocks
         return $html . '</section>';
     }
 
-    public static function separator(string $label = '', string $class = '', string $style = ''): string
+    public static function separator(string $label = '', string $class = ''): string
     {
         $classAttr = $class !== '' ? ' ' . Html::e($class) : '';
-        $styleAttr = $style !== '' ? ' style="' . Html::e($style) . '"' : '';
         if ($label === '') {
-            return '<hr class="rv-separator' . $classAttr . '"' . $styleAttr . ' />';
+            return '<hr class="rv-separator' . $classAttr . '" />';
         }
         $labelEsc = Html::e($label);
 
-        return '<div class="rv-separator-block' . $classAttr . '"' . $styleAttr . ' role="separator" aria-label="' . $labelEsc . '">'
+        return '<div class="rv-separator-block' . $classAttr . '" role="separator" aria-label="' . $labelEsc . '">'
             . '<span class="rv-separator-line" aria-hidden="true"></span>'
             . '<span class="rv-separator-label">' . $labelEsc . '</span>'
             . '<span class="rv-separator-line" aria-hidden="true"></span>'

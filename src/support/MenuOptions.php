@@ -6,6 +6,7 @@ namespace Adlexone\support;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
+use Adlexone\Html\Measure;
 
 /**
  * One menu model for custom fields.
@@ -215,8 +216,7 @@ final class MenuOptions
         $rows = '';
         foreach (self::flattened($fieldId) as $node) {
             $id = (int)$node['menu_value_id'];
-            $indent = (int)$node['depth'] * 20;
-            $rows .= '<div class="menu-editor-row" style="margin-left:' . $indent . 'px">'
+            $rows .= '<div class="menu-editor-row ' . Measure::depth((int)$node['depth']) . '">'
                 . Form::text((string)$id, (string)$node['menu_value'])
                 . Form::hidden('menu_value_old_id_' . $id, (string)$node['menu_value'])
                 . self::parentSelect('parent_' . $id, $fieldId, (int)$node['parent_menu_value_id'], $id)

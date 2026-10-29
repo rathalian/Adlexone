@@ -56,7 +56,9 @@ final class AppHero
             $tools .= '<a class="btn btn--glass apphero__action' . ($itemId === 0 && $section !== 'New' ? ' apphero__action--fab' : '') . '" href="' . Html::e($createHref) . '">' . Charts::icon('ic-plus') . 'New record</a>';
         }
 
-        return '<header class="apphero" style="' . Html::e(Accent::style($accent)) . '">'
+        $accentClass = Accent::classes($accent);
+
+        return '<header class="apphero' . ($accentClass !== '' ? ' ' . $accentClass : '') . '">'
             . '<div class="apphero__inner">'
             . '<span class="apphero__icon">' . Charts::icon((string) ($app['icon'] ?? 'ic-grid')) . '</span>'
             . '<div class="apphero__copy">' . Breadcrumb::BAND_SLOT

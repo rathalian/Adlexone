@@ -10,6 +10,7 @@ use Adlexone\Auth\Permission;
 use Adlexone\Html\Accent;
 use Adlexone\Html\Charts;
 use Adlexone\Html\Html;
+use Adlexone\Html\Measure;
 use Adlexone\Html\Presence;
 use Adlexone\Html\Timeline;
 use Adlexone\support\Database;
@@ -477,7 +478,7 @@ final class HomeDashboard
         return '<section class="checklist" data-dismissible="setup" data-fold aria-label="Set up this site">'
             . '<header class="checklist__head"><div><h2 class="checklist__title">Set up this site</h2>'
             . '<p class="checklist__lead">' . $done . ' of ' . count($steps) . ' steps are done.</p></div>'
-            . '<div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . $percent . '"><span style="--w:' . $percent . '%"></span></div>'
+            . '<div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . $percent . '"><span class="' . Measure::width((float) $percent) . '"></span></div>'
             . '<button type="button" class="iconbtn" data-dismiss aria-label="Hide this checklist">' . Charts::icon('ic-x') . '</button></header>'
             . '<ol class="checklist__steps">' . $list . '</ol>'
             . self::foldButton('Show all steps', 'Show the next step only', $hidden)
@@ -521,7 +522,8 @@ final class HomeDashboard
             $hasSeries = self::weeksOfHistory($app['series']) >= 3;
             $when = $app['touched'] > 0 ? 'Updated ' . Presence::ago((int) $app['touched']) : ($app['type'] > 0 ? 'No records yet' : '');
             $assignedCount = (int) ($app['assigned'] ?? 0);
-            $cards .= '<a class="appcard' . ($assignedCount > 0 ? ' appcard--assigned' : '') . '" href="' . Html::e((string) $app['href']) . '" style="' . Html::e(Accent::style((string) $app['accent'])) . '">'
+            $accentClass = Accent::classes((string) $app['accent']);
+            $cards .= '<a class="appcard' . ($assignedCount > 0 ? ' appcard--assigned' : '') . ($accentClass !== '' ? ' ' . $accentClass : '') . '" href="' . Html::e((string) $app['href']) . '">'
                 . '<span class="appcard__top"><span class="appcard__icon">' . Charts::icon((string) $app['icon']) . '</span>'
                 . '<span class="appcard__go" aria-hidden="true">' . Charts::icon('ic-arrow-right') . '</span></span>'
                 . '<span class="appcard__name">' . Html::e((string) $app['name']) . '</span>'
@@ -549,7 +551,9 @@ final class HomeDashboard
     {
         $when = $tone !== '' ? (string) $item['label'] : Presence::ago($item['when']);
 
-        return '<li><a class="rows__link" href="' . Html::e($item['href']) . '" style="' . Html::e(Accent::style($item['accent'])) . '">'
+        $accentClass = Accent::classes($item['accent']);
+
+        return '<li><a class="rows__link' . ($accentClass !== '' ? ' ' . $accentClass : '') . '" href="' . Html::e($item['href']) . '">'
             . '<span class="rows__dot"></span><span class="rows__main"><span class="rows__title">' . Html::e($item['title']) . '</span>'
             . '<span class="rows__meta">' . Html::e($item['app']) . '</span></span>'
             . '<span class="rows__when' . ($tone !== '' ? ' rows__when--' . Html::e($tone) : '') . '">' . Html::e($when) . '</span></a></li>';

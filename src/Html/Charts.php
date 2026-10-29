@@ -91,7 +91,7 @@ final class Charts
             }
             $html .= '<li class="bars__row ' . ($uniform && !in_array((string) ($row['tone'] ?? ''), self::TONES, true) ? 's0' : self::series($row, $index)) . '">'
                 . '<span class="bars__label">' . $label . '</span>'
-                . '<span class="bars__track"><span class="bars__fill" style="--w:' . $width . '%"></span></span>'
+                . '<span class="bars__track"><span class="bars__fill ' . Measure::width($width) . '"></span></span>'
                 . '<span class="bars__value">' . Html::e(self::number($value)) . ($unit !== '' ? ' <small>' . Html::e($unit) . '</small>' : '') . '</span>'
                 . '</li>';
         }
@@ -114,13 +114,13 @@ final class Charts
         if ($total <= 0) {
             return '';
         }
+        $shares = Measure::portions(array_map(static fn (array $part): float => (float) $part['value'], $parts));
         $bar = '';
         $legend = '';
         foreach ($parts as $index => $part) {
-            $share = round((float) $part['value'] / $total * 100, 2);
             $class = self::series($part, $index);
             $title = Html::e($part['label'] . ': ' . self::number((float) $part['value']));
-            $bar .= '<span class="stack__part ' . $class . '" style="--w:' . $share . '%" title="' . $title . '"></span>';
+            $bar .= '<span class="stack__part ' . $class . ' ' . Measure::width($shares[$index] / 10) . '" title="' . $title . '"></span>';
             $legend .= '<li class="' . $class . '"><span class="legend__dot"></span>' . Html::e((string) $part['label'])
                 . ' <strong>' . Html::e(self::number((float) $part['value'])) . '</strong></li>';
         }
@@ -198,7 +198,7 @@ final class Charts
             $html .= '<' . $tag . ' class="columns__col ' . ($uniform ? 's0' : self::series($column, $index)) . '" role="listitem"' . $href
                 . ' title="' . Html::e((string) $column['label'] . ': ' . self::number($value)) . '">'
                 . '<span class="columns__value">' . ($value > 0 ? Html::e(self::number($value)) : '') . '</span>'
-                . '<span class="columns__bar" style="--h:' . $height . '%"></span>'
+                . '<span class="columns__bar ' . Measure::height($height) . '"></span>'
                 . '<span class="columns__label">' . $label . '</span></' . $tag . '>';
         }
 

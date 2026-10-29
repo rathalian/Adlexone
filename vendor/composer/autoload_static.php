@@ -62,6 +62,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Html\\FieldControl' => __DIR__ . '/../..' . '/src/Html/FieldControl.php',
         'Adlexone\\Html\\Form' => __DIR__ . '/../..' . '/src/Html/Form.php',
         'Adlexone\\Html\\Html' => __DIR__ . '/../..' . '/src/Html/Html.php',
+        'Adlexone\\Html\\Measure' => __DIR__ . '/../..' . '/src/Html/Measure.php',
         'Adlexone\\Html\\Presence' => __DIR__ . '/../..' . '/src/Html/Presence.php',
         'Adlexone\\Html\\Stamp' => __DIR__ . '/../..' . '/src/Html/Stamp.php',
         'Adlexone\\Html\\Timeline' => __DIR__ . '/../..' . '/src/Html/Timeline.php',

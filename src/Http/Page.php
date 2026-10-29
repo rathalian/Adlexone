@@ -275,8 +275,8 @@ final class Page
      * Response headers sent with every rendered page.
      *
      * Scripts, styles, fonts, images, and the SVG sprite are served from this origin.
-     * script-src is this origin only. The theme mode script is layouts/js/mode.js.
-     * style-src still allows style attributes on the page.
+     * script-src and style-src are this origin only. The theme mode script is layouts/js/mode.js.
+     * Calculated widths, hues, and accents are classes in layouts/css/scale.css.
      */
     private static function sendSecurityHeaders(): void
     {
@@ -287,7 +287,7 @@ final class Page
         header(
             "Content-Security-Policy: default-src 'self'; "
             . "script-src 'self'; "
-            . "style-src 'self' 'unsafe-inline'; "
+            . "style-src 'self'; "
             . "img-src 'self' data:; "
             . "font-src 'self'; "
             . "object-src 'none'; "

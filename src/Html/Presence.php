@@ -59,7 +59,7 @@ final class Presence
             return '';
         }
 
-        return '<span class="mark" style="--h:' . Accent::hue($name) . '" title="' . Html::e($name) . '">' . Html::e($initials) . '</span>';
+        return '<span class="mark ' . Measure::hue(Accent::hue($name)) . '" title="' . Html::e($name) . '">' . Html::e($initials) . '</span>';
     }
 
     /**

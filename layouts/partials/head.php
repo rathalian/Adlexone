@@ -13,4 +13,5 @@ use Adlexone\Theme\Theme;
     <link rel="icon" href="<?php echo Html::e(Theme::faviconHref()); ?>" type="image/svg+xml">
     <link rel="stylesheet" href="<?php echo Html::e(Theme::baseCssHref()); ?>">
     <link rel="stylesheet" href="<?php echo Html::e(Theme::layoutCssHref('uplift')); ?>">
+    <link rel="stylesheet" href="<?php echo Html::e(Theme::layoutCssHref('scale')); ?>">
     <link rel="stylesheet" href="<?php echo Html::e(Theme::cssHref()); ?>">

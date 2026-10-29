@@ -30,9 +30,15 @@
 
 html{ color-scheme:light; scroll-behavior:smooth; }
 
-/* Derived accent tokens are rebuilt wherever an accent is set, so a card or a page can carry its own. */
-:root, body, [style*="--accent"]{
+/* Derived accent tokens are rebuilt on an element that carries its own colour. */
+:root, body{
     --accent:var(--accent-set, var(--brand));
+    --accent-ink:color-mix(in srgb, var(--accent) 80%, #000);
+    --accent-soft:color-mix(in srgb, var(--accent) 12%, var(--mix-base));
+    --c0:var(--accent);
+}
+.has-accent{
+    --accent:rgb(var(--ar) var(--ag) var(--ab));
     --accent-ink:color-mix(in srgb, var(--accent) 80%, #000);
     --accent-soft:color-mix(in srgb, var(--accent) 12%, var(--mix-base));
     --c0:var(--accent);

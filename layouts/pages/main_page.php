@@ -12,13 +12,14 @@ use Adlexone\Theme\Theme;
  */
 $sectionNav = $page->sectionNav();
 $heading = $page->title() !== '' ? $page->title() : $page->navLabel();
+$accentClass = $page->inApplication() ? Accent::classes(Accent::forSlug($page->applicationSlug())) : '';
 ?>
 <!doctype html>
 <html lang="en">
 <head>
 <?php View::partial('head', ['title' => $page->documentTitle()]); ?>
 </head>
-<body<?php echo $page->inApplication() ? ' style="' . Html::e(Accent::style(Accent::forSlug($page->applicationSlug()))) . '"' : ''; ?>>
+<body<?php echo $accentClass !== '' ? ' class="' . Html::e($accentClass) . '"' : ''; ?>>
     <a class="skip-link" href="#content">Skip to the page content</a>
     <div class="brandbar appbar">
 <?php View::partial('top_nav', ['nav' => $nav]); ?>

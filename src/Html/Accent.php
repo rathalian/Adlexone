@@ -168,10 +168,51 @@ final class Accent
             : $palette[abs(crc32($slug)) % count($palette)];
     }
 
-    /** Inline style declaration that sets the accent for the element and its children. */
-    public static function style(string $colour): string
+    /**
+     * Classes that set this colour as the accent for the element and its children.
+     * An empty string means the colour is not a hex value the stylesheet can apply.
+     */
+    public static function classes(string $colour): string
     {
-        return '--accent:' . $colour . ';';
+        $channels = self::channels($colour);
+
+        return $channels === '' ? '' : 'has-accent ' . $channels;
+    }
+
+    /**
+     * Classes that set the red, green, and blue channels of a hex colour.
+     * The theme picker uses these for a swatch. An accent also adds has-accent.
+     */
+    public static function channels(string $colour): string
+    {
+        $rgb = self::rgb($colour);
+        if ($rgb === null) {
+            return '';
+        }
+
+        return 'cr-' . $rgb[0] . ' cg-' . $rgb[1] . ' cb-' . $rgb[2];
+    }
+
+    /**
+     * @return array{0: int, 1: int, 2: int}|null
+     */
+    private static function rgb(string $colour): ?array
+    {
+        $colour = strtolower(trim($colour));
+        if (preg_match('/^#([0-9a-f]{3,8})$/', $colour, $match) !== 1) {
+            return null;
+        }
+        $hex = $match[1];
+        $length = strlen($hex);
+        if ($length === 3 || $length === 4) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2]
+                . ($length === 4 ? $hex[3] . $hex[3] : '');
+        }
+        if (strlen($hex) !== 6 && strlen($hex) !== 8) {
+            return null;
+        }
+
+        return [hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2))];
     }
 
     public static function hue(string $name): int

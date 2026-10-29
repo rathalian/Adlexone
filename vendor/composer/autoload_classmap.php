@@ -43,6 +43,7 @@ return array(
     'Adlexone\\Html\\FieldControl' => $baseDir . '/src/Html/FieldControl.php',
     'Adlexone\\Html\\Form' => $baseDir . '/src/Html/Form.php',
     'Adlexone\\Html\\Html' => $baseDir . '/src/Html/Html.php',
+    'Adlexone\\Html\\Measure' => $baseDir . '/src/Html/Measure.php',
     'Adlexone\\Html\\Presence' => $baseDir . '/src/Html/Presence.php',
     'Adlexone\\Html\\Stamp' => $baseDir . '/src/Html/Stamp.php',
     'Adlexone\\Html\\Timeline' => $baseDir . '/src/Html/Timeline.php',
