@@ -35,7 +35,7 @@ The root `.htaccess` lets only `index.php` run and refuses requests for `config/
 
 ## Several customers on one server
 
-Set `INLAY_STORES` to a directory outside `public/` and `INLAY_OPERATOR_HOST` to the management hostname. The same keys can live in `config/platform.json` next to the code. Environment values win. Open the operator host, create the operator account, then add a customer. Each customer gets `{stores}/{slug}/adlexone.sqlite`, `config/`, and `attachments/`. Leave the admin password blank and their first visit is the same setup page, with their own paths. The operator login is stored in `platform.sqlite` beside the stores directory, not inside a customer database.
+Set `INLAY_STORES` to a directory outside `public/` and `INLAY_OPERATOR_HOST` to the management hostname. The same keys can live in `config/platform.json` next to the code. Environment values win. Open the operator host, create the operator account, then add a customer. The design for a SaaS installer and a manager of hosted sites, including usage and cost, is in `design/saas-installer/`. It is not built yet. Each customer gets `{stores}/{slug}/adlexone.sqlite`, `config/`, and `attachments/`. Leave the admin password blank and their first visit is the same setup page, with their own paths. The operator login is stored in `platform.sqlite` beside the stores directory, not inside a customer database.
 
 4. **Autoloader.** `vendor/` is committed and a host never runs Composer. When a commit adds, moves, or deletes a class under `src/`, the Composer classmap must be rebuilt in the same commit:
 

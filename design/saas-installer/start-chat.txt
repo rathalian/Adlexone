@@ -1,0 +1,11 @@
+Build the SaaS site installer and manager. Start by proposing the design. Do not write the installer, the manager, or a schema in the first pass.
+
+Read design/saas-installer/README.md and follow it. Also read the operator that already exists: src/Platform/OperatorScreen.php, src/Platform/PlatformDb.php, src/Platform/Runtime.php, src/Platform/Provisioner.php, and HelpText::operator in src/Platform/HelpText.php.
+
+The work is two tools for the person who runs the server. The SaaS installer turns this copy of Adlexone into a host of customer sites. The manager creates, reads, updates, and deletes hosted sites, and shows end-to-end usage and the cost of that usage for one site and for the whole host.
+
+Write the proposal as design/saas-installer/proposal.md. Answer the decisions listed in the brief, including what usage is made of and what cost means. There is no price list today. The only usage figure on the operator screen is the size of the customer folder.
+
+Leave the self-hosted installer alone. It is the named flow in src/Platform/SetupScreen.php. A customer finishing their own hostname is not this manager.
+
+User-facing text is formal Australian English, specific, and direct. Commit to main. Do not open a pull request.
