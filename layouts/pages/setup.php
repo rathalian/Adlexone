@@ -14,6 +14,7 @@ use Adlexone\Theme\Theme;
  * @var bool $installer
  * @var string $stepsHtml
  * @var string $headingAction
+ * @var string $kicker
  */
 $error = $error ?? '';
 $notice = $notice ?? '';
@@ -22,6 +23,7 @@ $formHtml = $formHtml ?? '';
 $installer = !empty($installer);
 $stepsHtml = $stepsHtml ?? '';
 $headingAction = $headingAction ?? '';
+$kicker = $kicker ?? 'Self-hosted installer';
 $documentTitle = $documentTitle ?? ($title . ' — Adlexone');
 ?>
 <!doctype html>
@@ -38,7 +40,7 @@ $documentTitle = $documentTitle ?? ($title . ' — Adlexone');
             <div class="brandwrap">
                 <?php View::partial('brand_lockup'); ?>
             </div>
-            <p class="install-kicker">Set up this site</p>
+            <p class="install-kicker"><?php echo Html::e($kicker); ?></p>
         </div>
         <?php echo $stepsHtml; ?>
         <div class="login-panel install__panel">

@@ -341,7 +341,7 @@ final class SetupScreen
         $next = '?step=' . ($hosted ? self::STEP_ACCOUNT : self::nextInstallStep());
         $html = self::welcomeBody($hosted);
         $html .= '<div class="install-actions"><a class="btn btn--primary" href="' . Html::e($next) . '">Start setup</a></div>';
-        self::render('Welcome', 'This installs Adlexone on this server.', '', $html, '');
+        self::render('Welcome', 'This installs Adlexone on this server.', '', $html, '', '', '', !$hosted);
     }
 
     private static function welcomeBody(bool $hosted): string
@@ -408,7 +408,8 @@ final class SetupScreen
             $form,
             '',
             '',
-            self::detailsButton('install-help-files')
+            self::detailsButton('install-help-files'),
+            false
         );
     }
 
@@ -983,11 +984,14 @@ final class SetupScreen
         string $form,
         string $steps,
         string $notice = '',
-        string $headingAction = ''
+        string $headingAction = '',
+        bool $selfHosted = true
     ): void {
+        $name = $selfHosted ? 'Self-hosted installer' : 'Set up this site';
         Page::current()->useLayout('setup', [
             'title' => $title,
-            'documentTitle' => $title . ' — Set up Adlexone',
+            'documentTitle' => $title . ' — ' . $name,
+            'kicker' => $name,
             'lead' => $lead,
             'error' => $error,
             'notice' => $notice,
