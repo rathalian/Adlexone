@@ -16,15 +16,22 @@ $check = static function (bool $ok, string $message) use (&$failed): void {
 };
 
 $check(DefaultAccount::USERNAME === 'admin', 'default username is admin');
-$check(DefaultAccount::PASSWORD === 'admin', 'default password is admin');
+$check(DefaultAccount::PASSWORD === 'adlexoneadlexone', 'default password is adlexoneadlexone');
 $check(DefaultAccount::postedUsername('') === 'admin', 'empty posted username becomes admin');
-$check(DefaultAccount::postedPassword('') === 'admin', 'empty posted password becomes admin');
+$check(DefaultAccount::postedPassword('') === 'adlexoneadlexone', 'empty posted password becomes adlexoneadlexone');
+
+try {
+    DefaultAccount::assertPassword('adlexoneadlexone');
+    $check(true, 'the default password is accepted');
+} catch (Throwable $e) {
+    $check(false, 'the default password is accepted');
+}
 
 try {
     DefaultAccount::assertPassword('admin');
-    $check(true, 'password admin is accepted');
+    $check(false, 'the previous short password is rejected');
 } catch (Throwable $e) {
-    $check(false, 'password admin is accepted');
+    $check(str_contains($e->getMessage(), '8 characters'), 'the previous short password is rejected');
 }
 
 try {
@@ -74,7 +81,7 @@ $check(DefaultAccount::allowed() === false, 'a local proxy serving a public host
 unset($_SERVER['REMOTE_ADDR']);
 $_SERVER['HTTP_HOST'] = 'health.example.com';
 $check(DefaultAccount::postedPassword('') === '', 'a public host gets no default password');
-foreach (['admin', 'short-pass'] as $weak) {
+foreach (['admin', 'short-pass', 'adlexoneadlexone'] as $weak) {
     try {
         DefaultAccount::assertPassword($weak);
         $check(false, 'public host refuses ' . $weak);

@@ -9,7 +9,7 @@ namespace Adlexone\Platform;
 final class DefaultAccount
 {
     public const USERNAME = 'admin';
-    public const PASSWORD = 'admin';
+    public const PASSWORD = 'adlexoneadlexone';
 
     /**
      * The default password is for a machine in front of the person setting it up: the command line,
