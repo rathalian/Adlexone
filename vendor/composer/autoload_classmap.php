@@ -33,6 +33,7 @@ return array(
     'Adlexone\\Data\\GroupMembership' => $baseDir . '/src/Data/GroupMembership.php',
     'Adlexone\\Data\\ItemFields' => $baseDir . '/src/Data/ItemFields.php',
     'Adlexone\\Data\\SavedSearch' => $baseDir . '/src/Data/SavedSearch.php',
+    'Adlexone\\Database\\RecordListQuery' => $baseDir . '/src/Database/RecordListQuery.php',
     'Adlexone\\Database\\SchemaMigrator' => $baseDir . '/src/Database/SchemaMigrator.php',
     'Adlexone\\Html\\Accent' => $baseDir . '/src/Html/Accent.php',
     'Adlexone\\Html\\AppHero' => $baseDir . '/src/Html/AppHero.php',

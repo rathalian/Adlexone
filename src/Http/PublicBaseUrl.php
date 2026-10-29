@@ -41,6 +41,32 @@ final class PublicBaseUrl
         }
     }
 
+    /**
+     * Whether this request should set a Secure session cookie.
+     *
+     * A configured https origin counts. Otherwise the request scheme counts,
+     * including X-Forwarded-Proto from a trusted proxy or from loopback.
+     * The local web server sits on loopback in front of PHP.
+     *
+     * @param array<string, mixed> $server
+     */
+    public static function https(array $server): bool
+    {
+        $configured = self::configuredOrigin();
+        if (is_string($configured) && str_starts_with($configured, 'https://')) {
+            return true;
+        }
+        $remote = trim((string) ($server['REMOTE_ADDR'] ?? ''));
+        $trust = self::trustForwardedHeaders($server) || self::loopback($remote);
+
+        return self::scheme($server, $trust) === 'https';
+    }
+
+    private static function loopback(string $ip): bool
+    {
+        return $ip === '127.0.0.1' || $ip === '::1';
+    }
+
     private static function configuredOrigin(): ?string
     {
         if (!defined('SET_PUBLIC_BASE_URL')) {

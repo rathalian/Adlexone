@@ -52,6 +52,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Data\\GroupMembership' => __DIR__ . '/../..' . '/src/Data/GroupMembership.php',
         'Adlexone\\Data\\ItemFields' => __DIR__ . '/../..' . '/src/Data/ItemFields.php',
         'Adlexone\\Data\\SavedSearch' => __DIR__ . '/../..' . '/src/Data/SavedSearch.php',
+        'Adlexone\\Database\\RecordListQuery' => __DIR__ . '/../..' . '/src/Database/RecordListQuery.php',
         'Adlexone\\Database\\SchemaMigrator' => __DIR__ . '/../..' . '/src/Database/SchemaMigrator.php',
         'Adlexone\\Html\\Accent' => __DIR__ . '/../..' . '/src/Html/Accent.php',
         'Adlexone\\Html\\AppHero' => __DIR__ . '/../..' . '/src/Html/AppHero.php',

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Http\PublicBaseUrl;
+
 /**
  * Decides which database this request uses.
  *
@@ -102,10 +104,7 @@ final class Runtime
         if (session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
-        $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-        if (defined('SET_PUBLIC_BASE_URL') && str_starts_with((string) SET_PUBLIC_BASE_URL, 'https://')) {
-            $secure = true;
-        }
+        $secure = PublicBaseUrl::https($_SERVER);
         session_set_cookie_params([
             'lifetime' => 0,
             'path' => '/',
