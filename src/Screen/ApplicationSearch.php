@@ -319,7 +319,20 @@ final class ApplicationSearch
             }
         }
 
-        return Router::continueUrl('search');
+        return self::place('search');
+    }
+
+    /**
+     * The address for the next action. Inside an application that is the current place.
+     */
+    private static function place(string $manage): string
+    {
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId());
+        }
+
+        return Router::manageUrl($manage);
     }
 
     /**
@@ -534,7 +547,7 @@ final class ApplicationSearch
      */
     private static function savedLink(array $row): string
     {
-        return Router::continueUrl('search') . '&search=' . rawurlencode((string) $row['search_id'])
+        return self::place('search') . '&search=' . rawurlencode((string) $row['search_id'])
             . ((string) $row['user'] === 'all' ? '&global=1' : '');
     }
 
@@ -744,7 +757,7 @@ final class ApplicationSearch
             }
         }
 
-        $base = Router::continueUrl('items');
+        $base = self::place('records');
         $rows = [];
         foreach ($ids as $id) {
             $row = $items[$id] ?? null;

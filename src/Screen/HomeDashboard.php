@@ -13,6 +13,7 @@ use Adlexone\Html\Html;
 use Adlexone\Html\Measure;
 use Adlexone\Html\Presence;
 use Adlexone\Html\Timeline;
+use Adlexone\Http\Router;
 use Adlexone\support\Database;
 use Adlexone\support\FieldValidation;
 use Adlexone\Theme\Theme;
@@ -26,8 +27,9 @@ final class HomeDashboard
 {
     private const WEEKS = 8;
 
-    /** Controller name that returns the recent activity list as JSON. */
+    /** Screen key for the recent activity list. */
     public const ACTIVITY = 'home_activity';
+    /** Screen key for the assigned list. */
     public const ASSIGNED = 'home_assigned';
     private const ASSIGNED_LIMIT = 500;
     private const QUIET_DAYS = 14;
@@ -91,8 +93,12 @@ final class HomeDashboard
         $scope = $scope === 'mine' ? 'mine' : 'all';
         $events = self::events(self::typeIds($apps), self::typeToApp($apps), $apps, $scope === 'mine');
 
-        $link = static fn (string $key, string $label): string => '<a class="work-scope__link' . ($scope === $key ? ' is-selected' : '') . '" data-lazy-link href="?controller='
-            . self::ACTIVITY . ($key === 'mine' ? '&scope=mine' : '') . '"' . ($scope === $key ? ' aria-current="true"' : '') . '>' . Html::e($label) . '</a>';
+        $link = static function (string $key, string $label) use ($scope): string {
+            $href = Router::manageUrl('activity', $key === 'mine' ? 'scope=mine' : '');
+
+            return '<a class="work-scope__link' . ($scope === $key ? ' is-selected' : '') . '" data-lazy-link href="'
+                . Html::e($href) . '"' . ($scope === $key ? ' aria-current="true"' : '') . '>' . Html::e($label) . '</a>';
+        };
 
         return '<nav class="work-scope panel__scope" aria-label="Activity to show">' . $link('all', 'Everyone') . $link('mine', 'Mine') . '</nav>'
             . Timeline::render(
@@ -182,7 +188,7 @@ final class HomeDashboard
                 $n = count($attention['groups'][$key] ?? []);
                 $inner = '<strong class="homehero__n">' . $n . '</strong><span class="homehero__what">' . Html::e($label) . '</span>';
                 $tiles .= $n > 0
-                    ? '<li><a class="homehero__tile homehero__tile--' . $tone . '" href="#assigned" data-open-panel="assigned" data-panel-focus="?controller=' . self::ASSIGNED . '&focus=' . $key . '">' . $inner . '</a></li>'
+                    ? '<li><a class="homehero__tile homehero__tile--' . $tone . '" href="#assigned" data-open-panel="assigned" data-panel-focus="' . Html::e(Router::manageUrl('assigned', 'focus=' . $key)) . '">' . $inner . '</a></li>'
                     : '<li><span class="homehero__tile homehero__tile--none">' . $inner . '</span></li>';
             }
             $tiles = '<ul class="homehero__tiles" aria-label="Your records that need attention">' . $tiles . '</ul>';
@@ -221,7 +227,7 @@ final class HomeDashboard
                     continue;
                 }
                 $noted = true;
-                $facts[] = '<a class="homehero__link" href="#assigned" data-open-panel="assigned" data-panel-focus="?controller=' . self::ASSIGNED . '&focus=' . $key . '">'
+                $facts[] = '<a class="homehero__link" href="#assigned" data-open-panel="assigned" data-panel-focus="' . Html::e(Router::manageUrl('assigned', 'focus=' . $key)) . '">'
                     . Html::e($n . ' ' . $words[$key]) . '</a>';
             }
             if (!$noted) {
@@ -662,8 +668,12 @@ final class HomeDashboard
         if (array_sum(array_map('count', $attention['groups'])) === 0) {
             return '';
         }
-        $link = static fn (string $key, string $label): string => '<a class="work-scope__link' . ($focus === $key ? ' is-selected' : '') . '" data-lazy-link href="?controller='
-            . self::ASSIGNED . ($key !== '' ? '&focus=' . $key : '') . '"' . ($focus === $key ? ' aria-current="true"' : '') . '>' . Html::e($label) . '</a>';
+        $link = static function (string $key, string $label) use ($focus): string {
+            $href = Router::manageUrl('assigned', $key !== '' ? 'focus=' . $key : '');
+
+            return '<a class="work-scope__link' . ($focus === $key ? ' is-selected' : '') . '" data-lazy-link href="'
+                . Html::e($href) . '"' . ($focus === $key ? ' aria-current="true"' : '') . '>' . Html::e($label) . '</a>';
+        };
         $html = $link('', 'All');
         foreach (self::REASONS as $key => [$label]) {
             if ($attention['groups'][$key] !== []) {
@@ -701,13 +711,13 @@ final class HomeDashboard
                     $links .= '<span>and ' . self::plural($rest, 'other application') . '</span>';
                 }
                 $body .= '<p class="panel__more">'
-                    . '<a class="panel__all" data-lazy-link href="?controller=' . self::ASSIGNED . '">Show all ' . $assigned['total'] . '</a>'
+                    . '<a class="panel__all" data-lazy-link href="' . Html::e(Router::manageUrl('assigned')) . '">Show all ' . $assigned['total'] . '</a>'
                     . $links . '</p>';
             }
         }
         $count = $assigned['total'] > 0 ? '<span class="panel__count">' . $assigned['total'] . '</span>' : '';
 
-        $lazy = $items === [] ? '' : '?controller=' . self::ASSIGNED;
+        $lazy = $items === [] ? '' : Router::manageUrl('assigned');
 
         return self::panel('assigned', 'Assigned to you', $count, '<div class="panel__body" data-lazy-body aria-live="polite">' . $body . '</div>', $lazy, true, $assigned['total'] > 0);
     }
@@ -727,7 +737,7 @@ final class HomeDashboard
             '',
             '<div class="panel__body" data-lazy-body aria-live="polite"><p class="timeline__empty">Loading recent activity.</p>'
             . '<noscript><p class="timeline__empty">Recent activity needs JavaScript.</p></noscript></div>',
-            '?controller=' . self::ACTIVITY
+            Router::manageUrl('activity')
         );
     }
 

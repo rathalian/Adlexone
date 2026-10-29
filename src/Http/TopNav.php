@@ -118,19 +118,17 @@ final class TopNav
 
     private static function applicationIsCurrent(string $slug): bool
     {
-        return (string) ($_GET['controller'] ?? '') === 'application'
+        return Page::current()->inApplication()
             && $slug !== ''
-            && $slug === (string) ($_GET['app'] ?? '');
+            && $slug === Page::current()->applicationSlug();
     }
 
-    private static function controllerMatches(string $controller): bool
+    private static function controllerMatches(string $screen): bool
     {
-        $current = (string) ($_GET['controller'] ?? '');
-        if ($current === $controller) {
-            return true;
+        if (Request::query('manage') === '') {
+            return false;
         }
-        $prefix = preg_replace('/_(main|manage)$/', '', $controller);
 
-        return is_string($prefix) && $prefix !== $controller && str_starts_with($current, $prefix);
+        return Router::matches($screen);
     }
 }

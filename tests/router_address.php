@@ -35,9 +35,12 @@ $check(Request::query('subcontroller') === 'item_management_manage', 'subcontrol
 $check(Router::requested() === 'records', 'the old item address asks for records');
 $check(Router::matches(Router::ITEMS), 'the old item address opens the item screen');
 $check(Router::engine() === Router::ITEMS, 'the old item address still selects the item engine');
-$check(Router::continueUrl('items') === '?manage=records', 'the next item link outside an application is manage=records');
-$check(!str_contains(Router::continueUrl('items'), 'subcontroller='), 'the next item link does not write subcontroller');
-$check(!str_contains(Router::continueUrl('search'), 'controller='), 'the next search link does not write controller');
+$check(Router::manageUrl('records') === '?manage=records', 'records is a manage address');
+$check(Router::manageUrl('search') === '?manage=search', 'search is a manage address');
+$check(Router::manageUrl('activity', 'scope=mine') === '?manage=activity&scope=mine', 'activity keeps its filter after the place');
+$check(Router::manageUrl('assigned', 'focus=overdue') === '?manage=assigned&focus=overdue', 'assigned keeps focus after the place');
+$check(Router::manageUrl('palette') === '?manage=palette', 'palette is a manage address');
+$check(Router::manageUrl('print', 'item=44') === '?manage=print&item=44', 'print is its own place');
 
 $load(['manage' => 'records', 'option' => 'my_items']);
 $check(Router::requested() === 'records', 'manage=records asks for records');
@@ -87,7 +90,7 @@ $check(Router::engine() === Router::ITEMS, 'engine=items still selects the item 
 
 $load(['engine' => 'search', 'option' => 'show_quick_search']);
 $check(Request::query('manage') === 'search', 'engine=search becomes manage=search');
-$check(Router::continueUrl('search') === '?manage=search', 'the next search link outside an application is manage=search');
+$check(Router::manageUrl('search', 'option=show_quick_search') === '?manage=search&option=show_quick_search', 'a search action stays on manage=search');
 
 $load(['subcontroller' => 'search_management_manage', 'option' => 'show_quick_search']);
 $check(Request::query('manage') === 'search', 'a search subcontroller becomes manage=search');
@@ -106,7 +109,7 @@ $check(Router::requested() === 'application', 'an application address opens the 
 $check(Router::applicationUrl('publishing', 1) === '?application=publishing&nav=1', 'a publishing link stays on application and nav');
 Page::current()->enterApplication('publishing', 1);
 $check(
-    Router::continueUrl('items') === '?application=publishing&nav=1',
+    Router::applicationUrl(Page::current()->applicationSlug(), Page::current()->navId()) === '?application=publishing&nav=1',
     'the next link inside Publishing is the application address'
 );
 $check(Router::engine() === Router::ITEMS, 'an item inside Publishing still selects the item engine');
@@ -130,6 +133,19 @@ $check(Router::homeTarget('home') === './', 'a stored home opens the site root')
 $check(Router::homeTarget('security') === '?manage=security', 'a stored security home uses manage');
 $check(Router::homeTarget('item_management_manage') === '?manage=records', 'a stored item screen uses manage=records');
 $check(Router::homeTarget('home_activity') === '?manage=activity', 'a stored activity home uses manage=activity');
+$check(Router::homeTarget('full_page_view') === '?manage=print', 'a stored print screen uses manage=print');
+$check(Router::homeTarget('manage_security') === '?manage=security', 'a stored security screen uses manage=security');
+$check(Router::homeTarget('manage_fields') === '?manage=fields', 'a stored fields screen uses manage=fields');
+$check(Router::homeTarget('quick_launch') === './', 'a stored quick launch opens the site root');
+$check(Router::homeTarget('app_servicecentre_main') === './', 'an unknown stored home opens the site root');
+foreach (['home', 'application:publishing', 'security', 'item_management_manage', 'home_activity', 'full_page_view', 'manage_fields', 'print', 'quick_launch', 'app_servicecentre_main'] as $stored) {
+    $target = Router::homeTarget($stored);
+    $check(!str_contains($target, 'controller=') && !str_contains($target, 'subcontroller='), $stored . ' does not use controller in the address');
+}
+$router = (string) file_get_contents(dirname(__DIR__) . '/src/Http/Router.php');
+$check(!str_contains($router, 'function continueUrl'), 'continueUrl is gone');
+$check(!str_contains($router, "Request::set('controller'"), 'open does not write controller');
+$check(!str_contains($router, '?controller='), 'the router does not build a controller address');
 
 echo $failed === 0 ? "all checks passed\n" : "{$failed} check(s) failed\n";
 exit($failed === 0 ? 0 : 1);

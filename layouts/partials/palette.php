@@ -1,12 +1,13 @@
 <?php
 use Adlexone\Html\Html;
+use Adlexone\Http\Router;
 use Adlexone\Theme\Theme;
 
 if (!isset($_SESSION['access_user_id'])) {
     return;
 }
 ?>
-<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Search and commands" data-sprite="<?php echo Html::e(Theme::spriteHref()); ?>" data-endpoint="?controller=palette" hidden>
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Search and commands" data-sprite="<?php echo Html::e(Theme::spriteHref()); ?>" data-endpoint="<?php echo Html::e(Router::manageUrl('palette')); ?>" hidden>
     <div class="palette__backdrop" data-palette-close></div>
     <div class="palette__box">
         <div class="palette__search">

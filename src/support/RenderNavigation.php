@@ -478,10 +478,8 @@ final class RenderNavigation
         if ($linkOption !== '' || $currentOption !== '') {
             return $linkOption !== '' && $linkOption === $currentOption;
         }
-        $linkController = (string)($params['controller'] ?? '');
-        return $linkController !== ''
-            && $linkController === (string)($_GET['controller'] ?? '')
-            && (string)($params['subcontroller'] ?? '') === (string)($_GET['subcontroller'] ?? '');
+
+        return false;
     }
 
 

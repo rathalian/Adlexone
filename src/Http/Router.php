@@ -251,42 +251,25 @@ final class Router
     {
         if (str_contains($stored, ':')) {
             [$name, $app] = explode(':', $stored, 2);
-            if ($name === 'application') {
+            if ($name === 'application' && $app !== '') {
                 return self::applicationUrl($app);
             }
 
-            return '?controller=' . rawurlencode($stored);
-        }
-        $name = self::queryName($stored);
-        $canonical = self::canonical($name);
-        if ($name === '' || $canonical === 'home') {
             return self::page();
         }
-        $manageKey = array_search($canonical, self::ALIASES, true);
-        if (is_string($manageKey) && !str_starts_with($manageKey, 'administration_') && $manageKey !== 'manage' && $manageKey !== 'print' && $manageKey !== 'quick_launch') {
-            return self::manageUrl($manageKey);
+        $name = self::queryName($stored);
+        if ($name === '' || self::canonical($name) === 'home') {
+            return self::page();
         }
-        if (isset(self::ALIASES[$name]) && $name !== 'manage' && !str_starts_with($name, 'administration_')) {
-            return self::manageUrl($name);
+        $manage = self::manageName($name);
+        if ($manage === '') {
+            $manage = self::preferredManage(self::canonical($name));
         }
-
-        return '?controller=' . rawurlencode($canonical);
-    }
-
-    /**
-     * Address for the next action on the screen that is already open.
-     * Inside an application that is the application. Outside it is records or search.
-     */
-    public static function continueUrl(string $engine = ''): string
-    {
-        if (Page::current()->inApplication()) {
-            return self::applicationUrl(Page::current()->applicationSlug(), Page::current()->navId());
-        }
-        if ($engine === 'search') {
-            return self::manageUrl('search');
+        if ($manage !== '') {
+            return self::manageUrl($manage);
         }
 
-        return self::manageUrl('records');
+        return self::page();
     }
 
     /**
@@ -393,9 +376,6 @@ final class Router
             Access::deny();
         }
         self::absorbRecord($canonical);
-        if (!Request::has('controller') || $canonical !== self::queryName($name)) {
-            Request::set('controller', $canonical);
-        }
         $handler();
     }
 
