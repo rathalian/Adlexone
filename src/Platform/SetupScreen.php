@@ -18,6 +18,8 @@ final class SetupScreen
 {
     private const SESSION_KEY = 'adlexone_setup';
 
+    private const STEP_WELCOME = 'welcome';
+
     private const STEP_ROOT = 'root';
 
     private const STEP_STORAGE = 'storage';
@@ -74,6 +76,13 @@ final class SetupScreen
         }
 
         if ($hosted) {
+            $hostedStep = (string) ($_GET['step'] ?? '');
+            $onAccount = $hostedStep === self::STEP_ACCOUNT || (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST');
+            if (!$onAccount) {
+                self::renderWelcome(true);
+
+                return;
+            }
             try {
                 SetupToken::issue();
             } catch (\Throwable $e) {
@@ -311,6 +320,11 @@ final class SetupScreen
 
             return;
         }
+        if ($step === self::STEP_WELCOME) {
+            self::renderWelcome(false);
+
+            return;
+        }
         self::render(
             'Document root',
             'Shared hosting needs the Adlexone package in the document root. If the package is not in the document root, the document root must be the public folder.',
@@ -320,6 +334,60 @@ final class SetupScreen
             $notice,
             self::detailsButton('install-help-root')
         );
+    }
+
+    private static function renderWelcome(bool $hosted): void
+    {
+        $next = '?step=' . ($hosted ? self::STEP_ACCOUNT : self::nextInstallStep());
+        $html = self::welcomeBody($hosted);
+        $html .= '<div class="install-actions"><a class="btn btn--primary" href="' . Html::e($next) . '">Start setup</a></div>';
+        self::render('Welcome', 'This installs Adlexone on this server.', '', $html, '');
+    }
+
+    private static function welcomeBody(bool $hosted): string
+    {
+        $html = '<div class="install-brief">';
+        $html .= '<h2 class="install-section">What it is</h2>';
+        $html .= '<p>Adlexone keeps the applications, records, and rules for the work.</p>';
+        $html .= '<p>An application is one kind of work, with its own fields and steps. A record is one piece of that work. When a record moves, a rule can write the log, the next step, and the date.</p>';
+        $html .= '<h2 class="install-section">Why it is used</h2>';
+        $html .= '<p>Use it when the work is records moving through known steps, and more than one person needs to see them.</p>';
+        $html .= '<p>People sign in and open the application they use. The record holds the files. The database is one SQLite file on this server.</p>';
+        $html .= '<h2 class="install-section">This setup</h2>';
+        if ($hosted) {
+            $html .= '<p>The files for this site are already on the server. This setup sets the name on the sign-in page and creates the first administrator. Nothing else is configured here.</p>';
+        } else {
+            $html .= '<p>Setup installs the system. It does not configure the day-to-day work. There are three steps, and nothing is saved until the last one.</p>';
+            $html .= '<ol class="install-points">';
+            $html .= '<li><span class="install-points__num">1</span><span><strong>Document root.</strong> Confirm which folder the website uses.</span></li>';
+            $html .= '<li><span class="install-points__num">2</span><span><strong>Storage directory.</strong> Choose where the database, settings, and uploads are kept. PHP must be able to use the folder, and a browser must not be able to read it.</span></li>';
+            $html .= '<li><span class="install-points__num">3</span><span><strong>Account.</strong> Set the name on the sign-in page, create the first administrator, and choose whether to install sample applications.</span></li>';
+            $html .= '</ol>';
+        }
+        $html .= '<h2 class="install-section">After you sign in</h2>';
+        $html .= '<p>Configuration comes after installation. Sign in with the administrator you create here. The rest is under Configure.</p>';
+        $html .= '<ul class="install-points">';
+        $html .= '<li><span><strong>Applications.</strong> Create an application for the work, or remove the samples.</span></li>';
+        $html .= '<li><span><strong>People.</strong> Add a person when they need access.</span></li>';
+        $html .= '<li><span><strong>Settings.</strong> Set the time zone, the date format, and the introduction on the home page.</span></li>';
+        $html .= '<li><span><strong>Sign-in and email.</strong> Turn on username sign-in, an organisation directory, or mail when you need them.</span></li>';
+        $html .= '</ul>';
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    private static function nextInstallStep(): string
+    {
+        $state = self::state();
+        if ($state['placement'] === '') {
+            return self::STEP_ROOT;
+        }
+        if ($state['storage'] === '') {
+            return self::STEP_STORAGE;
+        }
+
+        return self::STEP_ACCOUNT;
     }
 
     /**
@@ -383,7 +451,7 @@ final class SetupScreen
             $selected,
             $focus
         );
-        $html .= self::actions('Continue', 'placement');
+        $html .= self::actions('Continue', 'placement', '', '', '?step=welcome');
         $html .= '</form>';
         $html .= self::dialog('install-help-root', 'Document root', self::helpDocument($install, $public, $doc));
 
@@ -950,9 +1018,12 @@ final class SetupScreen
 
     private static function currentStep(): string
     {
-        $requested = (string) ($_GET['step'] ?? self::STEP_ROOT);
-        if (!in_array($requested, [self::STEP_ROOT, self::STEP_STORAGE, self::STEP_ACCOUNT], true)) {
-            $requested = self::STEP_ROOT;
+        $requested = (string) ($_GET['step'] ?? self::STEP_WELCOME);
+        if (!in_array($requested, [self::STEP_WELCOME, self::STEP_ROOT, self::STEP_STORAGE, self::STEP_ACCOUNT], true)) {
+            $requested = self::STEP_WELCOME;
+        }
+        if ($requested === self::STEP_WELCOME) {
+            return self::STEP_WELCOME;
         }
         $state = self::state();
         if ($state['placement'] === '') {

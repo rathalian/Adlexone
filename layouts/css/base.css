@@ -2533,6 +2533,42 @@ input[type="file"]::file-selector-button:hover{ background:var(--hover); }
     text-transform:uppercase;
     color:var(--placeholder);
 }
+.install-brief{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    font-size:15px;
+    line-height:1.5;
+}
+.install-brief p{ margin:0; max-width:62ch; }
+.install-brief .install-section{ margin-top:14px; }
+.install-brief .install-section:first-child{ margin-top:2px; }
+.install-points{
+    list-style:none;
+    margin:4px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.install-points li{
+    display:grid;
+    grid-template-columns:1.45rem minmax(0, 1fr);
+    gap:8px;
+    align-items:start;
+}
+.install-points li:not(:has(.install-points__num)){ grid-template-columns:minmax(0, 1fr); }
+.install-points__num{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:1.45rem;
+    height:1.45rem;
+    border-radius:999px;
+    background:color-mix(in srgb, var(--ink) 8%, transparent);
+    font-size:12px;
+    font-weight:700;
+}
 .install-form{ gap:14px; }
 .install-labelrow{
     display:flex;

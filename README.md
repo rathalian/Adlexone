@@ -9,7 +9,7 @@ PHP 8.1+ / SQLite action and information management system. The database is a **
 
 ## Setup
 
-1. **Open the site.** If there is no administrator yet, the setup page has three steps.
+1. **Open the site.** If there is no administrator yet, the setup page opens with a short introduction, then three steps.
 
    - **Document root.** Shared hosting needs the Adlexone package in the document root. If the package is not in the document root, the document root must be the `public` folder. The page reads the document root from the server and continues only when the choice matches.
    - **Storage directory.** Choose a folder for the database, settings, and uploads. Adlexone creates `config/`, `database/adlexone.sqlite`, and `attachments/` inside it, and checks that the account running PHP can create, read, update, and delete files there. It also checks that a browser cannot fetch a file from that folder. A folder inside the web folder is strongly recommended against. If one is chosen anyway, setup requests a trial file from the website and continues only when that request does not return the file. The path is saved in `config/platform.json` next to the code (`INLAY_STORAGE`). The suggested folder is `storage/`, which sits outside `public/`. Directories are mode `700`. The database file is mode `600`.
