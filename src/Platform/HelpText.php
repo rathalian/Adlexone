@@ -80,7 +80,7 @@ final class HelpText
         $storeExample = rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . 'health' . DIRECTORY_SEPARATOR;
 
         return self::article('How customer stores are kept apart', [
-            self::p('This screen is the operator. It is a separate login in a separate database. It is not a user inside a customer site, and it does not appear in their user list or their backup. The default username and password are both ' . Html::e(DefaultAccount::USERNAME) . '.'),
+            self::p('This screen is the operator. It is a separate login in a separate database. It is not a user inside a customer site, and it does not appear in their user list or their backup. The default username is ' . Html::e(DefaultAccount::USERNAME) . '. On a local address the password field is filled with the local default. On a public address, choose a password of at least 12 characters.'),
             self::p('Each customer gets one folder. Their people, records, settings, and uploads stay in that folder. One request opens one SQLite file.'),
             self::facts([
                 'Code' => $install,
@@ -103,11 +103,54 @@ final class HelpText
             self::pre(self::commands($user, [dirname($platformDb), $stores], [$platformDb])),
             self::p('SQLite also writes -wal and -shm files next to each database while it is in use. Backup on this screen checkpoints those into the main file, then downloads the folder.'),
             self::h('Turning SaaS mode on'),
-            self::p('Set INLAY_STORES to the customer folder path and INLAY_OPERATOR_HOST to this site’s hostname. You can put the same values in ' . self::code('config/platform.json') . ' next to the code (the install’s config, not a customer config). Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
+            self::p('Open ' . self::code('./?install=host') . ' on a copy that is not in SaaS mode yet and has no administrator. That installer writes INLAY_STORES and INLAY_OPERATOR_HOST into ' . self::code('config/platform.json') . ' next to the code. Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
             self::h('Creating a customer'),
             self::p('Choose a short slug, the hostname they will use, and a display name. Leave the admin password blank if they should open that hostname and finish setup themselves. The setup page they see names their database, settings folder, and attachments folder, and it repeats the permission commands. Fill in the admin username and password here if you are creating the first account for them.'),
+            self::h('Changing a site'),
+            self::p('Open the site from the list. You can change the display name, the hostname, and the contact email. The slug is the folder name and it stays as it is. The display name is written to that site’s settings. When the hostname changes, that site’s public URL is updated. The contact email stays on this list.'),
+            self::h('Usage and cost'),
+            self::p('Measure usage reads each site’s folder and database, then stores the figures in the operator database. The list uses that measurement. It does not open every customer database on each view.'),
+            self::p('The rate is a monthly amount, an amount per person, and an amount per gigabyte, kept in the operator database. A gigabyte is 1,024 MB. The figure uses the folder total. There is no invoice. Clear the rate and cost is not calculated.'),
             self::h('Suspend, backup, delete'),
             self::p('Suspend leaves every file in place and stops sign-in. Resume turns the site back on. Backup downloads their SQLite file, settings, and attachments. Delete removes the folder from disk after you type the slug. Delete is permanent.'),
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $paths
+     */
+    public static function hostInstall(array $paths, string $stores = '', string $platformDb = ''): string
+    {
+        $user = $paths['php_user'] ?? Runtime::phpUser();
+        $install = $paths['install'] ?? '';
+        $public = $paths['public'] ?? '';
+        $platformJson = rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'platform.json';
+        $dirs = [];
+        if ($stores !== '') {
+            $dirs[] = $stores;
+        }
+        if ($platformDb !== '') {
+            $dirs[] = dirname($platformDb);
+        }
+
+        return self::article('Hosting customer sites', [
+            self::p('This installer turns this copy of Adlexone into a host of customer sites. It is a different page from the self-hosted installer. A customer finishing their own hostname is not this page.'),
+            self::p('There are four steps. The document root, the stores directory, and the operator hostname are saved together. The operator account is created after that, on the operator hostname.'),
+            self::facts([
+                'Code' => $install,
+                'Document root' => $public,
+                'Platform settings file' => $platformJson,
+                'Stores directory' => $stores !== '' ? $stores : '/home/health/adlexone-stores',
+                'Operator database' => $platformDb !== '' ? $platformDb : '/home/health/platform.sqlite',
+                'PHP is running as' => $user,
+            ]),
+            self::h('Stores directory'),
+            self::p('Each customer gets one folder under the stores directory. For example, ' . self::code('/home/health/adlexone-stores/health/') . '. The directory has to sit outside the website. PHP, running as ' . self::code($user) . ', must be able to create, read, update, and delete files there. The check removes its trial files before the page answers.'),
+            self::h('Operator database'),
+            self::p('The operator login and the list of sites are stored in platform.sqlite beside the stores directory, not inside a customer folder and not inside the website. Directories are mode 700. The database file is mode 600.'),
+            $dirs === [] ? '' : self::pre(self::commands($user, $dirs, $platformDb !== '' ? [$platformDb] : [])),
+            self::h('Operator hostname'),
+            self::p('For example, operate.example.com. Point that name at this server. It must not be a customer hostname. Environment values for INLAY_STORES and INLAY_OPERATOR_HOST win over the file this step writes.'),
         ]);
     }
 
@@ -210,7 +253,7 @@ final class HelpText
      */
     private static function commands(string $user, array $dirs, array $files): string
     {
-        $dirs = array_values(array_filter($dirs, static fn (string $dir): bool => $dir !== '' && $dir !== '.'));
+        $dirs = array_values(array_filter($dirs, static fn (string $dir): bool => $dir !== '' && $dir !== '.' && PlatformDb::mayRestrictDirectory($dir)));
         $files = array_values(array_filter($files, static fn (string $file): bool => $file !== ''));
         $lines = [];
         foreach ($dirs as $dir) {

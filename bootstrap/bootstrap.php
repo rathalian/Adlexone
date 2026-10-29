@@ -40,6 +40,7 @@ use Adlexone\Http\Request;
 use Adlexone\Http\Router;
 use Adlexone\Platform\OperatorScreen;
 use Adlexone\Platform\Runtime;
+use Adlexone\Platform\SaasInstallScreen;
 use Adlexone\Platform\SetupScreen;
 use Adlexone\Platform\StatusScreen;
 use Adlexone\support\SharedMethods;
@@ -68,6 +69,12 @@ if (defined('SET_DEBUG_MODE') && SET_DEBUG_MODE == 'Yes') {
 \Adlexone\Platform\ErrorHandler::register();
 
 Runtime::startSession();
+
+if (SaasInstallScreen::handles((string) (Runtime::paths()['stores'] ?? ''), (string) ($_GET['install'] ?? ''))) {
+    SaasInstallScreen::handle();
+    Page::current()->send();
+    exit;
+}
 
 if (Runtime::mode() === Runtime::OPERATOR) {
     OperatorScreen::handle();

@@ -316,6 +316,32 @@ final class InstallLayout
         if ($real !== false) {
             $absolute = rtrim($real, '/\\');
         }
+        self::mergePlatform($install, ['INLAY_STORAGE' => $absolute]);
+    }
+
+    public static function rememberSaaS(string $install, string $stores, string $host, string $platformDb): void
+    {
+        $storesAbsolute = self::absolute($stores);
+        $dbAbsolute = self::absolute($platformDb);
+        if ($storesAbsolute === null || $dbAbsolute === null) {
+            throw new \RuntimeException('The stores directory and the operator database need full paths.');
+        }
+        $storesReal = realpath($storesAbsolute);
+        if ($storesReal !== false) {
+            $storesAbsolute = rtrim($storesReal, '/\\');
+        }
+        self::mergePlatform($install, [
+            'INLAY_STORES' => $storesAbsolute,
+            'INLAY_OPERATOR_HOST' => strtolower($host),
+            'INLAY_PLATFORM_DB' => $dbAbsolute,
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $values
+     */
+    private static function mergePlatform(string $install, array $values): void
+    {
         $file = self::pointerFile($install);
         $dir = dirname($file);
         if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
@@ -329,7 +355,9 @@ final class InstallLayout
             }
             $json = $decoded;
         }
-        $json['INLAY_STORAGE'] = $absolute;
+        foreach ($values as $key => $value) {
+            $json[$key] = $value;
+        }
         $encoded = json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($encoded === false || file_put_contents($file, $encoded . "\n", LOCK_EX) === false) {
             throw new \RuntimeException('PHP, running as ' . Runtime::phpUser() . ', cannot write ' . $file . '.');

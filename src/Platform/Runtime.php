@@ -179,6 +179,31 @@ final class Runtime
     }
 
     /**
+     * Resolved SaaS settings, and whether each value came from the environment.
+     * Environment values win over config/platform.json.
+     *
+     * @return array{
+     *   stores: string,
+     *   operator_host: string,
+     *   platform_db: string,
+     *   stores_from_env: bool,
+     *   host_from_env: bool,
+     *   db_from_env: bool
+     * }
+     */
+    public static function saasSettings(string $install): array
+    {
+        $install = rtrim($install, '/\\') . DIRECTORY_SEPARATOR;
+        $settings = self::platformSettings($install);
+
+        return $settings + [
+            'stores_from_env' => self::env('INLAY_STORES') !== '',
+            'host_from_env' => self::env('INLAY_OPERATOR_HOST') !== '',
+            'db_from_env' => self::env('INLAY_PLATFORM_DB') !== '',
+        ];
+    }
+
+    /**
      * @return array{stores: string, operator_host: string, platform_db: string}
      */
     private static function platformSettings(string $install): array

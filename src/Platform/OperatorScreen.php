@@ -33,6 +33,8 @@ final class OperatorScreen
                     if ($needsAccount || $action === 'create_operator') {
                         self::createOperator($db);
                         $needsAccount = false;
+                        $notice = (string) ($_SESSION['operator_notice'] ?? '');
+                        unset($_SESSION['operator_notice']);
                     } elseif ($action === 'login') {
                         self::login($db);
                     } elseif (!self::signedIn()) {
@@ -69,9 +71,36 @@ final class OperatorScreen
             return;
         }
 
+        $siteSlug = strtolower(trim((string) ($_GET['site'] ?? '')));
+        if ($siteSlug !== '') {
+            $store = PlatformDb::storeBySlug($paths['platform_db'], $siteSlug);
+            if ($store === null) {
+                Page::current()->useLayout('setup', [
+                    'title' => 'Customer site',
+                    'lead' => $error !== '' ? $error : 'That customer site was not found.',
+                    'error' => '',
+                    'notice' => $notice,
+                    'helpHtml' => HelpText::operator($paths),
+                    'formHtml' => '<p><a href="./">Customer sites</a></p>',
+                ]);
+
+                return;
+            }
+            Page::current()->useLayout('setup', [
+                'title' => (string) $store['label'],
+                'lead' => (string) $store['host'] . '. These figures are the last measurement of this site.',
+                'error' => $error,
+                'notice' => $notice,
+                'helpHtml' => HelpText::operator($paths),
+                'formHtml' => self::sitePage($paths, $store),
+            ]);
+
+            return;
+        }
+
         Page::current()->useLayout('setup', [
             'title' => 'Customer sites',
-            'lead' => 'Each row is one isolated store. Their database, settings, and uploads stay in the folder shown.',
+            'lead' => 'Each row is one site. The totals are the last measurement of those sites.',
             'error' => $error,
             'notice' => $notice,
             'helpHtml' => HelpText::operator($paths),
@@ -91,7 +120,23 @@ final class OperatorScreen
             exit;
         }
         if ($action === 'create_store') {
-            self::createStore($paths);
+            $slug = self::createStore($paths);
+            header('Location: ./?site=' . rawurlencode($slug));
+            exit;
+        }
+        if ($action === 'measure') {
+            $_SESSION['operator_notice'] = SiteUsage::measureAll($db, $paths['stores'], PlatformDb::stores($db));
+            header('Location: ./');
+            exit;
+        }
+        if ($action === 'save_rate') {
+            self::saveRate($db);
+            header('Location: ./');
+            exit;
+        }
+        if ($action === 'clear_rate') {
+            PlatformDb::deleteRate($db);
+            $_SESSION['operator_notice'] = 'The rate is cleared. Cost is not calculated.';
             header('Location: ./');
             exit;
         }
@@ -99,36 +144,51 @@ final class OperatorScreen
         if ($store === null) {
             throw new \RuntimeException('That customer site was not found.');
         }
-        $folder = self::folder($paths['stores'], (string) $store['slug']);
+        $slug = (string) $store['slug'];
+        $folder = SiteUsage::folder($paths['stores'], $slug);
+        $site = './?site=' . rawurlencode($slug);
+        if ($action === 'save_site') {
+            self::saveSite($paths, $store);
+            header('Location: ' . $site);
+            exit;
+        }
+        if ($action === 'measure_site') {
+            $result = SiteUsage::measure($db, $store, $folder);
+            $_SESSION['operator_notice'] = $result['problem'] !== ''
+                ? $result['problem']
+                : 'Measured ' . $store['label'] . ' at ' . SiteUsage::formatMeasured(time()) . '.';
+            header('Location: ' . $site);
+            exit;
+        }
         if ($action === 'suspend') {
             PlatformDb::setStatus($db, (int) $store['store_id'], 'suspended');
             $_SESSION['operator_notice'] = $store['label'] . ' is suspended. Files remain at ' . $folder;
-        } elseif ($action === 'resume') {
+            header('Location: ' . $site);
+            exit;
+        }
+        if ($action === 'resume') {
             PlatformDb::setStatus($db, (int) $store['store_id'], 'active');
             $_SESSION['operator_notice'] = $store['label'] . ' is active again.';
-        } elseif ($action === 'backup') {
-            self::backup($folder, (string) $store['slug']);
-            return;
-        } elseif ($action === 'delete') {
-            $confirm = trim((string) ($_POST['confirm_slug'] ?? ''));
-            if (!hash_equals((string) $store['slug'], $confirm)) {
-                throw new \RuntimeException('Type the slug ' . $store['slug'] . ' to delete that store.');
-            }
-            self::assertInside($paths['stores'], $folder);
-            Provisioner::removeTree($folder);
-            PlatformDb::deleteStore($db, (int) $store['store_id']);
-            $_SESSION['operator_notice'] = $store['label'] . ' was deleted from disk.';
-        } else {
-            throw new \RuntimeException('Unknown action.');
+            header('Location: ' . $site);
+            exit;
         }
-        header('Location: ./');
-        exit;
+        if ($action === 'backup') {
+            self::backup($folder, $slug);
+            return;
+        }
+        if ($action === 'delete') {
+            SiteUsage::deleteSite($db, $paths['stores'], $store, trim((string) ($_POST['confirm_slug'] ?? '')));
+            $_SESSION['operator_notice'] = $store['label'] . ' was deleted from disk.';
+            header('Location: ./');
+            exit;
+        }
+        throw new \RuntimeException('Unknown action.');
     }
 
     /**
      * @param array<string, string> $paths
      */
-    private static function createStore(array $paths): void
+    private static function createStore(array $paths): string
     {
         $label = trim((string) ($_POST['label'] ?? ''));
         $slug = strtolower(trim((string) ($_POST['slug'] ?? '')));
@@ -162,8 +222,8 @@ final class OperatorScreen
             throw new \RuntimeException('The admin username must be 2–40 characters: letters, numbers, dots, underscores, or hyphens.');
         }
 
-        $folder = self::folder($paths['stores'], $slug);
-        self::assertInside($paths['stores'], $folder);
+        $folder = SiteUsage::folder($paths['stores'], $slug);
+        SiteUsage::assertInside($paths['stores'], $folder);
         $admin = [
             'site_name' => $label,
             'public_url' => 'https://' . $host,
@@ -189,7 +249,17 @@ final class OperatorScreen
         $ready = $username !== ''
             ? ' The first admin can sign in now.'
             : ' The first visit to https://' . $host . ' shows setup, including where that store’s SQLite file, settings, and attachments live.';
+        $created = PlatformDb::storeByHost($paths['platform_db'], $host);
+        if ($created !== null) {
+            try {
+                SiteUsage::measure($paths['platform_db'], $created, $folder);
+            } catch (\Throwable $e) {
+                $ready .= ' Usage was not measured. ' . $e->getMessage();
+            }
+        }
         $_SESSION['operator_notice'] = $label . ' is ready at ' . $folder . '.' . $ready;
+
+        return $slug;
     }
 
     private static function createOperator(string $db): void
@@ -238,12 +308,9 @@ final class OperatorScreen
     private static function console(array $paths): string
     {
         $stores = PlatformDb::stores($paths['platform_db']);
-        $html = '<p class="form-help">Signed in as ' . Html::e((string) ($_SESSION['operator_name'] ?? '')) . '.</p>';
-        $html .= '<form method="post" action="" class="setup-inline">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="sign_out">';
-        $html .= '<button type="submit" class="btn">Sign out</button>';
-        $html .= '</form>';
+        $html = self::sessionBar();
+        $html .= self::totals($paths);
+        $html .= self::rateForm($paths);
 
         if ($stores === []) {
             $html .= '<p class="login-lead">No customer sites yet. The form below creates the first folder.</p>';
@@ -297,34 +364,271 @@ final class OperatorScreen
     private static function storeRow(array $paths, array $store): string
     {
         $slug = (string) $store['slug'];
-        $folder = self::folder($paths['stores'], $slug);
-        $bytes = Provisioner::folderBytes($folder);
+        $usage = PlatformDb::usage($paths['platform_db'], (int) $store['store_id']);
         $status = (string) $store['status'];
+        $figures = 'Not measured';
+        if ($usage !== null) {
+            $bytes = (int) $usage['database_bytes'] + (int) $usage['wal_bytes'] + (int) $usage['shm_bytes']
+                + (int) $usage['settings_bytes'] + (int) $usage['uploads_bytes'] + (int) $usage['other_bytes'];
+            $rate = PlatformDb::rate($paths['platform_db']);
+            $cost = $usage['cost_cents'] === null || $rate === null
+                ? 'No cost'
+                : SiteUsage::formatMoney((int) $usage['cost_cents'], (string) $rate['currency']);
+            $figures = SiteUsage::formatSize($bytes) . ' · ' . $cost;
+        }
         $html = '<li class="setup-store">';
-        $html .= '<div class="setup-store__name">' . Html::e((string) $store['label']) . '</div>';
+        $html .= '<a class="setup-store__name" href="?site=' . Html::e(rawurlencode($slug)) . '">' . Html::e((string) $store['label']) . '</a>';
         $html .= '<p class="form-help">' . Html::e((string) $store['host']) . ' · ' . Html::e($status)
-            . ' · ' . Html::e(self::size($bytes)) . '</p>';
-        $html .= '<p class="form-help">Database <code>' . Html::e($folder . 'adlexone.sqlite') . '</code><br>'
-            . 'Settings <code>' . Html::e($folder . 'config' . DIRECTORY_SEPARATOR) . '</code><br>'
-            . 'Uploads <code>' . Html::e($folder . 'attachments' . DIRECTORY_SEPARATOR) . '</code></p>';
+            . ' · ' . Html::e($figures) . '</p>';
+        $html .= '</li>';
+
+        return $html;
+    }
+
+    /**
+     * @param array<string, string> $paths
+     * @param array<string, mixed> $store
+     */
+    private static function sitePage(array $paths, array $store): string
+    {
+        $slug = (string) $store['slug'];
+        $folder = SiteUsage::folder($paths['stores'], $slug);
         $id = (int) $store['store_id'];
-        $html .= self::miniForm($id, $status === 'active' ? 'suspend' : 'resume', $status === 'active' ? 'Suspend' : 'Resume');
-        $html .= self::miniForm($id, 'backup', 'Download backup');
-        $html .= '<form method="post" action="" class="setup-inline setup-delete">';
+        $usage = PlatformDb::usage($paths['platform_db'], $id);
+        $rate = PlatformDb::rate($paths['platform_db']);
+        $action = '?site=' . rawurlencode($slug);
+        $html = self::sessionBar();
+        $html .= '<p><a href="./">Customer sites</a></p>';
+        $html .= '<dl class="setup-facts">';
+        $html .= '<dt>Slug</dt><dd><code>' . Html::e($slug) . '</code></dd>';
+        $html .= '<dt>Database</dt><dd><code>' . Html::e($folder . 'adlexone.sqlite') . '</code></dd>';
+        $html .= '<dt>Settings</dt><dd><code>' . Html::e($folder . 'config' . DIRECTORY_SEPARATOR) . '</code></dd>';
+        $html .= '<dt>Uploads</dt><dd><code>' . Html::e($folder . 'attachments' . DIRECTORY_SEPARATOR) . '</code></dd>';
+        $html .= '</dl>';
+        $html .= '<p class="form-help">The slug is ' . Html::e($slug) . '. It is the folder name and it is not changed here.</p>';
+        $html .= self::usageBlock($usage, $rate);
+        $html .= self::miniForm($id, 'measure_site', 'Measure this site', $action);
+        $html .= '<h2 class="setup-form-title">Update this site</h2>';
+        $html .= '<form method="post" action="' . Html::e($action) . '" class="login-form">';
+        $html .= Csrf::field();
+        $html .= '<input type="hidden" name="operator_action" value="save_site">';
+        $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
+        $html .= '<input type="hidden" name="slug" value="' . Html::e($slug) . '">';
+        $html .= self::field('Display name', 'label', 'text', (string) $store['label'], true, 'Shown on their sign-in page. For example, Health.');
+        $html .= self::field('Hostname', 'host', 'text', (string) $store['host'], true, 'The address their browser uses. For example, health.example.com.');
+        $html .= self::field('Admin email', 'admin_email', 'email', (string) $store['admin_email'], false, 'Stored on the operator list so you know who to contact. Optional.');
+        $html .= '<button type="submit" class="btn btn--primary login-submit">Save changes</button>';
+        $html .= '</form>';
+        $status = (string) $store['status'];
+        $html .= self::miniForm($id, $status === 'active' ? 'suspend' : 'resume', $status === 'active' ? 'Suspend' : 'Resume', $action);
+        $html .= self::miniForm($id, 'backup', 'Download backup', $action);
+        $html .= '<form method="post" action="' . Html::e($action) . '" class="setup-inline setup-delete">';
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="delete">';
         $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
         $html .= '<input class="input" type="text" name="confirm_slug" placeholder="Type ' . Html::e($slug) . ' to delete" aria-label="Slug confirm">';
         $html .= '<button type="submit" class="btn">Delete from disk</button>';
         $html .= '</form>';
-        $html .= '</li>';
 
         return $html;
     }
 
-    private static function miniForm(int $id, string $action, string $label): string
+    /**
+     * @param array<string, mixed>|null $usage
+     * @param array<string, mixed>|null $rate
+     */
+    private static function usageBlock(?array $usage, ?array $rate): string
     {
-        $html = '<form method="post" action="" class="setup-inline">';
+        if ($usage === null) {
+            return '<p class="form-help">This site has not been measured.</p>';
+        }
+        $html = '<h2 class="setup-form-title">Usage</h2>';
+        $html .= '<p class="form-help">Measured ' . Html::e(SiteUsage::formatMeasured((int) $usage['measured_at'])) . '.</p>';
+        $rows = [
+            'Database' => SiteUsage::formatSize((int) $usage['database_bytes']),
+            'Write-ahead log' => SiteUsage::formatSize((int) $usage['wal_bytes']),
+            'Shared memory' => SiteUsage::formatSize((int) $usage['shm_bytes']),
+            'Settings' => SiteUsage::formatSize((int) $usage['settings_bytes']),
+            'Uploads' => SiteUsage::formatSize((int) $usage['uploads_bytes']),
+        ];
+        if ((int) $usage['other_bytes'] > 0) {
+            $rows['Other'] = SiteUsage::formatSize((int) $usage['other_bytes']);
+        }
+        $total = (int) $usage['database_bytes'] + (int) $usage['wal_bytes'] + (int) $usage['shm_bytes']
+            + (int) $usage['settings_bytes'] + (int) $usage['uploads_bytes'] + (int) $usage['other_bytes'];
+        $rows['Folder total'] = SiteUsage::formatSize($total);
+        $rows['People'] = self::countText($usage['people'] ?? null);
+        $rows['Applications'] = self::countText($usage['applications'] ?? null);
+        $rows['Records'] = self::countText($usage['records'] ?? null);
+        $html .= '<dl class="setup-facts">';
+        foreach ($rows as $label => $value) {
+            $html .= '<dt>' . Html::e($label) . '</dt><dd>' . Html::e($value) . '</dd>';
+        }
+        $html .= '</dl>';
+        if ($usage['people'] === null) {
+            $html .= '<p class="form-help">This site has no administrator yet.</p>';
+        }
+        $note = trim((string) ($usage['counts_note'] ?? ''));
+        if ($note !== '') {
+            $html .= '<p class="form-help">' . Html::e($note) . '</p>';
+        }
+        if ($rate === null || $usage['cost_cents'] === null) {
+            $html .= '<p class="form-help">No rate is set. Set a rate to calculate a cost. Usage is already shown.</p>';
+        } else {
+            $html .= '<p class="form-help">Cost ' . Html::e(SiteUsage::formatMoney((int) $usage['cost_cents'], (string) $rate['currency'])) . '.</p>';
+        }
+
+        return $html;
+    }
+
+    private static function countText(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return 'Not set up';
+        }
+
+        return (string) (int) $value;
+    }
+
+    /**
+     * @param array<string, string> $paths
+     */
+    private static function totals(array $paths): string
+    {
+        $figures = SiteUsage::hostFigures($paths['platform_db']);
+        $rate = PlatformDb::rate($paths['platform_db']);
+        $html = '<h2 class="setup-form-title">Host</h2>';
+        $html .= '<dl class="setup-facts">';
+        $html .= '<dt>Sites</dt><dd>' . $figures['sites'] . '</dd>';
+        $html .= '<dt>Active</dt><dd>' . $figures['active'] . '</dd>';
+        $html .= '<dt>Suspended</dt><dd>' . $figures['suspended'] . '</dd>';
+        $html .= '<dt>Folder total</dt><dd>' . Html::e(SiteUsage::formatSize($figures['bytes'])) . '</dd>';
+        $html .= '<dt>People</dt><dd>' . $figures['people'] . '</dd>';
+        $html .= '<dt>Applications</dt><dd>' . $figures['applications'] . '</dd>';
+        $html .= '<dt>Records</dt><dd>' . $figures['records'] . '</dd>';
+        if ($figures['cost'] === null || $rate === null) {
+            $html .= '<dt>Cost</dt><dd>No rate is set. Set a rate to calculate a cost. Usage is already shown.</dd>';
+        } else {
+            $html .= '<dt>Cost</dt><dd>' . Html::e(SiteUsage::formatMoney($figures['cost'], (string) $rate['currency'])) . '</dd>';
+        }
+        $html .= '</dl>';
+        if ($figures['unmeasured'] > 0) {
+            $n = $figures['unmeasured'];
+            $html .= '<p class="form-help">' . $n . ' ' . ($n === 1 ? 'site has not been measured and is not in this cost.' : 'sites have not been measured and are not in this cost.') . '</p>';
+        }
+        if ($figures['unset_counts'] > 0) {
+            $n = $figures['unset_counts'];
+            $html .= '<p class="form-help">' . $n . ' ' . ($n === 1 ? 'site has' : 'sites have') . ' no administrator yet. Their people, applications, and records are not in these totals.</p>';
+        }
+        $html .= '<form method="post" action="" class="setup-inline">';
+        $html .= Csrf::field();
+        $html .= '<input type="hidden" name="operator_action" value="measure">';
+        $html .= '<button type="submit" class="btn">Measure usage</button>';
+        $html .= '</form>';
+
+        return $html;
+    }
+
+    /**
+     * @param array<string, string> $paths
+     */
+    private static function rateForm(array $paths): string
+    {
+        $rate = PlatformDb::rate($paths['platform_db']);
+        $html = '<h2 class="setup-form-title">Rate</h2>';
+        $html .= '<p class="form-help">One rate for every site. There is no invoice. The cost is this rate applied to the last measurement.</p>';
+        $html .= '<form method="post" action="" class="login-form">';
+        $html .= Csrf::field();
+        $html .= '<input type="hidden" name="operator_action" value="save_rate">';
+        $html .= self::field('Currency', 'currency', 'text', $rate === null ? 'AUD' : (string) $rate['currency'], true, 'Three letters. For example, AUD.');
+        $html .= self::field(
+            'Monthly amount',
+            'monthly',
+            'text',
+            $rate === null ? '' : SiteUsage::formatAmount((int) $rate['monthly_cents']),
+            true,
+            'Applied once to each site. For example, 12.50.'
+        );
+        $html .= self::field(
+            'Amount per person',
+            'person',
+            'text',
+            $rate === null ? '' : SiteUsage::formatAmount((int) $rate['person_cents']),
+            true,
+            'Multiplied by the number of people on the site.'
+        );
+        $html .= self::field(
+            'Amount per gigabyte',
+            'gigabyte',
+            'text',
+            $rate === null ? '' : SiteUsage::formatAmount((int) $rate['gigabyte_cents']),
+            true,
+            'A gigabyte is 1,024 MB. The figure uses the folder total.'
+        );
+        $html .= '<button type="submit" class="btn btn--primary login-submit">Save the rate</button>';
+        $html .= '</form>';
+        if ($rate !== null) {
+            $html .= '<form method="post" action="" class="setup-inline">';
+            $html .= Csrf::field();
+            $html .= '<input type="hidden" name="operator_action" value="clear_rate">';
+            $html .= '<button type="submit" class="btn">Clear the rate</button>';
+            $html .= '</form>';
+        }
+
+        return $html;
+    }
+
+    private static function saveRate(string $db): void
+    {
+        PlatformDb::saveRate(
+            $db,
+            SiteUsage::parseCurrency((string) ($_POST['currency'] ?? '')),
+            SiteUsage::parseAmount((string) ($_POST['monthly'] ?? '')),
+            SiteUsage::parseAmount((string) ($_POST['person'] ?? '')),
+            SiteUsage::parseAmount((string) ($_POST['gigabyte'] ?? ''))
+        );
+        SiteUsage::applyRate($db);
+        $_SESSION['operator_notice'] = 'The rate is saved. Cost uses the last measurement.';
+    }
+
+    /**
+     * @param array<string, string> $paths
+     * @param array<string, mixed> $store
+     */
+    private static function saveSite(array $paths, array $store): void
+    {
+        $postedSlug = (string) ($_POST['slug'] ?? '');
+        if (!hash_equals((string) $store['slug'], $postedSlug)) {
+            throw new \RuntimeException('That customer site was not found.');
+        }
+        $label = trim((string) ($_POST['label'] ?? ''));
+        SiteUsage::updateSite(
+            $paths['platform_db'],
+            $paths['stores'],
+            $store,
+            $label,
+            (string) ($_POST['host'] ?? ''),
+            (string) ($_POST['admin_email'] ?? ''),
+            $paths['operator_host']
+        );
+        $_SESSION['operator_notice'] = $label . ' was updated.';
+    }
+
+    private static function sessionBar(): string
+    {
+        $html = '<p class="form-help">Signed in as ' . Html::e((string) ($_SESSION['operator_name'] ?? '')) . '.</p>';
+        $html .= '<form method="post" action="" class="setup-inline">';
+        $html .= Csrf::field();
+        $html .= '<input type="hidden" name="operator_action" value="sign_out">';
+        $html .= '<button type="submit" class="btn">Sign out</button>';
+        $html .= '</form>';
+
+        return $html;
+    }
+
+    private static function miniForm(int $id, string $action, string $label, string $target = ''): string
+    {
+        $html = '<form method="post" action="' . Html::e($target) . '" class="setup-inline">';
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="' . Html::e($action) . '">';
         $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
@@ -336,7 +640,9 @@ final class OperatorScreen
 
     private static function accountForm(string $button, string $action): string
     {
-        $html = '<form method="post" action="" class="login-form">';
+        $saved = Runtime::paths();
+        $html = '<p class="form-help">Stores directory <code>' . Html::e($saved['stores'] ?? '') . '</code>. Operator hostname <code>' . Html::e($saved['operator_host'] ?? '') . '</code>.</p>';
+        $html .= '<form method="post" action="" class="login-form">';
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="' . Html::e($action) . '">';
         $html .= self::field(
@@ -410,7 +716,7 @@ final class OperatorScreen
 
     private static function backup(string $folder, string $slug): void
     {
-        self::assertInside((string) (Runtime::paths()['stores'] ?? ''), $folder);
+        SiteUsage::assertInside((string) (Runtime::paths()['stores'] ?? ''), $folder);
         $sqlite = $folder . 'adlexone.sqlite';
         Provisioner::checkpoint($sqlite);
         $tmp = tempnam(sys_get_temp_dir(), 'inlay');
@@ -442,38 +748,6 @@ final class OperatorScreen
         readfile($zipPath);
         @unlink($zipPath);
         exit;
-    }
-
-    private static function folder(string $stores, string $slug): string
-    {
-        return rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . $slug . DIRECTORY_SEPARATOR;
-    }
-
-    private static function assertInside(string $stores, string $folder): void
-    {
-        $root = realpath($stores);
-        if ($root === false) {
-            if (!is_dir($stores) && !mkdir($stores, 0700, true) && !is_dir($stores)) {
-                throw new \RuntimeException('Cannot create the stores folder: ' . $stores);
-            }
-            $root = realpath($stores);
-        }
-        $parent = realpath(dirname(rtrim($folder, '/\\')));
-        if ($root === false || $parent === false || !str_starts_with($parent . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR) && $parent !== $root) {
-            throw new \RuntimeException('The store folder must stay inside the stores directory.');
-        }
-    }
-
-    private static function size(int $bytes): string
-    {
-        if ($bytes < 1024) {
-            return $bytes . ' B';
-        }
-        if ($bytes < 1024 * 1024) {
-            return round($bytes / 1024, 1) . ' KB';
-        }
-
-        return round($bytes / (1024 * 1024), 1) . ' MB';
     }
 
     private static function theme(): void

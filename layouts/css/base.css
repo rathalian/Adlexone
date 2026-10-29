@@ -2402,6 +2402,7 @@ input[type="file"]::file-selector-button:hover{ background:var(--hover); }
 .setup-stores{ list-style:none; margin:0 0 8px; padding:0; display:flex; flex-direction:column; gap:12px; }
 .setup-store{ padding:12px 0; border-top:1px solid var(--border); }
 .setup-store__name{ font-weight:700; }
+a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
 .setup-inline{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0; }
 .setup-inline .input{ max-width:220px; }
 .login-notice{
@@ -2483,6 +2484,7 @@ input[type="file"]::file-selector-button:hover{ background:var(--hover); }
     grid-template-columns:repeat(3, minmax(0, 1fr));
     gap:8px;
 }
+.install-steps--four{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
 .install-steps__item{
     display:flex;
     align-items:center;
