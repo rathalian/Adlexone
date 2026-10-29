@@ -6,7 +6,6 @@ parameters:
     bootstrapFiles:
         - phpstan-bootstrap.php
     dynamicConstantNames:
-        - MAN_BASE_URL
         - SET_INSTALL_PATH
         - SET_CONFIGURATION_PATH
         - SET_ATTACHMENTS_PATH

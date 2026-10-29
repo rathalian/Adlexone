@@ -52,6 +52,3 @@ if (!defined('SET_IMAGE_PATH')) {
 if (!defined('SET_THEME')) {
     define('SET_THEME', 'inlay-stone');
 }
-if (!defined('MAN_BASE_URL')) {
-    define('MAN_BASE_URL', '?controller=items&subcontroller=item_management_manage');
-}

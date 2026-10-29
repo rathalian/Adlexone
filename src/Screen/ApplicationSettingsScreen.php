@@ -12,6 +12,8 @@ use Adlexone\Application\WorkflowFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
+use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -96,7 +98,7 @@ final class ApplicationSettingsScreen
 
         $html = Form::form(
             'Application settings',
-            MAN_BASE_URL . '&option=update_settings',
+            self::rulesPlace($slug, 'option=update_settings'),
             [
                 'New work' => Form::select('default_item_type_id', $valueArray, $displayArray, $current),
                 'Workflow status' => self::workflowFieldSelect(
@@ -141,17 +143,41 @@ final class ApplicationSettingsScreen
 
     public static function rulesFormAction(string $slug, string $option): string
     {
-        $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('?application=' . rawurlencode($slug));
-        return $base . '&option=' . $option . '&app=' . rawurlencode($slug);
+        return self::rulesPlace($slug, 'option=' . $option . '&app=' . rawurlencode($slug));
     }
 
     public static function rulesHomeUrl(string $slug): string
     {
-        if (defined('RULES_HOME_URL')) {
-            return RULES_HOME_URL;
+        if (Request::query('manage') === 'rules') {
+            return Router::manageUrl('rules');
         }
-        $base = defined('MAN_BASE_URL') ? MAN_BASE_URL : ('?application=' . rawurlencode($slug));
-        return $base . '&option=settings';
+        if (Request::query('manage') === 'applications') {
+            return Router::manageUrl('applications', 'option=rules&application_id=' . rawurlencode(Request::query('application_id')));
+        }
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId(), 'option=settings');
+        }
+
+        return Router::applicationUrl($slug, 0, 'option=settings');
+    }
+
+    private static function rulesPlace(string $slug, string $query): string
+    {
+        if (Request::query('manage') === 'rules') {
+            return Router::manageUrl('rules', $query);
+        }
+        if (Request::query('manage') === 'applications') {
+            $id = 'application_id=' . rawurlencode(Request::query('application_id'));
+
+            return Router::manageUrl('applications', $query === '' ? $id : $id . '&' . ltrim($query, '&'));
+        }
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId(), $query);
+        }
+
+        return Router::applicationUrl($slug, 0, $query);
     }
 
     public static function rulesHtml(string $slug): string
@@ -592,7 +618,7 @@ final class ApplicationSettingsScreen
                 return true;
             }
         }
-        return defined('RULES_HOME_URL');
+        return Request::query('manage') === 'rules' || Request::query('manage') === 'applications';
     }
 
     public static function saveRule(string $slug, int $ruleId): void
@@ -687,7 +713,7 @@ final class ApplicationSettingsScreen
             $settings = WorkflowFields::store($settings, $typeId, $statusId, $stepId, $dueId, $open);
         }
         ApplicationSettings::put($slug, $settings);
-        header('Location: ' . MAN_BASE_URL . '&option=settings');
+        header('Location: ' . self::rulesHomeUrl($slug));
         exit;
     }
 

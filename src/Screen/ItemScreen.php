@@ -83,7 +83,7 @@ final class ItemScreen
         }
 
         $option = Request::query('option');
-                if (!self::authoriseItemOption($option)) {
+        if (!self::authoriseItemOption($option)) {
             return;
         }
 

@@ -74,7 +74,7 @@ final class WorkScreen
         }
 
         $ids = self::applicationAccessibleItemIds($itemTypeId);
-        $base = defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './';
+        $base = self::place();
         $stand = self::workStand($ids, $itemTypeId, $base);
         $shown = self::workFocusIds($ids, $stand['field_id'], $stand['values']);
         $status = self::workStatusField($itemTypeId);
@@ -262,15 +262,26 @@ final class WorkScreen
 
     private static function workHref(string $base, string $view, string $focus = ''): string
     {
-        $href = $base . '&view=' . rawurlencode($view);
+        $query = [];
         if ($focus === 'mine' || $focus === 'status' || $focus === 'empty') {
-            $href .= '&focus=' . rawurlencode($focus);
+            $query[] = 'focus=' . rawurlencode($focus);
             if ($focus === 'status') {
-                $href .= '&status=' . rawurlencode((string) ($_GET['status'] ?? ''));
+                $query[] = 'status=' . rawurlencode((string) ($_GET['status'] ?? ''));
             }
         }
+        $query[] = 'view=' . rawurlencode($view);
 
-        return $href;
+        return $base . '&' . implode('&', $query);
+    }
+
+    private static function place(): string
+    {
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId());
+        }
+
+        return Router::page();
     }
 
     private static function workViewSwitch(string $base, string $view): string
@@ -783,14 +794,14 @@ final class WorkScreen
         $status = trim((string) ($_POST['status'] ?? ''));
         $field = self::workStatusField($itemTypeId);
         if ($ids === [] || $field === null || !in_array($status, $field['values'], true)) {
-            header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));
+            header('Location: ' . self::place());
             exit;
         }
         foreach ($ids as $itemId) {
             RecordQuery::saveField($itemId, (int) $field['id'], $status);
         }
 
-        header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));
+        header('Location: ' . self::place());
         exit;
     }
 

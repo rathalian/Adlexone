@@ -370,11 +370,6 @@ final class Capabilities
     {
         $slug = (string) $app['slug'];
         Page::current()->enterApplication($slug, $navId);
-
-        $base = \Adlexone\Http\Router::applicationUrl($slug, $navId);
-        if (!defined('MAN_BASE_URL')) {
-            define('MAN_BASE_URL', $base);
-        }
         $_SESSION['application_slug'] = $slug;
     }
 

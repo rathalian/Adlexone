@@ -6,6 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\support\Database;
 use Adlexone\Http\Page;
+use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -81,7 +82,7 @@ final class AnnouncementsScreen
     {
         $row = self::find((int) $id, $slug);
         if ($row === null) {
-            View::respond('Announcement not found.', Blocks::link(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
+            View::respond('Announcement not found.', Blocks::link(self::place('option=show_announcements'), 'Announcements', 'URL'));
             return;
         }
 
@@ -100,7 +101,7 @@ final class AnnouncementsScreen
     {
         Page::current()->setBody(Form::form(
             'New announcement',
-            MAN_BASE_URL . '&option=add_announcement',
+            self::place('option=add_announcement'),
             [
                 'Subject' => Form::text('subject', ''),
                 'Message' => Form::textarea('message', ''),
@@ -144,9 +145,9 @@ final class AnnouncementsScreen
             $actions = '';
             if ($canManage) {
                 $actions = '<div class="notice__actions">'
-                    . ($lead ? Blocks::link(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary') : '')
-                    . Blocks::link(MAN_BASE_URL . '&option=edit_announcement&id=' . $row['id'], 'Edit', '', 'btn btn--sm btn--quiet')
-                    . Blocks::link(MAN_BASE_URL . '&option=delete_announcement&id=' . $row['id'], 'Delete', '', 'btn btn--sm btn--danger', '', '_parent', 'Delete this announcement?')
+                    . ($lead ? Blocks::link(self::place('option=new_announcement'), 'Post a notice', '', 'btn btn--primary') : '')
+                    . Blocks::link(self::place('option=edit_announcement&id=' . $row['id']), 'Edit', '', 'btn btn--sm btn--quiet')
+                    . Blocks::link(self::place('option=delete_announcement&id=' . $row['id']), 'Delete', '', 'btn btn--sm btn--danger', '', '_parent', 'Delete this announcement?')
                     . '</div>';
             }
             $picture = $lead && $art !== ''
@@ -171,7 +172,7 @@ final class AnnouncementsScreen
                     ? 'Post an announcement for the people who use this application.'
                     : 'Announcements are listed here once they are posted.',
                 'action' => $canManage
-                    ? Blocks::link(MAN_BASE_URL . '&option=new_announcement', 'Post a notice', '', 'btn btn--primary')
+                    ? Blocks::link(self::place('option=new_announcement'), 'Post a notice', '', 'btn btn--primary')
                     : '',
             ]);
         } else {
@@ -187,12 +188,12 @@ final class AnnouncementsScreen
     {
         $row = self::find((int) $id, $slug);
         if ($row === null) {
-            View::respond('Announcement not found.', Blocks::link(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
+            View::respond('Announcement not found.', Blocks::link(self::place('option=show_announcements'), 'Announcements', 'URL'));
             return;
         }
         Page::current()->setBody(Form::form(
             'Edit announcement',
-            MAN_BASE_URL . '&option=update_announcement',
+            self::place('option=update_announcement'),
             [
                 'Subject' => Form::text('subject', (string) $row['subject']),
                 'Message' => Form::textarea('message', (string) $row['message'], SET_FORM_FIELD_HEIGHT),
@@ -209,7 +210,7 @@ final class AnnouncementsScreen
     {
         $id = (int) ($_POST['id'] ?? 0);
         if (self::find($id, $slug) === null) {
-            View::respond('Announcement not found.', Blocks::link(MAN_BASE_URL . '&option=show_announcements', 'Announcements', 'URL'));
+            View::respond('Announcement not found.', Blocks::link(self::place('option=show_announcements'), 'Announcements', 'URL'));
             return;
         }
         Database::update('announcements', [
@@ -226,5 +227,15 @@ final class AnnouncementsScreen
             Database::delete('announcements', 'id = ?', [(int) $id]);
         }
         self::showList($slug);
+    }
+
+    private static function place(string $query = ''): string
+    {
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId(), $query);
+        }
+
+        return Router::page($query);
     }
 }

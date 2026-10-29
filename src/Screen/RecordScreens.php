@@ -1450,7 +1450,12 @@ final class RecordScreens
 
     private static function base(): string
     {
-        return defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './';
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId());
+        }
+
+        return Router::page();
     }
 
     private static function show(string $title, string $help, string $html, string $lead = ''): void

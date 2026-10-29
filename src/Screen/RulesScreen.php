@@ -6,6 +6,7 @@ use Adlexone\Application\Rules;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Http\Page;
+use Adlexone\Http\Router;
 use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
@@ -19,7 +20,6 @@ final class RulesScreen
 {
     public static function open(): void
     {
-        define('MAN_BASE_URL', '?manage=rules');
         define('RULES_HOME_URL', '?manage=rules');
 
 
@@ -85,7 +85,7 @@ final class RulesScreen
     	}
     	$html = Form::form(
     		'Add a rule',
-    		MAN_BASE_URL . '&option=' . $option,
+    		Router::manageUrl('rules', 'option=' . $option),
     		[
     			'Application' => Form::select('app', $values, $labels, $values[0]),
     		],
@@ -111,7 +111,7 @@ final class RulesScreen
     			}
     			$rows[] = [
     				'name' => (string) $rule['name'],
-    				'href' => MAN_BASE_URL . '&option=edit_rule&app=' . rawurlencode($slug) . '&rule_id=' . $id,
+    				'href' => Router::manageUrl('rules', 'option=edit_rule&app=' . rawurlencode($slug) . '&rule_id=' . $id),
     				'meta' => (int) $rule['enabled'] === 1 ? 'On' : 'Off',
     				'cells' => ['description' => $description],
     				'search' => $description,
@@ -127,7 +127,7 @@ final class RulesScreen
     		],
     		'searchLabel' => 'Search',
     		'primary' => [
-    			'href' => MAN_BASE_URL . '&option=new_rule',
+    			'href' => Router::manageUrl('rules', 'option=new_rule'),
     			'label' => 'Add a rule',
     		],
     		'empty' => 'No rules yet. Add a rule, or create an application from a blueprint.',

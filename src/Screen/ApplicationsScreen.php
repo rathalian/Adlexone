@@ -143,10 +143,6 @@ final class ApplicationsScreen
             return;
         }
         $slug = (string) $app['slug'];
-        $base = APPLICATIONS_MANAGE_URL . '&application_id=' . $applicationId;
-        if (!defined('MAN_BASE_URL')) {
-            define('MAN_BASE_URL', $base);
-        }
         if (!defined('RULES_HOME_URL')) {
             define('RULES_HOME_URL', APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $applicationId);
         }
