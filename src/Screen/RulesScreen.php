@@ -20,7 +20,6 @@ final class RulesScreen
 {
     public static function open(): void
     {
-        define('RULES_HOME_URL', '?manage=rules');
 
 
 

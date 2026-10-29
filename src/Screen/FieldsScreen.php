@@ -14,6 +14,7 @@ use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
 use Adlexone\Html\Html;
+use Adlexone\Http\Router;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -25,8 +26,6 @@ final class FieldsScreen
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
         RenderNavigation::applyConfigureNav([['label' => 'Fields', 'href' => '?manage=fields']]);
-        $scope = trim((string) ($_GET['application'] ?? ''));
-        define('FIELDS_BASE_URL', '?manage=fields' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 
 
 
@@ -154,7 +153,7 @@ final class FieldsScreen
         } else {
             $fieldValues = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
             if ($fieldValues === null) {
-                View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+                View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
                 return;
             }
             $formAction = '?manage=fields&option=update_custom_field';
@@ -231,7 +230,7 @@ final class FieldsScreen
             $parentId = (int)($_POST['parent_menu_value_id'] ?? 0);
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
                 $html = TXT_294;
-                $html .= '<br><br><a href ="' . FIELDS_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
+                $html .= '<br><br><a href ="' . self::url('option=modify_menu_values&custom_field_id=') . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
                 Page::current()->setBody($html);
                 return;
             }
@@ -267,7 +266,7 @@ final class FieldsScreen
     public static function addCustomField()
     {
         $columns = self::postedFieldColumns();
-        $back = Blocks::link(FIELDS_BASE_URL . '&option=new_custom_field', TXT_362);
+        $back = Blocks::link(self::url('option=new_custom_field'), TXT_362);
         if ($columns['custom_field_name'] === '') {
             View::respond('Enter a field name.', $back);
             return;
@@ -278,7 +277,7 @@ final class FieldsScreen
         }
         $id = Database::insert('custom_fields', $columns);
         Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
-        View::respond($columns['custom_field_name'] . ' ' . TXT_162, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+        View::respond($columns['custom_field_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_fields'), TXT_362));
     }
 
     /**
@@ -408,7 +407,7 @@ final class FieldsScreen
     {
         $toggle = '';
         if (!$scoped) {
-            $href = $unused ? FIELDS_BASE_URL : FIELDS_BASE_URL . '&unused=1';
+            $href = $unused ? self::url() : self::url('unused=1');
             $toggle = '<div class="record-list__tools">'
                 . Blocks::link($href, $unused ? 'In use' : 'Unused', '', 'btn btn--sm')
                 . '</div>';
@@ -422,7 +421,7 @@ final class FieldsScreen
                 ['key' => 'enabled', 'label' => 'Enabled'],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => FIELDS_BASE_URL . '&option=new_custom_field', 'label' => 'Add field'],
+            'primary' => ['href' => self::url('option=new_custom_field'), 'label' => 'Add field'],
             'toolbar' => $toggle,
             'empty' => $unused ? 'Every field is used by an application.' : 'No fields for this view.',
             'emptyIllustration' => 'empty-fields',
@@ -446,20 +445,20 @@ final class FieldsScreen
             ? 'worker_field_' . $row['custom_field_id']
             : 'custom_field_' . $row['custom_field_id'];
         $actions = [[
-            'href' => FIELDS_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $id,
+            'href' => self::url('option=modify_custom_field&custom_field_id=') . $id,
             'label' => TXT_626,
             'tone' => 'quiet',
         ]];
         if ((FieldTypes::normalise((string)$row['field_type']) === FieldTypes::MENU || $row['field_type'] == 'workerFieldMenu')
             && !MenuOptions::isLegacyChild((int)$row['custom_field_id'])) {
             $actions[] = [
-                'href' => FIELDS_BASE_URL . '&option=modify_menu_values&custom_field_id=' . $id,
+                'href' => self::url('option=modify_menu_values&custom_field_id=') . $id,
                 'label' => TXT_287,
                 'tone' => 'quiet',
             ];
         }
         $actions[] = [
-            'href' => FIELDS_BASE_URL . '&option=delete_custom_field&custom_field_id=' . $id,
+            'href' => self::url('option=delete_custom_field&custom_field_id=') . $id,
             'label' => TXT_47,
             'tone' => 'danger',
             'confirm' => $name . "\n" . TXT_400,
@@ -467,7 +466,7 @@ final class FieldsScreen
 
         return [
             'name' => $name,
-            'href' => FIELDS_BASE_URL . '&option=modify_custom_field&custom_field_id=' . $id,
+            'href' => self::url('option=modify_custom_field&custom_field_id=') . $id,
             'cells' => [
                 'type' => FieldTypes::label((string) $row['field_type']),
                 'enabled' => (string)$row['enabled'],
@@ -529,7 +528,7 @@ final class FieldsScreen
     public static function updateCustomField($customFieldID)
     {
         $customFieldID = (int) $customFieldID;
-        $back = Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362);
+        $back = Blocks::link(self::url('option=manage_fields'), TXT_362);
         if (!Database::exists('custom_fields', 'custom_field_id = ?', [$customFieldID])) {
             View::respond(TXT_115, $back);
             return;
@@ -554,13 +553,13 @@ final class FieldsScreen
     {
         $customFieldID = (string)($_GET['custom_field_id'] ?? '');
         if ($customFieldID === '' || !ctype_digit($customFieldID)) {
-            View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+            View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
             return;
         }
 
         $row = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
         if (!$row) {
-            View::respond(TXT_115, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+            View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
             return;
         }
 
@@ -572,7 +571,7 @@ final class FieldsScreen
         Database::delete('custom_fields', 'custom_field_id = ?', $params);
         \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
-        View::respond($name . ' ' . TXT_47, Blocks::link(FIELDS_BASE_URL . '&option=manage_fields', TXT_362));
+        View::respond($name . ' ' . TXT_47, Blocks::link(self::url('option=manage_fields'), TXT_362));
     }
 
     /**
@@ -590,5 +589,15 @@ final class FieldsScreen
             $payload['validation_type'] = FieldTypes::normaliseKind((string) ($payload['validation_type'] ?? ''));
         }
         return $payload;
+    }
+
+    private static function url(string $query = ''): string
+    {
+        $scope = trim((string) ($_GET['application'] ?? ''));
+        if ($scope !== '') {
+            $query = 'application=' . rawurlencode($scope) . ($query !== '' ? '&' . ltrim($query, '&') : '');
+        }
+
+        return Router::manageUrl('fields', $query);
     }
 }

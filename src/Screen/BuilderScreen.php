@@ -29,7 +29,6 @@ final class BuilderScreen
             Access::deny();
         }
 
-        define('BUILDER_URL', '?manage=builder');
         $option = (string) ($_GET['option'] ?? '');
 
         RenderNavigation::applyConfigureNav([['label' => 'Create an application', 'href' => '?manage=builder']]);
@@ -259,7 +258,7 @@ final class BuilderScreen
             . '<p class="builder__lead">Choose a blueprint. The screens and fields can be changed later.</p></div>'
             . '</header>'
             . $errorHtml
-            . '<form id="builder-form" class="builder__form builder__panel" method="post" action="' . $h(BUILDER_URL . '&option=create') . '">'
+            . '<form id="builder-form" class="builder__form builder__panel" method="post" action="' . $h(self::url('option=create')) . '">'
             . Csrf::field()
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Application</h2>'
@@ -321,7 +320,7 @@ final class BuilderScreen
             . '<details class="builder__import builder__panel">'
             . '<summary>Import a JSON package</summary>'
             . '<p class="form-help">Bring in an application that was saved as a solution package.</p>'
-            . '<form method="post" action="' . $h(BUILDER_URL . '&option=import') . '" enctype="multipart/form-data">'
+            . '<form method="post" action="' . $h(self::url('option=import')) . '" enctype="multipart/form-data">'
             . Csrf::field()
             . '<div class="builder__identity">'
             . '<div class="field"><label class="label" for="package">Package file</label>'
@@ -400,5 +399,10 @@ final class BuilderScreen
         }
         header('Location: ' . Router::applicationUrl($created['slug']));
         exit;
+    }
+
+    private static function url(string $query = ''): string
+    {
+        return Router::manageUrl('builder', $query);
     }
 }

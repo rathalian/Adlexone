@@ -19,6 +19,7 @@ use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Html\Html;
+use Adlexone\Http\Router;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -29,11 +30,10 @@ final class ApplicationsScreen
     {
         Access::require(Permission::ADMIN_SETTINGS);
 
-        define('APPLICATIONS_MANAGE_URL', '?manage=applications');
         $option = (string) ($_GET['option'] ?? '');
 
         $section = '';
-        $trail = [['label' => 'Applications', 'href' => APPLICATIONS_MANAGE_URL]];
+        $trail = [['label' => 'Applications', 'href' => self::url()]];
         $applicationOptions = [
             'edit', 'update', 'nav', 'new_nav', 'add_nav', 'edit_nav', 'update_nav',
             'rules', 'new_rule', 'add_rule', 'edit_rule', 'update_rule', 'delete_rule',
@@ -42,18 +42,18 @@ final class ApplicationsScreen
         if (in_array($option, $applicationOptions, true)) {
             $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
             if ($sectionApp > 0) {
-                $section = Blocks::link(APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp, 'Details', 'ic-sliders');
-                $section .= Blocks::link(APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $sectionApp, 'Navigation', 'ic-list-tree');
+                $section = Blocks::link(self::url('option=edit&application_id=') . $sectionApp, 'Details', 'ic-sliders');
+                $section .= Blocks::link(self::url('option=nav&application_id=') . $sectionApp, 'Navigation', 'ic-list-tree');
                 $section .= Access::outputIfAllowed(
-                    Blocks::link(APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $sectionApp, 'Rules', 'ic-zap'),
+                    Blocks::link(self::url('option=rules&application_id=') . $sectionApp, 'Rules', 'ic-zap'),
                     Permission::ADMIN_ACTIONS
                 );
                 $sectionName = ApplicationStore::find($sectionApp);
                 $trail = [
-                    ['label' => 'Applications', 'href' => APPLICATIONS_MANAGE_URL],
+                    ['label' => 'Applications', 'href' => self::url()],
                     [
                         'label' => is_array($sectionName) ? (string) $sectionName['name'] : 'Application',
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $sectionApp,
+                        'href' => self::url('option=edit&application_id=') . $sectionApp,
                     ],
                 ];
             }
@@ -87,11 +87,11 @@ final class ApplicationsScreen
                 break;
             case 'delete':
                 ApplicationStore::deleteApplication((int) ($_GET['application_id'] ?? 0));
-                header('Location: ' . APPLICATIONS_MANAGE_URL);
+                header('Location: ' . self::url());
                 exit;
             case 'move':
                 ApplicationStore::moveApplication((int) ($_GET['application_id'] ?? 0), (string) ($_GET['direction'] ?? ''));
-                header('Location: ' . APPLICATIONS_MANAGE_URL);
+                header('Location: ' . self::url());
                 exit;
             case 'nav':
                 self::showNavigation((int) ($_GET['application_id'] ?? 0));
@@ -112,19 +112,19 @@ final class ApplicationsScreen
                 $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
                 if ($nav !== null) {
                     ApplicationStore::deleteNav((int) $nav['nav_id']);
-                    header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . (int) $nav['application_id']);
+                    header('Location: ' . self::url('option=nav&application_id=') . (int) $nav['application_id']);
                     exit;
                 }
-                header('Location: ' . APPLICATIONS_MANAGE_URL);
+                header('Location: ' . self::url());
                 exit;
             case 'move_nav':
                 $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
                 if ($nav !== null) {
                     ApplicationStore::moveNav((int) $nav['nav_id'], (string) ($_GET['direction'] ?? ''));
-                    header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . (int) $nav['application_id']);
+                    header('Location: ' . self::url('option=nav&application_id=') . (int) $nav['application_id']);
                     exit;
                 }
-                header('Location: ' . APPLICATIONS_MANAGE_URL);
+                header('Location: ' . self::url());
                 exit;
             default:
                 self::showApplications();
@@ -139,13 +139,10 @@ final class ApplicationsScreen
         $applicationId = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
         $app = ApplicationStore::find($applicationId);
         if ($app === null) {
-            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
         $slug = (string) $app['slug'];
-        if (!defined('RULES_HOME_URL')) {
-            define('RULES_HOME_URL', APPLICATIONS_MANAGE_URL . '&option=rules&application_id=' . $applicationId);
-        }
         Page::current()->suggestTitle((string) $app['name'] . ' rules');
 
         switch ($option) {
@@ -195,23 +192,23 @@ final class ApplicationsScreen
             $id = (int) $app['application_id'];
             $rows[] = [
                 'name' => (string) $app['name'],
-                'href' => APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id,
+                'href' => self::url('option=edit&application_id=') . $id,
                 'cells' => [
                     'menu' => $app['enabled'] ? 'In the menu' : 'Not in the menu',
                 ],
                 'search' => (string) $app['slug'],
                 'actions' => [
                     [
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $id,
+                        'href' => self::url('option=nav&application_id=') . $id,
                         'label' => 'Navigation',
                     ],
                     [
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=export&application_id=' . $id,
+                        'href' => self::url('option=export&application_id=') . $id,
                         'label' => 'Export',
                     ],
                     [
                         'href' => $index > 0
-                            ? APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=up'
+                            ? self::url('option=move&application_id=') . $id . '&direction=up'
                             : '',
                         'label' => 'Up',
                         'inline' => true,
@@ -219,14 +216,14 @@ final class ApplicationsScreen
                     ],
                     [
                         'href' => $index < $last
-                            ? APPLICATIONS_MANAGE_URL . '&option=move&application_id=' . $id . '&direction=down'
+                            ? self::url('option=move&application_id=') . $id . '&direction=down'
                             : '',
                         'label' => 'Down',
                         'inline' => true,
                         'disabled' => $index === $last,
                     ],
                     [
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=delete&application_id=' . $id,
+                        'href' => self::url('option=delete&application_id=') . $id,
                         'label' => 'Delete',
                         'tone' => 'danger',
                         'confirm' => 'Delete ' . $app['name'] . ' and its navigation?',
@@ -249,7 +246,7 @@ final class ApplicationsScreen
                 'emptyTitle' => 'No applications yet',
                 'emptyCopy' => 'Use the builder to create the first application.',
                 'toolbar' => '<div class="record-list__tools">'
-                    . Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Create manually', '', 'btn btn--sm')
+                    . Blocks::link(self::url('option=new'), 'Create manually', '', 'btn btn--sm')
                     . '</div>',
                 'groups' => [['rows' => $rows]],
             ]),
@@ -261,7 +258,7 @@ final class ApplicationsScreen
         try {
             $package = \Adlexone\Application\ApplicationPackage::export($id);
         } catch (\InvalidArgumentException $e) {
-            View::respond($e->getMessage(), Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond($e->getMessage(), Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
         $slug = (string) ($package['application']['slug'] ?? 'application');
@@ -276,7 +273,7 @@ final class ApplicationsScreen
     {
         $app = $id > 0 ? ApplicationStore::find($id) : null;
         if ($id > 0 && $app === null) {
-            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
 
@@ -301,7 +298,7 @@ final class ApplicationsScreen
         if ($app !== null) {
             $fields[''] = Form::hidden('application_id', (string) $app['application_id']);
         }
-        $action = $app === null ? APPLICATIONS_MANAGE_URL . '&option=add' : APPLICATIONS_MANAGE_URL . '&option=update';
+        $action = $app === null ? self::url('option=add') : self::url('option=update');
         $html = Form::form($app === null ? 'New application' : (string) $app['name'], $action, $fields, [
             Form::button('submit', 'submit_button', 'Save'),
         ]);
@@ -316,19 +313,19 @@ final class ApplicationsScreen
         $recordType = self::postedRecordType();
         $groupIds = self::postedGroupIds();
         if ($recordType === false) {
-            View::respond('Choose a record type from the list.', Blocks::link(APPLICATIONS_MANAGE_URL . ($id > 0 ? '&option=edit&application_id=' . $id : '&option=new'), 'Back', 'URL'));
+            View::respond('Choose a record type from the list.', Blocks::link(self::url($id > 0 ? 'option=edit&application_id=' . $id : 'option=new'), 'Back', 'URL'));
             return;
         }
         if ($groupIds === false) {
-            View::respond('Choose a group from the list.', Blocks::link(APPLICATIONS_MANAGE_URL . ($id > 0 ? '&option=edit&application_id=' . $id : '&option=new'), 'Back', 'URL'));
+            View::respond('Choose a group from the list.', Blocks::link(self::url($id > 0 ? 'option=edit&application_id=' . $id : 'option=new'), 'Back', 'URL'));
             return;
         }
         if ($name === '' || $slug === '' || !in_array($icon, Capabilities::icons(), true)) {
-            View::respond('Enter a name for the application.', Blocks::link(APPLICATIONS_MANAGE_URL . '&option=new', 'Back', 'URL'));
+            View::respond('Enter a name for the application.', Blocks::link(self::url('option=new'), 'Back', 'URL'));
             return;
         }
         if (ApplicationStore::slugInUse($slug, $id)) {
-            View::respond('That slug is already used.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That slug is already used.', Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
         $fields = [
@@ -343,7 +340,7 @@ final class ApplicationsScreen
         if ($id > 0) {
             $existing = ApplicationStore::find($id);
             if ($existing === null) {
-                View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+                View::respond('That application does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
                 return;
             }
             // Keep shell apps on their app.{slug}.use permission when the slug changes.
@@ -356,7 +353,7 @@ final class ApplicationsScreen
                 self::saveWorkflowFields($slug, (int) $recordType);
             }
             Permission::setAppUseGroups($slug, $groupIds);
-            header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=edit&application_id=' . $id);
+            header('Location: ' . self::url('option=edit&application_id=') . $id);
             exit;
         }
         $max = 0;
@@ -371,7 +368,7 @@ final class ApplicationsScreen
         ], JSON_UNESCAPED_SLASHES);
         $newId = ApplicationStore::insertApplication($fields);
         Permission::setAppUseGroups($slug, $groupIds);
-        header('Location: ' . APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $newId);
+        header('Location: ' . self::url('option=nav&application_id=') . $newId);
         exit;
     }
 
@@ -379,7 +376,7 @@ final class ApplicationsScreen
     {
         $app = ApplicationStore::find($applicationId);
         if ($app === null) {
-            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
 
@@ -388,15 +385,15 @@ final class ApplicationsScreen
             $id = (int) $link['nav_id'];
             $rows[] = [
                 'name' => (string) $link['label'],
-                'href' => APPLICATIONS_MANAGE_URL . '&option=edit_nav&nav_id=' . $id,
+                'href' => self::url('option=edit_nav&nav_id=') . $id,
                 'cells' => [
                     'screen' => Capabilities::choiceLabel((string) $link['capability']),
                 ],
                 'actions' => [
-                    ['href' => APPLICATIONS_MANAGE_URL . '&option=move_nav&nav_id=' . $id . '&direction=up', 'label' => 'Up'],
-                    ['href' => APPLICATIONS_MANAGE_URL . '&option=move_nav&nav_id=' . $id . '&direction=down', 'label' => 'Down'],
+                    ['href' => self::url('option=move_nav&nav_id=') . $id . '&direction=up', 'label' => 'Up'],
+                    ['href' => self::url('option=move_nav&nav_id=') . $id . '&direction=down', 'label' => 'Down'],
                     [
-                        'href' => APPLICATIONS_MANAGE_URL . '&option=delete_nav&nav_id=' . $id,
+                        'href' => self::url('option=delete_nav&nav_id=') . $id,
                         'label' => 'Delete',
                         'tone' => 'danger',
                         'confirm' => 'Remove ' . $link['label'] . ' from the navigation?',
@@ -414,7 +411,7 @@ final class ApplicationsScreen
                 ],
                 'searchLabel' => 'Search',
                 'primary' => [
-                    'href' => APPLICATIONS_MANAGE_URL . '&option=new_nav&application_id=' . $applicationId,
+                    'href' => self::url('option=new_nav&application_id=') . $applicationId,
                     'label' => 'Add link',
                 ],
                 'empty' => 'No links yet. Add create, search, or another screen.',
@@ -427,7 +424,7 @@ final class ApplicationsScreen
     {
         $link = $navId > 0 ? ApplicationStore::findNav($navId) : null;
         if ($navId > 0 && $link === null) {
-            View::respond('That link does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That link does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
         if ($link !== null) {
@@ -435,7 +432,7 @@ final class ApplicationsScreen
         }
         $app = ApplicationStore::find($applicationId);
         if ($app === null) {
-            View::respond('That application does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+            View::respond('That application does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
             return;
         }
 
@@ -460,7 +457,7 @@ final class ApplicationsScreen
             '' => Form::hidden('application_id', (string) $applicationId)
                 . ($link === null ? '' : Form::hidden('nav_id', (string) $link['nav_id'])),
         ];
-        $action = $link === null ? APPLICATIONS_MANAGE_URL . '&option=add_nav' : APPLICATIONS_MANAGE_URL . '&option=update_nav';
+        $action = $link === null ? self::url('option=add_nav') : self::url('option=update_nav');
         Page::current()->setBody(Form::form(
             $link === null ? 'Add link' : 'Edit link',
             $action,
@@ -476,7 +473,7 @@ final class ApplicationsScreen
         if ($navId > 0) {
             $existing = ApplicationStore::findNav($navId);
             if ($existing === null) {
-                View::respond('That link does not exist.', Blocks::link(APPLICATIONS_MANAGE_URL, 'Applications', 'URL'));
+                View::respond('That link does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
                 return;
             }
             $applicationId = (int) $existing['application_id'];
@@ -487,7 +484,7 @@ final class ApplicationsScreen
         $permission = (string) ($_POST['permission'] ?? '');
         $icon = (string) ($_POST['icon'] ?? '');
         $catalog = Capabilities::catalog();
-        $back = APPLICATIONS_MANAGE_URL . '&option=nav&application_id=' . $applicationId;
+        $back = self::url('option=nav&application_id=') . $applicationId;
         if ($app === null || $label === '' || !isset($catalog[$capability])) {
             View::respond('Enter a label and choose a screen.', Blocks::link($back, 'Navigation', 'URL'));
             return;
@@ -830,5 +827,10 @@ final class ApplicationsScreen
         $source = strtolower($source);
         $source = preg_replace('/[^a-z0-9]+/', '-', $source) ?? '';
         return trim($source, '-');
+    }
+
+    private static function url(string $query = ''): string
+    {
+        return Router::manageUrl('applications', $query);
     }
 }

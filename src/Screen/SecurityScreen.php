@@ -17,6 +17,7 @@ use Adlexone\support\FormState;
 use Adlexone\Http\View;
 use Adlexone\Html\Html;
 use Adlexone\Platform\DefaultAccount;
+use Adlexone\Http\Router;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -25,11 +26,6 @@ final class SecurityScreen
 {
     public static function open(): void
     {
-        /**
-         * Controller specific constants
-         */
-        define('SEC_BASE_URL', '?manage=security');
-
         $securityOption = Request::query('option');
         if ($securityOption !== 'modify_user') {
             $groupSectionOptions = ['manage_groups', 'new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
@@ -178,9 +174,9 @@ final class SecurityScreen
      */
     public static function showSecurityOptions(): void
     {
-        $html = Access::outputIfAllowed(Blocks::link(SEC_BASE_URL . '&option=manage_users_groups', TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        $html = Access::outputIfAllowed(Blocks::link(self::url('option=manage_users_groups'), TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(self::url('option=new_user'), TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(self::url('option=new_group'), TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
         Page::current()->setBody(Blocks::vertical([['title' => TXT_28, 'html' => $html]]));
     }
 
@@ -199,7 +195,7 @@ final class SecurityScreen
         } else {
             $fieldValues = Database::first('users', '*', 'user_id = ?', [(int) $userID]);
             if ($fieldValues === null) {
-                View::respond('That person was not found.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+                View::respond('That person was not found.', Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
                 return;
             }
         }
@@ -301,7 +297,7 @@ final class SecurityScreen
 
         Page::current()->setBody(Form::form(
             $heading,
-            SEC_BASE_URL . '&option=' . $option,
+            self::url('option=' . $option),
             $fields,
             [
                 Form::button('submit', 'submit_button', $submitText, $javascript),
@@ -321,16 +317,16 @@ final class SecurityScreen
         $isNew = ($groupID == '');
         if ($isNew) {
             $fieldValues = is_array($values) ? $values : [];
-            $action = SEC_BASE_URL . '&option=add_group';
+            $action = self::url('option=add_group');
             $selectedPermissions = [];
         } else {
             $columnArray = array('group_id', 'group_name', 'description', 'role');
             $fieldValues = Database::first('groups', $columnArray, 'group_id = ?', [(int) $groupID]);
             if ($fieldValues === null) {
-                View::respond('That group was not found.', Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+                View::respond('That group was not found.', Blocks::link(self::url('option=manage_groups'), TXT_160, 'URL'));
                 return;
             }
-            $action = SEC_BASE_URL . '&option=update_group';
+            $action = self::url('option=update_group');
             $selectedPermissions = \Adlexone\Auth\Access::permissionsForGroup((int) $groupID);
         }
         $roleIDs = array(1, 2, 3, 4, 5);
@@ -357,7 +353,7 @@ final class SecurityScreen
             [
                 Form::button('submit', 'submit_button', TXT_74, $javascript),
                 Form::button('reset', 'reset', TXT_75),
-                '<a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=manage_groups') . '">'
+                '<a class="btn btn--quiet" href="' . Html::e(self::url('option=manage_groups')) . '">'
                     . Html::e(TXT_160) . '</a>',
             ]
         ));
@@ -456,7 +452,7 @@ final class SecurityScreen
                 ['key' => 'active', 'label' => TXT_653],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => SEC_BASE_URL . '&option=new_user', 'label' => 'Add person'],
+            'primary' => ['href' => self::url('option=new_user'), 'label' => 'Add person'],
             'empty' => TXT_115,
             'emptyIllustration' => 'empty-people',
             'emptyTitle' => 'No users yet',
@@ -478,7 +474,7 @@ final class SecurityScreen
                 ['key' => 'role', 'label' => TXT_187],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => SEC_BASE_URL . '&option=new_group', 'label' => 'Add group'],
+            'primary' => ['href' => self::url('option=new_group'), 'label' => 'Add group'],
             'empty' => TXT_115,
             'emptyIllustration' => 'empty-people',
             'emptyTitle' => 'No groups yet',
@@ -505,7 +501,7 @@ final class SecurityScreen
         return [
             'name' => $name,
             'mark' => $name,
-            'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
+            'href' => self::url('option=admin_modify_user&user_id=') . $id,
             'cells' => [
                 'username' => $userName,
                 'email' => (string)($row['email'] ?? ''),
@@ -514,17 +510,17 @@ final class SecurityScreen
             ],
             'actions' => [
                 [
-                    'href' => SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $id,
+                    'href' => self::url('option=admin_modify_user&user_id=') . $id,
                     'label' => TXT_626,
                     'tone' => 'quiet',
                 ],
                 [
-                    'href' => SEC_BASE_URL . '&option=modify_group_membership&user_id=' . $id,
+                    'href' => self::url('option=modify_group_membership&user_id=') . $id,
                     'label' => TXT_239,
                     'tone' => 'quiet',
                 ],
                 [
-                    'href' => SEC_BASE_URL . '&option=delete_user&user_id=' . $id,
+                    'href' => self::url('option=delete_user&user_id=') . $id,
                     'label' => TXT_47,
                     'tone' => 'danger',
                     'confirm' => $name . "\n" . TXT_400,
@@ -544,19 +540,19 @@ final class SecurityScreen
         $description = trim((string)preg_replace('/\s+/', ' ', (string)($row['description'] ?? '')));
         return [
             'name' => $name,
-            'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
+            'href' => self::url('option=modify_group&group_id=') . $id,
             'cells' => [
                 'description' => $description,
                 'role' => self::securityRoleLabel($row['role'] ?? ''),
             ],
             'actions' => [
                 [
-                    'href' => SEC_BASE_URL . '&option=modify_group&group_id=' . $id,
+                    'href' => self::url('option=modify_group&group_id=') . $id,
                     'label' => TXT_626,
                     'tone' => 'quiet',
                 ],
                 [
-                    'href' => SEC_BASE_URL . '&option=delete_group&group_id=' . $id,
+                    'href' => self::url('option=delete_group&group_id=') . $id,
                     'label' => TXT_47,
                     'tone' => 'danger',
                     'confirm' => $name . "\n" . TXT_400,
@@ -676,7 +672,7 @@ final class SecurityScreen
         $password = (string) ($_POST['password_ftype'] ?? '');
         $confirm = (string) ($_POST['password_confirm'] ?? '');
         $email = trim((string) ($_POST['email'] ?? ''));
-        $back = Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL');
+        $back = Blocks::link(self::url('option=new_user'), TXT_161, 'URL');
 
         if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $userName) !== 1) {
             View::respond('Enter a username of 2 to 40 characters: letters, numbers, dots, underscores, or hyphens.', $back);
@@ -697,7 +693,7 @@ final class SecurityScreen
             return;
         }
         if (Database::exists('users', 'LOWER(user_name) = LOWER(?)', [$userName])) {
-            View::respond($userName . ' ' . TXT_163, Blocks::link(SEC_BASE_URL . '&option=new_user', TXT_161, 'URL'));
+            View::respond($userName . ' ' . TXT_163, Blocks::link(self::url('option=new_user'), TXT_161, 'URL'));
             return;
         }
 
@@ -726,7 +722,7 @@ final class SecurityScreen
         $userID = $admin ? (int) $userID : (int) ($_SESSION['access_user_id'] ?? 0);
         $current = Database::first('users', ['user_id', 'user_name', 'settings', 'role'], 'user_id = ?', [$userID]);
         $list = Blocks::link(
-            SEC_BASE_URL . ($admin ? '&option=manage_users' : '&option=modify_user'),
+            self::url($admin ? 'option=manage_users' : 'option=modify_user'),
             $admin ? TXT_160 : 'Return to your profile',
             'URL'
         );
@@ -815,16 +811,16 @@ final class SecurityScreen
     {
         $columns = self::postedGroupColumns();
         if ($columns['group_name'] === '') {
-            View::respond('Enter a group name.', Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
+            View::respond('Enter a group name.', Blocks::link(self::url('option=new_group'), TXT_161, 'URL'));
             return;
         }
         if (Database::exists('groups', 'LOWER(group_name) = LOWER(?)', [$columns['group_name']])) {
-            View::respond($columns['group_name'] . ' ' . TXT_198, Blocks::link(SEC_BASE_URL . '&option=new_group', TXT_161, 'URL'));
+            View::respond($columns['group_name'] . ' ' . TXT_198, Blocks::link(self::url('option=new_group'), TXT_161, 'URL'));
             return;
         }
         $groupId = Database::insert('groups', $columns);
         Access::setGroupPermissions($groupId, self::postedPermissions());
-        View::respond($columns['group_name'] . ' ' . TXT_162, Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL'));
+        View::respond($columns['group_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_groups'), TXT_160, 'URL'));
     }
 
     /**
@@ -835,7 +831,7 @@ final class SecurityScreen
     public static function updateGroup($groupID)
     {
         $groupID = (int) $groupID;
-        $list = Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL');
+        $list = Blocks::link(self::url('option=manage_groups'), TXT_160, 'URL');
         if (!Database::exists('groups', 'group_id = ?', [$groupID])) {
             View::respond('That group was not found.', $list);
             return;
@@ -875,7 +871,7 @@ final class SecurityScreen
     {
         $userID = (int) $userID;
         if (!Database::exists('users', 'user_id = ?', [$userID])) {
-            View::respond('That person was not found.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+            View::respond('That person was not found.', Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
             return;
         }
 
@@ -884,7 +880,7 @@ final class SecurityScreen
             \Adlexone\Data\GroupMembership::idsFromPost($_POST)
         );
 
-        View::respond(TXT_241, Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+        View::respond(TXT_241, Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
     }
 
     /**
@@ -943,7 +939,7 @@ final class SecurityScreen
     public static function deleteGroup($groupID = '')
     {
         $groupID = (int) $groupID;
-        $back = Blocks::link(SEC_BASE_URL . '&option=manage_groups', TXT_160, 'URL');
+        $back = Blocks::link(self::url('option=manage_groups'), TXT_160, 'URL');
         $group = Database::first('groups', ['group_name'], 'group_id = ?', [$groupID]);
         if ($group === null) {
             View::respond('That group was not found.', $back);
@@ -987,10 +983,10 @@ final class SecurityScreen
     {
         $userID = (int) $userID;
         if ($userID === (int) ($_SESSION['access_user_id'] ?? 0)) {
-            View::respond('You cannot delete the account you are signed in with.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+            View::respond('You cannot delete the account you are signed in with.', Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
             return;
         }
-        $back = Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL');
+        $back = Blocks::link(self::url('option=manage_users'), TXT_160, 'URL');
         if (!Database::exists('users', 'user_id = ?', [$userID])) {
             View::respond('That person was not found.', $back);
             return;
@@ -1015,7 +1011,7 @@ final class SecurityScreen
         $userID = (int) $userID;
         $user = Database::first('users', ['user_name'], 'user_id = ?', [$userID]);
         if ($user === null) {
-            View::respond('User not found.', Blocks::link(SEC_BASE_URL . '&option=manage_users', TXT_160, 'URL'));
+            View::respond('User not found.', Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
             return;
         }
         $userName = (string) $user['user_name'];
@@ -1028,7 +1024,7 @@ final class SecurityScreen
             Page::current()->setBody(Blocks::vertical([[
                 'title' => TXT_239 . ': ' . $userName,
                 'html' => '<p class="form-help">' . Html::e(TXT_342) . '</p>'
-                    . '<p><a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID) . '">' . Html::e(TXT_160) . '</a></p>',
+                    . '<p><a class="btn btn--quiet" href="' . Html::e(self::url('option=admin_modify_user&user_id=') . $userID) . '">' . Html::e(TXT_160) . '</a></p>',
             ]]));
             return;
         }
@@ -1056,16 +1052,21 @@ final class SecurityScreen
 
         Page::current()->setBody(Form::form(
             TXT_239 . ': ' . $userName,
-            SEC_BASE_URL . '&option=update_group_membership&user_id=' . $userID,
+            self::url('option=update_group_membership&user_id=') . $userID,
             [
                 TXT_71 => $groupMembershipHtml,
             ],
             [
                 Form::button('submit', 'submit_button', TXT_74),
                 Form::button('reset', 'reset', TXT_75),
-                '<a class="btn btn--quiet" href="' . Html::e(SEC_BASE_URL . '&option=admin_modify_user&user_id=' . $userID) . '">'
+                '<a class="btn btn--quiet" href="' . Html::e(self::url('option=admin_modify_user&user_id=') . $userID) . '">'
                     . Html::e(TXT_160) . '</a>',
             ]
         ));
+    }
+
+    private static function url(string $query = ''): string
+    {
+        return Router::manageUrl('security', $query);
     }
 }

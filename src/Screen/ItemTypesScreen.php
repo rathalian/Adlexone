@@ -14,6 +14,7 @@ use Adlexone\Html\Form;
 use Adlexone\support\FormState;
 use Adlexone\Http\View;
 use Adlexone\Html\Html;
+use Adlexone\Http\Router;
 
 /**
  * Screen formerly loaded from legacy/.
@@ -25,8 +26,6 @@ final class ItemTypesScreen
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
         RenderNavigation::applyConfigureNav([['label' => 'Record types', 'href' => '?manage=item-types']]);
-        $scope = trim((string) ($_GET['application'] ?? ''));
-        define('ITEM_TYPES_BASE_URL', '?manage=item-types' . ($scope !== '' ? '&application=' . rawurlencode($scope) : ''));
 
 
 
@@ -120,7 +119,7 @@ final class ItemTypesScreen
             $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'enabled'];
             $fieldValues = Database::first('item_types', $columnArray, 'item_type_id = ?', [(int) $itemTypeID]);
             if ($fieldValues === null) {
-                View::respond(TXT_115, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+                View::respond(TXT_115, Blocks::link(self::url('option=manage_item_types'), TXT_362));
                 return;
             }
         }
@@ -251,7 +250,7 @@ final class ItemTypesScreen
     public static function addItemType()
     {
         $columns = self::postedTypeColumns();
-        $back = Blocks::link(ITEM_TYPES_BASE_URL . '&option=new_item_type', TXT_363);
+        $back = Blocks::link(self::url('option=new_item_type'), TXT_363);
         if ($columns['item_type_name'] === '') {
             View::respond('Enter a record type name.', $back);
             return;
@@ -271,7 +270,7 @@ final class ItemTypesScreen
             ]);
         }
         \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
-        View::respond($columns['item_type_name'] . ' ' . TXT_162, Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362));
+        View::respond($columns['item_type_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_item_types'), TXT_362));
     }
 
     /**
@@ -340,7 +339,7 @@ final class ItemTypesScreen
     {
         $toggle = '';
         if (!$scoped) {
-            $href = $unused ? ITEM_TYPES_BASE_URL : ITEM_TYPES_BASE_URL . '&unused=1';
+            $href = $unused ? self::url() : self::url('unused=1');
             $toggle = '<div class="record-list__tools">'
                 . Blocks::link($href, $unused ? 'In use' : 'Unused', '', 'btn btn--sm')
                 . '</div>';
@@ -352,7 +351,7 @@ final class ItemTypesScreen
                 ['key' => 'enabled', 'label' => 'Enabled'],
             ],
             'searchLabel' => TXT_3,
-            'primary' => ['href' => ITEM_TYPES_BASE_URL . '&option=new_item_type', 'label' => 'Add type'],
+            'primary' => ['href' => self::url('option=new_item_type'), 'label' => 'Add type'],
             'toolbar' => $toggle,
             'empty' => $unused ? 'Every record type is used by an application.' : 'No record types for this view.',
             'emptyIllustration' => 'empty-types',
@@ -374,18 +373,18 @@ final class ItemTypesScreen
 
         return [
             'name' => $name,
-            'href' => ITEM_TYPES_BASE_URL . '&option=modify_item_type&item_type_id=' . $id,
+            'href' => self::url('option=modify_item_type&item_type_id=') . $id,
             'cells' => [
                 'enabled' => (string)$row['enabled'],
             ],
             'actions' => [
                 [
-                    'href' => ITEM_TYPES_BASE_URL . '&option=modify_item_type&item_type_id=' . $id,
+                    'href' => self::url('option=modify_item_type&item_type_id=') . $id,
                     'label' => TXT_626,
                     'tone' => 'quiet',
                 ],
                 [
-                    'href' => ITEM_TYPES_BASE_URL . '&option=delete_item_type&item_type_id=' . $id,
+                    'href' => self::url('option=delete_item_type&item_type_id=') . $id,
                     'label' => TXT_47,
                     'tone' => 'danger',
                     'confirm' => $name . "\n" . TXT_400,
@@ -404,7 +403,7 @@ final class ItemTypesScreen
     public static function updateItemType($itemTypeID)
     {
         $itemTypeID = (int) $itemTypeID;
-        $back = Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362);
+        $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
         if (!Database::exists('item_types', 'item_type_id = ?', [$itemTypeID])) {
             View::respond(TXT_115, $back);
             return;
@@ -481,7 +480,7 @@ final class ItemTypesScreen
     public static function deleteItemType(): void
     {
         $itemTypeID = (string)($_GET['item_type_id'] ?? '');
-        $back = Blocks::link(ITEM_TYPES_BASE_URL . '&option=manage_item_types', TXT_362);
+        $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
         if ($itemTypeID === '' || !ctype_digit($itemTypeID)) {
             View::respond(TXT_115, $back);
             return;
@@ -503,5 +502,15 @@ final class ItemTypesScreen
         Database::delete('item_type_groups', 'item_type_id = ?', [(int) $itemTypeID]);
         Database::delete('item_types', 'item_type_id = ?', [(int) $itemTypeID]);
         View::respond($name . ' ' . TXT_47, $back);
+    }
+
+    private static function url(string $query = ''): string
+    {
+        $scope = trim((string) ($_GET['application'] ?? ''));
+        if ($scope !== '') {
+            $query = 'application=' . rawurlencode($scope) . ($query !== '' ? '&' . ltrim($query, '&') : '');
+        }
+
+        return Router::manageUrl('item-types', $query);
     }
 }

@@ -7,28 +7,10 @@ parameters:
 			path: src/Screen/ApplicationSettingsScreen.php
 
 		-
-			message: '#^Constant APPLICATIONS_MANAGE_URL not found\.$#'
-			identifier: constant.notFound
-			count: 32
-			path: src/Screen/ApplicationsScreen.php
-
-		-
 			message: '#^Parameter \#1 \$fields of static method Adlexone\\Application\\RecordQuery\:\:field\(\) expects list\<array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\>, list\<array\{id\: int, type\: string\}\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/Screen/ApplicationsScreen.php
-
-		-
-			message: '#^Constant BUILDER_URL not found\.$#'
-			identifier: constant.notFound
-			count: 2
-			path: src/Screen/BuilderScreen.php
-
-		-
-			message: '#^Constant FIELDS_BASE_URL not found\.$#'
-			identifier: constant.notFound
-			count: 15
-			path: src/Screen/FieldsScreen.php
 
 		-
 			message: '#^Default value of the parameter \#2 \$values \(string\) of method Adlexone\\Screen\\FieldsScreen\:\:showCustomField\(\) is incompatible with type array\.$#'
@@ -41,12 +23,6 @@ parameters:
 			identifier: offsetAccess.notFound
 			count: 1
 			path: src/Screen/HomeDashboard.php
-
-		-
-			message: '#^Constant ITEM_TYPES_BASE_URL not found\.$#'
-			identifier: constant.notFound
-			count: 11
-			path: src/Screen/ItemTypesScreen.php
 
 		-
 			message: '#^PHPDoc tag @return has invalid value \(\)\: Unexpected token "\\n     ", expected type at offset 326 on line 8$#'
@@ -107,12 +83,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: src/Screen/RecordScreens.php
-
-		-
-			message: '#^Constant SEC_BASE_URL not found\.$#'
-			identifier: constant.notFound
-			count: 34
-			path: src/Screen/SecurityScreen.php
 
 		-
 			message: '#^Default value of the parameter \#1 \$userID \(string\) of method Adlexone\\Screen\\SecurityScreen\:\:showGroupMembership\(\) is incompatible with type int\.$#'
