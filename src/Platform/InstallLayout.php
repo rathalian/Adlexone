@@ -200,7 +200,7 @@ final class InstallLayout
 
             return $result;
         }
-        $reason = self::reject($install, $absolute, $placement, $documentRoot);
+        $reason = self::reject($install, $absolute);
         if ($reason !== null) {
             $result['message'] = $reason;
             $result['directory'] = $absolute;
@@ -225,7 +225,7 @@ final class InstallLayout
         }
         $real = realpath($absolute);
         $dir = $real !== false ? rtrim($real, '/\\') : $absolute;
-        $reason = self::reject($install, $dir, $placement, $documentRoot);
+        $reason = self::reject($install, $dir);
         if ($reason !== null) {
             if ($created) {
                 @rmdir($dir);
@@ -276,6 +276,7 @@ final class InstallLayout
             if ($recordPath) {
                 $checks[] = self::probePointer($install, $user);
             }
+            $checks[] = self::privateAccess($dir, $documentRoot);
         } finally {
             if (is_file($file)) {
                 @unlink($file);
@@ -296,7 +297,7 @@ final class InstallLayout
         }
         $result['ok'] = $ok;
         $result['message'] = $ok
-            ? 'PHP, running as ' . $user . ', can create, read, update, and delete files in this folder.'
+            ? 'PHP, running as ' . $user . ', can create, read, update, and delete files in this folder, and the website cannot read it.'
             : $failure;
         $result['directory'] = $dir;
         $result['created'] = $created;
@@ -460,7 +461,7 @@ final class InstallLayout
         return self::check('record', 'Record path', true, '');
     }
 
-    private static function reject(string $install, string $directory, string $placement, ?string $documentRoot): ?string
+    private static function reject(string $install, string $directory): ?string
     {
         $dir = self::canonical($directory);
         $root = self::canonical($install);
@@ -481,18 +482,192 @@ final class InstallLayout
         if (self::contains($root . DIRECTORY_SEPARATOR . 'config', $dir)) {
             return 'That folder is where Adlexone records the storage path. Choose a different folder for the database and uploads.';
         }
-        if (self::contains($root . DIRECTORY_SEPARATOR . 'public', $dir)) {
-            return 'That folder is inside the public folder, so a browser could open it. Choose a folder outside public.';
-        }
+
+        return null;
+    }
+
+    public static function inWebFolder(string $directory, ?string $documentRoot = null): bool
+    {
         $doc = self::canonical($documentRoot ?? (string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
-        if ($doc !== '' && self::contains($doc, $dir)) {
-            $underStorage = $placement === self::PACKAGE && self::contains($root . DIRECTORY_SEPARATOR . 'storage', $dir);
-            if (!$underStorage) {
-                return 'That folder is on the website (' . $doc . '). A browser could download the database or uploaded files. Choose a folder outside the document root. When the package is the document root, use a folder under storage.';
+        $dir = self::canonical($directory);
+        if ($doc === '' || $dir === '') {
+            return false;
+        }
+
+        return self::contains($doc, $dir);
+    }
+
+    /**
+     * A folder inside the web folder is strongly recommended against. Setup
+     * still requests a trial file from the website and refuses the folder when
+     * that request returns the file. A folder outside the web folder has no
+     * public address.
+     *
+     * @param array<string, mixed>|null $server
+     * @param (callable(string): array{reached: bool, status: int, body: string})|null $request
+     * @return array{id: string, label: string, ok: bool, detail: string, state: string}
+     */
+    public static function privateAccess(string $directory, ?string $documentRoot = null, ?array $server = null, ?callable $request = null): array
+    {
+        $server ??= $_SERVER;
+        $doc = self::canonical($documentRoot ?? (string) ($server['DOCUMENT_ROOT'] ?? ''));
+        $dir = self::canonical($directory);
+        if ($doc === '' || $dir === '' || !self::contains($doc, $dir)) {
+            $where = $doc !== '' ? $doc : 'the web folder';
+
+            return self::check('private', 'Private', true, 'This folder is outside the web folder (' . $where . '). The website cannot serve it.');
+        }
+
+        $host = trim((string) ($server['HTTP_HOST'] ?? ''));
+        if (preg_match('/^[A-Za-z0-9.:\[\]-]+$/', $host) !== 1) {
+            return self::check(
+                'private',
+                'Private',
+                false,
+                'This folder is inside the web folder (' . $doc . '). That is strongly recommended against, and this request did not include a website address to test. Move the folder outside the web folder.'
+            );
+        }
+
+        $name = 'adlexone-public-check-' . bin2hex(random_bytes(8)) . '.txt';
+        $secret = 'adlexone-public-' . bin2hex(random_bytes(16));
+        $file = $dir . DIRECTORY_SEPARATOR . $name;
+        $url = self::publicFileUrl($dir, $doc, $name, $server);
+        try {
+            if (@file_put_contents($file, $secret) === false) {
+                return self::check(
+                    'private',
+                    'Private',
+                    false,
+                    'This folder is inside the web folder (' . $doc . '). That is strongly recommended against. The trial file could not be written, so Adlexone could not prove the folder is private. Move the folder outside the web folder.'
+                );
+            }
+            $response = $request !== null ? $request($url) : self::httpGet($url);
+            if (!is_array($response) || empty($response['reached'])) {
+                return self::check(
+                    'private',
+                    'Private',
+                    false,
+                    'This folder is inside the web folder (' . $doc . '). That is strongly recommended against. Adlexone could not open ' . $url . ', so it cannot confirm the folder is private. Move the folder outside the web folder and check again.'
+                );
+            }
+            $body = (string) ($response['body'] ?? '');
+            if ($secret !== '' && str_contains($body, $secret)) {
+                return self::check(
+                    'private',
+                    'Private',
+                    false,
+                    'The website returned the trial file at ' . $url . '. A browser can download the database and uploads from this folder. Move the folder outside the web folder.'
+                );
+            }
+
+            return self::check(
+                'private',
+                'Private',
+                true,
+                'A request for ' . $url . ' did not return the trial file. Keeping this folder inside the web folder is still strongly recommended against.'
+            );
+        } finally {
+            if (isset($file) && is_file($file)) {
+                @unlink($file);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $server
+     */
+    private static function publicFileUrl(string $directory, string $documentRoot, string $name, array $server): string
+    {
+        $relative = substr(self::canonical($directory), strlen(self::canonical($documentRoot)));
+        $relative = trim(str_replace('\\', '/', $relative), '/');
+        $path = '/' . ($relative === '' ? '' : $relative . '/') . $name;
+        $https = (!empty($server['HTTPS']) && (string) $server['HTTPS'] !== 'off')
+            || (string) ($server['REQUEST_SCHEME'] ?? '') === 'https'
+            || strtolower((string) ($server['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+
+        return ($https ? 'https' : 'http') . '://' . trim((string) $server['HTTP_HOST']) . $path;
+    }
+
+    /**
+     * @return array{reached: bool, status: int, body: string}
+     */
+    private static function httpGet(string $url, int $redirects = 0): array
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || !in_array((string) ($parts['scheme'] ?? ''), ['http', 'https'], true) || ($parts['host'] ?? '') === '') {
+            return ['reached' => false, 'status' => 0, 'body' => ''];
+        }
+        $scheme = (string) $parts['scheme'];
+        $host = (string) $parts['host'];
+        $port = (int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+        $path = (string) ($parts['path'] ?? '/');
+        if (isset($parts['query']) && $parts['query'] !== '') {
+            $path .= '?' . $parts['query'];
+        }
+        $target = ($scheme === 'https' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
+        $socket = @stream_socket_client($target, $errno, $errstr, 3, STREAM_CLIENT_CONNECT);
+        if ($socket === false) {
+            return ['reached' => false, 'status' => 0, 'body' => ''];
+        }
+        stream_set_timeout($socket, 3);
+        $authority = $host;
+        if (!(($scheme === 'http' && $port === 80) || ($scheme === 'https' && $port === 443))) {
+            $authority .= ':' . $port;
+        }
+        $request = "GET " . $path . " HTTP/1.0\r\nHost: " . $authority . "\r\nUser-Agent: Adlexone-setup\r\nConnection: close\r\n\r\n";
+        fwrite($socket, $request);
+        $raw = stream_get_contents($socket, 65536);
+        fclose($socket);
+        if ($raw === false || $raw === '') {
+            return ['reached' => false, 'status' => 0, 'body' => ''];
+        }
+        $split = explode("\r\n\r\n", $raw, 2);
+        $headers = $split[0];
+        $body = $split[1] ?? '';
+        $status = 0;
+        $statusLine = explode("\r\n", $headers, 2)[0];
+        if (preg_match('/\s(\d{3})(?:\s|$)/', $statusLine, $match) === 1) {
+            $status = (int) $match[1];
+        }
+        if ($redirects < 1 && in_array($status, [301, 302, 307, 308], true) && preg_match('/^Location:\s*(\S+)/mi', $headers, $location) === 1) {
+            $next = self::sameHostUrl($url, $location[1]);
+            if ($next !== null) {
+                return self::httpGet($next, $redirects + 1);
             }
         }
 
-        return null;
+        return ['reached' => true, 'status' => $status, 'body' => $body];
+    }
+
+    private static function sameHostUrl(string $current, string $location): ?string
+    {
+        $location = trim($location);
+        if ($location === '') {
+            return null;
+        }
+        if (str_starts_with($location, '/')) {
+            $parts = parse_url($current);
+            if (!is_array($parts) || ($parts['host'] ?? '') === '') {
+                return null;
+            }
+            $scheme = (string) ($parts['scheme'] ?? 'http');
+            $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+            return $scheme . '://' . $parts['host'] . $port . $location;
+        }
+        $next = parse_url($location);
+        $now = parse_url($current);
+        if (!is_array($next) || !is_array($now)) {
+            return null;
+        }
+        if (strcasecmp((string) ($next['host'] ?? ''), (string) ($now['host'] ?? '')) !== 0) {
+            return null;
+        }
+        if (!in_array((string) ($next['scheme'] ?? ''), ['http', 'https'], true)) {
+            return null;
+        }
+
+        return $location;
     }
 
     private static function resolveInput(string $install, string $path): ?string

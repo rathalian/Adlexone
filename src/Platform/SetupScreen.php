@@ -435,7 +435,7 @@ final class SetupScreen
                 'text',
                 $path,
                 true,
-                'Full path on this server. Adlexone creates config, database, and attachments inside it.',
+                'Full path on this server, outside the web folder. A folder inside the website is strongly recommended against.',
                 '',
                 'off',
                 $focus,
@@ -450,6 +450,9 @@ final class SetupScreen
                 'Database' => $planned['sqlite'],
                 'Uploads' => $planned['attachments'],
             ]);
+            if (InstallLayout::inWebFolder($preview)) {
+                $html .= '<p class="install-match is-bad">This folder is inside the web folder. That is strongly recommended against. The database and uploads should sit outside the website. Setup requests a trial file from the website and continues only when that request does not return the file.</p>';
+            }
         }
         if ($report !== null) {
             $html .= self::checks($report['checks']);
@@ -740,7 +743,7 @@ final class SetupScreen
             $html .= '<li class="is-' . Html::e($state) . '">'
                 . '<span class="install-checks__name">' . Html::e($check['label']) . '</span>'
                 . '<span class="install-checks__result">' . $result . '</span>';
-            if ($state !== 'pass' && $check['detail'] !== '') {
+            if ($check['detail'] !== '') {
                 $html .= '<span class="install-checks__detail">' . Html::e($check['detail']) . '</span>';
             }
             $html .= '</li>';
@@ -830,7 +833,7 @@ final class SetupScreen
             $html .= self::para('Adlexone creates three folders inside the directory you enter. Settings go in ' . self::code('config') . '. The database is ' . self::code('database/adlexone.sqlite') . '. Uploads go in ' . self::code('attachments') . '.');
         }
         $html .= self::para('Check this folder creates a file, reads it, changes it, deletes it, and creates then removes a folder. PHP does this as ' . self::code($user) . '. The trial files are removed before the page answers.');
-        $html .= self::para('Keep the directory off the website. When the package is the document root, a folder under ' . self::code('storage') . ' is blocked by the package rules. Any other folder inside the document root is not, and uploaded files could be downloaded.');
+        $html .= self::para('The folder must also be unreachable from a browser. A folder outside the web folder has no public address. A folder inside the web folder is strongly recommended against. Setup still writes a trial file there and requests it from the website. Continue is available only when that request does not return the file. On shared hosting the package rules can refuse a folder named storage, but the check is what decides.');
         if ($record) {
             $html .= self::para('Adlexone writes the path into ' . self::code($pointer) . '. That file stays next to the code so the next visit uses the same folder. It does not hold records. If the code folder cannot be written, set INLAY_STORAGE to this path in the server environment and reload. The environment wins over the file.');
         }
