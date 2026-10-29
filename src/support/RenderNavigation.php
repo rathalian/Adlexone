@@ -14,6 +14,7 @@ use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Breadcrumb;
 use Adlexone\Html\Html;
+use Adlexone\Http\Router;
 
 final class RenderNavigation
 {
@@ -33,23 +34,23 @@ final class RenderNavigation
 
     public static function itemSettingsURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=fields', TXT_53, 'ic-fields'), Permission::ADMIN_ITEMS);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=item-types', TXT_50, 'ic-layers'), Permission::ADMIN_ITEMS);
+        $html = Access::outputIfAllowed(Blocks::link(Router::manageUrl('fields'), TXT_53, 'ic-fields'), Permission::ADMIN_ITEMS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('item-types'), TXT_50, 'ic-layers'), Permission::ADMIN_ITEMS);
 
         return $html;
     }
 
     public static function securityManagementURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=security&option=manage_users', TXT_40, 'ic-users'), Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=security&option=manage_groups', TXT_35, 'ic-users-round'), Permission::ADMIN_SECURITY);
+        $html = Access::outputIfAllowed(Blocks::link(Router::manageUrl('security', 'option=manage_users'), TXT_40, 'ic-users'), Permission::ADMIN_SECURITY);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('security', 'option=manage_groups'), TXT_35, 'ic-users-round'), Permission::ADMIN_SECURITY);
 
         return $html;
     }
 
     public static function rulesURLs()
     {
-        $html = Access::outputIfAllowed(Blocks::link('?manage=rules', 'Rules', 'ic-zap'), Permission::ADMIN_ACTIONS);
+        $html = Access::outputIfAllowed(Blocks::link(Router::manageUrl('rules'), 'Rules', 'ic-zap'), Permission::ADMIN_ACTIONS);
 
         return $html;
     }
@@ -58,72 +59,33 @@ final class RenderNavigation
     {
         $canSite = Access::can(Permission::ADMIN_SETTINGS);
         $html = $includeLanding
-            ? Access::outputIfAllowed(Blocks::link('?manage=settings&option=adlexone_settings', TXT_42,'ic-sliders'), Permission::ADMIN_SETTINGS)
+            ? Access::outputIfAllowed(Blocks::link(Router::manageUrl('settings', 'option=adlexone_settings'), TXT_42,'ic-sliders'), Permission::ADMIN_SETTINGS)
             : '';
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'ic-palette'), Permission::ADMIN_SETTINGS);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=theme_settings'), 'Theme', 'ic-palette'), Permission::ADMIN_SETTINGS);
 
         if ($includeLanding || $canSite) {
-            $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=sign_in_settings', 'Sign-in', 'ic-lock'), Permission::ADMIN_SYSTEM);
+            $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=sign_in_settings'), 'Sign-in', 'ic-lock'), Permission::ADMIN_SYSTEM);
         }
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=email_settings', TXT_565,'ic-mail'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=email_settings'), TXT_565,'ic-mail'), Permission::ADMIN_SYSTEM);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link('?manage=settings&option=advanced_settings', TXT_130, 'ic-settings2'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=advanced_settings'), TXT_130, 'ic-settings2'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }
 
-/**
-     * Convert controller left-nav HTML into a simple map of controller => [ [label, href, target?, rel?], ... ]
-     *
-     * @param array<string,string> $controllersNavHtml e.g. ['Service Centre' => $serviceCentreNavHtml]
-     * @return array<string,array<int,array{label:string, href:string, target:?string, rel:?string}>>
+    /**
+     * @param array<string, string> $sections section name => link HTML
+     * @return array<string, array<int, array{label: ?string, html: ?string, href: string, target: ?string, rel: ?string}>>
      */
-    public static function build(array $controllersNavHtml): array
+    public static function build(array $sections): array
     {
         $out = [];
-        foreach ($controllersNavHtml as $name => $html) {
+        foreach ($sections as $name => $html) {
             $out[$name] = self::parseLinks($html);
         }
         return $out;
-    }
-
-    /**
-     * Render a Launchpad grid with one card per controller.
-     * - Shows first $peek links inline (no <br>)
-     * - Remaining links sit behind a "More" button and include <br> after each link
-     *
-     * @param array<string,array<int,array{label:string, href:string, target:?string, rel:?string}>> $controllers
-     */
-    public static function render(
-        array $controllers,
-        ?int  $columns = null,
-        int   $peek = 3,
-        bool  $aside = false
-    ): string
-    {
-        // Build blocks
-        $blocks = [];
-        foreach ($controllers as $title => $links) {
-            $blocks[] = [
-                'title' => (string)$title,
-                'html' => self::cardBody((string)$title, $links, $peek, $aside),
-                'full' => false,
-            ];
-        }
-
-        // Render cards (responsive by default if $columns is null)
-        $content = $columns === null
-            ? Blocks::horizontal($blocks)
-            : Blocks::horizontal($blocks, $columns);
-
-        // Optional aside wrapper
-        if ($aside) {
-            $content = '<aside id="sidebar" class="sidebar" aria-label="Primary">' . $content . '</aside>';
-        }
-
-        return $content;
     }
 
 
@@ -219,132 +181,7 @@ final class RenderNavigation
         return $out;
     }
 
-    /**
-     * Generates an HTML anchor (`<a>`) element with sanitized attributes and content.
-     *
-     * This method creates an anchor tag based on the provided link data and CSS class.
-     * It ensures that the `href`, `target`, and `rel` attributes are properly escaped
-     * to prevent XSS vulnerabilities. The content of the anchor tag is either the sanitized
-     * inner HTML (if provided) or the escaped label text.
-     *
-     * @param array $lnk An associative array containing the link data:
-     *  - 'href' (string): The URL for the anchor tag. Defaults to `#` if not provided.
-     *  - 'target' (string|null): The target attribute for the anchor tag (e.g., `_blank`).
-     *  - 'rel' (string|null): The rel attribute for the anchor tag (e.g., `noopener`).
-     *  - 'html' (string|null): The inner HTML content of the anchor tag. If provided, it is used as-is.
-     *  - 'label' (string|null): The text content of the anchor tag. Used if 'html' is not provided.
-     * @param string $class The CSS class to apply to the anchor tag.
-     * @return string The generated HTML anchor tag as a string.
-     */
-    private static function a(array $lnk, string $class): string
-    {
-        // Sanitize the href attribute, defaulting to '#' if not provided
-        $href = Html::e((string)($lnk['href'] ?? '#'));
 
-        // Sanitize the target attribute, if provided
-        $target = !empty($lnk['target']) ? ' target="' . Html::e((string)$lnk['target']) . '"' : '';
-
-        // Sanitize the rel attribute, if provided
-        $rel = !empty($lnk['rel']) ? ' rel="' . Html::e((string)$lnk['rel']) . '"' : '';
-
-        // Determine the content of the anchor tag
-        // Use the sanitized inner HTML if provided; otherwise, escape the label text
-        if (!empty($lnk['html'])) {
-            $labelOutput = $lnk['html'];
-        } else {
-            $labelOutput = Html::e((string)($lnk['label'] ?? ''));
-        }
-
-        // Return the constructed anchor tag
-        return '<a class="' . Html::e($class) . '" href="' . $href . '"' . $target . $rel . '>' . $labelOutput . '</a>';
-    }
-
-    /**
-     * Generates the HTML content for a navigation card body, including quick links and an optional "More" menu.
-     *
-     * This method creates a navigation block (`<nav>`) containing a set of links. If the number of links exceeds
-     * the specified `$peek` value, the remaining links are hidden behind a "More" button. The "More" button toggles
-     * the visibility of the additional links. The method also supports rendering all links without the "More" button
-     * when `$aside` is set to `true`.
-     *
-     * @param string $title The title of the navigation block, used for accessibility labels.
-     * @param array<int, array{label: string, href: string, target: ?string, rel: ?string}> $links
-     *        An array of links, where each link is an associative array with the following keys:
-     *        - 'label': The visible text of the link.
-     *        - 'href': The URL the link points to.
-     *        - 'target': (Optional) The target attribute for the link (e.g., `_blank`).
-     *        - 'rel': (Optional) The rel attribute for the link (e.g., `noopener`).
-     * @param int $peek The number of links to display inline before hiding the rest behind the "More" button.
-     * @param bool $aside If `true`, all links are displayed without the "More" button.
-     * @return string The generated HTML content for the navigation card body.
-     */
-    private static function cardBody(string $title, array $links, int $peek, bool $aside = false): string
-    {
-        // If aside is true, list all links (no "More" button)
-        if ($aside) {
-            $html = '<nav class="side-actions" aria-label="' . Html::e($title) . ' quick actions">';
-            foreach ($links as $lnk) {
-                $html .= self::a($lnk, 'URL');
-            }
-            $html .= '</nav>';
-            return $html;
-        }
-
-        // Split the links into quick links (visible) and the rest (hidden behind "More")
-        $quick = array_slice($links, 0, max(0, $peek));
-        $rest = array_slice($links, max(0, $peek));
-
-        // Generate the quick links section
-        $html = '<nav class="side-actions" aria-label="' . Html::e($title) . ' quick actions">';
-        foreach ($quick as $lnk) {
-            $html .= self::a($lnk, 'URL');
-        }
-        $html .= '</nav>';
-
-        // If there are additional links, generate the "More" button and hidden menu
-        if (!empty($rest)) {
-            // Create a unique ID for the "More" menu based on the title and link count
-            $id = 'lp-more-' . self::slug($title) . '-' . substr(md5($title . count($links)), 0, 6);
-
-            $html .= '<div class="controller-more">'
-                . '<button class="btn btn--sm controller-more__toggle" type="button" aria-expanded="false" aria-controls="' . $id . '">More</button>'
-                . '<div id="' . $id . '" class="controller-more__menu" hidden>';
-            foreach ($rest as $lnk) {
-                $html .= self::a($lnk, 'controller-more__item URL') . '<br>';
-            }
-            $html .= '</div>'
-                . '</div>';
-        }
-
-        return $html;
-    }
-
-
-    /**
-     * Converts a string into a URL-friendly "slug".
-     *
-     * This method takes a string and transforms it into a lowercase, hyphen-separated format
-     * suitable for use in URLs. It removes any non-alphanumeric characters and replaces them
-     * with hyphens. Leading and trailing hyphens are also trimmed to ensure a clean result.
-     *
-     * Example:
-     * Input: "Hello World!"
-     * Output: "hello-world"
-     *
-     * @param string $s The input string to be converted into a slug.
-     * @return string The URL-friendly slug.
-     */
-    private static function slug(string $s): string
-    {
-        $s = strtolower(trim($s)); // Convert to lowercase and trim whitespace
-        $s = preg_replace('~[^a-z0-9]+~', '-', $s); // Replace non-alphanumeric characters with hyphens
-        return trim($s ?? '', '-'); // Trim leading and trailing hyphens
-    }
-
-    /**
-     * Put a controller's links in the top navigation card and drop the left sidebar.
-     * Call this once at the top of a controller, before the page is rendered.
-     */
     /**
      * @param list<array{label: string, href?: string}> $crumbs The page trail, Home first. It is drawn in the
      *        application band when there is one, otherwise at the start of the section bar.

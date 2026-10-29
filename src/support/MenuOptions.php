@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\support;
 
 use Adlexone\Html\Blocks;
+use Adlexone\Http\Router;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
 use Adlexone\Html\Measure;
@@ -222,7 +223,7 @@ final class MenuOptions
                 . Form::hidden('menu_value_old_id_' . $id, (string)$node['menu_value'])
                 . self::parentSelect('parent_' . $id, $fieldId, (int)$node['parent_menu_value_id'], $id)
                 . Blocks::link(
-                    '?manage=fields' . '&option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . $fieldId,
+                    Router::manageUrl('fields', 'option=delete_menu_value&menu_value_id=' . $id . '&custom_field_id=' . $fieldId),
                     TXT_47,
                     '',
                     'URL',

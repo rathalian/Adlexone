@@ -53,37 +53,37 @@ final class TopNav
     public static function designItems(): array
     {
         $items = [];
-        $add = static function (string $label, string $href, string $icon, string $controller, string $hint) use (&$items): void {
+        $add = static function (string $label, string $name, string $icon, string $hint, string $query = '') use (&$items): void {
             $items[] = [
                 'label' => $label,
-                'href' => $href,
+                'href' => Router::manageUrl($name, $query),
                 'icon' => $icon,
-                'current' => self::controllerMatches($controller),
+                'current' => self::screenIsCurrent($name),
                 'hint' => $hint,
             ];
         };
 
         if (Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
-            $add('Create an application', '?manage=builder', 'ic-plus', 'manage_builder', 'Add a record type, fields, and screens.');
+            $add('Create an application', 'builder', 'ic-plus', 'Add a record type, fields, and screens.');
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $add('Applications', '?manage=applications', 'ic-grid', 'manage_applications', 'Set the order of applications and their navigation.');
+            $add('Applications', 'applications', 'ic-grid', 'Set the order of applications and their navigation.');
         }
         if (Access::can(Permission::ADMIN_ITEMS)) {
-            $add('Fields', '?manage=fields', 'ic-fields', 'manage_fields', 'Fields used across the applications.');
-            $add('Record types', '?manage=item-types', 'ic-layers', 'manage_item_types', 'The record type each application keeps.');
+            $add('Fields', 'fields', 'ic-fields', 'Fields used across the applications.');
+            $add('Record types', 'item-types', 'ic-layers', 'The record type each application keeps.');
         }
         if (Access::can(Permission::ADMIN_ACTIONS)) {
-            $add('Rules', '?manage=rules', 'ic-zap', 'manage_actions', 'What runs when a record is created or updated.');
+            $add('Rules', 'rules', 'ic-zap', 'What runs when a record is created or updated.');
         }
         if (Access::can(Permission::ADMIN_SECURITY)) {
-            $add('People', '?manage=security&option=manage_users', 'ic-users', 'manage_security', 'People who can sign in.');
-            $add('Groups', '?manage=security&option=manage_groups', 'ic-users-round', 'manage_security', 'Groups and their access.');
+            $add('People', 'security', 'ic-users', 'People who can sign in.', 'option=manage_users');
+            $add('Groups', 'security', 'ic-users-round', 'Groups and their access.', 'option=manage_groups');
         }
         if (Access::can(Permission::ADMIN_SETTINGS)) {
-            $add('Settings', '?manage=settings&option=adlexone_settings', 'ic-sliders', 'manage_settings', 'Site, theme, sign-in, email, and advanced settings.');
+            $add('Settings', 'settings', 'ic-sliders', 'Site, theme, sign-in, email, and advanced settings.', 'option=adlexone_settings');
         } elseif (Access::can(Permission::ADMIN_SYSTEM)) {
-            $add('Settings', '?manage=settings&option=sign_in_settings', 'ic-sliders', 'manage_settings', 'Sign-in, email, and advanced settings.');
+            $add('Settings', 'settings', 'ic-sliders', 'Sign-in, email, and advanced settings.', 'option=sign_in_settings');
         }
 
         return $items;
@@ -105,8 +105,8 @@ final class TopNav
         }
 
         $links = [
-            ['label' => 'My profile', 'href' => '?manage=security&option=modify_user', 'icon' => 'ic-user'],
-            ['label' => 'My theme', 'href' => '?manage=settings&option=my_theme', 'icon' => 'ic-palette'],
+            ['label' => 'My profile', 'href' => Router::manageUrl('security', 'option=modify_user'), 'icon' => 'ic-user'],
+            ['label' => 'My theme', 'href' => Router::manageUrl('settings', 'option=my_theme'), 'icon' => 'ic-palette'],
         ];
 
         return [
@@ -123,7 +123,7 @@ final class TopNav
             && $slug === Page::current()->applicationSlug();
     }
 
-    private static function controllerMatches(string $screen): bool
+    private static function screenIsCurrent(string $screen): bool
     {
         if (Request::query('manage') === '') {
             return false;

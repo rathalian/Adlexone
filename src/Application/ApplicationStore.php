@@ -108,7 +108,6 @@ final class ApplicationStore
                 'hint' => $app['hint'],
                 'icon' => $app['icon'],
                 'href' => \Adlexone\Http\Router::applicationUrl((string) $app['slug']),
-                'controller' => 'application',
                 'app' => $app['slug'],
             ];
         }

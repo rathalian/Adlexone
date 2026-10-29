@@ -240,7 +240,7 @@ final class ApplicationsScreen
                     ['key' => 'menu', 'label' => 'Menu'],
                 ],
                 'searchLabel' => 'Search',
-                'primary' => ['href' => '?manage=builder', 'label' => 'Create an application'],
+                'primary' => ['href' => Router::manageUrl('builder'), 'label' => 'Create an application'],
                 'empty' => 'No applications yet. Use the builder to create one.',
                 'emptyIllustration' => 'empty-apps',
                 'emptyTitle' => 'No applications yet',

@@ -139,7 +139,7 @@ final class PaletteScreen
                 'kind' => 'Records',
                 'label' => $title !== '' ? $title : 'Record ' . (int) $row['item_id'],
                 'group' => (string) $app['label'],
-                'href' => '?application=' . rawurlencode((string) $app['app']) . '&item=' . (int) $row['item_id'],
+                'href' => Router::applicationUrl((string) $app['app'], 0, 'item=' . (int) $row['item_id']),
                 'icon' => 'ic-file-search',
             ];
         }

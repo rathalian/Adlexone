@@ -321,7 +321,7 @@ final class HomeDashboard
                     'title' => $title !== '' ? $title : 'Record ' . $id,
                     'app' => (string) $app['name'],
                     'accent' => (string) $app['accent'],
-                    'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . $id,
+                    'href' => Router::applicationUrl((string) $app['slug'], 0, 'item=' . $id),
                     'when' => $last,
                     'appIndex' => $typeToApp[$typeId],
                 ];
@@ -382,7 +382,7 @@ final class HomeDashboard
         return [
             'title' => $title !== '' ? $title : 'Record ' . (int) $row['item_id'],
             'app' => (string) $app['name'],
-            'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
+            'href' => Router::applicationUrl((string) $app['slug'], 0, 'item=' . (int) $row['item_id']),
             'label' => 'You changed it ' . Presence::ago((int) $row['at']),
         ];
     }
@@ -458,9 +458,9 @@ final class HomeDashboard
             . 'EXISTS(SELECT 1 FROM items) AS records, (SELECT COUNT(*) FROM (SELECT 1 FROM users LIMIT 2)) AS people'
         )[0] ?? [];
         $steps = [
-            ['Create an application', 'An application groups the screens for one kind of work. A blueprint brings the fields and the rules.', '?manage=builder', (int) ($seen['apps'] ?? 0) > 0],
-            ['Create a record', 'Open an application and add the first record.', './', (int) ($seen['records'] ?? 0) > 0],
-            ['Add people', 'Add the people who need to sign in, then place them in groups.', '?manage=security&option=manage_users', (int) ($seen['people'] ?? 0) > 1],
+            ['Create an application', 'An application groups the screens for one kind of work. A blueprint brings the fields and the rules.', Router::manageUrl('builder'), (int) ($seen['apps'] ?? 0) > 0],
+            ['Create a record', 'Open an application and add the first record.', Router::page(), (int) ($seen['records'] ?? 0) > 0],
+            ['Add people', 'Add the people who need to sign in, then place them in groups.', Router::manageUrl('security', 'option=manage_users'), (int) ($seen['people'] ?? 0) > 1],
         ];
         $done = count(array_filter($steps, static fn (array $step): bool => $step[3]));
         if ($done === count($steps)) {
@@ -596,7 +596,7 @@ final class HomeDashboard
                 'title' => $title !== '' ? $title : 'Record ' . (int) $row['item_id'],
                 'app' => (string) $app['name'],
                 'accent' => (string) $app['accent'],
-                'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
+                'href' => Router::applicationUrl((string) $app['slug'], 0, 'item=' . (int) $row['item_id']),
                 'when' => max((int) $row['create_date'], (int) ($row['core_log_updated'] ?? 0)),
                 'appIndex' => $index,
             ];
@@ -807,7 +807,7 @@ final class HomeDashboard
                 'text' => $text,
                 'when' => (int) $line['at'],
                 'who' => $names[(int) ($line['security_id'] ?? 0)] ?? '',
-                'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $line['item_id'],
+                'href' => Router::applicationUrl((string) $app['slug'], 0, 'item=' . (int) $line['item_id']),
                 'icon' => 'ic-activity',
                 'detail' => (string) $app['name'],
             ];
@@ -828,7 +828,7 @@ final class HomeDashboard
                 'text' => 'Created ' . ($title !== '' ? $title : 'record ' . (int) $row['item_id']),
                 'when' => (int) $row['create_date'],
                 'who' => $creators[(int) ($row['creator_security'] ?? 0)] ?? '',
-                'href' => '?application=' . rawurlencode((string) $app['slug']) . '&item=' . (int) $row['item_id'],
+                'href' => Router::applicationUrl((string) $app['slug'], 0, 'item=' . (int) $row['item_id']),
                 'icon' => 'ic-file-plus',
                 'detail' => (string) $app['name'],
             ];

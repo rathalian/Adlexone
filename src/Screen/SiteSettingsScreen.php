@@ -7,6 +7,7 @@ use Adlexone\support\RenderNavigation;
 use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
+use Adlexone\Http\Router;
 use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
@@ -28,7 +29,7 @@ final class SiteSettingsScreen
     {
         View::respond(
             implode(' ', $problems),
-            Blocks::link('?manage=settings&option=' . $option, TXT_55, 'URL')
+            Blocks::link(Router::manageUrl('settings', 'option=' . $option), TXT_55, 'URL')
         );
     }
 
@@ -134,7 +135,7 @@ final class SiteSettingsScreen
             return;
         }
 
-        RenderNavigation::applyConfigureNav([['label' => 'Settings', 'href' => '?manage=settings&option=adlexone_settings']], RenderNavigation::systemSettingsURLs());
+        RenderNavigation::applyConfigureNav([['label' => 'Settings', 'href' => Router::manageUrl('settings', 'option=adlexone_settings')]], RenderNavigation::systemSettingsURLs());
 
 
 
@@ -164,7 +165,7 @@ final class SiteSettingsScreen
                 if (!isset($themes[$theme])) {
                     View::respond(
                         'Choose an installed theme.',
-                        Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'URL')
+                        Blocks::link(Router::manageUrl('settings', 'option=theme_settings'), 'Theme', 'URL')
                     );
                     break;
                 }
@@ -173,7 +174,7 @@ final class SiteSettingsScreen
                 if (!is_array($decoded)) {
                     View::respond(
                         'Theme settings could not be read.',
-                        Blocks::link('?manage=settings&option=theme_settings', 'Theme', 'URL')
+                        Blocks::link(Router::manageUrl('settings', 'option=theme_settings'), 'Theme', 'URL')
                     );
                     break;
                 }
@@ -380,7 +381,7 @@ final class SiteSettingsScreen
                 break;
             default :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-                View::respond('Invalid Option', Blocks::link('?manage=settings&option=adlexone_settings', TXT_55, 'URL'));
+                View::respond('Invalid Option', Blocks::link(Router::manageUrl('settings', 'option=adlexone_settings'), TXT_55, 'URL'));
                 break;
         }
     }
@@ -419,7 +420,7 @@ final class SiteSettingsScreen
         ];
         Page::current()->setBody(Form::form(
             'Site',
-            '?manage=settings&option=update_adlexone_settings',
+            Router::manageUrl('settings', 'option=update_adlexone_settings'),
             $fields,
             [Form::button('submit', 'submit_button', TXT_56)]
         ));
@@ -440,7 +441,7 @@ final class SiteSettingsScreen
         ];
         Page::current()->setBody(Form::form(
             'Advanced',
-            '?manage=settings&option=update_advanced_settings',
+            Router::manageUrl('settings', 'option=update_advanced_settings'),
             $fields,
             [Form::button('submit', 'submit_button', TXT_56)]
         ));
@@ -502,12 +503,12 @@ final class SiteSettingsScreen
         if ($save) {
             $theme = \Adlexone\Theme\Theme::canonicalize(trim((string) ($_POST['theme'] ?? '')));
             if ($theme !== '' && !isset($themes[$theme])) {
-                View::respond('Choose an installed theme.', Blocks::link('?manage=settings&option=my_theme', 'Theme', '', 'btn btn--primary btn--sm'));
+                View::respond('Choose an installed theme.', Blocks::link(Router::manageUrl('settings', 'option=my_theme'), 'Theme', '', 'btn btn--primary btn--sm'));
                 return;
             }
             Database::update('users', ['theme' => $theme], 'user_id = ?', [$userId]);
             $_SESSION['access_theme'] = $theme;
-            header('Location: ?manage=settings&option=my_theme');
+            header('Location: ' . Router::manageUrl('settings', 'option=my_theme'));
             exit;
         }
         Page::current()->setCrumbs(\Adlexone\Html\Breadcrumb::trail([['label' => 'My theme']]));
@@ -520,7 +521,7 @@ final class SiteSettingsScreen
         $defaultLabel = $themes[$default] ?? $default;
         Page::current()->setBody(Form::form(
             'Theme',
-            '?manage=settings&option=update_my_theme',
+            Router::manageUrl('settings', 'option=update_my_theme'),
             [
                 'Your theme' => \Adlexone\Theme\Theme::picker('theme', $current, false, 'Follow the site theme')
                     . '<p class="form-help">Follow the site theme to use ' . Html::e($defaultLabel) . ', the default the administrator has set. Choose another theme to keep it on your account only.</p>',
@@ -568,7 +569,7 @@ final class SiteSettingsScreen
 
         Page::current()->setBody(Form::form(
             'Sign-in',
-            '?manage=settings&option=update_sign_in_settings',
+            Router::manageUrl('settings', 'option=update_sign_in_settings'),
             $fields,
             [Form::button('submit', 'submit_button', TXT_56)]
         ));
@@ -598,7 +599,7 @@ final class SiteSettingsScreen
         ];
         Page::current()->setBody(Form::form(
             'Theme',
-            '?manage=settings&option=update_theme_settings',
+            Router::manageUrl('settings', 'option=update_theme_settings'),
             $fields,
             [Form::button('submit', 'submit_button', TXT_56)]
         ));
@@ -618,7 +619,7 @@ final class SiteSettingsScreen
         ];
         Page::current()->setBody(Form::form(
             TXT_565,
-            '?manage=settings&option=update_email_settings',
+            Router::manageUrl('settings', 'option=update_email_settings'),
             $fields,
             [Form::button('submit', 'submit_button', TXT_56)]
         ));

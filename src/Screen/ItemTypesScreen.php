@@ -25,7 +25,7 @@ final class ItemTypesScreen
     {
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applyConfigureNav([['label' => 'Record types', 'href' => '?manage=item-types']]);
+        RenderNavigation::applyConfigureNav([['label' => 'Record types', 'href' => self::url()]]);
 
 
 
@@ -111,7 +111,7 @@ final class ItemTypesScreen
     public static function showItemType($itemTypeID, $values = [])
     {
         $isNew = ($itemTypeID == '');
-        $action = $isNew ? '?manage=item-types&option=add_item_type' : '?manage=item-types&option=update_item_type';
+        $action = self::url($isNew ? 'option=add_item_type' : 'option=update_item_type');
         // Load field values
         if ($isNew) {
             $fieldValues = is_array($values) ? $values : [];

@@ -14,24 +14,6 @@ use Adlexone\Theme\Theme;
  */
 final class Blocks
 {
-    public static function sideButton(string $queryString, string $buttonText, string|false $navBarTitle = false, bool $navBarDivider = false): string
-    {
-        return
-            ($navBarDivider ? '<div class="side-divider"></div>' : '') .
-            '<div class="side-group">' .
-            (!empty($navBarTitle) ? '<div class="side-title side-title--spaced">' . Html::e($navBarTitle) . '</div>' : '') .
-            '<a class="navbtn" href="' . Html::e($queryString) . '">' . Html::e($buttonText) . '</a>' .
-            '</div>';
-    }
-
-    public static function sideCard(string $navigationButtons): string
-    {
-        return '<aside id="sidebar" class="sidebar" aria-label="Primary">'
-            . '<nav class="side-actions">'
-            . $navigationButtons
-            . '</nav></aside>';
-    }
-
     /**
      * @param list<array{title?: string, html?: string, render?: callable, class?: string}> $bodyBlocks
      */
@@ -113,27 +95,6 @@ final class Blocks
         }
 
         return $html . '</div>';
-    }
-
-    /**
-     * @param list<array{title?: string, html?: string, full?: bool}> $blocks
-     */
-    public static function horizontal(array $blocks, ?int $columns = null): string
-    {
-        $modeClass = $columns === null ? '-auto' : '-fixed ' . Measure::columns($columns);
-        $html = '<section class="launchpad-grid ' . $modeClass . '">';
-        foreach ($blocks as $block) {
-            $title = Html::e($block['title'] ?? '');
-            $body = $block['html'] ?? '';
-            $span = !empty($block['full']) ? ' card -full' : ' card';
-            $html .= '<article class="' . $span . '">';
-            if ($title !== '') {
-                $html .= '<div class="card-title">' . $title . '</div>';
-            }
-            $html .= '<div class="card__body">' . $body . '</div></article>';
-        }
-
-        return $html . '</section>';
     }
 
     public static function separator(string $label = '', string $class = ''): string

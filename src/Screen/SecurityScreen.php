@@ -39,8 +39,8 @@ final class SecurityScreen
             }
             $groupPage = in_array($securityOption, $groupSectionOptions, true);
             RenderNavigation::applyConfigureNav([$groupPage
-                ? ['label' => 'Groups', 'href' => '?manage=security&option=manage_groups']
-                : ['label' => 'People', 'href' => '?manage=security&option=manage_users']]);
+                ? ['label' => 'Groups', 'href' => self::url('option=manage_groups')]
+                : ['label' => 'People', 'href' => self::url('option=manage_users')]]);
         }
 
 

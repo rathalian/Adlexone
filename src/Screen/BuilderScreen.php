@@ -31,7 +31,7 @@ final class BuilderScreen
 
         $option = (string) ($_GET['option'] ?? '');
 
-        RenderNavigation::applyConfigureNav([['label' => 'Create an application', 'href' => '?manage=builder']]);
+        RenderNavigation::applyConfigureNav([['label' => 'Create an application', 'href' => Router::manageUrl('builder')]]);
         Page::current()->suggestTitle('Create an application');
 
         switch ($option) {

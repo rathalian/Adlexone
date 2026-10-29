@@ -284,14 +284,14 @@ final class Capabilities
     /**
      * @param array<string, mixed> $app
      */
-    public static function forwardShared(array $app, int $navId, string $subcontroller): void
+    public static function forwardShared(array $app, int $navId, string $screen): void
     {
         self::defineContext($app, $navId);
         ApplicationAccess::requireUse();
         if (!Request::has('application')) {
             Request::set('application', ApplicationStore::scopeKey($app));
         }
-        self::includeShared($subcontroller);
+        self::includeShared($screen);
     }
 
     /**
@@ -373,13 +373,13 @@ final class Capabilities
         $_SESSION['application_slug'] = $slug;
     }
 
-    private static function includeShared(string $controller): void
+    private static function includeShared(string $screen): void
     {
-        if ($controller === \Adlexone\Http\Router::ITEMS) {
+        if ($screen === \Adlexone\Http\Router::ITEMS) {
             \Adlexone\Screen\ItemScreen::open();
             return;
         }
-        if ($controller === \Adlexone\Http\Router::SEARCH) {
+        if ($screen === \Adlexone\Http\Router::SEARCH) {
             \Adlexone\Screen\SearchScreen::open();
             return;
         }

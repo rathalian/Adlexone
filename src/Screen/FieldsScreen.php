@@ -25,7 +25,7 @@ final class FieldsScreen
     {
         MenuOptions::prepare();
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applyConfigureNav([['label' => 'Fields', 'href' => '?manage=fields']]);
+        RenderNavigation::applyConfigureNav([['label' => 'Fields', 'href' => self::url()]]);
 
 
 
@@ -147,7 +147,7 @@ final class FieldsScreen
     public static function showCustomField($customFieldID = '', $values = '')
     {
         if ($customFieldID == '') {
-            $formAction = '?manage=fields&option=add_custom_field';
+            $formAction = self::url('option=add_custom_field');
             $fieldValues = is_array($values) ? $values : [];
             $title = 'Add field';
         } else {
@@ -156,7 +156,7 @@ final class FieldsScreen
                 View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
                 return;
             }
-            $formAction = '?manage=fields&option=update_custom_field';
+            $formAction = self::url('option=update_custom_field');
             $title = 'Edit field';
         }
 
@@ -216,7 +216,7 @@ final class FieldsScreen
 
         Page::current()->setBody(Form::form(
             TXT_287,
-            '?manage=fields&option=add_update_menu_value',
+            self::url('option=add_update_menu_value'),
             $fields,
             $buttons
         ));
@@ -339,7 +339,7 @@ final class FieldsScreen
         // First parameter is the form title (replaces the deprecated HEADING constant).
         $html = Form::form(
             TXT_52,
-            '?manage=fields&option=field_type_search',
+            self::url('option=field_type_search'),
             $formFields,
             $buttons
         );
@@ -497,7 +497,7 @@ final class FieldsScreen
             $result = Database::select($table, '*', $column . " LIKE ? ESCAPE '\\'", ['%' . Database::escapeLike($criteria) . '%'], 'enabled DESC, ' . $column . ' ASC');
         }
         if ($table !== 'custom_fields') {
-            header('Location: ?manage=item-types');
+            header('Location: ' . Router::manageUrl('item-types'));
             exit;
         }
 

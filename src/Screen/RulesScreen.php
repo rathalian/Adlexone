@@ -25,7 +25,7 @@ final class RulesScreen
 
         Access::require(Permission::ADMIN_ACTIONS);
         Page::current()->setNavOption('__section__');
-        RenderNavigation::applyConfigureNav([['label' => 'Rules', 'href' => '?manage=rules']]);
+        RenderNavigation::applyConfigureNav([['label' => 'Rules', 'href' => Router::manageUrl('rules')]]);
 
         $slug = trim((string) ($_GET['app'] ?? $_POST['app'] ?? ''));
         $option = (string) ($_GET['option'] ?? '');

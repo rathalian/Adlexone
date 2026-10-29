@@ -16,6 +16,6 @@ use Adlexone\Http\View;
             <?php View::partial('brand_lockup'); ?>
         </div>
         <p class="empty-state__copy"><?php echo Html::e($copy); ?></p>
-        <div class="empty-state__actions"><a class="btn btn--primary" href="?manage=builder">Create an application</a></div>
+        <div class="empty-state__actions"><a class="btn btn--primary" href="<?php echo Html::e(\Adlexone\Http\Router::manageUrl('builder')); ?>">Create an application</a></div>
     </div>
 </section>
