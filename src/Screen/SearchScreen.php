@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
+use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
@@ -321,11 +322,10 @@ final class SearchScreen
             return;
         }
 
-        $ids = array_values(array_unique(array_map('intval', $ids)));
-        $condition = 'WHERE item_id IN (' . implode(',', $ids) . ')';
-        $orderClause = ($orderSQL !== '') ? ' ORDER BY ' . $orderSQL : ' ORDER BY item_id DESC';
+        $ids = RecordListQuery::ids($ids);
+        [$where, $params] = RecordListQuery::idWhere($ids);
         $columns = ['item_id', 'item_title', 'create_date', 'item_type_id'];
-        $result = Database::select('items', $columns, $condition . $orderClause);
+        $result = Database::select('items', $columns, $where, $params, RecordListQuery::order((string) $orderSQL));
 
         $base = \Adlexone\Http\Router::continueUrl('items');
         $rows = [];
@@ -391,8 +391,13 @@ final class SearchScreen
     			//Build saved searches heading
     			foreach($tmpArray as $key => $value) {
     				$tmpvars1 = explode(" ", $value);
-    				$columnArray[] = $tmpvars1[1];
-    				$headFields[] = "disp_" . $tmpvars1[1];
+    				$safeColumn = RecordListQuery::column((string) ($tmpvars1[1] ?? ''));
+    				if ($safeColumn === '') {
+    					continue;
+    				}
+    				$tmpvars1[1] = $safeColumn;
+    				$columnArray[] = $safeColumn;
+    				$headFields[] = 'disp_' . $safeColumn;
     				switch(trim($value)) {
     					case 'item_id':
     						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), $_SESSION['access_role_id'], 4);
@@ -417,8 +422,8 @@ final class SearchScreen
 
     					default:
     						$tmpvars = explode("_",$tmpvars1[1]);
-    						$headsql = "SELECT custom_field_name FROM custom_fields WHERE custom_field_id = " . $tmpvars[count($tmpvars) - 1];
-    												$headresult = Database::rows($headsql);
+    						$fieldId = (int) ($tmpvars[count($tmpvars) - 1] ?? 0);
+    						$headresult = Database::rows('SELECT custom_field_name FROM custom_fields WHERE custom_field_id = ?', [$fieldId]);
     						$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('custom_field_' . (int) $tmpvars[count($tmpvars) - 1], (string) ($headresult[0]['custom_field_name'] ?? '')), $_SESSION['access_role_id'], 4);
     						unset($tmpvars1);
     						unset($tmpvars);
@@ -429,12 +434,16 @@ final class SearchScreen
     			if (is_array($_POST)) {
     				foreach($_POST as $key => $value) {
     					if (substr($key,0,4)== "disp") {
-    						$columnArray[] = substr($key,5);
-    						$headFields[] = $key;
+    						$safeColumn = RecordListQuery::column(substr((string) $key, 5));
+    						if ($safeColumn === '') {
+    							continue;
+    						}
+    						$columnArray[] = $safeColumn;
+    						$headFields[] = 'disp_' . $safeColumn;
     						if (substr($key,5,6) == "custom") {
-    							$tmpvars = explode("_",$key);
-    							$headsql = "SELECT custom_field_name FROM custom_fields WHERE custom_field_id = " . $tmpvars[count($tmpvars) - 1];
-    														$headresult = Database::rows($headsql);
+    							$tmpvars = explode('_', $safeColumn);
+    							$fieldId = (int) ($tmpvars[count($tmpvars) - 1] ?? 0);
+    							$headresult = Database::rows('SELECT custom_field_name FROM custom_fields WHERE custom_field_id = ?', [$fieldId]);
     							$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('custom_field_' . (int) $tmpvars[count($tmpvars) - 1], (string) ($headresult[0]['custom_field_name'] ?? '')), $_SESSION['access_role_id'], 4);
     							unset($tmpvars);
     						} else {
@@ -495,19 +504,23 @@ final class SearchScreen
     //		}
 
             // Replace the existing item-id handling with this robust logic
+            $listParams = [];
             if ($itemID != '') {
                 if (in_array($itemID, (array)$userItemArray)) {
-                    $condition = "WHERE item_id = '" . (int)$itemID . "'";
+                    $condition = 'item_id = ?';
+                    $listParams = [(int) $itemID];
                 } else {
-                    $condition = "WHERE item_id = ''"; // not allowed to see it
+                    $condition = 'item_id = ?';
+                    $listParams = [0];
                 }
             } else {
                 // Ensure we have an array of IDs
                 if (!is_array($itemIDArray) || count($itemIDArray) === 0) {
-                    $condition = "WHERE item_id = ''";
+                    $condition = 'item_id = ?';
+                    $listParams = [0];
                 } else {
                     // normalize incoming ID arrays to flat integer lists
-                    $itemIDArray = is_array($itemIDArray) ? array_values(array_map('intval', $itemIDArray)) : [];
+                    $itemIDArray = array_values(array_map('intval', $itemIDArray));
     // Normalize $userItemArray which may be an array of rows (e.g. ['item_id'=>...]) or a flat list
                     $userItemIds = [];
                     if (isset($userItemArray) && is_array($userItemArray)) {
@@ -522,29 +535,18 @@ final class SearchScreen
                     }
 
     // perform permission-aware filtering using the normalized lists
-                    if (isset($userItemIds) && is_array($userItemIds)) {
+                    if ($userItemIds !== []) {
                         $allowed = array_values(array_intersect($itemIDArray, $userItemIds));
                     } else {
                         $allowed = array_values($itemIDArray);
                     }
 
-                    // If nothing remains after filtering -> return no rows
-                    if (empty($allowed)) {
-                        $condition = "WHERE item_id = ''";
-                    } else {
-                        // Sanitize ids as integers and build an IN() clause
-                        $ids = array_map('intval', $allowed);
-                        $condition = "WHERE item_id IN (" . implode(',', $ids) . ")";
-                    }
+                    [$condition, $listParams] = RecordListQuery::idWhere(array_map('intval', $allowed));
                 }
             }
-    //		//If no condition exists set one to return no items
-    //		if (!isset($condition)){
-    //			$condition = "WHERE item_id = ''";
-    //		}
     		if (!isset($_POST['pageset'])) {
     			// First off get number of records before doing sort
-    			$countrecs = Database::count('items', $condition);
+    			$countrecs = Database::count('items', $condition, $listParams);
     		} else {
     			$countrecs = $_POST['countrecs'];
     		}
@@ -562,16 +564,14 @@ final class SearchScreen
                 $countrecs = (int)$countrecs;
             }
     		$countBoolean = (($countrecs / SET_ITEMS_PAGE) > 1);
-    		if ($orderSQL != '') {
-    			$condition .= " ORDER BY $orderSQL";
-    		}else{
-    			$condition .= " ORDER BY item_id DESC";
-    			$orderSQL = "item_id DESC";
+    		$orderSQL = RecordListQuery::order((string) $orderSQL);
+    		$pageSize = max(1, (int) SET_ITEMS_PAGE);
+    		if ($countBoolean) {
+    			$page = RecordListQuery::page($_POST['pageset'] ?? 1);
+    			$result = Database::select('items', $columnArray, $condition, $listParams, $orderSQL, $pageSize, ($page - 1) * $pageSize);
+    		} else {
+    			$result = Database::select('items', $columnArray, $condition, $listParams, $orderSQL);
     		}
-    		if ($countBoolean){
-    			$condition .= " LIMIT " . SET_ITEMS_PAGE;
-    		}
-    		$result = Database::select('items', $columnArray, $condition);
 
     		// Create Table and populate with data (and formatting)
     		// Set required style info
@@ -614,10 +614,8 @@ final class SearchScreen
     							break;
     						case 'item_type_id':
     							if ($itemTypeID != $row['item_type_id']){  // We don't need to recheck as the last check was for the same item type id
-    								$tmpcolumnArray = array ('item_type_name');
-    								$condition = "WHERE item_type_id = '" . $row['item_type_id'] . "'";
-    								$itemTypeRow = Database::first('item_types', $tmpcolumnArray, $condition);
-    								$itemTypeName = $itemTypeRow['item_type_name']; //We set this so we can use it later if the next check is the same item type
+    								$itemTypeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [(int) $row['item_type_id']]);
+    								$itemTypeName = (string) ($itemTypeRow['item_type_name'] ?? '');
     								$cellData[] = $itemTypeName;
     								$itemTypeID = $row['item_type_id'];
     							} else {
@@ -626,23 +624,22 @@ final class SearchScreen
     							break;
 
     						case 'creator_security':
-    							$creatorColumnArray = array ('user_name');
-    							$condition = "WHERE user_id = '" . $row['creator_security'] . "'";
-    							$creatorRow = Database::first('users', $creatorColumnArray, $condition);
-    							$cellData[] = $creatorRow['user_name'];
+    							$creatorRow = Database::first('users', ['user_name'], 'user_id = ?', [(int) $row['creator_security']]);
+    							$cellData[] = (string) ($creatorRow['user_name'] ?? '');
     							break;
 
     						case 'user_security':
-    							$userColumnArray = array ('user_name');
-    							$condition = "WHERE user_id = '" . $row['user_security'] . "'";
-    							$userRow = Database::first('users', $userColumnArray, $condition);
-    							$cellData[] = $userRow['user_name'];
+    							$userRow = Database::first('users', ['user_name'], 'user_id = ?', [(int) $row['user_security']]);
+    							$cellData[] = (string) ($userRow['user_name'] ?? '');
     							break;
 
     						default:
-    							$urlColumnArray = array ('field_type','data');
-    							$condition = "WHERE custom_field_id = '" .    str_replace('custom_field_','',$value) . "'";
-    							$urlRow = Database::first('custom_fields', $urlColumnArray, $condition);
+    							$fieldId = (int) str_replace('custom_field_', '', (string) $value);
+    							$urlRow = Database::first('custom_fields', ['field_type', 'data'], 'custom_field_id = ?', [$fieldId]);
+    							if (!is_array($urlRow)) {
+    								$cellData[] = $row[$value] ?? '';
+    								break;
+    							}
     							if ($urlRow['field_type'] == 'URL'){
     								if ($row[$value] != ''){
     									$http = (!stristr($value,'http') AND !stristr($value,'https')) ? 'http://' : '';
@@ -1018,12 +1015,13 @@ final class SearchScreen
         unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
 
         $sortColumn = self::sortColumn(substr(self::postedText('sort_field'), 5));
+        $newsort = '';
         if (isset($_POST['sortOrder']) && $sortColumn !== '') {
-            $newsort = $sortColumn . " ";
-            $newsort .= ($_POST['sortOrder'] == "descending") ? "DESC" : "";
-            $sql .= " ORDER BY " . $newsort;
-        } else {
-            $newsort = '';
+            $direction = ($_POST['sortOrder'] == 'descending') ? 'DESC' : '';
+            $newsort = RecordListQuery::order(trim($sortColumn . ' ' . $direction), '');
+            if ($newsort !== '') {
+                $sql .= ' ORDER BY ' . $newsort;
+            }
         }
         // Show search results or move to save search page
         if (isset($_POST['search'])) {
@@ -1310,6 +1308,7 @@ final class SearchScreen
     public static function showCustomFieldsAsList($itemTypeID = '', $fieldData = '', $dispRows = '')
     {
         $condition = '';
+        $fieldIds = [];
         if ($itemTypeID != '' and $itemTypeID != '0') {
             $columnArray = array('custom_field_id');
             if (is_array($itemTypeID)) {
@@ -1322,31 +1321,36 @@ final class SearchScreen
                 $condition = "WHERE item_type_id = " . (int) $itemTypeID;
             }
             $result = Database::select('item_type_custom_fields', $columnArray, $condition);
-            $i = 0;
-            $condition = "";
+            $fieldIds = [];
             foreach ($result as $row) {
-                if ($i == 0) {
-                    $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                } else {
-                    $condition .= " OR custom_field_id = '" . $row['custom_field_id'] . "'";
+                $id = (int) ($row['custom_field_id'] ?? 0);
+                if ($id > 0) {
+                    $fieldIds[] = $id;
                 }
-                $i++;
             }
         }
-        // Get custom fields from database
         $columnArray = array('custom_field_id', 'custom_field_name');
-        if ($condition != '') {
-            $condition .= "AND field_type NOT LIKE 'worker%' AND field_type <> 'fieldSeparator' ORDER BY custom_field_name ASC";
+        $typeLimit = "field_type NOT LIKE ? AND field_type <> ?";
+        $typeParams = ['worker%', 'fieldSeparator'];
+        if (!empty($fieldIds)) {
+            $marks = implode(', ', array_fill(0, count($fieldIds), '?'));
+            $result = Database::select(
+                'custom_fields',
+                $columnArray,
+                'custom_field_id IN (' . $marks . ') AND ' . $typeLimit,
+                array_merge($fieldIds, $typeParams),
+                'custom_field_name ASC'
+            );
         } else {
-            $condition = "WHERE field_type NOT LIKE 'worker%' AND field_type <> 'fieldSeparator' ORDER BY custom_field_name ASC";
+            $result = Database::select('custom_fields', $columnArray, $typeLimit, $typeParams, 'custom_field_name ASC');
         }
-        $result = Database::select('custom_fields', $columnArray, $condition);
         // Build list based on the defined amount of custom field lists to display
         $html = '';
         foreach ($result as $row) {
-            $fieldData[] = $row[1];
-            $fieldData[] = Form::checkbox('disp_custom_field_' . $row[0], false, true);
-            $fieldData[] = Form::radio('sort_field', 'sort_custom_field_' . $row[0], '');
+            $fieldId = (int) ($row['custom_field_id'] ?? 0);
+            $fieldData[] = Html::e((string) ($row['custom_field_name'] ?? ''));
+            $fieldData[] = Form::checkbox('disp_custom_field_' . $fieldId, 'true', '');
+            $fieldData[] = Form::radio('sort_field', 'sort_custom_field_' . $fieldId, '');
             if (count($fieldData) == 9) {
                 $dispRows .= '<div class="group-security-list">' . implode('', $fieldData) . '</div>';
                 unset($fieldData);

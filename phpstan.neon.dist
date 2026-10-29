@@ -1,3 +1,6 @@
+includes:
+    - phpstan-baseline.neon
+
 parameters:
     level: 5
     bootstrapFiles:
@@ -7,6 +10,8 @@ parameters:
         - src/Auth
         - src/Database
         - src/support
+        - src/Screen/ItemScreen.php
+        - src/Screen/SearchScreen.php
     excludePaths:
         - src/support/SharedMethods.php
     treatPhpDocTypesAsCertain: false

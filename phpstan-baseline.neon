@@ -1,0 +1,433 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Constant ADD_ATTACHMENTS not found\.$#'
+			identifier: constant.notFound
+			count: 5
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant MAN_BASE_URL not found\.$#'
+			identifier: constant.notFound
+			count: 32
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_ATTACHMENTS not found\.$#'
+			identifier: constant.notFound
+			count: 11
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_ATTACHMENTS_PATH not found\.$#'
+			identifier: constant.notFound
+			count: 3
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_CUSTOM_FIELDS_IN_SEARCH not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_DATE_FORMAT not found\.$#'
+			identifier: constant.notFound
+			count: 4
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_DEFAULT_ITEM_TYPE not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_FORM_FIELD_HEIGHT not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_IMAGE_PATH not found\.$#'
+			identifier: constant.notFound
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_ITEMS_PAGE not found\.$#'
+			identifier: constant.notFound
+			count: 4
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_LOG_ENTRY not found\.$#'
+			identifier: constant.notFound
+			count: 11
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_MAX_ATTACHMENT not found\.$#'
+			identifier: constant.notFound
+			count: 5
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_OWNER_MENU not found\.$#'
+			identifier: constant.notFound
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Constant SET_SECURE_TYPE not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Default value of the parameter \#2 \$itemID \(string\) of method Adlexone\\Screen\\ItemScreen\:\:showItems\(\) is incompatible with type int\.$#'
+			identifier: parameter.defaultValue
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:addItem\(\) has invalid return type Adlexone\\Screen\\Rendered\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:addItem\(\) should return Adlexone\\Screen\\Rendered but empty return statement found\.$#'
+			identifier: return.empty
+			count: 4
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:addItem\(\) should return Adlexone\\Screen\\Rendered but return statement is missing\.$#'
+			identifier: return.missing
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:showItemLog\(\) has invalid return type Adlexone\\Screen\\Return\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:showItemLog\(\) should return Adlexone\\Screen\\Return but returns string\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:transformItem\(\) has invalid return type Adlexone\\Screen\\unknown_type\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:transformItem\(\) should return Adlexone\\Screen\\unknown_type but empty return statement found\.$#'
+			identifier: return.empty
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\ItemScreen\:\:transformItem\(\) should return Adlexone\\Screen\\unknown_type but return statement is missing\.$#'
+			identifier: return.missing
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Offset 0 does not exist on array\<string, mixed\>\.$#'
+			identifier: offsetAccess.notFound
+			count: 3
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Offset 1 does not exist on array\<string, mixed\>\.$#'
+			identifier: offsetAccess.notFound
+			count: 4
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Parameter \#1 \$itemIDArray of static method Adlexone\\Screen\\ItemScreen\:\:showItems\(\) expects int, array\<int\<0, max\>, array\<string, mixed\>\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Parameter \#2 \$maximumSize of static method Adlexone\\Html\\Form\:\:file\(\) expects string, \(float\|int\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$displayArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$filterdUserIDArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$filteredUserArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$hidden on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$hiddenValue might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$listDisplayValues might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$listValues might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$menuArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 4
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$paginationHTML on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$url might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$userArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$userIDArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Variable \$valueArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/ItemScreen.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 3
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Call to function unset\(\) contains undefined variable \$cellData\.$#'
+			identifier: unset.variable
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Call to function unset\(\) contains undefined variable \$columnArray\.$#'
+			identifier: unset.variable
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant APP_COUNT_ITEM_TYPE not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant SET_ATTACHMENTS not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant SET_CUSTOM_FIELDS_IN_SEARCH not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant SET_DATE_FORMAT not found\.$#'
+			identifier: constant.notFound
+			count: 2
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant SET_FORM_FIELD_HEIGHT not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant SET_ITEMS_PAGE not found\.$#'
+			identifier: constant.notFound
+			count: 4
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Constant SET_LOG_ENTRY not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Default value of the parameter \#2 \$itemID \(string\) of method Adlexone\\Screen\\SearchScreen\:\:showItems1\(\) is incompatible with type int\.$#'
+			identifier: parameter.defaultValue
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\SearchScreen\:\:updateKnoweldgeCount\(\) has invalid return type Adlexone\\Screen\\none\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Method Adlexone\\Screen\\SearchScreen\:\:updateKnoweldgeCount\(\) should return Adlexone\\Screen\\none but return statement is missing\.$#'
+			identifier: return.missing
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<mixed\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_values contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 3
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Parameter \#2 \$callback of function array_filter expects \(callable\(mixed\)\: bool\)\|null, ''strlen'' given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Right side of && is always false\.$#'
+			identifier: booleanAnd.rightAlwaysFalse
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between '''' and ''0'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Undefined variable\: \$itemTypeID$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$condition might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$formHTML might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$itemTypeName might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$linkArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$pageset might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$titleArray might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Screen/SearchScreen.php
+
+		-
+			message: '#^Variable \$userItemArray in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.variable
+			count: 1
+			path: src/Screen/SearchScreen.php

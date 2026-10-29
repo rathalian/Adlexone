@@ -2,6 +2,7 @@
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
+use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
@@ -922,40 +923,26 @@ final class ItemScreen
         // Get data from database
         global $html;
         $columnArray = array('item_id', 'create_date', 'item_type_id', 'item_title');
-        // Override item id list if a specific id has been requested
-        if ($itemID != '') {
-            $condition = 'WHERE item_id = ' . (int) $itemID;
+        if ((string) $itemID !== '') {
+            [$where, $params] = ['item_id = ?', [(int) $itemID]];
         } else {
-            $condition = "WHERE ";
-            $i = 0;
-            // handle empty arrays (i.e. no result returned)
-            if (!is_array($itemIDArray)) {
-                $condition .= "item_id = ''";
-            } else {
-                foreach ($itemIDArray as $a) {
-                    if ($i == 0) {
-                        $condition .= "item_id = '$a'";
-                    } else {
-                        $condition .= " OR item_id = '$a'";
-                    }
-                    $i++;
-                }
-            }
+            [$where, $params] = RecordListQuery::idWhere(RecordListQuery::ids(is_array($itemIDArray) ? $itemIDArray : []));
         }
         $countrecs = count((array)$itemIDArray);
         $countBoolean = (($countrecs / SET_ITEMS_PAGE) > 1);
 
         $orderSQL = self::listOrder((string) $orderSQL, (string) $itemID === '');
-        $condition .= ' ORDER BY ' . $orderSQL;
-
-        $condition .= " LIMIT ";
-
-        if (isset($_POST['pageset']) && $_POST['pageset'] != 1) {
-            $condition .= (($_POST['pageset'] - 1) * SET_ITEMS_PAGE) . ",";
-        }
-
-        $condition .= SET_ITEMS_PAGE;
-        $result = Database::rows(Database::sqlSelect('items', $columnArray, $condition));
+        $pageSize = max(1, (int) SET_ITEMS_PAGE);
+        $page = RecordListQuery::page($_POST['pageset'] ?? 1);
+        $result = Database::select(
+            'items',
+            $columnArray,
+            $where,
+            $params,
+            $orderSQL,
+            $pageSize,
+            ($page - 1) * $pageSize
+        );
 
         $listHtml = '';
         $sortLinks = '';
@@ -983,10 +970,8 @@ final class ItemScreen
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
                 if ($itemTypeID != $row['item_type_id']) {
-                    $columnArray = array('item_type_name');
-                    $condition = "WHERE item_type_id = '" . $row['item_type_id'] . "'";
-                    $itemTypeRow = Database::first('item_types', $columnArray, $condition);
-                    $itemTypeName = $itemTypeRow['item_type_name'];
+                    $itemTypeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [(int) $row['item_type_id']]);
+                    $itemTypeName = (string) ($itemTypeRow['item_type_name'] ?? '');
                     $itemTypeID = $row['item_type_id'];
                 }
                 $action = Access::outputIfRoleAllowed('<a href="' . MAN_BASE_URL . '&option=show_attachments&item_id=' . $row['item_id'] . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
