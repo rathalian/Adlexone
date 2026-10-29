@@ -30,6 +30,18 @@ $check($_POST['item_title'] === "O'Reilly", 'free text is left alone');
 $check($_POST['id'] === '', 'a number too long for an identifier is cleared');
 $check(!array_key_exists('group_id', $_POST), 'a key that was not sent is not added');
 
+$_GET = [];
+$_POST = [];
+$check(Request::query('option') === '', 'a missing query value is empty');
+$check(Request::posted('item_type_id') === '', 'a missing posted value is empty');
+$_GET = ['controller' => 'a b&c', 'option' => ' show '];
+$_POST = ['item_type_id' => ' 12 ', 'tags' => ['a', 'b']];
+$check(Request::query('option') === 'show', 'a query value is trimmed');
+$check(Request::queryPart('controller') === 'a%20b%26c', 'a controller is encoded for a link');
+$check(Request::posted('item_type_id') === '12', 'a posted value is trimmed');
+$check(Request::posted('tags') === '', 'a posted list is read as empty');
+$check(Request::posted('missing', 'x') === 'x', 'a missing posted value uses the default');
+
 $check(Database::escapeLike('50%_off\\') === '50\\%\\_off\\\\', 'LIKE wildcards and the escape character are escaped');
 $check(Database::escape("it's") === "it''s", 'single quotes are doubled');
 

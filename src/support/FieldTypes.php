@@ -138,11 +138,25 @@ final class FieldTypes
     }
 
     /**
-     * SQL list literal matching a type and any legacy aliases, for use in "field_type IN (...)".
+     * A bound field_type predicate for this type and its legacy aliases.
+     *
+     * $includeSelf adds the type itself. Pass false when the statement is only
+     * rewriting older names, so rows already stored as the current type stay as they are.
+     *
+     * @return array{0: string, 1: list<string>}
      */
-    public static function sqlInList(string $fieldType): string
+    public static function sqlInList(string $fieldType, bool $includeSelf = true): array
     {
-        $names = array_merge([$fieldType], array_keys(self::ALIASES, $fieldType, true));
-        return implode(', ', array_map(fn(string $n): string => "'" . Database::escape($n) . "'", $names));
+        $names = array_keys(self::ALIASES, $fieldType, true);
+        if ($includeSelf) {
+            array_unshift($names, $fieldType);
+        }
+        $names = array_values(array_unique($names));
+        if ($names === []) {
+            return ['1 = 0', []];
+        }
+        $placeholders = implode(', ', array_fill(0, count($names), '?'));
+
+        return ['field_type IN (' . $placeholders . ')', $names];
     }
 }

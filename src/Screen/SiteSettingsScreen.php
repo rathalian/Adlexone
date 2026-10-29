@@ -6,6 +6,7 @@ use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
 use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
@@ -127,7 +128,7 @@ final class SiteSettingsScreen
 
     public static function open(): void
     {
-        $option = (string) ($_GET['option'] ?? '');
+        $option = Request::query('option');
         if ($option === 'my_theme' || $option === 'update_my_theme') {
             self::myTheme($option === 'update_my_theme');
             return;
@@ -147,7 +148,7 @@ final class SiteSettingsScreen
 
 
 
-        switch (@$_GET['option']) {
+        switch ($option) {
             case 'adlexone_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
                 self::showAdlexoneSettings();

@@ -21,6 +21,7 @@ use Adlexone\support\MenuOptions;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -92,7 +93,7 @@ final class ItemScreen
          * Controller Constants
          */
         if (!defined('MAN_BASE_URL')) {
-            define('MAN_BASE_URL', '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage');
+            define('MAN_BASE_URL', '?controller=' . Request::queryPart('controller') . '&subcontroller=item_management_manage');
         }
 
 
@@ -144,7 +145,8 @@ final class ItemScreen
 
 
 
-        if (!self::authoriseItemOption((string) ($_GET['option'] ?? ''))) {
+        $option = Request::query('option');
+        if (!self::authoriseItemOption($option)) {
             return;
         }
 
@@ -152,19 +154,22 @@ final class ItemScreen
          * Logic to render the appropriate template or call wrapper functions
          * Option is captured from the value selected via a hyperlink
          */
-        switch (@$_GET['option']) {
+        switch ($option) {
             case 'my_items' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::showMyItems($_SESSION['access_user_id'], @$_GET['item_id']);
+                self::showMyItems($_SESSION['access_user_id'], Request::query('item_id'));
                 break;
             case 'show_item_types' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-                self::showItemTypes(@$_GET['default_item_type']);
+                self::showItemTypes(Request::query('default_item_type'));
                 break;
             case 'new_item' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-                $itemTypeId = $_POST['item_type_id'] ?? $_GET['item_type_id'] ?? '';
-                if ($itemTypeId === '' || $itemTypeId === null) {
+                $itemTypeId = Request::posted('item_type_id');
+                if ($itemTypeId === '') {
+                    $itemTypeId = Request::query('item_type_id');
+                }
+                if ($itemTypeId === '') {
                     $target = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
                     $defaultType = trim((string) ($_GET['default_item_type'] ?? ''));
                     if ($defaultType === '' && Page::current()->inApplication()) {
@@ -914,8 +919,8 @@ final class ItemScreen
     /**
      * Shows a list of items defined by item id, filtered by specific item where applicable
      *
-     * @param integer $itemIDArray Item ID array
-     * @param integer $itemID Item ID to show specifically - must exist in array
+     * @param array<mixed>|int|string $itemIDArray Item ids, or one id
+     * @param int|string $itemID Item id to show on its own, or an empty string for the whole list
      * @param string $orderSQL Order by clause
      */
     public static function showItems($itemIDArray, $itemID = '', $orderSQL = '')
@@ -929,7 +934,7 @@ final class ItemScreen
             [$where, $params] = RecordListQuery::idWhere(RecordListQuery::ids(is_array($itemIDArray) ? $itemIDArray : []));
         }
         $countrecs = count((array)$itemIDArray);
-        $countBoolean = (($countrecs / SET_ITEMS_PAGE) > 1);
+        $countBoolean = (($countrecs / (int) SET_ITEMS_PAGE) > 1);
 
         $orderSQL = self::listOrder((string) $orderSQL, (string) $itemID === '');
         $pageSize = max(1, (int) SET_ITEMS_PAGE);
@@ -974,13 +979,14 @@ final class ItemScreen
                     $itemTypeName = (string) ($itemTypeRow['item_type_name'] ?? '');
                     $itemTypeID = $row['item_type_id'];
                 }
-                $action = Access::outputIfRoleAllowed('<a href="' . MAN_BASE_URL . '&option=show_attachments&item_id=' . $row['item_id'] . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= Access::outputIfRoleAllowed(' - <a href="' . MAN_BASE_URL . '&option=change_security&item_id=' . $row['item_id'] . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
-                $action .= Access::outputIfRoleAllowed(' - <a href ="' . MAN_BASE_URL . '&option=log_entry&item_id=' . $row['item_id'] . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= Access::outputIfRoleAllowed(' - ' . Blocks::link('?controller=full_page_view&option=print_item&item_id=' . $row['item_id'], TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
+                $itemId = (int) $row['item_id'];
+                $action = Access::outputIfRoleAllowed('<a href="' . Html::e(MAN_BASE_URL . '&option=show_attachments&item_id=' . $itemId) . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
+                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(MAN_BASE_URL . '&option=change_security&item_id=' . $itemId) . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
+                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(MAN_BASE_URL . '&option=log_entry&item_id=' . $itemId) . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
+                $action .= Access::outputIfRoleAllowed(' - ' . Blocks::link('?controller=full_page_view&option=print_item&item_id=' . $itemId, TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
                 $action .= Access::outputIfRoleAllowed(
                     ' - ' . Blocks::link(
-                        MAN_BASE_URL . '&option=delete_item&item_id=' . $row['item_id'],
+                        MAN_BASE_URL . '&option=delete_item&item_id=' . $itemId,
                         TXT_315,
                         '',
                         'URL',
@@ -993,7 +999,7 @@ final class ItemScreen
                 );
                 $listHtml .= Form::fields([
                     Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
-                    Wording::get('LA_84', 'TXT_84') => '<a href ="' . MAN_BASE_URL . '&option=show_item&item_id=' . $row['item_id'] . $logEntry . $attachments . '" class="URL">' . $title . '</a>',
+                    Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(MAN_BASE_URL . '&option=show_item&item_id=' . $itemId . $logEntry . $attachments) . '" class="URL">' . Html::e((string) $title) . '</a>',
                     TXT_225 => date(SET_DATE_FORMAT, $row['create_date']),
                     Wording::get('LA_226', 'TXT_226') => (string)$itemTypeName,
                     TXT_388 => $action,
@@ -1006,6 +1012,7 @@ final class ItemScreen
         }
         $paginationHTML = '';
         $hidden = '';
+        $pageset = '';
         if ($countBoolean) {
             $paginationHTML = '<div class="pagination pagination-centered "><ul>';
             $pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
@@ -1016,7 +1023,7 @@ final class ItemScreen
             }
             $istart = max(1, ($pageset - 3));
             $iend = max(10, $pageset + 3);
-            $iend = ($iend > (int)(($countrecs / SET_ITEMS_PAGE) + 1)) ? (int)($countrecs / SET_ITEMS_PAGE) + 1 : $iend;
+            $iend = ($iend > (int)(($countrecs / (int) SET_ITEMS_PAGE) + 1)) ? (int)($countrecs / (int) SET_ITEMS_PAGE) + 1 : $iend;
             if ($istart > 1 && $iend - $istart < 10) {
                 $istart = max($iend - 10, 1);
             }
@@ -1039,15 +1046,15 @@ final class ItemScreen
         }
         if ($itemID == '') {
             $hidden .= Form::hidden('currsort', '');
-            $hidden .= Form::hidden('search', (string)($pageset ?? ''));
+            $hidden .= Form::hidden('search', (string) $pageset);
             $hidden .= Form::hidden('countrecs', (string)$countrecs);
-            $hidden .= Form::hidden('search_type', (string)($_GET['option'] ?? ''));
+            $hidden .= Form::hidden('search_type', Request::query('option'));
         }
 
         $html = Form::form(
             Wording::get('LA_44', 'TXT_44'),
-            '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=my_items',
-            ['' => $sortLinks . $listHtml . ($paginationHTML ?? '') . ($hidden ?? '')],
+            '?controller=' . Request::queryPart('controller') . '&subcontroller=item_management_manage&option=my_items',
+            ['' => $sortLinks . $listHtml . $paginationHTML . $hidden],
             [],
             ['name' => 'repform', 'id' => 'repform']
         );
@@ -1133,7 +1140,7 @@ final class ItemScreen
             return;
         }
 
-        if (!$noItemTypes) {
+        if (!$noItemTypes && isset($valueArray, $displayArray)) {
             $inApplication = Page::current()->inApplication();
             $fields[$inApplication ? 'What is this' : Wording::get('LA_66', 'TXT_66')] = Form::select('item_type_id', $valueArray, $displayArray, $defaultItemType);
             Page::current()->setBody(Form::form(
@@ -1239,6 +1246,8 @@ final class ItemScreen
                 // Security is setup by default from the item
                 $columnArray = array('user_id', 'user_name');
                 $condition = "WHERE lastactive <> 'inactive' ORDER BY user_name ASC";
+                $userIDArray = [];
+                $userArray = [];
                 foreach (Database::select('users', $columnArray, $condition) as $row) {
                     $userIDArray[] = $row['user_id'];
                     $userArray[] = $row['user_name'];
@@ -1246,6 +1255,8 @@ final class ItemScreen
                 $fields[Wording::get('LA_551', 'TXT_551')] = Form::select('creator_security', $userIDArray, $userArray, $itemTypeFields['creator_security']);
                 $columnArray = array('user_id', 'user_name');
                 $condition = "WHERE lastactive <> 'inactive' AND role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
+                $filterdUserIDArray = [];
+                $filteredUserArray = [];
                 foreach (Database::select('users', $columnArray, $condition) as $row) {
                     $filterdUserIDArray[] = $row['user_id'];
                     $filteredUserArray[] = $row['user_name'];
@@ -1312,10 +1323,8 @@ final class ItemScreen
             // Override default value if previous values have already been selected.  user_security is a POST variable and is only set when the page is submitted
             if (!isset($values['user_security'])) {
                 $defaultValue = $row['default_value'];
-                $subMenuFilter = $row['default_value'];
             } else {
-                $defaultValue = @$itemTypeFields['custom_field_' . $row['custom_field_id']];
-                $subMenuFilter = @$itemTypeFields['custom_field_' . $row['custom_field_id']];
+                $defaultValue = (string) ($itemTypeFields['custom_field_' . $row['custom_field_id']] ?? '');
             }
 
             $fieldCheck->add($row, $prepend . $row['custom_field_id']);
@@ -1358,12 +1367,11 @@ final class ItemScreen
                     $columnArray = array('menu_value');
                     $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
                     $result = Database::select('custom_field_menu_values', $columnArray, $condition);
-                    // Build buildSelectDropdown array
+                    $menuArray = [];
                     foreach ($result as $menuRow) {
                         $menuArray[] = $menuRow['menu_value'];
-                    }// while
-                    $fields[$row['custom_field_name']] = Form::select('worker_field_menu_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValueArray['default_value']);
-                    unset($menuArray);
+                    }
+                    $fields[$row['custom_field_name']] = Form::select('worker_field_menu_' . $row['custom_field_id'], $menuArray, $menuArray, $defaultValueArray['default_value']);
                     break;
                 default :
                     $control = FieldControl::render(
@@ -1414,7 +1422,7 @@ final class ItemScreen
                 }
             }
         } elseif (ADD_ATTACHMENTS == 'yes') {
-            $fields[TXT_393] = Form::file('attachment', SET_MAX_ATTACHMENT * 1000000);
+            $fields[TXT_393] = Form::file('attachment', (string) ((int) SET_MAX_ATTACHMENT * 1000000));
             $formOptions['enctype'] = 'multipart/form-data';
         }
         $javascript = $fieldCheck->withTitle()->onclick();
@@ -1467,6 +1475,8 @@ final class ItemScreen
                     // Security is setup by default from the item
                     $columnArray = array('user_id', 'user_name');
                     $condition = "ORDER BY user_name ASC";
+                    $userIDArray = [];
+                    $userArray = [];
                     foreach (Database::select('users', $columnArray, $condition) as $row) {
                         $userIDArray[] = $row['user_id'];
                         $userArray[] = $row['user_name'];
@@ -1474,6 +1484,8 @@ final class ItemScreen
                     $itemField[Wording::get('LA_551', 'TXT_551')] = Form::select('creator_security', $userIDArray, $userArray, $itemFields['creator_security']);
                     $columnArray = array('user_id', 'user_name');
                     $condition = "WHERE role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
+                    $filterdUserIDArray = [];
+                    $filteredUserArray = [];
                     foreach (Database::select('users', $columnArray, $condition) as $row) {
                         $filterdUserIDArray[] = $row['user_id'];
                         $filteredUserArray[] = $row['user_name'];
@@ -1526,7 +1538,7 @@ final class ItemScreen
                         $groupMembership = implode(', ', $names);
                     }
                     $changeSecurityURL = Blocks::link(
-                        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $itemID,
+                        '?controller=' . Request::queryPart('controller') . '&subcontroller=item_management_manage&option=change_security&item_id=' . (int) $itemID,
                         TXT_268,
                         '',
                         'btn btn--sm'
@@ -1575,15 +1587,16 @@ final class ItemScreen
                     }
                     // Override database value if values have already been selected
                     if (!isset($values['item_id'])) {
-                        $value = @$itemFields['custom_field_' . $row['custom_field_id']];
-                        $menuValue = @$itemFields['custom_field_' . $row['custom_field_id']];
+                        $value = (string) ($itemFields['custom_field_' . $row['custom_field_id']] ?? '');
+                        $menuValue = $value;
                     } else {
-                        $value = @stripslashes($values['custom_field_' . $row['custom_field_id']]);
-                        $menuValue = @$values['custom_field_' . $row['custom_field_id']];
+                        $value = stripslashes((string) ($values['custom_field_' . $row['custom_field_id']] ?? ''));
+                        $menuValue = (string) ($values['custom_field_' . $row['custom_field_id']] ?? '');
                     }
 
                     $fieldCheck->add($row, $prepend . $row['custom_field_id']);
 
+                    $hiddenValue = '';
                     if (($itemRole >= 4) and ($row['field_type'] != 'fieldSeparator')) {//Users and viewers can read only so we override the field type
                         $hiddenValue = $value;
                         if ($row['field_type'] != FieldTypes::TEXT_AREA) {
@@ -1639,17 +1652,19 @@ final class ItemScreen
                             );
                             break;
                         case 'URL' :
+                            $url = '';
                             if ($value != '') {
                                 $http = (!stristr($value, 'http') and !stristr($value, 'https')) ? 'http://' : '';
                                 $url = ' ' . Blocks::link($http . $value, TXT_480, 'URL', SET_IMAGE_PATH . 'hyperlink.png', '', '_blank');
                             }
-                            $itemField[$row['custom_field_name']] = Form::url('custom_field_' . $row['custom_field_id'], $value) . @$url;
+                            $itemField[$row['custom_field_name']] = Form::url('custom_field_' . $row['custom_field_id'], $value) . $url;
                             break;
                         case 'dynamicURL' :
+                            $url = '';
                             if ($value != '') {
                                 $url = ' ' . Blocks::link(str_replace('<?php echo INSERT; ?>', $value, $row['data']), TXT_480, 'URL', SET_IMAGE_PATH . 'hyperlink.png', '', '_blank');
                             }
-                            $itemField[$row['custom_field_name']] = Form::text('custom_field_' . $row['custom_field_id'], $value) . @$url;
+                            $itemField[$row['custom_field_name']] = Form::text('custom_field_' . $row['custom_field_id'], $value) . $url;
                             break;
                         case 'workerFieldMenu' :
                             $columnArray = array('default_value');
@@ -1659,12 +1674,11 @@ final class ItemScreen
                             $columnArray = array('menu_value');
                             $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
                             $result = Database::select('custom_field_menu_values', $columnArray, $condition);
-                            // Build buildSelectDropdown array
+                            $menuArray = [];
                             foreach ($result as $menuRow) {
                                 $menuArray[] = $menuRow['menu_value'];
-                            }// while
-                            $itemField[$row['custom_field_name']] = Form::select('worker_field_menu_' . $row['custom_field_id'], @$menuArray, @$menuArray, $defaultValueArray['default_value']);
-                            unset($menuArray);
+                            }
+                            $itemField[$row['custom_field_name']] = Form::select('worker_field_menu_' . $row['custom_field_id'], $menuArray, $menuArray, $defaultValueArray['default_value']);
                             break;
                         default :
                             $control = FieldControl::render(
@@ -1900,8 +1914,9 @@ final class ItemScreen
     }
 
     /**
-     * Takes information posted from the new item page and adds the item to the database then renders a succcess page
-     * @return Rendered HTML response
+     * Takes information posted from the new item page and adds the item to the database, then shows the result.
+     *
+     * @return void
      */
     public static function addItem()
     {
@@ -1977,9 +1992,10 @@ final class ItemScreen
     /**
      * Select target item type to copies or move an item to
      * s
-     * @param $itemID Item ID
-     * @param $transformMethod Copy or Move
-     * @return unknown_type
+     * @param mixed $itemID Item ID
+     * @param mixed $transformType Copy or move
+     * @param mixed $targetItemTypeID Item type to land on
+     * @return void
      */
     public static function transformItem($itemID, $transformType, $targetItemTypeID)
     {
@@ -2252,8 +2268,8 @@ final class ItemScreen
     /**
      * Shows the selected items log
      *
-     * @param integer $itemID Item ID
-     * @return Return the log in html format
+     * @param mixed $itemID Item ID
+     * @return string The log as HTML
      */
     // Refactored snippet: render logs into a vertical card (escape user content, keep line breaks & double-spaces)
     public static function showItemLog($itemID, string $title = '', string $empty = '')
@@ -2323,8 +2339,8 @@ final class ItemScreen
             $listValues = [0 => ''];
             $listDisplayValues = [0 => TXT_108];
             foreach ($rows as $r) {
-                $id = $r['custom_field_id'] ?? $r[0] ?? '';
-                $name = $r['custom_field_name'] ?? $r[1] ?? '';
+                $id = $r['custom_field_id'] ?? '';
+                $name = $r['custom_field_name'] ?? '';
                 $listValues[] = $id;
                 $listDisplayValues[] = $name;
             }
@@ -2367,8 +2383,8 @@ final class ItemScreen
         $listDisplayValues[0] = TXT_105;
         $i = 1;
         foreach ($result as $row) {
-            $listValues[$i] = $row[0];
-            $listDisplayValues[$i] = $row[1];
+            $listValues[$i] = $row['user_id'];
+            $listDisplayValues[$i] = $row['user_name'];
             $i++;
         }
         // Create the list box
@@ -2386,8 +2402,8 @@ final class ItemScreen
         $listDisplayValues[0] = TXT_104;
         $i = 1;
         foreach ($result as $row) {
-            $listValues[$i] = $row[0];
-            $listDisplayValues[$i] = $row[1];
+            $listValues[$i] = $row['group_id'];
+            $listDisplayValues[$i] = $row['group_name'];
             $i++;
         }
         // Create the list box
@@ -2400,6 +2416,8 @@ final class ItemScreen
         $columnArray = array('item_type_id', 'item_type_name');
         $result = Database::select('item_types', $columnArray);
         // Set the selected option to 'All item definitions'
+        $listValues = [];
+        $listDisplayValues = [];
         $i = 0;
         if ($showAll == true) {
             $listValues[0] = '';
@@ -2410,13 +2428,13 @@ final class ItemScreen
         // Display all item types or only a subset based on the filter array
         foreach ($result as $row) {
             if ($filterArray != '') {
-                if (trim($filterArray[$a]) == $row[1]) {
-                    $listValues[$i] = $row[0];
-                    $listDisplayValues[$i] = $row[1];
+                if (trim((string) ($filterArray[$a] ?? '')) == (string) ($row['item_type_name'] ?? '')) {
+                    $listValues[$i] = $row['item_type_id'];
+                    $listDisplayValues[$i] = $row['item_type_name'];
                 }
             } else {
-                $listValues[$i] = $row[0];
-                $listDisplayValues[$i] = $row[1];
+                $listValues[$i] = $row['item_type_id'];
+                $listDisplayValues[$i] = $row['item_type_name'];
             }
             $a++;
             $i++;
@@ -2494,7 +2512,7 @@ final class ItemScreen
             \Adlexone\Data\GroupMembership::setItemGroups((int) $itemID, $ids);
         } catch (\Throwable $e) {
             // Render an error response (keeps behaviour simple and user-friendly)
-            View::respond(TXT_321 ?? 'Update failed', $e->getMessage());
+            View::respond(TXT_321, $e->getMessage());
             return;
         }
 
@@ -2605,7 +2623,7 @@ final class ItemScreen
         $backHref = MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $showLog . $attachments;
         $fields = [
             '' => $list,
-            TXT_393 => Form::file('attachment', (string)(SET_MAX_ATTACHMENT * 1000000)),
+            TXT_393 => Form::file('attachment', (string) ((int) SET_MAX_ATTACHMENT * 1000000)),
         ];
         Page::current()->setBody(Form::form(
             TXT_389,

@@ -11,6 +11,7 @@ use Adlexone\Application\ApplicationSettings;
 use Adlexone\support\Database;
 use Adlexone\support\RssFeed;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -82,7 +83,8 @@ final class SearchScreen
          * Logic to render the appropriate template or call wrapper functions
          * Option is captured from the value selected via a hyperlink
          */
-        switch (@$_GET['option']) {
+        $option = Request::query('option');
+        switch ($option) {
             case 'show_item_search' :
             case 'show_search_results' :
                 if (Page::current()->inApplication()) {
@@ -90,36 +92,32 @@ final class SearchScreen
                     ApplicationSearch::open();
                     break;
                 }
-                if (@$_GET['option'] === 'show_search_results') {
+                if ($option === 'show_search_results') {
                     Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                     self::searchResults();
                     break;
                 }
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                $itemTypes = $_GET['item_types'] ?? '';
-                if ($itemTypes === '' && Page::current()->inApplication()) {
-                    $allowed = self::applicationSearchTypeIds();
-                    $itemTypes = $allowed !== [] ? implode(',', $allowed) : '';
-                }
-                $itemTypes = preg_replace('/[^0-9,]/', '', (string) $itemTypes) ?? '';
+                $itemTypes = preg_replace('/[^0-9,]/', '', Request::query('item_types')) ?? '';
                 $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
                 self::showAdvancedItemSearch($filter);
                 break;
             case 'show_saved_searches' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                $application = (string)($_GET['application'] ?? '');
-                if ($application === '' && str_starts_with((string)($_GET['controller'] ?? ''), 'app_')) {
-                    $application = (string)$_GET['controller'];
+                $application = Request::query('application');
+                $controller = Request::query('controller');
+                if ($application === '' && str_starts_with($controller, 'app_')) {
+                    $application = $controller;
                 }
                 self::showSavedSearches($_SESSION['access_user_id'], $application);
                 break;
             case 'saved_search' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::savedSearch($_GET['id'], $_SESSION['access_user_id'], @$_GET['global']);
+                self::savedSearch($_GET['id'], $_SESSION['access_user_id'], Request::query('global'));
                 break;
             case 'delete_saved_search' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::deleteSavedSearch($_GET['id'], $_SESSION['access_user_id'], @$_GET['scope']);
+                self::deleteSavedSearch($_GET['id'], $_SESSION['access_user_id'], Request::query('scope'));
                 break;
             case 'quick_search' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
@@ -187,7 +185,7 @@ final class SearchScreen
      * the database to say that they have been returned
      *
      * @param $knowledgeIds
-     * @return none
+     * @return void
      */
     public static function updateKnoweldgeCount($knowledgeIds)
     {
@@ -196,7 +194,7 @@ final class SearchScreen
             if (substr($values, -1) == '*') {
                 $values = substr($values, 0, -1);
                 $validId = false;
-                if (Database::exists('items', 'item_id = ? AND item_type_id = ?', [(int) $values, (int) APP_COUNT_ITEM_TYPE])) {
+                if (defined('APP_COUNT_ITEM_TYPE') && Database::exists('items', 'item_id = ? AND item_type_id = ?', [(int) $values, (int) APP_COUNT_ITEM_TYPE])) {
                     $validId = true;
                 }
             } else {
@@ -208,14 +206,13 @@ final class SearchScreen
                 if (Database::exists('system_log', 'item_id = ? AND event_id = ?', [$values, $event_id])) {
                     Database::run('UPDATE system_log SET event_counter = event_counter + 1 WHERE item_id = ? AND event_id = ?', [$values, $event_id]);
                 } else {
-                    unset($columnArray);
-                    $columnArray['item_id'] = $values;
-                    $columnArray['create_date'] = time();
-                    $columnArray['event_counter'] = 1;
-                    $columnArray['event_id'] = $event_id;
-                    $columnArray['security_id'] = $_SESSION['access_user_id'];
-                    Database::insert('system_log', $columnArray);
-                    unset($columnArray);
+                    Database::insert('system_log', [
+                        'item_id' => $values,
+                        'create_date' => time(),
+                        'event_counter' => 1,
+                        'event_id' => $event_id,
+                        'security_id' => $_SESSION['access_user_id'],
+                    ]);
                 }
 
             }
@@ -355,10 +352,11 @@ final class SearchScreen
     /**
      * Shows a list of items defined by item id, filtered by specific item where applicable
      *
-     * @param integer $itemIDArray Item ID array
-     * @param integer $itemID Item ID to show specifically - must exist in array
+     * @param array<mixed>|int|string $itemIDArray Item ids, or one id
+     * @param int|string $itemID Item id to show on its own, or an empty string for the whole list
      * @param string $orderSQL Order by clause
-     * @param $userID User ID
+     * @param mixed $userID User ID
+     * @param mixed $savedSearch Saved search text
      */
     public static function showItems1($itemIDArray, $itemID = '', $orderSQL = '',  $userID = '', $savedSearch='')
     {
@@ -366,6 +364,8 @@ final class SearchScreen
 
     	$knowledgeArticlesArray = array();
 
+    	$condition = 'item_id = ?';
+    	$listParams = [0];
     	if (is_array($itemIDArray)){
     		if ($_SESSION['access_role_id'] >1){ //Everyone except admins and global admins
     			$uid = (int) $_SESSION['access_user_id'];
@@ -431,7 +431,6 @@ final class SearchScreen
     			}
     		} else {
     			//build POSTed search hading
-    			if (is_array($_POST)) {
     				foreach($_POST as $key => $value) {
     					if (substr($key,0,4)== "disp") {
     						$safeColumn = RecordListQuery::column(substr((string) $key, 5));
@@ -466,13 +465,10 @@ final class SearchScreen
     								case 'disp_user_security':
     									$headTitle[] = Access::outputIfRoleAllowed(Form::sortButton('user_security', Wording::get('LA_269', 'TXT_269')), $_SESSION['access_role_id'], 4);
     									break;
-
-    									break;
     							}
     						}
     					}
     				}
-    			}
     		}
     //		// Override item id list if a specific id has been requested
     //		if ($itemID != '') {
@@ -515,30 +511,25 @@ final class SearchScreen
                 }
             } else {
                 // Ensure we have an array of IDs
-                if (!is_array($itemIDArray) || count($itemIDArray) === 0) {
+                if (count($itemIDArray) === 0) {
                     $condition = 'item_id = ?';
                     $listParams = [0];
                 } else {
                     // normalize incoming ID arrays to flat integer lists
                     $itemIDArray = array_values(array_map('intval', $itemIDArray));
-    // Normalize $userItemArray which may be an array of rows (e.g. ['item_id'=>...]) or a flat list
                     $userItemIds = [];
-                    if (isset($userItemArray) && is_array($userItemArray)) {
-                        $first = reset($userItemArray);
-                        if (is_array($first) && array_key_exists('item_id', $first)) {
-                            // array of rows from Database::buildArray
-                            $userItemIds = array_values(array_map('intval', array_column($userItemArray, 'item_id')));
-                        } else {
-                            // already a flat list
-                            $userItemIds = array_values(array_map('intval', $userItemArray));
-                        }
+                    $first = $userItemArray === [] ? null : reset($userItemArray);
+                    if (is_array($first) && array_key_exists('item_id', $first)) {
+                        $userItemIds = array_values(array_map('intval', array_column($userItemArray, 'item_id')));
+                    } else {
+                        $userItemIds = array_values(array_map('intval', $userItemArray));
                     }
 
     // perform permission-aware filtering using the normalized lists
                     if ($userItemIds !== []) {
                         $allowed = array_values(array_intersect($itemIDArray, $userItemIds));
                     } else {
-                        $allowed = array_values($itemIDArray);
+                        $allowed = $itemIDArray;
                     }
 
                     [$condition, $listParams] = RecordListQuery::idWhere(array_map('intval', $allowed));
@@ -563,7 +554,7 @@ final class SearchScreen
             } else {
                 $countrecs = (int)$countrecs;
             }
-    		$countBoolean = (($countrecs / SET_ITEMS_PAGE) > 1);
+    		$countBoolean = (($countrecs / (int) SET_ITEMS_PAGE) > 1);
     		$orderSQL = RecordListQuery::order((string) $orderSQL);
     		$pageSize = max(1, (int) SET_ITEMS_PAGE);
     		if ($countBoolean) {
@@ -590,10 +581,14 @@ final class SearchScreen
     		$html = Form::fields($fields);
     		$i = 0;
     		$countUpdate = (defined('APP_COUNT_ITEM_TYPE')) ? '&event_id=view_item' : '';
+    		$formHTML = '';
+    		$controller = Request::queryPart('controller');
     		if (count($result) > 0) {
     			$itemTypeID = '';
+    			$itemTypeName = '';
     			$tableRows = '';
     			foreach ($result as $row) {
+    				$cellData = [];
     				foreach ($columnArray as $value) {
     					switch ($value){
     						case 'item_id':
@@ -607,7 +602,8 @@ final class SearchScreen
     							}
     							$logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     							$attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-    							$cellData[] = '<a href ="?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_item&item_id=' . $row['item_id'] . $logEntry . $attachments. $countUpdate . '" class="URL">' . $title . '</a>';
+    							$showHref = '?controller=' . $controller . '&subcontroller=item_management_manage&option=show_item&item_id=' . (int) $row['item_id'] . $logEntry . $attachments . $countUpdate;
+    							$cellData[] = '<a href="' . Html::e($showHref) . '" class="URL">' . Html::e((string) $title) . '</a>';
     							break;
     						case 'create_date':
     							$cellData[] = date(SET_DATE_FORMAT, $row['create_date']);
@@ -669,7 +665,7 @@ final class SearchScreen
     				}
     				$actions = (string) Access::outputIfRoleAllowed(
     				    Blocks::link(
-    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=log_entry&item_id=' . $row['item_id'],
+    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=log_entry&item_id=' . (int) $row['item_id'],
     				        TXT_246
     				    ),
     				    $_SESSION['access_role_id'],
@@ -678,7 +674,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . $row['item_id'],
+    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . (int) $row['item_id'],
     				        TXT_389
     				    ),
     				    $_SESSION['access_role_id'],
@@ -687,7 +683,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=change_security&item_id=' . $row['item_id'],
+    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=change_security&item_id=' . (int) $row['item_id'],
     				        TXT_28
     				    ),
     				    $_SESSION['access_role_id'],
@@ -709,7 +705,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=' . $_GET['controller'] . '&subcontroller=item_management_manage&option=delete_item&item_id=' . $row['item_id'],
+    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=delete_item&item_id=' . (int) $row['item_id'],
     				        TXT_315,
     				        '', // spriteName
     				        'URL',
@@ -731,8 +727,9 @@ final class SearchScreen
     		$html = Form::open(\Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results','POST','form-horizontal');
 
     		$html .= $formHTML;
-    		unset($tableRows,$cellData);
+    		unset($tableRows);
     		//Display next/prev menu
+    		$pageset = '';
     		if ($countBoolean) {
     			$paginationHTML = '<div class="pagination pagination-centered "><ul>';
     			$pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
@@ -743,7 +740,7 @@ final class SearchScreen
     			}
     			$istart = max(1,($pageset - 3));
     			$iend = max(10,$pageset + 3);
-    			$iend = ($iend > (int)(($countrecs / SET_ITEMS_PAGE) + 1)) ? (int)($countrecs / SET_ITEMS_PAGE) + 1 : $iend;
+    			$iend = ($iend > (int)(($countrecs / (int) SET_ITEMS_PAGE) + 1)) ? (int)($countrecs / (int) SET_ITEMS_PAGE) + 1 : $iend;
     			if ($istart > 1 && $iend - $istart < 10) {
     				$istart = max($iend - 10,1);
     			}
@@ -765,9 +762,9 @@ final class SearchScreen
     		}
     		$html .= Form::hidden('currsort','');
     		unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
-    		$html .= Form::hidden('search',@$pageset);
+    		$html .= Form::hidden('search', (string) $pageset);
     		$html .= Form::hidden('countrecs',$countrecs);
-    		$html .= Form::hidden('search_type',$_GET['option']);
+    		$html .= Form::hidden('search_type', Request::query('option'));
     		$html .= $headHtml;
     		$html .= '</form>';
     	}else{
@@ -895,13 +892,13 @@ final class SearchScreen
     {
 
         // Handling accessing the page from option=show_search_results with no POSTed data
-        if (empty($_POST['search']) and empty($_POST['new_favourite']) and @$_POST['item_type_id'] == '' and empty($_POST['search_type'])) {
+        if (empty($_POST['search']) and empty($_POST['new_favourite']) and Request::posted('item_type_id') == '' and empty($_POST['search_type'])) {
             View::respond(TXT_548);
             return;
         }
 
         // Handle item id filtering
-    if ((isset($_POST['item_type_id']) && ($_POST['item_type_id'] !== '' || $_POST['item_type_id'] === '0')) && empty($_POST['search']) && empty($_POST['new_favourite'])) {
+    if (isset($_POST['item_type_id']) && $_POST['item_type_id'] !== '' && empty($_POST['search']) && empty($_POST['new_favourite'])) {
                 self::showAdvancedItemSearch($_POST['item_type_id']);
                 return;
             }
@@ -1172,7 +1169,7 @@ final class SearchScreen
 
         // Show the records that match the saved filters.
         $searchID = (int) $searchID;
-        if (@$_GET['global'] == true) {
+        if ($global == true) {
             $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND user = 'all'", [$searchID]);
         } elseif ($_SESSION['access_role_id'] <= 2) {
             $result = Database::rows('SELECT * FROM saved_searches WHERE search_id = ?', [$searchID]);
@@ -1200,29 +1197,30 @@ final class SearchScreen
 
             $savedQuery = \Adlexone\Data\SavedSearch::resolve($row);
             $built = Database::rows($savedQuery->sql, $savedQuery->params);
-
-            // Normalize to flat list of item IDs when buildArray returned rows
-            if (is_array($built) && count($built) > 0 && is_array($built[0])) {
-                $itemIDs = array_values(array_filter(array_column($built, 'item_id'), 'strlen'));
-            } elseif (is_array($built)) {
-                $itemIDs = $built;
-            } else {
-                $itemIDs = [];
+            $itemIDs = [];
+            if ($built !== []) {
+                $itemIDs = array_values(array_filter(
+                    array_column($built, 'item_id'),
+                    static fn ($id): bool => is_scalar($id) && (string) $id !== ''
+                ));
             }
 
             self::showItems($itemIDs, '', 'item_id DESC', $_SESSION['access_user_id']);
         } else {
             //Prep for output of XML RSS feed
             ob_clean();
-            $savedQuery = \Adlexone\Data\SavedSearch::resolve($row);
+            $search = $row;
+            $savedQuery = \Adlexone\Data\SavedSearch::resolve($search);
             $itemArray = Database::rows($savedQuery->sql, $savedQuery->params);
+            $linkArray = [];
+            $titleArray = [];
             foreach ($itemArray as $id) {
                 $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
-                $row = $result[0] ?? null;
-                $linkArray[] = Blocks::link('?controller=' . $_GET['controller'] . '&subcontroller=search_management_manage&option=saved_search&id=' . $row['item_id'], '', 'URL');
-                $titleArray[] = $row['item_title'];
+                $item = $result[0] ?? null;
+                $linkArray[] = Blocks::link('?controller=' . Request::queryPart('controller') . '&subcontroller=search_management_manage&option=saved_search&id=' . (int) ($item['item_id'] ?? 0), '', 'URL');
+                $titleArray[] = (string) ($item['item_title'] ?? '');
             }
-            RssFeed::send(SET_DATE_FORMAT, $row['search_name'], $row['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
+            RssFeed::send(SET_DATE_FORMAT, $search['search_name'], $search['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
         }
     }
 
@@ -1241,6 +1239,7 @@ final class SearchScreen
     public static function showItemTypeMenu($filter = '')
     {
         $filter = self::constrainSearchTypeFilter($filter);
+        $condition = '';
         if (is_array($filter)) {
             $i = 0;
             foreach ($filter as $id) {
@@ -1283,7 +1282,7 @@ final class SearchScreen
             }
         }
         // Create the list box
-        return Form::select('item_type_id', $listValues, $listDisplayValues, @$itemTypeID, 'onChange="document.itemSearch.submit();"');
+        return Form::select('item_type_id', $listValues, $listDisplayValues, '', 'onChange="document.itemSearch.submit();"');
     }
 
     public static function showSecurityGroups()
@@ -1561,7 +1560,7 @@ final class SearchScreen
             $fields[''] = Form::hidden('security', 'mine');
         }
 
-        $fields[TXT_350] = self::searchApplicationMenu((string)($_GET['controller'] ?? ''));
+        $fields[TXT_350] = self::searchApplicationMenu(Request::query('controller'));
 
         $javascript = Form::fieldCheck(TXT_468, [''], ['search_name'], [''], [TXT_367], [true]);
 

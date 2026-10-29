@@ -17,11 +17,7 @@ jobs:
       - name: Syntax
         run: find src layouts bootstrap public bin site -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Tests
-        run: |
-          set -e
-          for f in tests/*.php; do
-            php "$f"
-          done
+        run: php tests/run.php
       - name: PHPStan
         run: |
           curl -fsSL -o /tmp/phpstan.phar https://github.com/phpstan/phpstan/releases/download/2.1.22/phpstan.phar

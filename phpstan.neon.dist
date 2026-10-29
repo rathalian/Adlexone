@@ -5,13 +5,53 @@ parameters:
     level: 5
     bootstrapFiles:
         - phpstan-bootstrap.php
+    dynamicConstantNames:
+        - MAN_BASE_URL
+        - SET_INSTALL_PATH
+        - SET_CONFIGURATION_PATH
+        - SET_ATTACHMENTS_PATH
+        - SET_IMAGE_PATH
+        - SET_THEME
+        - DSN
+        - SET_CUSTOM_FIELDS_IN_SEARCH
+        - SET_OWNER_MENU
+        - SET_ITEMS_PAGE
+        - SET_FORM_FIELD_HEIGHT
+        - SET_SECURE_TYPE
+        - SET_LOG_ENTRY
+        - SET_ATTACHMENTS
+        - ADD_ATTACHMENTS
+        - SET_MAX_ATTACHMENT
+        - SET_DATE_FORMAT
+        - SET_TIMEZONE
+        - SET_DEFAULT_THEME
+        - SET_DEFAULT_APPLICATION
+        - SET_DEFAULT_ITEM_TYPE
+        - SET_DEFAULT_LANGUAGE
+        - USER_REG_ACTION
+        - SET_HOME_LEAD
+        - SET_PUBLIC_BASE_URL
+        - SET_ALLOWED_HOSTS
+        - SET_TRUSTED_PROXIES
+        - SET_DEBUG_MODE
+        - SET_SHOW_SQL
+        - SET_ERROR_REPORTING_LEVEL
+        - AUTH_HELP
+        - AUTH_LOCAL_ENABLED
+        - AUTH_LOCAL_ALLOW_REGISTRATION
+        - AUTH_OAUTH_ENABLED
+        - AUTH_OAUTH_AUTO_REDIRECT
+        - AUTH_OAUTH_CONNECTIONS_JSON
+        - SET_SMTP_HOST
+        - SET_SMTP_PORT
+        - SET_SMTP_USER
+        - SET_SMTP_PASSWORD
     paths:
         - src/Http
         - src/Auth
         - src/Database
         - src/support
-        - src/Screen/ItemScreen.php
-        - src/Screen/SearchScreen.php
+        - src/Screen
     excludePaths:
         - src/support/SharedMethods.php
     treatPhpDocTypesAsCertain: false

@@ -20,6 +20,24 @@ final class Request
         return is_scalar($value) ? trim((string) $value) : $default;
     }
 
+    /**
+     * A posted scalar, trimmed. A missing key or a list is the default.
+     */
+    public static function posted(string $key, string $default = ''): string
+    {
+        $value = $_POST[$key] ?? null;
+
+        return is_scalar($value) ? trim((string) $value) : $default;
+    }
+
+    /**
+     * A query value encoded for a link.
+     */
+    public static function queryPart(string $key): string
+    {
+        return rawurlencode(self::query($key));
+    }
+
     public static function has(string $key): bool
     {
         return self::query($key) !== '';

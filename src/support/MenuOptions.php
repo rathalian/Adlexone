@@ -43,7 +43,8 @@ final class MenuOptions
         self::ensureParentColumn();
         self::importCommaChildren();
         self::importMultiLevelMenus();
-        Database::run("UPDATE custom_fields SET field_type = 'menu' WHERE field_type IN ('subMenu', 'subMenuChild', 'multiLevelMenu')");
+        [$clause, $params] = FieldTypes::sqlInList(FieldTypes::MENU, false);
+        Database::run("UPDATE custom_fields SET field_type = 'menu' WHERE {$clause}", $params);
         self::loadLinks();
     }
 

@@ -5,6 +5,7 @@ use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
@@ -26,7 +27,7 @@ final class PrintScreen
          * Logic to render the appropriate template or call wrapper functions
          * Option is captured from the value selected via a hyperlink
          */
-        switch (@$_GET['option']) {
+        switch (Request::query('option')) {
         	case 'print_item' :
         		self::printItem($_GET['item_id']);
         		break;

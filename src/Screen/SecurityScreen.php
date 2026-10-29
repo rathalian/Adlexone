@@ -7,6 +7,7 @@ use Adlexone\Application\ApplicationStore;
 use Adlexone\support\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
+use Adlexone\Http\Request;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Html\Blocks;
@@ -29,7 +30,7 @@ final class SecurityScreen
          */
         define('SEC_BASE_URL', '?manage=security');
 
-        $securityOption = (string)($_GET['option'] ?? '');
+        $securityOption = Request::query('option');
         if ($securityOption !== 'modify_user') {
             $groupSectionOptions = ['manage_groups', 'new_group', 'modify_group', 'add_group', 'update_group', 'delete_group'];
             if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
@@ -88,7 +89,7 @@ final class SecurityScreen
          * Logic to render the appropriate template or call wrapper functions
          * Option is captured from the value selected via a hyperlink
          */
-        switch (@$_GET['option']) {
+        switch ($securityOption) {
             case 'manage_users' :
             case 'manage_users_groups' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
