@@ -30,6 +30,7 @@ $check(!str_contains($search, "\$_GET['controller']"), 'search links do not read
 $check(!str_contains($item, "\$_GET['controller']"), 'item links do not read the controller straight from the query');
 $check(!str_contains($item, 'Request::queryPart(\'controller\')'), 'the item screen does not encode a controller for its links');
 $check(!str_contains($search, 'Request::queryPart(\'controller\')'), 'the search screen does not encode a controller for its links');
+$check(!str_contains($search, "Request::query('controller')"), 'the search screen does not read a controller');
 $check(!str_contains($item, 'controller='), 'the item screen does not put controller in an address');
 $check(!str_contains($search, 'controller='), 'the search screen does not put controller in an address');
 $check(!str_contains($item, 'subcontroller='), 'the item screen does not put subcontroller in an address');

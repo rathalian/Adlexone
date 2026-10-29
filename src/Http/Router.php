@@ -26,8 +26,7 @@ use Adlexone\Screen\SiteSettingsScreen;
  *
  * Home is the site root. Manage pages use manage. An application uses
  * application and nav. item and search name the record on that page.
- * Older controller, subcontroller, and screen names are copied onto manage
- * before the screen is chosen. A name that is not in the map is not opened.
+ * A name that is not in the map is not opened.
  */
 final class Router
 {
@@ -70,50 +69,24 @@ final class Router
     ];
 
     /**
-     * Public or older name => canonical screen key.
+     * Public name => canonical screen key.
      *
      * @var array<string, string>
      */
     private const ALIASES = [
-        'quick_launch' => 'home',
         'print' => 'full_page_view',
         'records' => 'item_management_manage',
         'search' => 'search_management_manage',
         'activity' => 'home_activity',
         'assigned' => 'home_assigned',
-        'manage' => 'manage_main',
         'applications' => 'manage_applications',
         'builder' => 'manage_builder',
         'fields' => 'manage_fields',
         'item-types' => 'manage_item_types',
         'items' => 'manage_items',
         'rules' => 'manage_actions',
-        'workflow' => 'manage_actions',
         'security' => 'manage_security',
         'settings' => 'manage_settings',
-        'portal' => 'manage_portal',
-        'administration_main' => 'manage_main',
-        'administration_applications' => 'manage_applications',
-        'administration_item_settings' => 'manage_items',
-        'administration_actions' => 'manage_actions',
-        'administration_security' => 'manage_security',
-        'administration_settings' => 'manage_settings',
-        'administration_portal' => 'manage_portal',
-    ];
-
-    /**
-     * Older screen names copied onto manage. The original query stays so the
-     * engine can still read subcontroller while callers move across.
-     *
-     * @var array<string, string>
-     */
-    private const LEGACY_MANAGE = [
-        'item_management_manage' => 'records',
-        'search_management_manage' => 'search',
-        'full_page_view' => 'print',
-        'home_activity' => 'activity',
-        'home_assigned' => 'assigned',
-        'palette' => 'palette',
     ];
 
     public static function requested(): string
@@ -123,11 +96,7 @@ final class Router
         if ($manage !== '') {
             return $manage;
         }
-        $controller = self::queryName(Request::query('controller'));
-        if ($controller !== '' && $controller !== 'application') {
-            return $controller;
-        }
-        if ($controller === 'application' || Request::has('app')) {
+        if (Request::has('application') || Request::has('app')) {
             return 'application';
         }
 
@@ -145,7 +114,7 @@ final class Router
     }
 
     /**
-     * Item or search file when the request names a record or an older engine parameter.
+     * Item or search screen when the request names a record or one of those actions.
      */
     public static function engine(): ?string
     {
@@ -163,20 +132,6 @@ final class Router
             Request::fill('option', 'saved_search');
 
             return self::SEARCH;
-        }
-        $engine = Request::query('engine');
-        if ($engine === 'items') {
-            return self::ITEMS;
-        }
-        if ($engine === 'search') {
-            return self::SEARCH;
-        }
-        $sub = self::queryName(Request::query('subcontroller'));
-        if ($sub === self::ITEMS || $sub === self::SEARCH) {
-            return $sub;
-        }
-        if (Request::has('item_id')) {
-            return self::ITEMS;
         }
         $option = Request::query('option');
         if (in_array($option, self::ITEM_OPTIONS, true)) {
@@ -245,7 +200,7 @@ final class Router
     }
 
     /**
-     * Where a stored home controller should send the person after sign-in.
+     * Where a stored home should send the person after sign-in.
      */
     public static function homeTarget(string $stored): string
     {
@@ -258,87 +213,17 @@ final class Router
             return self::page();
         }
         $name = self::queryName($stored);
-        if ($name === '' || self::canonical($name) === 'home') {
-            return self::page();
-        }
-        $manage = self::manageName($name);
-        if ($manage === '') {
-            $manage = self::preferredManage(self::canonical($name));
-        }
-        if ($manage !== '') {
-            return self::manageUrl($manage);
+        if ($name !== '' && isset(self::ALIASES[$name])) {
+            return self::manageUrl($name);
         }
 
         return self::page();
-    }
-
-    /**
-     * Copy an older address onto manage when the request has not named one.
-     * The original parameters stay in the query.
-     */
-    public static function absorb(): void
-    {
-        if (Request::has('manage')) {
-            return;
-        }
-        $controller = self::queryName(Request::query('controller'));
-        if ($controller === 'application' || Request::has('application') || Request::has('app')) {
-            return;
-        }
-        $screen = self::queryName(Request::query('screen'));
-        foreach ([$screen, $controller] as $name) {
-            if ($name === '') {
-                continue;
-            }
-            $manage = self::manageName($name);
-            if ($manage !== '') {
-                Request::set('manage', $manage);
-                return;
-            }
-        }
-        if ($screen !== '') {
-            Request::set('manage', $screen);
-            return;
-        }
-        if ($controller !== '') {
-            return;
-        }
-        $engine = Request::query('engine');
-        if ($engine === 'items') {
-            Request::set('manage', 'records');
-            return;
-        }
-        if ($engine === 'search') {
-            Request::set('manage', 'search');
-            return;
-        }
-        $sub = self::manageName(self::queryName(Request::query('subcontroller')));
-        if ($sub !== '') {
-            Request::set('manage', $sub);
-        }
     }
 
     public static function open(string $name): void
     {
         Request::prepare();
         $canonical = self::canonical(self::queryName($name));
-        if ($canonical === 'manage_main') {
-            $sub = self::queryName(Request::query('subcontroller'));
-            $forward = [
-                'manage_security',
-                'manage_fields',
-                'manage_item_types',
-                'manage_items',
-                'manage_actions',
-                'manage_settings',
-            ];
-            if (in_array($sub, $forward, true)) {
-                self::open($sub);
-                return;
-            }
-            header('Location: ./');
-            exit;
-        }
         if ($canonical === 'manage_items') {
             $option = Request::query('option');
             $typeOptions = [
@@ -375,7 +260,7 @@ final class Router
         ) {
             Access::deny();
         }
-        self::absorbRecord($canonical);
+        self::fillRecord($canonical);
         $handler();
     }
 
@@ -423,7 +308,7 @@ final class Router
         };
     }
 
-    private static function absorbRecord(string $canonical): void
+    private static function fillRecord(string $canonical): void
     {
         if (Request::has('item')) {
             Request::fill('item_id', Request::query('item'));
@@ -434,38 +319,6 @@ final class Router
         if ($canonical === 'full_page_view' && Request::has('item_id')) {
             Request::fill('option', 'print_item');
         }
-    }
-
-    /**
-     * Public manage name for an older screen key. Empty when the name is not one of those addresses.
-     */
-    private static function manageName(string $name): string
-    {
-        if (isset(self::LEGACY_MANAGE[$name])) {
-            return self::LEGACY_MANAGE[$name];
-        }
-        if (!isset(self::ALIASES[$name]) || $name === 'manage' || $name === 'quick_launch' || str_starts_with($name, 'administration_')) {
-            if (isset(self::ALIASES[$name])) {
-                return self::preferredManage(self::ALIASES[$name]);
-            }
-
-            return '';
-        }
-
-        return $name;
-    }
-
-    private static function preferredManage(string $canonical): string
-    {
-        foreach (self::ALIASES as $public => $target) {
-            if ($target !== $canonical || $public === 'manage' || $public === 'quick_launch' || str_starts_with($public, 'administration_')) {
-                continue;
-            }
-
-            return $public;
-        }
-
-        return '';
     }
 
     private static function canonical(string $name): string

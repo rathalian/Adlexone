@@ -8,19 +8,15 @@ namespace Adlexone\Text;
  */
 final class Wording
 {
-    /** @var array<string, string> controller prefix => constant prefix */
-    private static array $prefixes = [
-        'app_oneorzeroknowledgebase' => 'APP_KB_',
-        'app_oneorzeroreportmanager' => 'APP_RM_',
-        'app_oneorzerotimemanager' => 'APP_TM_',
-    ];
+    /** @var array<string, string> application slug => constant prefix */
+    private static array $prefixes = [];
 
     /**
-     * An application registers the constant prefix for its controller name.
+     * An application registers the constant prefix for its slug.
      */
-    public static function register(string $controllerPrefix, string $constantPrefix): void
+    public static function register(string $slug, string $constantPrefix): void
     {
-        self::$prefixes[$controllerPrefix] = $constantPrefix;
+        self::$prefixes[$slug] = $constantPrefix;
     }
 
     public static function get(string $alias, string $original): mixed
@@ -51,13 +47,11 @@ final class Wording
 
     private static function applicationPrefix(): ?string
     {
-        $controller = (string) ($_GET['controller'] ?? '');
-        foreach (self::$prefixes as $needle => $prefix) {
-            if (str_starts_with($controller, $needle)) {
-                return $prefix;
-            }
+        $slug = \Adlexone\Http\Page::current()->applicationSlug();
+        if ($slug === '') {
+            return null;
         }
 
-        return null;
+        return self::$prefixes[$slug] ?? null;
     }
 }

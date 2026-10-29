@@ -106,9 +106,8 @@ final class SearchScreen
             case 'show_saved_searches' :
                 Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
                 $application = Request::query('application');
-                $controller = Request::query('controller');
-                if ($application === '' && str_starts_with($controller, 'app_')) {
-                    $application = $controller;
+                if ($application === '' && Page::current()->inApplication()) {
+                    $application = Page::current()->applicationSlug();
                 }
                 self::showSavedSearches($_SESSION['access_user_id'], $application);
                 break;
@@ -1558,7 +1557,11 @@ final class SearchScreen
             $fields[''] = Form::hidden('security', 'mine');
         }
 
-        $fields[TXT_350] = self::searchApplicationMenu(Request::query('controller'));
+        $searchScope = Request::query('application');
+        if ($searchScope === '' && Page::current()->inApplication()) {
+            $searchScope = Page::current()->applicationSlug();
+        }
+        $fields[TXT_350] = self::searchApplicationMenu($searchScope);
 
         $javascript = Form::fieldCheck(TXT_468, [''], ['search_name'], [''], [TXT_367], [true]);
 

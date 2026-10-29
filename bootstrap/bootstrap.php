@@ -110,8 +110,8 @@ if (!defined('SET_HOME_LEAD')) {
     define('SET_HOME_LEAD', 'This site keeps the applications, records, and rules for the work.');
 }
 
-// Set the required controller using the 'controller' GET variable or load the
-// logon page if the user has not logged on
+// Sign-in when there is no session. A signed-in request opens the screen named
+// by manage or application.
 if (isset($_GET['action'])) {
     $urlaction = $_GET['action'];
 } else {
@@ -136,15 +136,6 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
 
     Request::normaliseNumbers();
 
-    // A stored home such as application:service-centre still arrives as controller.
-    $requestedController = (string) ($_GET['controller'] ?? '');
-    if (str_contains($requestedController, ':')) {
-        [$requestedController, $requestedApp] = explode(':', $requestedController, 2);
-        $_GET['controller'] = $requestedController;
-        if (trim((string) ($_GET['app'] ?? '')) === '') {
-            $_GET['app'] = $requestedApp;
-        }
-    }
     // Setup theme and other user options.  If user is not logged in the theme is set to use default
     // Override default theme which represents a empty value for the users theme setting
     if ($_SESSION['access_theme'] != '') {
