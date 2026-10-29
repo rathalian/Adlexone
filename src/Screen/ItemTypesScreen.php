@@ -217,7 +217,16 @@ final class ItemTypesScreen
         });
         $selectedHtml = implode('', array_column($selectedItems, 'html'));
 
-        $pickerHtml = '<div class="field-picker">'
+        $locked = '';
+        foreach (['Title' => 'Shown as Name on a record.', 'Owner' => 'The person who has the record.', 'Opened by' => 'The person who created the record.'] as $label => $help) {
+            $locked .= '<li class="field-picker-item is-locked">'
+                . '<label class="checkbox"><input type="checkbox" checked disabled> <span>' . Html::e($label) . '</span> '
+                . '<span class="field-picker-type">' . Html::e($help) . '</span></label></li>';
+        }
+        $pickerHtml = '<div class="field-picker-locked"><div class="label">On every record</div>'
+            . '<ul class="field-picker-list">' . $locked . '</ul>'
+            . '<p class="form-help">Title, Owner, and Opened by stay on every record.</p></div>'
+            . '<div class="field-picker">'
             . '<div><div class="label">' . Html::e(TXT_684) . '</div><ul id="availableFields" class="field-picker-list">' . $availableItems . '</ul></div>'
             . '<div><div class="label">' . Html::e(TXT_685) . '</div><ul id="selectedFields" class="field-picker-list">' . $selectedHtml . '</ul></div>'
             . '</div>';

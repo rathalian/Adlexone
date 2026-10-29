@@ -62,8 +62,10 @@ check(FieldValidation::toDateInput('2026-10-20') === '2026-10-20', 'ISO stays IS
 check(FieldValidation::display($dateField, '2026-10-20') === '20-10-2026', 'date display uses the site format');
 
 $markup = FieldControl::render(FieldTypes::DATE, 'custom_field_9', '20-10-2026', $dateField);
-check(is_string($markup) && str_contains($markup, 'type="date"'), 'date field renders a date picker');
-check(is_string($markup) && str_contains($markup, 'value="2026-10-20"'), 'date picker value is ISO');
+check(is_string($markup) && !str_contains($markup, 'type="date"'), 'date field does not use the browser date control');
+check(is_string($markup) && str_contains($markup, 'value="20-10-2026"'), 'date field shows the site format');
+check(is_string($markup) && str_contains($markup, 'Site format: 14-10-2026'), 'date field keeps the format reminder');
+check(FieldValidation::today() === (new DateTimeImmutable('today'))->format('d-m-Y'), 'today is stored in the site format');
 
 $emailMarkup = FieldControl::render(FieldTypes::EMAIL, 'custom_field_10', 'records@health.example.com', $emailField);
 check(is_string($emailMarkup) && str_contains($emailMarkup, 'type="email"'), 'email field renders an email control');
@@ -72,7 +74,8 @@ $numberMarkup = FieldControl::render(FieldTypes::NUMBER, 'custom_field_11', '12.
 check(is_string($numberMarkup) && str_contains($numberMarkup, 'type="number"'), 'number field renders a number control');
 
 $textDateMarkup = FieldControl::render(FieldTypes::TEXT_BOX, 'custom_field_12', '2026-10-20', $textDate);
-check(is_string($textDateMarkup) && str_contains($textDateMarkup, 'type="date"'), 'text plus date validation still opens a date picker');
+check(is_string($textDateMarkup) && str_contains($textDateMarkup, 'value="20-10-2026"'), 'text with date validation shows the site format');
+check(is_string($textDateMarkup) && !str_contains($textDateMarkup, 'type="date"'), 'text with date validation does not use the browser date control');
 
 $markup = (new \Adlexone\support\FieldCheck())->withTitle()->onclick();
 check(preg_match('/data-field-check="([^"]*)"/', $markup, $match) === 1, 'field check is a data attribute');

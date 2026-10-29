@@ -7,8 +7,6 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Communications;
 use Adlexone\support\Database;
-use Adlexone\Html\Blocks;
-use Adlexone\Html\Html;
 
 /**
  * Per-application rules.
@@ -239,7 +237,13 @@ final class Rules
             }
             $options = [];
             $kind = 'text';
-            if (Database::tableExists('custom_field_menu_values')) {
+            $scoped = WorkflowFields::scopedStatusValues($itemTypeId, $fieldId);
+            if ($scoped !== null) {
+                foreach ($scoped as $value) {
+                    $options[] = ['value' => $value, 'label' => $value];
+                }
+                $kind = 'menu';
+            } elseif (Database::tableExists('custom_field_menu_values')) {
                 $menus = Database::select(
                     'custom_field_menu_values',
                     ['menu_value'],
@@ -606,48 +610,6 @@ final class Rules
             'id DESC',
             $limit
         );
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public static function runsForItem(int $itemId, int $limit = 10): array
-    {
-        if ($itemId <= 0 || !Database::tableExists('application_rule_runs')) {
-            return [];
-        }
-        $runs = Database::select(
-            'application_rule_runs',
-            '*',
-            'item_id = ?',
-            [$itemId],
-            'id DESC',
-            $limit
-        );
-        foreach ($runs as $i => $run) {
-            $rule = Database::first('application_rules', ['name'], 'id = ?', [(int) ($run['rule_id'] ?? 0)]);
-            $runs[$i]['rule_name'] = (string) ($rule['name'] ?? 'Rule');
-        }
-        return $runs;
-    }
-
-    public static function recordCard(int $itemId): string
-    {
-        $runs = self::runsForItem($itemId, 8);
-        if ($runs === []) {
-            return '';
-        }
-        $html = '';
-        foreach ($runs as $run) {
-            $when = \Adlexone\Html\Stamp::dayTime((int) ($run['ran_at'] ?? time()));
-            $html .= '<div class="log-item"><div class="log-heading"><strong>'
-                . Html::e($when)
-                . ' — ' . Html::e((string) $run['rule_name'])
-                . '</strong></div><div class="log-text">'
-                . nl2br(Html::e((string) ($run['detail'] ?? '')))
-                . '</div></div>';
-        }
-        return \Adlexone\Html\Blocks::vertical([['title' => 'Rules that ran', 'html' => $html]]);
     }
 
     /**
@@ -1387,11 +1349,27 @@ final class Rules
         }
         if ($skipActor) {
             $actor = (int) ($_SESSION['access_user_id'] ?? 0);
+            $keep = [];
+            if (self::recipientIncludesOwner($kind) && $actor > 0 && $actor === $ownerId) {
+                foreach (self::emailsForUsers([$ownerId]) as $email) {
+                    $keep[$email] = true;
+                }
+            }
             foreach (self::emailsForUsers([$actor]) as $email) {
-                unset($emails[$email]);
+                if (!isset($keep[$email])) {
+                    unset($emails[$email]);
+                }
             }
         }
         return array_values($emails);
+    }
+
+    /**
+     * The owner is a recipient, including when that person made the change.
+     */
+    private static function recipientIncludesOwner(string $kind): bool
+    {
+        return in_array($kind, [self::TO_OWNER, self::TO_BOTH, self::TO_OWNER_AND_GROUPS, ''], true);
     }
 
     /**

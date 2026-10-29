@@ -57,7 +57,57 @@ final class ItemScreen
         if (trim((string) ($post['item_title'] ?? '')) === '') {
             $errors['item_title'] = defined('TXT_476') ? (string) TXT_476 : 'Enter a name.';
         }
-        return $errors + FieldValidation::postedErrors($post, (int) ($post['item_type_id'] ?? 0));
+        $typeId = (int) ($post['item_type_id'] ?? 0);
+        $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
+
+        return $errors + FieldValidation::postedErrors($post, $typeId) + WorkflowFields::dueError($typeId, $slug, $post);
+    }
+
+    private static function menuHtml(int $typeId, int $fieldId, string $stored, string $childStored, array $request): string
+    {
+        $choices = WorkflowFields::scopedStatusValues($typeId, $fieldId);
+        if ($choices !== null) {
+            if ($stored !== '' && !in_array($stored, $choices, true)) {
+                $choices[] = $stored;
+            }
+            $html = Form::select('custom_field_' . $fieldId, $choices, $choices, $stored);
+        } else {
+            $html = MenuOptions::controls($fieldId, $stored, $childStored, $request);
+        }
+
+        return self::markWait($typeId, $fieldId, $html);
+    }
+
+    private static function markWait(int $typeId, int $fieldId, string $html): string
+    {
+        if ($html === '' || $typeId <= 0 || !Page::current()->inApplication()) {
+            return $html;
+        }
+        $slug = Page::current()->applicationSlug();
+        $status = WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
+        $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
+        if ($status === null || $due === null) {
+            return $html;
+        }
+        $waits = WorkflowFields::waitStatuses($slug, $typeId);
+        if ($waits === []) {
+            return $html;
+        }
+        if ($fieldId === (int) $status['id']) {
+            $html = preg_replace(
+                '/<select\b/',
+                '<select data-waits="' . Html::e(implode('|', $waits)) . '" data-due-name="custom_field_' . (int) $due['id'] . '"',
+                $html,
+                1
+            ) ?? $html;
+            Page::current()->addScript('work-board');
+        }
+        if ($fieldId === (int) $due['id']) {
+            $html = preg_replace('/<input\b/', '<input data-due-field="1"', $html, 1) ?? $html;
+            Page::current()->addScript('work-board');
+        }
+
+        return $html;
     }
 
     /**
@@ -1286,9 +1336,10 @@ final class ItemScreen
                 case FieldTypes::MENU :
                     $childId = (int)($row['sub_menu'] ?? 0);
                     $childStored = ($childId > 0) ? (string)($itemTypeFields['custom_field_' . $childId] ?? '') : '';
-                    $fields[$row['custom_field_name']] = MenuOptions::controls(
-                        (int)$row['custom_field_id'],
-                        (string)$defaultValue,
+                    $fields[$row['custom_field_name']] = self::menuHtml(
+                        (int) $itemTypeID,
+                        (int) $row['custom_field_id'],
+                        (string) $defaultValue,
                         $childStored,
                         (is_array($values) && isset($values['user_security'])) ? $values : []
                     );
@@ -1318,7 +1369,7 @@ final class ItemScreen
                         $row
                     );
                     if ($control !== null) {
-                        $fields[$row['custom_field_name']] = $control;
+                        $fields[$row['custom_field_name']] = self::markWait((int) $itemTypeID, (int) $row['custom_field_id'], $control);
                     }
                     break;
             }
@@ -1573,9 +1624,10 @@ final class ItemScreen
                                     ? ($values['custom_field_' . $childId] ?? '')
                                     : ($itemFields['custom_field_' . $childId] ?? ''))
                                 : '';
-                            $itemField[$row['custom_field_name']] = MenuOptions::controls(
-                                (int)$row['custom_field_id'],
-                                (string)$menuValue,
+                            $itemField[$row['custom_field_name']] = self::menuHtml(
+                                (int) ($itemFields['item_type_id'] ?? 0),
+                                (int) $row['custom_field_id'],
+                                (string) $menuValue,
                                 $childStored,
                                 (is_array($values) && isset($values['item_id'])) ? $values : []
                             );
@@ -1625,7 +1677,11 @@ final class ItemScreen
                                 $row
                             );
                             if ($control !== null) {
-                                $itemField[$row['custom_field_name']] = $control;
+                                $itemField[$row['custom_field_name']] = self::markWait(
+                                    (int) ($itemFields['item_type_id'] ?? 0),
+                                    (int) $row['custom_field_id'],
+                                    $control
+                                );
                             }
                             break;
                     }
@@ -1736,9 +1792,6 @@ final class ItemScreen
                     SearchScreen::updateKnoweldgeCount(array($itemID));
                 }
 
-                if ($itemRole < 4) {
-                    $html .= \Adlexone\Application\Rules::recordCard((int) $itemID);
-                }
                 if ($inApplication) {
                     $html = '<div class="workspace"><div class="workspace__main">' . $html . '</div>'
                         . self::recordSide((int) $itemID, $itemFields, array_map('intval', $itemGroupIds), $itemRole < 4) . '</div>';

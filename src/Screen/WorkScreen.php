@@ -12,6 +12,7 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
+use Adlexone\support\FieldValidation;
 use Adlexone\Http\Page;
 use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
@@ -371,15 +372,30 @@ final class WorkScreen
             'ariaSort' => $sort === 'opened' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
         ];
 
+        $wait = self::waitContext($itemTypeId);
+        $dueValues = $wait['field_id'] > 0 ? RecordQuery::values($ids, $wait['field_id']) : [];
+        foreach ($rows as $index => $record) {
+            $itemId = (int) ($record['itemId'] ?? 0);
+            $raw = trim((string) ($dueValues[$itemId] ?? ''));
+            $rows[$index]['due'] = $raw === '' ? '' : FieldValidation::formatDate($raw);
+        }
         $bulk = '';
         if ($status !== null && $status['values'] !== []) {
             $options = '<option value="">Set status to</option>';
             foreach ($status['values'] as $value) {
                 $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
             }
+            $due = '';
+            if ($wait['waits'] !== []) {
+                $due = '<label class="work-bulk__due"> ' . Html::e($wait['label'])
+                    . ' <input class="input" type="text" name="due" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="'
+                    . Html::e($wait['example']) . '" aria-label="' . Html::e($wait['label']) . '" data-due-input>'
+                    . '</label>';
+            }
             $bulk = '<div class="record-list__tools work-bulk__tools">'
                 . '<span class="record-list__meta" data-selected-count>0 selected</span>'
                 . '<select class="select work-bulk__status" name="status" aria-label="Status for selected records" required>' . $options . '</select>'
+                . $due
                 . '<button class="btn btn--sm" type="submit" data-bulk-submit disabled>Apply</button></div>';
         }
 
@@ -398,7 +414,12 @@ final class WorkScreen
             return $list;
         }
 
-        return '<form class="work-bulk" method="post" action="' . Html::e($base . '&option=move_cards') . '">'
+        Page::current()->addScript('work-board');
+        $waitAttr = $wait['waits'] === []
+            ? ''
+            : ' data-waits="' . Html::e(implode('|', $wait['waits'])) . '" data-due-label="' . Html::e($wait['label']) . '"';
+
+        return '<form class="work-bulk" method="post" action="' . Html::e($base . '&option=move_cards') . '"' . $waitAttr . '>'
             . Csrf::field() . $list . '</form>';
     }
 
@@ -475,10 +496,13 @@ final class WorkScreen
         }
         $unset = [];
         $facts = self::workCardFacts($ids);
+        $wait = self::waitContext($itemTypeId);
+        $dueValues = $wait['field_id'] > 0 ? RecordQuery::values($ids, $wait['field_id']) : [];
         foreach ($ids as $id) {
             $value = $values[$id] ?? '';
             $fact = $facts[$id] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-            $card = self::workCard($id, $fact, $base, $value, $status['values']);
+            $rawDue = trim((string) ($dueValues[$id] ?? ''));
+            $card = self::workCard($id, $fact, $base, $value, $status['values'], $rawDue === '' ? '' : FieldValidation::formatDate($rawDue));
             if (isset($columns[$value])) {
                 $columns[$value][] = $card;
             } else {
@@ -496,11 +520,28 @@ final class WorkScreen
 
         $move = Html::e($base . '&option=move_card');
         $token = Html::e(Csrf::token());
+        $waitAttr = $wait['waits'] === []
+            ? ''
+            : ' data-waits="' . Html::e(implode('|', $wait['waits'])) . '" data-due-label="' . Html::e($wait['label'])
+                . '" data-due-example="' . Html::e($wait['example']) . '"';
+        $dialog = $wait['waits'] === []
+            ? ''
+            : '<dialog class="due-ask" data-due-ask><form method="dialog" class="due-ask__form">'
+                . '<h2 class="due-ask__title">' . Html::e($wait['label']) . '</h2>'
+                . '<p class="due-ask__copy">Enter the date this is due.</p>'
+                . '<label class="label" for="work-due-date">' . Html::e($wait['label']) . '</label>'
+                . '<input class="input" id="work-due-date" type="text" name="due" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="'
+                . Html::e($wait['example']) . '" data-due-input>'
+                . '<p class="form-help">Site format: ' . Html::e($wait['example']) . '.</p>'
+                . '<div class="due-ask__actions"><button class="btn btn--quiet" type="button" value="cancel" data-due-cancel>Cancel</button>'
+                . '<button class="btn btn--primary" type="submit" value="ok" data-due-ok>Move</button></div>'
+                . '</form></dialog>';
 
         Page::current()->addScript('work-board');
 
-        return '<section class="work-board" aria-label="Board" data-move="' . $move . '" data-csrf="' . $token . '">'
+        return '<section class="work-board" aria-label="Board" data-move="' . $move . '" data-csrf="' . $token . '"' . $waitAttr . '>'
             . $html
+            . $dialog
             . '</section>';
     }
 
@@ -527,7 +568,7 @@ final class WorkScreen
      * @param array{title: string, owner: string, log: string, detail?: string, next?: string} $fact
      * @param list<string> $statuses
      */
-    private static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses): string
+    private static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses, string $due = ''): string
     {
         $title = $fact['title'] !== '' ? $fact['title'] : ('Record ' . $itemId);
         $href = Html::e($base . '&item=' . $itemId);
@@ -555,7 +596,9 @@ final class WorkScreen
             $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
         }
 
-        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . Html::e($status) . '">'
+        $dueAttr = $due !== '' ? ' data-due="' . Html::e($due) . '"' : '';
+
+        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . Html::e($status) . '"' . $dueAttr . '>'
             . '<a class="work-card__title" draggable="false" href="' . $href . '">' . $titleEsc . '</a>'
             . $detailHtml
             . $nextHtml
@@ -744,9 +787,18 @@ final class WorkScreen
         }
 
         $key = 'custom_field_' . (int) $field['id'];
+        $dueWrite = self::dueForMove($itemTypeId, $status);
+        if ($dueWrite['error'] !== '') {
+            self::workJson(['ok' => false, 'error' => $dueWrite['error']], 422);
+        }
         $_POST[$key] = $status;
+        $payload = [$key => $status];
+        if ($dueWrite['key'] !== '') {
+            $_POST[$dueWrite['key']] = $dueWrite['value'];
+            $payload[$dueWrite['key']] = $dueWrite['value'];
+        }
         \Adlexone\Application\Rules::run($itemId, 'update_item');
-        ItemFields::saveFromArray($itemId, [$key => $status]);
+        ItemFields::saveFromArray($itemId, $payload);
 
         $values = self::workStatusValues($ids, (int) $field['id']);
         $counts = [];
@@ -797,12 +849,79 @@ final class WorkScreen
             header('Location: ' . self::place());
             exit;
         }
+        $dueWrite = self::dueForMove($itemTypeId, $status);
+        if ($dueWrite['error'] !== '') {
+            \Adlexone\Http\View::flash($dueWrite['error'], 'danger');
+            header('Location: ' . self::place());
+            exit;
+        }
+        $key = 'custom_field_' . (int) $field['id'];
         foreach ($ids as $itemId) {
-            RecordQuery::saveField($itemId, (int) $field['id'], $status);
+            $_POST[$key] = $status;
+            $payload = [$key => $status];
+            if ($dueWrite['key'] !== '') {
+                $_POST[$dueWrite['key']] = $dueWrite['value'];
+                $payload[$dueWrite['key']] = $dueWrite['value'];
+            }
+            \Adlexone\Application\Rules::run($itemId, 'update_item');
+            ItemFields::saveFromArray($itemId, $payload);
         }
 
         header('Location: ' . self::place());
         exit;
+    }
+
+    /**
+     * @return array{label: string, waits: list<string>, field_id: int, example: string}
+     */
+    private static function waitContext(?int $itemTypeId): array
+    {
+        $empty = ['label' => '', 'waits' => [], 'field_id' => 0, 'example' => ''];
+        $typeId = (int) $itemTypeId;
+        if ($typeId <= 0) {
+            return $empty;
+        }
+        $slug = self::applicationSlug();
+        $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
+        $waits = WorkflowFields::waitStatuses($slug, $typeId);
+        if ($due === null || $waits === []) {
+            return $empty;
+        }
+
+        return [
+            'label' => (string) $due['label'],
+            'waits' => $waits,
+            'field_id' => (int) $due['id'],
+            'example' => FieldValidation::formatDate('2026-10-14'),
+        ];
+    }
+
+    /**
+     * @return array{key: string, value: string, error: string}
+     */
+    private static function dueForMove(?int $itemTypeId, string $status): array
+    {
+        $none = ['key' => '', 'value' => '', 'error' => ''];
+        $typeId = (int) $itemTypeId;
+        $slug = self::applicationSlug();
+        $waits = WorkflowFields::waitStatuses($slug, $typeId);
+        if (!in_array($status, $waits, true)) {
+            return $none;
+        }
+        $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
+        if ($due === null) {
+            return $none;
+        }
+        $raw = trim((string) ($_POST['due'] ?? ''));
+        if (FieldValidation::parseDate($raw, false) === null) {
+            return ['key' => '', 'value' => '', 'error' => 'Enter ' . $due['label'] . '.'];
+        }
+
+        return [
+            'key' => 'custom_field_' . (int) $due['id'],
+            'value' => FieldValidation::formatDate($raw),
+            'error' => '',
+        ];
     }
 
     private static function applicationSlug(): string

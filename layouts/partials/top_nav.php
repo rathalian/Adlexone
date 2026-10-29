@@ -11,9 +11,11 @@ use Adlexone\Theme\Theme;
 $sprite = Html::e(Theme::spriteHref());
 $apps = $nav['apps'];
 $account = $nav['account'];
+$siteName = defined('SET_SITE_NAME') ? trim((string) SET_SITE_NAME) : '';
+$homeLabel = $siteName !== '' ? $siteName . ' home' : 'Adlexone home';
 ?>
     <div class="brandrow">
-        <a class="brandhome" href="./" aria-label="Adlexone home">
+        <a class="brandhome" href="./" aria-label="<?php echo Html::e($homeLabel); ?>">
         <div class="brandwrap">
             <?php View::partial('brand_lockup'); ?>
         </div>

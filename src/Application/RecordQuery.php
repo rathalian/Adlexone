@@ -116,10 +116,15 @@ final class RecordQuery
             $id = (int) $row['custom_field_id'];
             $values = [];
             if ($type === FieldTypes::MENU) {
-                foreach (Database::select('custom_field_menu_values', ['menu_value'], 'custom_field_id = ?', [$id], 'menu_value_id ASC') as $menu) {
-                    $value = trim((string) ($menu['menu_value'] ?? ''));
-                    if ($value !== '') {
-                        $values[] = $value;
+                $scoped = WorkflowFields::scopedStatusValues($typeId, $id);
+                if ($scoped !== null) {
+                    $values = $scoped;
+                } else {
+                    foreach (Database::select('custom_field_menu_values', ['menu_value'], 'custom_field_id = ?', [$id], 'menu_value_id ASC') as $menu) {
+                        $value = trim((string) ($menu['menu_value'] ?? ''));
+                        if ($value !== '') {
+                            $values[] = $value;
+                        }
                     }
                 }
             }

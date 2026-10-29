@@ -9,7 +9,7 @@ namespace Adlexone\Platform;
 final class Provisioner
 {
     /**
-     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string} $admin
+     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string, starting_applications?: string} $admin
      */
     public static function install(
         string $install,
@@ -22,14 +22,20 @@ final class Provisioner
         self::makePrivateDir($configDir);
         self::makePrivateDir($attachments);
         self::makePrivateDir(dirname($sqlite));
-        self::copyConfig($install, $configDir, $admin['site_name'], $admin['public_url']);
+        self::copyConfig(
+            $install,
+            $configDir,
+            $admin['site_name'],
+            $admin['public_url'],
+            trim((string) ($admin['starting_applications'] ?? ''))
+        );
         $seedAdmin = trim($admin['username']) !== '' && $admin['password'] !== '';
         self::prepareDatabase($install, $sqlite, $seedAdmin ? $admin : null);
         self::lockDown($configDir, dirname($sqlite), $attachments, $sqlite);
     }
 
     /**
-     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string}|null $admin
+     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string, starting_applications?: string}|null $admin
      */
     public static function prepareDatabase(string $install, string $sqlite, ?array $admin): void
     {
@@ -128,10 +134,7 @@ final class Provisioner
         @chmod($dir, 0700);
     }
 
-    /**
-     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string} $admin
-     */
-    private static function copyConfig(string $install, string $configDir, string $siteName, string $publicUrl): void
+    private static function copyConfig(string $install, string $configDir, string $siteName, string $publicUrl, string $starting = ''): void
     {
         $example = rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'config.example';
         foreach (glob($example . DIRECTORY_SEPARATOR . '*.json') ?: [] as $src) {
@@ -146,10 +149,14 @@ final class Provisioner
             }
             @chmod($dest, 0600);
         }
-        self::patchJson($configDir . 'adlexone_settings.json', [
+        $settings = [
             'SET_SITE_NAME' => $siteName,
             'SET_PUBLIC_BASE_URL' => $publicUrl,
-        ]);
+        ];
+        if (in_array($starting, ['samples', 'exemplar', 'none'], true)) {
+            $settings['SET_STARTING_APPLICATIONS'] = $starting;
+        }
+        self::patchJson($configDir . 'adlexone_settings.json', $settings);
         self::patchJson($configDir . 'advanced_settings.json', [
             'SET_DEBUG_MODE' => 'No',
             'SET_SHOW_SQL' => 'No',
@@ -201,7 +208,7 @@ final class Provisioner
     }
 
     /**
-     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string} $admin
+     * @param array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string, starting_applications?: string} $admin
      */
     private static function seedAdmin(\PDO $pdo, array $admin): void
     {

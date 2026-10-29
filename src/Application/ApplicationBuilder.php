@@ -34,7 +34,7 @@ final class ApplicationBuilder
      */
     public static function blueprints(): array
     {
-        $status = static fn (array $values): array => self::menu('Status', $values);
+        $status = static fn (array $values, array $waits = []): array => self::menu('Status', $values, $waits);
         $close = static function (string $name, string $status, string $date, string $line): array {
             return self::when($name, Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, $status, [
                 self::stamp($date),
@@ -52,7 +52,7 @@ final class ApplicationBuilder
                 'Writer',
                 'Posts a notice and stamps the approved date when a manuscript is approved.',
                 [
-                    $status(['Received', 'Reading', 'With the writer', 'Editing', 'Approved', 'Declined']),
+                    $status(['Received', 'Reading', 'With the writer', 'Editing', 'Approved', 'Declined'], ['With the writer']),
                     self::text('Writer'),
                     self::menu('Kind', ['Novel', 'Stories', 'Memoir', 'Poetry', 'Essays']),
                     self::number('Word count'),
@@ -110,7 +110,7 @@ final class ApplicationBuilder
                 'ic-briefcase',
                 'Opened on',
                 'Stamps the closed date when a matter is done.',
-                [$status(['Waiting on us', 'Waiting on them', 'Done']), self::text('Client'), self::menu('Kind', ['Contract', 'Dispute', 'Advice', 'Property']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Opened on'), self::date('Closed on')],
+                [$status(['Waiting on us', 'Waiting on them', 'Done'], ['Waiting on them']), self::text('Client'), self::menu('Kind', ['Contract', 'Dispute', 'Advice', 'Property']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Opened on'), self::date('Closed on')],
                 [
                     self::when('Note that a matter was opened', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Opened on'),
@@ -140,7 +140,7 @@ final class ApplicationBuilder
                 'ic-home',
                 'Instructed on',
                 'Stamps the completed date when a conveyance is complete.',
-                [$status(['Instructed', 'Searches', 'Enquiries', 'Exchange', 'Complete']), self::text('Client'), self::text('Place'), self::menu('Side', ['Sale', 'Purchase']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Instructed on'), self::date('Completed on')],
+                [$status(['Instructed', 'Searches', 'Enquiries', 'Exchange', 'Complete'], ['Enquiries']), self::text('Client'), self::text('Place'), self::menu('Side', ['Sale', 'Purchase']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Instructed on'), self::date('Completed on')],
                 [
                     self::when('Note the instruction', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Instructed on'),
@@ -173,7 +173,7 @@ final class ApplicationBuilder
                 'ic-shield',
                 'Notified on',
                 'Posts a notice and stamps the settled date when a claim is settled.',
-                [$status(['Notified', 'With the insurer', 'Waiting on them', 'Settled', 'Withdrawn']), self::text('Client'), self::text('Insurer'), self::menu('Kind', ['Property', 'Motor', 'Liability', 'Travel']), self::text('Reference'), self::number('Reserve'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Notified on'), self::date('Settled on'), self::date('Withdrawn on')],
+                [$status(['Notified', 'With the insurer', 'Waiting on them', 'Settled', 'Withdrawn'], ['With the insurer', 'Waiting on them']), self::text('Client'), self::text('Insurer'), self::menu('Kind', ['Property', 'Motor', 'Liability', 'Travel']), self::text('Reference'), self::number('Reserve'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Notified on'), self::date('Settled on'), self::date('Withdrawn on')],
                 [
                     self::when('Note the notification', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Notified on'),
@@ -214,7 +214,7 @@ final class ApplicationBuilder
                 'ic-wrench',
                 'Booked for',
                 'Emails the owner when a repair is on site.',
-                [$status(['Reported', 'Booked', 'On site', 'Done']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::date('Booked for'), self::date('Reported on'), self::date('Done on')],
+                [$status(['Reported', 'Booked', 'On site', 'Done'], ['Booked']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::date('Booked for'), self::date('Reported on'), self::date('Done on')],
                 [
                     self::when('Note the report', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Reported on'),
@@ -243,7 +243,7 @@ final class ApplicationBuilder
                 'ic-complaint',
                 'Upheld on',
                 'Posts a notice and stamps the date when a complaint is upheld.',
-                [$status(['Opened', 'With us', 'With them', 'Upheld', 'Not upheld']), self::text('Client'), self::menu('Channel', ['Letter', 'Phone', 'Email', 'Web']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Response due'), self::date('Opened on'), self::date('Upheld on'), self::date('Not upheld on')],
+                [$status(['Opened', 'With us', 'With them', 'Upheld', 'Not upheld'], ['With them']), self::text('Client'), self::menu('Channel', ['Letter', 'Phone', 'Email', 'Web']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Response due'), self::date('Opened on'), self::date('Upheld on'), self::date('Not upheld on')],
                 [
                     self::when('Open the complaint', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Opened on'),
@@ -280,7 +280,7 @@ final class ApplicationBuilder
                 'ic-landmark',
                 'Sitting due',
                 'Posts a notice and stamps the awarded date when a paper is awarded.',
-                [$status(['Received', 'Reading', 'With the applicant', 'Awarded', 'Refused']), self::text('Applicant'), self::menu('Kind', ['Grant', 'Credit', 'Award']), self::number('Amount'), self::text('Next step'), self::note(), self::date('Sitting due'), self::date('Received on'), self::date('Awarded on'), self::date('Refused on')],
+                [$status(['Received', 'Reading', 'With the applicant', 'Awarded', 'Refused'], ['With the applicant']), self::text('Applicant'), self::menu('Kind', ['Grant', 'Credit', 'Award']), self::number('Amount'), self::text('Next step'), self::note(), self::date('Sitting due'), self::date('Received on'), self::date('Awarded on'), self::date('Refused on')],
                 [
                     self::when('Note the paper arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Received on'),
@@ -316,7 +316,7 @@ final class ApplicationBuilder
                 'ic-audit',
                 'Raised on',
                 'Emails the owner when a finding is accepted.',
-                [$status(['Raised', 'Accepted', 'In progress', 'Closed']), self::text('Place'), self::menu('Rating', ['High', 'Medium', 'Low']), self::text('Next step'), self::note(), self::date('Due'), self::date('Raised on'), self::date('Closed on')],
+                [$status(['Raised', 'Accepted', 'In progress', 'Closed'], ['Accepted']), self::text('Place'), self::menu('Rating', ['High', 'Medium', 'Low']), self::text('Next step'), self::note(), self::date('Due'), self::date('Raised on'), self::date('Closed on')],
                 [
                     self::when('Note the finding', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Raised on'),
@@ -345,7 +345,7 @@ final class ApplicationBuilder
                 'ic-alert',
                 'Action due',
                 'Posts a notice when an incident is reported.',
-                [$status(['Reported', 'Investigating', 'Actions underway', 'Closed']), self::text('Place'), self::menu('Kind', ['Injury', 'Near miss', 'Damage', 'Environment']), self::text('Reported by'), self::text('Next step'), self::note(), self::date('Action due'), self::date('Reported on'), self::date('Closed on')],
+                [$status(['Reported', 'Investigating', 'Actions underway', 'Closed'], ['Actions underway']), self::text('Place'), self::menu('Kind', ['Injury', 'Near miss', 'Damage', 'Environment']), self::text('Reported by'), self::text('Next step'), self::note(), self::date('Action due'), self::date('Reported on'), self::date('Closed on')],
                 [
                     self::when('Report the incident', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Reported on'),
@@ -378,7 +378,7 @@ final class ApplicationBuilder
                 'ic-user',
                 'Listed on',
                 'Posts a notice and stamps the placed date when a candidate is placed.',
-                [$status(['Listed', 'Shortlist', 'Interviewed', 'Offer', 'Placed', 'Withdrawn']), self::text('Client'), self::text('Role'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Listed on'), self::date('Placed on'), self::date('Withdrawn on')],
+                [$status(['Listed', 'Shortlist', 'Interviewed', 'Offer', 'Placed', 'Withdrawn'], ['Offer']), self::text('Client'), self::text('Role'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Listed on'), self::date('Placed on'), self::date('Withdrawn on')],
                 [
                     self::when('Note the candidate', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Listed on'),
@@ -419,7 +419,7 @@ final class ApplicationBuilder
                 'ic-contract',
                 'Received on',
                 'Hands a contract back to the person who opened it, and posts a notice when it is signed.',
-                [$status(['Received', 'In review', 'With the business', 'Signed', 'Declined']), self::text('Client'), self::menu('Kind', ['Customer', 'Supplier', 'Employment', 'NDA']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Received on'), self::date('Signed on'), self::date('Declined on')],
+                [$status(['Received', 'In review', 'With the business', 'Signed', 'Declined'], ['With the business']), self::text('Client'), self::menu('Kind', ['Customer', 'Supplier', 'Employment', 'NDA']), self::text('Reference'), self::text('Next step'), self::note(), self::date('Reply due'), self::date('Received on'), self::date('Signed on'), self::date('Declined on')],
                 [
                     self::when('Note the contract arrived', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
                         self::stamp('Received on'),
@@ -549,6 +549,8 @@ final class ApplicationBuilder
         $dueId = 0;
         $dueFallback = 0;
         $openStatuses = [];
+        $statusValues = [];
+        $waitStatuses = [];
         $closed = array_values(array_filter(array_map('strval', $blueprints[$blueprint]['closed'] ?? [])));
         foreach ($fieldDefs as $field) {
             $fieldName = trim((string) ($field['name'] ?? ''));
@@ -556,7 +558,9 @@ final class ApplicationBuilder
             $plain = self::plainName($fieldName);
             if ($plain === 'status') {
                 $statusId = $fieldId;
-                $openStatuses = array_values(array_filter(array_map('strval', $field['values'] ?? [])));
+                $statusValues = array_values(array_filter(array_map('strval', $field['values'] ?? [])));
+                $waitStatuses = array_values(array_filter(array_map('strval', $field['waits'] ?? [])));
+                $openStatuses = $statusValues;
                 if ($closed !== []) {
                     $openStatuses = array_values(array_filter(
                         $openStatuses,
@@ -583,7 +587,7 @@ final class ApplicationBuilder
         $applicationSettings = WorkflowFields::store([
             'default_item_type_id' => (string) $itemTypeId,
             'search_tab_added' => '1',
-        ], $itemTypeId, $statusId, $stepId, $dueId, $openStatuses);
+        ], $itemTypeId, $statusId, $stepId, $dueId, $openStatuses, $statusValues, $waitStatuses);
         $applicationId = ApplicationStore::insertApplication([
             'slug' => $slug,
             'name' => $name,
@@ -694,16 +698,26 @@ final class ApplicationBuilder
      */
     private static function createBlueprintFields(array $fields, string $appName): array
     {
+        unset($appName);
+        self::ensureSharedColumn();
         $ids = [];
         foreach ($fields as $field) {
-            $desired = (string) ($field['name'] ?? '');
+            $desired = trim((string) ($field['name'] ?? ''));
             if ($desired === '') {
                 continue;
             }
             $type = FieldTypes::normalise((string) ($field['type'] ?? FieldTypes::TEXT_BOX));
-            $name = self::uniqueFieldName($desired, $appName);
-            $id = Database::insert('custom_fields', [
-                'custom_field_name' => $name,
+            $sharedId = self::sharedFieldId($desired, $type);
+            $values = $field['values'] ?? [];
+            if ($sharedId > 0) {
+                if ($type === FieldTypes::MENU && is_array($values)) {
+                    self::ensureMenuValues($sharedId, $values);
+                }
+                $ids[] = $sharedId;
+                continue;
+            }
+            $row = [
+                'custom_field_name' => $desired,
                 'field_type' => $type,
                 'default_value' => '',
                 'sub_menu' => 0,
@@ -712,33 +726,78 @@ final class ApplicationBuilder
                 'data' => '',
                 'validation_type' => FieldTypes::impliedValidation($type),
                 'required' => 'No',
-            ]);
+            ];
+            if (self::isSharedDefinition($desired, $type) && Database::columnExists('custom_fields', 'shared')) {
+                $row['shared'] = 1;
+            }
+            $id = Database::insert('custom_fields', $row);
             Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
 
-            $values = $field['values'] ?? [];
             if ($type === FieldTypes::MENU && is_array($values)) {
-                foreach ($values as $value) {
-                    $value = trim((string) $value);
-                    if ($value === '') {
-                        continue;
-                    }
-                    Database::insert('custom_field_menu_values', [
-                        'custom_field_id' => $id,
-                        'menu_value' => $value,
-                        'parent_menu_value_id' => 0,
-                    ]);
-                }
+                self::ensureMenuValues($id, $values);
             }
             $ids[] = $id;
         }
         return $ids;
     }
 
-    private static function uniqueFieldName(string $desired, string $appName): string
+    private static function ensureSharedColumn(): void
     {
-        unset($appName);
+        if (Database::tableExists('custom_fields') && !Database::columnExists('custom_fields', 'shared')) {
+            Database::exec('ALTER TABLE custom_fields ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
+        }
+    }
 
-        return $desired;
+    private static function isSharedDefinition(string $name, string $type): bool
+    {
+        return match (self::plainName($name)) {
+            'status' => $type === FieldTypes::MENU,
+            'next step' => $type === FieldTypes::TEXT_BOX,
+            'note' => $type === FieldTypes::TEXT_AREA,
+            default => false,
+        };
+    }
+
+    private static function sharedFieldId(string $name, string $type): int
+    {
+        if (!self::isSharedDefinition($name, $type) || !Database::columnExists('custom_fields', 'shared')) {
+            return 0;
+        }
+        $row = Database::first(
+            'custom_fields',
+            ['custom_field_id'],
+            'shared = 1 AND field_type = ? AND LOWER(custom_field_name) = LOWER(?)',
+            [$type, $name],
+            'custom_field_id ASC'
+        );
+
+        return (int) ($row['custom_field_id'] ?? 0);
+    }
+
+    /**
+     * @param list<mixed> $values
+     */
+    private static function ensureMenuValues(int $fieldId, array $values): void
+    {
+        if ($fieldId <= 0) {
+            return;
+        }
+        $have = [];
+        foreach (Database::select('custom_field_menu_values', ['menu_value'], 'custom_field_id = ?', [$fieldId]) as $row) {
+            $have[(string) ($row['menu_value'] ?? '')] = true;
+        }
+        foreach ($values as $value) {
+            $value = trim((string) $value);
+            if ($value === '' || isset($have[$value])) {
+                continue;
+            }
+            Database::insert('custom_field_menu_values', [
+                'custom_field_id' => $fieldId,
+                'menu_value' => $value,
+                'parent_menu_value_id' => 0,
+            ]);
+            $have[$value] = true;
+        }
     }
 
     /**
@@ -793,6 +852,76 @@ final class ApplicationBuilder
         }
     }
 
+    /**
+     * Publishing, with (Example) in the title, and the sample manuscripts.
+     */
+    public static function installExemplar(): void
+    {
+        if (self::$installingShowcase) {
+            return;
+        }
+        self::$installingShowcase = true;
+        try {
+            $spec = self::showcase()['publishing'] ?? null;
+            if (is_array($spec)) {
+                self::installOne('publishing', $spec, self::blueprints(), 'Publishing (Example)');
+            }
+        } finally {
+            self::$installingShowcase = false;
+        }
+    }
+
+    /**
+     * Record the statuses that start a wait on showcase applications already installed.
+     * A later edit of that list is left in place.
+     */
+    public static function noteWaits(): void
+    {
+        if (!Database::tableExists('applications') || !Database::columnExists('applications', 'settings_json')) {
+            return;
+        }
+        $blueprints = self::blueprints();
+        foreach (self::showcase() as $slug => $spec) {
+            $meta = $blueprints[$spec['blueprint']] ?? null;
+            if (!is_array($meta)) {
+                continue;
+            }
+            $waits = [];
+            foreach ($meta['fields'] as $field) {
+                if (($field['name'] ?? '') === 'Status') {
+                    $waits = array_values(array_filter(array_map('strval', $field['waits'] ?? [])));
+                }
+            }
+            $row = Database::first('applications', ['settings_json'], 'slug = ?', [$slug]);
+            if ($row === null) {
+                continue;
+            }
+            $settings = json_decode((string) ($row['settings_json'] ?? ''), true);
+            if (!is_array($settings)) {
+                $settings = [];
+            }
+            $typeId = (int) ($settings['default_item_type_id'] ?? 0);
+            if ($typeId <= 0) {
+                continue;
+            }
+            $workflow = is_array($settings['workflow_fields'] ?? null) ? $settings['workflow_fields'] : [];
+            $block = $workflow[(string) $typeId] ?? [];
+            $block = is_array($block) ? $block : [];
+            if (array_key_exists('wait_statuses', $block)) {
+                continue;
+            }
+            $block['wait_statuses'] = $waits;
+            $workflow[(string) $typeId] = $block;
+            $settings['workflow_fields'] = $workflow;
+            Database::update(
+                'applications',
+                ['settings_json' => json_encode($settings, JSON_UNESCAPED_SLASHES) ?: '{}'],
+                'slug = ?',
+                [$slug]
+            );
+        }
+    }
+
     private static function installShowcaseOnce(): void
     {
         self::dropSlug('studio');
@@ -812,34 +941,43 @@ final class ApplicationBuilder
         }
         self::deleteUnlinkedFields();
         foreach (self::showcase() as $slug => $spec) {
-            if (self::slugExists($slug)) {
-                continue;
-            }
-            $meta = $blueprints[$spec['blueprint']];
-            $record = (string) $meta['record'];
-            if (self::itemTypeNameInUse($record)) {
-                $record .= ' (' . $meta['label'] . ')';
-            }
-            $created = self::create(
-                (string) $meta['label'],
-                $slug,
-                (string) $meta['hint'],
-                (string) $meta['icon'],
-                $spec['blueprint'],
-                $record
-            );
-            Database::update('applications', ['sort_order' => $spec['sort']], 'application_id = ?', [(int) $created['application_id']]);
-            self::seedShowcaseCards((int) $created['item_type_id'], $meta['fields'], $spec['cards']);
-            $notice = $spec['notice'] ?? null;
-            if (is_array($notice) && Database::tableExists('announcements')) {
-                Database::insert('announcements', [
-                    'time' => time(),
-                    'subject' => (string) $notice['subject'],
-                    'message' => (string) $notice['message'],
-                    'type' => '',
-                    'application' => $slug,
-                ]);
-            }
+            self::installOne($slug, $spec, $blueprints, null);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $spec
+     * @param array<string, mixed> $blueprints
+     */
+    private static function installOne(string $slug, array $spec, array $blueprints, ?string $name): void
+    {
+        if (self::slugExists($slug) || !isset($blueprints[$spec['blueprint']])) {
+            return;
+        }
+        $meta = $blueprints[$spec['blueprint']];
+        $record = (string) $meta['record'];
+        if (self::itemTypeNameInUse($record)) {
+            $record .= ' (' . $meta['label'] . ')';
+        }
+        $created = self::create(
+            $name ?? (string) $meta['label'],
+            $slug,
+            (string) $meta['hint'],
+            (string) $meta['icon'],
+            (string) $spec['blueprint'],
+            $record
+        );
+        Database::update('applications', ['sort_order' => $spec['sort']], 'application_id = ?', [(int) $created['application_id']]);
+        self::seedShowcaseCards((int) $created['item_type_id'], $meta['fields'], $spec['cards']);
+        $notice = $spec['notice'] ?? null;
+        if (is_array($notice) && Database::tableExists('announcements')) {
+            Database::insert('announcements', [
+                'time' => time(),
+                'subject' => (string) $notice['subject'],
+                'message' => (string) $notice['message'],
+                'type' => '',
+                'application' => $slug,
+            ]);
         }
     }
 
@@ -1397,9 +1535,14 @@ TEXT;
      * @param list<string> $values
      * @return array<string, mixed>
      */
-    private static function menu(string $name, array $values): array
+    private static function menu(string $name, array $values, array $waits = []): array
     {
-        return ['name' => $name, 'type' => FieldTypes::MENU, 'values' => $values];
+        $field = ['name' => $name, 'type' => FieldTypes::MENU, 'values' => $values];
+        if ($waits !== []) {
+            $field['waits'] = array_values($waits);
+        }
+
+        return $field;
     }
 
     /**

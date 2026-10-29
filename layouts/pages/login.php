@@ -11,11 +11,13 @@ use Adlexone\Theme\Theme;
  * @var bool $showOauth
  */
 $defaultsInUse = \Adlexone\Platform\DefaultAccount::stillInUse();
+$siteName = defined('SET_SITE_NAME') ? trim((string) SET_SITE_NAME) : '';
+$signInTitle = $siteName !== '' ? 'Sign in — ' . $siteName : 'Sign in — Adlexone';
 ?>
 <!doctype html>
 <html lang="en">
 <head>
-<?php View::partial('head', ['title' => 'Sign in — Adlexone']); ?>
+<?php View::partial('head', ['title' => $signInTitle]); ?>
 </head>
 <body class="page-login">
     <a class="skip-link" href="#content">Skip to the page content</a>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Data;
 
 use Adlexone\support\Database;
+use Adlexone\support\FieldTypes;
 use Adlexone\support\FieldValidation;
 
 /**
@@ -109,13 +110,37 @@ final class ItemFields
                 continue;
             }
             $fieldId = (int) $m[1];
-            $text = $value === null ? '' : (string) $value;
+            $text = self::storedText($fieldId, $value === null ? '' : (string) $value);
             Database::run(
                 'INSERT INTO item_field_values (item_id, custom_field_id, value) VALUES (?, ?, ?)
                  ON CONFLICT(item_id, custom_field_id) DO UPDATE SET value = excluded.value',
                 [$itemId, $fieldId, $text]
             );
         }
+    }
+
+    /**
+     * A date is stored in the site format, so 6 October is 06-10-2026 and not a month-first string.
+     */
+    private static function storedText(int $fieldId, string $text): string
+    {
+        $text = trim($text);
+        if ($text === '' || $fieldId <= 0 || !Database::tableExists('custom_fields')) {
+            return $text;
+        }
+        $field = Database::first('custom_fields', ['field_type', 'validation_type'], 'custom_field_id = ?', [$fieldId]);
+        if ($field === null) {
+            return $text;
+        }
+        $kind = FieldValidation::kind([
+            'field_type' => FieldTypes::normalise((string) ($field['field_type'] ?? '')),
+            'validation_type' => (string) ($field['validation_type'] ?? ''),
+        ]);
+        if ($kind !== 'date' || FieldValidation::parseDate($text, false) === null) {
+            return $text;
+        }
+
+        return FieldValidation::formatDate($text);
     }
 
     /**

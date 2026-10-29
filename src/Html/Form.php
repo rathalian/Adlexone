@@ -283,8 +283,17 @@ final class Form
     public static function date(string $nameID, string $value, string $dateFormat = ''): string
     {
         unset($dateFormat);
-        return self::input('date', $nameID, FieldValidation::toDateInput($value), [
+        $shown = trim((string) $value);
+        if ($shown !== '' && FieldValidation::parseDate($shown) !== null) {
+            $shown = FieldValidation::formatDate($shown);
+        }
+
+        return self::input('text', $nameID, $shown, [
             'autocomplete' => 'off',
+            'inputmode' => 'numeric',
+            'placeholder' => FieldValidation::formatDate('2026-10-14'),
+            'spellcheck' => 'false',
+            'data-date' => 'site',
         ]) . self::dateHint(false);
     }
 

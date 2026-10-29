@@ -3,6 +3,8 @@ use Adlexone\Html\Html;
 
 /** @var string|null $descriptor */
 $descriptor = trim((string) ($descriptor ?? ''));
+$siteName = defined('SET_SITE_NAME') ? trim((string) SET_SITE_NAME) : '';
+$brandTitle = $siteName !== '' ? $siteName : 'Adlexone';
 ?>
 <span class="logoA">
     <svg class="logo-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -16,7 +18,7 @@ $descriptor = trim((string) ($descriptor ?? ''));
     </svg>
 </span>
 <span class="brandtext">
-    <span class="title-static">Adlexone</span>
+    <span class="title-static"><?php echo Html::e($brandTitle); ?></span>
     <?php if ($descriptor !== ''): ?>
         <span class="brand-descriptor"><?php echo Html::e($descriptor); ?></span>
     <?php endif; ?>

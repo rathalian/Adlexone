@@ -1019,7 +1019,9 @@ final class RecordScreens
             $errors['item_title'] = 'Enter a name.';
         }
 
-        return $errors + FieldValidation::postedErrors($_POST, $typeId);
+        $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
+
+        return $errors + FieldValidation::postedErrors($_POST, $typeId) + WorkflowFields::dueError($typeId, $slug, $_POST);
     }
 
     /**

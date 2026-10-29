@@ -522,8 +522,11 @@ final class Blocks
 
         $select = '';
         if ($selectName !== '' && (int) ($row['itemId'] ?? 0) > 0) {
+            $due = trim((string) ($row['due'] ?? ''));
             $select = '<td class="record-list__select"><input type="checkbox" name="' . Html::e($selectName)
-                . '[]" value="' . (int) $row['itemId'] . '" aria-label="Select ' . Html::e($name) . '" data-select-row></td>';
+                . '[]" value="' . (int) $row['itemId'] . '" aria-label="Select ' . Html::e($name) . '" data-select-row'
+                . ($due !== '' ? ' data-due="' . Html::e($due) . '"' : '')
+                . '></td>';
         }
 
         return '<tr data-search="' . Html::e($search) . '">' . $select . '<td class="record-list__primary">' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';

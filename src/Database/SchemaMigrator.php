@@ -17,7 +17,7 @@ use Adlexone\support\Database;
 final class SchemaMigrator
 {
     /** @phpstan-ignore classConstant.unused */
-    private const VERSION = 14;
+    private const VERSION = 15;
 
     private static bool $done = false;
 
@@ -104,6 +104,11 @@ final class SchemaMigrator
         if ($current < 14) {
             self::applyV14();
             self::mark(14);
+            $current = 14;
+        }
+        if ($current < 15) {
+            self::applyV15();
+            self::mark(15);
         }
     }
 
@@ -1082,5 +1087,17 @@ final class SchemaMigrator
             Database::exec('ALTER TABLE core_log ADD COLUMN group_id INTEGER NOT NULL DEFAULT 0');
         }
         \Adlexone\Application\ApplicationBuilder::alignInstalled();
+    }
+
+    /**
+     * Status, Next step, and Note can be one shared field. Existing applications
+     * keep their own copies. A status that starts a wait is recorded for the diary.
+     */
+    private static function applyV15(): void
+    {
+        if (Database::tableExists('custom_fields') && !Database::columnExists('custom_fields', 'shared')) {
+            Database::exec('ALTER TABLE custom_fields ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
+        }
+        \Adlexone\Application\ApplicationBuilder::noteWaits();
     }
 }

@@ -55,7 +55,7 @@ final class SetupScreen
     }
 
     /**
-     * @return array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string}
+     * @return array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string, starting_applications: string}
      */
     private static function adminFromPost(): array
     {
@@ -87,6 +87,10 @@ final class SetupScreen
         if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''))) {
             throw new \RuntimeException('The setup token does not match the file beside the database. Open that file on the server and enter the value.');
         }
+        $starting = (string) ($_POST['starting_applications'] ?? '');
+        if (!in_array($starting, ['samples', 'exemplar', 'none'], true)) {
+            throw new \RuntimeException('Choose the applications to install.');
+        }
 
         return [
             'site_name' => $site,
@@ -96,6 +100,7 @@ final class SetupScreen
             'first_name' => $first,
             'last_name' => $last,
             'email' => $email,
+            'starting_applications' => $starting,
         ];
     }
 
@@ -149,10 +154,41 @@ final class SetupScreen
             false,
             'Optional. For example, https://health.example.com. Leave this blank and Adlexone uses the address in the browser. Set it when the site sits behind a proxy.'
         );
+        $html .= self::startingApplications((string) ($_POST['starting_applications'] ?? ''));
         $html .= '<button type="submit" class="btn btn--primary login-submit">Create the site</button>';
         $html .= '</form>';
 
         return $html;
+    }
+
+    private static function startingApplications(string $selected): string
+    {
+        $options = [
+            'samples' => [
+                'Sample applications',
+                'Install the sample applications to help with the first setup. They can be deleted.',
+            ],
+            'exemplar' => [
+                'Publishing (Example)',
+                'Install Publishing, with its fields, rules, guide, and sample records.',
+            ],
+            'none' => [
+                'No applications',
+                'Start with an empty home. Create an application is the next step.',
+            ],
+        ];
+        $html = '<fieldset class="setup-choice"><legend class="login-label label">Starting applications</legend>';
+        foreach ($options as $value => [$label, $help]) {
+            $id = 'setup_start_' . $value;
+            $html .= '<label class="setup-choice__option" for="' . Html::e($id) . '">'
+                . '<input class="radio" type="radio" name="starting_applications" id="' . Html::e($id) . '" value="' . Html::e($value) . '"'
+                . ($selected === $value ? ' checked' : '')
+                . ' required>'
+                . '<span class="setup-choice__text"><span class="setup-choice__label">' . Html::e($label) . '</span>'
+                . '<span class="form-help">' . Html::e($help) . '</span></span></label>';
+        }
+
+        return $html . '</fieldset>';
     }
 
     private static function field(

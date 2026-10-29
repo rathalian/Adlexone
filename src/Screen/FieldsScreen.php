@@ -457,12 +457,16 @@ final class FieldsScreen
                 'tone' => 'quiet',
             ];
         }
-        $actions[] = [
-            'href' => self::url('option=delete_custom_field&custom_field_id=') . $id,
-            'label' => TXT_47,
-            'tone' => 'danger',
-            'confirm' => $name . "\n" . TXT_400,
-        ];
+        $sharedInUse = (int) ($row['shared'] ?? 0) === 1
+            && Database::exists('item_type_custom_fields', 'custom_field_id = ?', [(int) $row['custom_field_id']]);
+        if (!$sharedInUse) {
+            $actions[] = [
+                'href' => self::url('option=delete_custom_field&custom_field_id=') . $id,
+                'label' => TXT_47,
+                'tone' => 'danger',
+                'confirm' => $name . "\n" . TXT_400,
+            ];
+        }
 
         return [
             'name' => $name,
@@ -566,6 +570,10 @@ final class FieldsScreen
         $name = (string)$row['custom_field_name'];
         $type = (string)$row['field_type'];
         $params = [(int) $customFieldID];
+        if ((int) ($row['shared'] ?? 0) === 1 && Database::exists('item_type_custom_fields', 'custom_field_id = ?', $params)) {
+            View::respond($name . ' is used by the applications. It stays while a record type uses it.', Blocks::link(self::url('option=manage_fields'), TXT_362));
+            return;
+        }
         Database::delete('custom_field_menu_values', 'custom_field_id = ?', $params);
         Database::delete('item_type_custom_fields', 'custom_field_id = ?', $params);
         Database::delete('custom_fields', 'custom_field_id = ?', $params);

@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS custom_fields (
   field_reference INTEGER,
   data TEXT,
   validation_type TEXT,
-  required TEXT
+  required TEXT,
+  shared INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS custom_field_menu_values (
@@ -172,6 +173,11 @@ CREATE TABLE IF NOT EXISTS system_log (
   create_date INTEGER NOT NULL,
   security_id INTEGER,
   PRIMARY KEY (item_id, event_id)
+);
+
+CREATE TABLE IF NOT EXISTS site_setup (
+  choice TEXT NOT NULL PRIMARY KEY,
+  applied_at INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS applications (

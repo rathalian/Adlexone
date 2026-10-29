@@ -314,6 +314,35 @@ $stampRun = Database::first('application_rule_runs', ['detail'], 'rule_id = ?', 
 check(str_contains((string) ($stampRun['detail'] ?? ''), 'Stamped'), 'the run says the date was stamped');
 check(str_contains((string) ($stampRun['detail'] ?? ''), 'Posted a notice'), 'the run says the notice was posted');
 
+Database::insert('items', [
+    'item_id' => 3,
+    'create_date' => time(),
+    'item_type_id' => 9,
+    'creator_security' => 1,
+    'user_security' => 1,
+    'item_title' => 'Manuscript',
+]);
+$ownerMail = Rules::add(1, [
+    'item_type_id' => 9,
+    'name' => 'Email the owner',
+    'event' => Rules::EVENT_UPDATE,
+    'operator' => Rules::OP_ALWAYS,
+    'sort_order' => 60,
+    'skip_actor' => 1,
+    'steps' => [[
+        'outcome' => Rules::OUTCOME_EMAIL,
+        'recipient' => Rules::TO_OWNER,
+        'subject' => 'With the writer: ITEM_TITLE',
+        'body' => 'ITEM_TITLE is with the writer.',
+    ]],
+]);
+$_SESSION['access_user_id'] = 1;
+Rules::run(3, 'update_item');
+$ownerRun = Database::first('application_rule_runs', ['detail'], 'rule_id = ?', [$ownerMail]);
+$ownerDetail = (string) ($ownerRun['detail'] ?? '');
+check(str_contains($ownerDetail, 'ada@example.com'), 'the owner is emailed when they made the change');
+check(!str_contains($ownerDetail, 'nobody to email'), 'the owner is not dropped from their own notice');
+
 if ($failed > 0) {
     fwrite(STDERR, $failed . " check(s) failed\n");
     exit(1);

@@ -190,7 +190,7 @@ final class FieldValidation
 
     public static function today(): string
     {
-        return date('Y-m-d');
+        return (new \DateTimeImmutable('today'))->format(self::dateFormat());
     }
 
     public static function isValid(string $kind, string $value): bool

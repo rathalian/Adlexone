@@ -27,10 +27,11 @@ final class HomeScreen
 
         $intro = '';
         if ($menu === [] && Access::canAll(Permission::ADMIN_SETTINGS, Permission::ADMIN_ITEMS)) {
+            $lead = defined('SET_HOME_LEAD') ? trim((string) SET_HOME_LEAD) : '';
             $intro = View::partialToString('launchpad_intro', [
-                'copy' => defined('SET_HOME_LEAD') && trim((string) SET_HOME_LEAD) !== ''
-                    ? (string) SET_HOME_LEAD
-                    : 'This site keeps the applications, records, and rules for the work.',
+                'copy' => $lead !== '' && $lead !== 'This site keeps the applications, records, and rules for the work.'
+                    ? $lead
+                    : 'No applications yet. Create an application when you are ready.',
                 'art' => Theme::illustrationHref('empty-apps'),
             ]);
         }

@@ -24,7 +24,7 @@ final class ApplicationStore
         self::ensureSchema();
         self::$ready = true;
         self::seedIfEmpty();
-        ApplicationBuilder::installShowcase();
+        self::applyStartingApplications();
         self::retireServiceCentreLegacy();
         self::renameServiceCentreWork();
         self::renameBusinessNav();
@@ -61,6 +61,12 @@ final class ApplicationStore
             Database::exec('ALTER TABLE applications ADD COLUMN guide TEXT NOT NULL DEFAULT ""');
         }
         Database::exec(
+            'CREATE TABLE IF NOT EXISTS site_setup (
+                choice TEXT NOT NULL PRIMARY KEY,
+                applied_at INTEGER NOT NULL
+            )'
+        );
+        Database::exec(
             'CREATE TABLE IF NOT EXISTS application_nav (
                 nav_id INTEGER PRIMARY KEY,
                 application_id INTEGER NOT NULL,
@@ -75,7 +81,45 @@ final class ApplicationStore
     }
 
     /**
-     * An empty install stays empty until the showcase applications are installed.
+     * The setup choice is applied once. Deleting a sample does not bring it back.
+     */
+    private static function applyStartingApplications(): void
+    {
+        if (!Database::tableExists('applications') || !Database::tableExists('site_setup')) {
+            return;
+        }
+        if (Database::first('site_setup', ['choice']) !== null) {
+            return;
+        }
+        if (Database::count('applications') > 0) {
+            self::markStartingApplications('existing');
+            return;
+        }
+        $choice = defined('SET_STARTING_APPLICATIONS') ? trim((string) SET_STARTING_APPLICATIONS) : 'none';
+        if (!in_array($choice, ['samples', 'exemplar', 'none'], true)) {
+            $choice = 'none';
+        }
+        if ($choice === 'samples') {
+            ApplicationBuilder::installShowcase();
+        } elseif ($choice === 'exemplar') {
+            ApplicationBuilder::installExemplar();
+        }
+        self::markStartingApplications($choice);
+    }
+
+    private static function markStartingApplications(string $choice): void
+    {
+        if (Database::first('site_setup', ['choice']) !== null) {
+            return;
+        }
+        Database::insert('site_setup', [
+            'choice' => $choice,
+            'applied_at' => time(),
+        ]);
+    }
+
+    /**
+     * An empty install stays empty until setup chooses applications.
      * Use Manage → Builder to compose another business app.
      */
     public static function seedIfEmpty(): void
