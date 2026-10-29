@@ -22,6 +22,7 @@ use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
+use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -81,72 +82,8 @@ final class ItemScreen
             Access::deny();
         }
 
-
-
-
-
-
-
-
-
-        /**
-         * Controller Constants
-         */
-        if (!defined('MAN_BASE_URL')) {
-            define('MAN_BASE_URL', '?controller=' . Request::queryPart('controller') . '&subcontroller=item_management_manage');
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         $option = Request::query('option');
-        if (!self::authoriseItemOption($option)) {
+                if (!self::authoriseItemOption($option)) {
             return;
         }
 
@@ -170,7 +107,7 @@ final class ItemScreen
                     $itemTypeId = Request::query('item_type_id');
                 }
                 if ($itemTypeId === '') {
-                    $target = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
+                    $target = self::recordUrl('option=show_item_types');
                     $defaultType = trim((string) ($_GET['default_item_type'] ?? ''));
                     if ($defaultType === '' && Page::current()->inApplication()) {
                         $defaultType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
@@ -430,7 +367,7 @@ final class ItemScreen
         $embedAccess = !$existing && $canEdit;
         if ($existing && $canEdit) {
             $accessDialog = self::recordDialog('access', 'Access', $accessBody, [
-                'action' => MAN_BASE_URL . '&option=update_item',
+                'action' => self::recordUrl('option=update_item'),
                 'submit' => 'Save access',
                 'hidden' => Form::hidden('item_id', (string) $itemId)
                     . Form::hidden('item_type_id', (string) $itemTypeId)
@@ -462,7 +399,7 @@ final class ItemScreen
             $sizeNote = 'Maximum size is ' . (int) SET_MAX_ATTACHMENT . ' MB.';
             if ($existing) {
                 $filesDialog = self::recordDialog('files', 'Files', self::filesBody($list, true), [
-                    'action' => MAN_BASE_URL . '&option=add_attachment&item_id=' . $itemId,
+                    'action' => self::recordUrl('item=' . $itemId . '&option=add_attachment'),
                     'enctype' => 'multipart/form-data',
                     'submit' => 'Add file',
                 ], $sizeNote);
@@ -519,7 +456,7 @@ final class ItemScreen
                 $embedNotes = !$existing && $canEdit;
                 if ($existing && $canEdit) {
                     $notesDialog = self::recordDialog('notes', 'Notes', self::notesBody($entries, '', true), [
-                        'action' => MAN_BASE_URL . '&option=add_log_entry',
+                        'action' => self::recordUrl('option=add_log_entry'),
                         'submit' => 'Add note',
                         'hidden' => Form::hidden('item_id', (string) $itemId),
                     ]);
@@ -638,7 +575,7 @@ final class ItemScreen
         foreach ($rows as $row) {
             $stored = (string) ($row['file_name'] ?? '');
             $label = self::attachmentDisplayName($stored);
-            $href = MAN_BASE_URL . '&option=download_attachment&id=' . (int) ($row['id'] ?? 0);
+            $href = self::recordUrl('option=download_attachment&id=' . (int) ($row['id'] ?? 0));
             $bytes = (int) ($row['file_size'] ?? 0);
             $size = $bytes < 1000 ? $bytes . ' bytes' : (string) round($bytes / 1000) . ' KB';
             $meta = trim((string) ($row['file_type'] ?? ''))
@@ -647,7 +584,7 @@ final class ItemScreen
             $html .= '<li class="file-lines__item"><a class="record-link" href="' . Html::e($href) . '">' . Html::e($label) . '</a>'
                 . '<span class="file-lines__meta">' . Html::e($meta) . '</span>';
             if ($canDelete) {
-                $delete = MAN_BASE_URL . '&option=delete_attachment&item_id=' . rawurlencode($itemID) . '&id=' . (int) ($row['id'] ?? 0);
+                $delete = self::recordUrl('item=' . rawurlencode($itemID) . '&option=delete_attachment&id=' . (int) ($row['id'] ?? 0));
                 $html .= '<a class="btn btn--sm btn--danger" href="' . Html::e($delete) . '"' . Form::confirmData((string) TXT_400) . '>Remove</a>';
             }
             $html .= '</li>';
@@ -761,7 +698,7 @@ final class ItemScreen
     {
         $scarce = count(Rules::people()) < 2;
 
-        return '<form class="owner-assign" method="post" action="' . Html::e(MAN_BASE_URL . '&option=update_owner') . '">'
+        return '<form class="owner-assign" method="post" action="' . Html::e(self::recordUrl('option=update_owner')) . '">'
             . Csrf::field()
             . Form::hidden('item_id', (string) $itemId)
             . '<label class="sr-only" for="record-owner">Owner</label>'
@@ -803,7 +740,7 @@ final class ItemScreen
             $groupLabels[] = $name;
         }
 
-        return '<form class="composer" method="post" action="' . Html::e(MAN_BASE_URL . '&option=add_log_entry') . '">'
+        return '<form class="composer" method="post" action="' . Html::e(self::recordUrl('option=add_log_entry')) . '">'
             . \Adlexone\Auth\Csrf::field()
             . Form::hidden('item_id', (string) $itemId) . Form::hidden('role_id', '5') . Form::hidden('from_timeline', '1')
             . '<label class="sr-only" for="composer-note">Add a note to the timeline</label>'
@@ -980,13 +917,13 @@ final class ItemScreen
                     $itemTypeID = $row['item_type_id'];
                 }
                 $itemId = (int) $row['item_id'];
-                $action = Access::outputIfRoleAllowed('<a href="' . Html::e(MAN_BASE_URL . '&option=show_attachments&item_id=' . $itemId) . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(MAN_BASE_URL . '&option=change_security&item_id=' . $itemId) . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
-                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(MAN_BASE_URL . '&option=log_entry&item_id=' . $itemId) . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= Access::outputIfRoleAllowed(' - ' . Blocks::link('?controller=full_page_view&option=print_item&item_id=' . $itemId, TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
+                $action = Access::outputIfRoleAllowed('<a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
+                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
+                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
+                $action .= Access::outputIfRoleAllowed(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
                 $action .= Access::outputIfRoleAllowed(
                     ' - ' . Blocks::link(
-                        MAN_BASE_URL . '&option=delete_item&item_id=' . $itemId,
+                        self::recordUrl('item=' . $itemId . '&option=delete_item'),
                         TXT_315,
                         '',
                         'URL',
@@ -999,7 +936,7 @@ final class ItemScreen
                 );
                 $listHtml .= Form::fields([
                     Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
-                    Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(MAN_BASE_URL . '&option=show_item&item_id=' . $itemId . $logEntry . $attachments) . '" class="URL">' . Html::e((string) $title) . '</a>',
+                    Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments)) . '" class="URL">' . Html::e((string) $title) . '</a>',
                     TXT_225 => date(SET_DATE_FORMAT, $row['create_date']),
                     Wording::get('LA_226', 'TXT_226') => (string)$itemTypeName,
                     TXT_388 => $action,
@@ -1053,7 +990,7 @@ final class ItemScreen
 
         $html = Form::form(
             Wording::get('LA_44', 'TXT_44'),
-            '?controller=' . Request::queryPart('controller') . '&subcontroller=item_management_manage&option=my_items',
+            self::recordUrl('option=my_items'),
             ['' => $sortLinks . $listHtml . $paginationHTML . $hidden],
             [],
             ['name' => 'repform', 'id' => 'repform']
@@ -1145,7 +1082,7 @@ final class ItemScreen
             $fields[$inApplication ? 'What is this' : Wording::get('LA_66', 'TXT_66')] = Form::select('item_type_id', $valueArray, $displayArray, $defaultItemType);
             Page::current()->setBody(Form::form(
                 $inApplication ? 'New' : Wording::get('LA_46', 'TXT_46'),
-                MAN_BASE_URL . '&option=new_item',
+                self::recordUrl('option=new_item'),
                 $fields,
                 [Form::button('submit', 'submit_button', $inApplication ? 'Continue' : TXT_69)]
             ));
@@ -1215,7 +1152,7 @@ final class ItemScreen
         $condition = 'WHERE item_type_id = ' . (int) $itemTypeID;
         $row = Database::first('item_types', $columnArray, $condition);
         if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
-            $picker = \Adlexone\Http\Router::continueUrl('items') . '&option=show_item_types';
+            $picker = self::recordUrl('option=show_item_types');
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => TXT_68,
@@ -1431,7 +1368,7 @@ final class ItemScreen
         $createHeading = $inApplication
             ? 'New ' . $itemTypeName
             : Wording::get('LA_46', 'TXT_67') . ' — ' . $itemTypeName;
-        $bodyContent = Form::form($createHeading,MAN_BASE_URL. '&option=add_item',$fields,$buttons,$formOptions);
+        $bodyContent = Form::form($createHeading,self::recordUrl('option=add_item'),$fields,$buttons,$formOptions);
         Page::current()->setBody($bodyContent);
     }
 
@@ -1538,7 +1475,7 @@ final class ItemScreen
                         $groupMembership = implode(', ', $names);
                     }
                     $changeSecurityURL = Blocks::link(
-                        '?controller=' . Request::queryPart('controller') . '&subcontroller=item_management_manage&option=change_security&item_id=' . (int) $itemID,
+                        self::recordUrl('item=' . (int) $itemID . '&option=change_security'),
                         TXT_268,
                         '',
                         'btn btn--sm'
@@ -1762,12 +1699,12 @@ final class ItemScreen
                     if ($backLabel === '' || strcasecmp($backLabel, $formTitle) === 0) {
                         $backLabel = 'Work';
                     }
-                    $html .= '<p class="record-back"><a href="' . Html::e((string) MAN_BASE_URL) . '">Back to '
+                    $html .= '<p class="record-back"><a href="' . Html::e(self::recordUrl()) . '">Back to '
                         . Html::e($backLabel) . '</a></p>';
                 } else {
                     Page::current()->setCrumbs(\Adlexone\Html\Breadcrumb::trail([['label' => $formTitle]]));
                 }
-                $html .= Form::form($formTitle, MAN_BASE_URL . '&option=update_item', $itemField, $buttons, $formOptions);
+                $html .= Form::form($formTitle, self::recordUrl('option=update_item'), $itemField, $buttons, $formOptions);
 
                 //Show transform option
                 if (!$inApplication && $_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
@@ -1792,7 +1729,7 @@ final class ItemScreen
 
                     $transinputArray[TXT_445] = $transformationTypeMenu;
                     $transinputArray[TXT_447] = $itemTypeMenu . $hiddenItemID;
-                    $html .= Form::form(TXT_446,MAN_BASE_URL . '&option=transform_item',$transinputArray,$transformButton);
+                    $html .= Form::form(TXT_446,self::recordUrl('option=transform_item'),$transinputArray,$transformButton);
                 }
 
                 if ($itemID != '' && defined('APP_COUNT_ITEM_TYPE') && $itemFields['item_type_id'] == APP_COUNT_ITEM_TYPE) {
@@ -1984,7 +1921,7 @@ final class ItemScreen
             if (self::returnToItem($itemId, ($createdTitle !== '' ? $createdTitle : 'The record') . ' created.')) {
                 return;
             }
-            header('Location: ' . MAN_BASE_URL . '&option=show_item&item_id=' . rawurlencode((string) $itemId));
+            header('Location: ' . self::recordUrl('item=' . rawurlencode((string) $itemId) . '&option=show_item'));
             exit;
         }
     }
@@ -2007,7 +1944,7 @@ final class ItemScreen
                 Database::update('items', $columnArray, $condition);
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-                View::respond(TXT_450, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
+                View::respond(TXT_450, Blocks::link(self::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
                 return;
 
             case 'copy' :
@@ -2060,7 +1997,7 @@ final class ItemScreen
                 }
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-                View::respond(TXT_392, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $newItemColumnArray['item_id'] . $logEntry . $attachments, TXT_262, 'URL'));
+                View::respond(TXT_392, Blocks::link(self::recordUrl('item=' . $newItemColumnArray['item_id'] . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
                 return;
         }
 
@@ -2107,7 +2044,7 @@ final class ItemScreen
                     self::syncItemGroupsFromSecurity((int) $itemID, (string) $_POST['group_security']);
                 }
                 if (!self::returnToItem($itemID, 'Access saved.', 'access')) {
-                    View::respond(TXT_320, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID, TXT_353, 'URL'));
+                    View::respond(TXT_320, Blocks::link(self::recordUrl('item=' . $itemID . '&option=show_item'), TXT_353, 'URL'));
                 }
                 return;
             }
@@ -2145,7 +2082,7 @@ final class ItemScreen
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            View::respond($message, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
+            View::respond($message, Blocks::link(self::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
             return;
         }
     }
@@ -2159,7 +2096,7 @@ final class ItemScreen
     {
         $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-        $backHref = MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $showLog . $attachments;
+        $backHref = self::recordUrl('item=' . $itemID . '&option=show_item' . $showLog . $attachments);
         $logField[Wording::get('LA_244', 'TXT_244')] = Form::textarea('log_entry', '', SET_FORM_FIELD_HEIGHT);
         $groupIds = ['0'];
         $groupLabels = ['Everyone'];
@@ -2184,7 +2121,7 @@ final class ItemScreen
         $logField[' '] = $hidden;
         Page::current()->setBody(Form::form(
             Wording::get('LA_243', 'TXT_243'),
-            MAN_BASE_URL . '&option=add_log_entry',
+            self::recordUrl('option=add_log_entry'),
             $logField,
             [
                 Form::button('submit', 'submit_button', TXT_74),
@@ -2241,7 +2178,7 @@ final class ItemScreen
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            View::respond(TXT_248, Blocks::link(MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments, TXT_262, 'URL'));
+            View::respond(TXT_248, Blocks::link(self::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
             return;
         }
     }
@@ -2257,7 +2194,7 @@ final class ItemScreen
         if (trim($notice) !== '') {
             View::flash($notice);
         }
-        $url = MAN_BASE_URL . '&item=' . rawurlencode((string) $itemID);
+        $url = self::recordUrl('item=' . rawurlencode((string) $itemID));
         if (in_array($sheet, ['access', 'files', 'notes'], true)) {
             $url .= '&sheet=' . $sheet;
         }
@@ -2459,7 +2396,7 @@ final class ItemScreen
     public static function showSecurityAssignment(string $itemID): void
     {
         // Build form action
-        $action = MAN_BASE_URL . '&option=update_security&item_id=' . $itemID;
+        $action = self::recordUrl('item=' . $itemID . '&option=update_security');
 
         $groupArray = array_map('strval', \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID));
 
@@ -2519,7 +2456,7 @@ final class ItemScreen
         // Build return URL and render success response via the modern helper
         $logEntry   = (SET_LOG_ENTRY === 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS === 'yes') ? '&attachments=yes' : '';
-        $url = MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $logEntry . $attachments;
+        $url = self::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments);
 
         View::respond(TXT_320, Blocks::link($url, TXT_353, 'URL'));
     }
@@ -2584,7 +2521,7 @@ final class ItemScreen
             $actions = [];
             if ($canDelete) {
                 $actions[] = [
-                    'href' => MAN_BASE_URL . '&option=delete_attachment&item_id=' . $itemID . '&id=' . $row['id'],
+                    'href' => self::recordUrl('item=' . $itemID . '&option=delete_attachment&id=' . $row['id']),
                     'label' => TXT_47,
                     'tone' => 'danger',
                     'confirm' => TXT_400,
@@ -2592,7 +2529,7 @@ final class ItemScreen
             }
             $rows[] = [
                 'name' => self::attachmentDisplayName((string) $row['file_name']),
-                'href' => MAN_BASE_URL . '&option=download_attachment&id=' . $row['id'],
+                'href' => self::recordUrl('option=download_attachment&id=' . $row['id']),
                 'cells' => [
                     'type' => (string)$row['file_type'],
                     'size' => (string)round(((int)$row['file_size']) / 1000),
@@ -2620,14 +2557,14 @@ final class ItemScreen
 
         $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-        $backHref = MAN_BASE_URL . '&option=show_item&item_id=' . $itemID . $showLog . $attachments;
+        $backHref = self::recordUrl('item=' . $itemID . '&option=show_item' . $showLog . $attachments);
         $fields = [
             '' => $list,
             TXT_393 => Form::file('attachment', (string) ((int) SET_MAX_ATTACHMENT * 1000000)),
         ];
         Page::current()->setBody(Form::form(
             TXT_389,
-            MAN_BASE_URL . '&option=add_attachment&item_id=' . $itemID,
+            self::recordUrl('item=' . $itemID . '&option=add_attachment'),
             $fields,
             [
                 Form::button('submit', 'submit_button', TXT_74),
@@ -2711,9 +2648,23 @@ final class ItemScreen
         });
         if (Page::current()->inApplication()) {
             View::flash('The record has been deleted.');
-            header('Location: ' . (defined('MAN_BASE_URL') ? (string) MAN_BASE_URL : './'));
+            header('Location: ' . self::recordUrl());
             exit;
         }
         self::showMyItems($_SESSION['access_user_id']);
     }
+
+    /**
+     * The next address on this screen. Inside an application that is the application. Outside it is the record list.
+     */
+    private static function recordUrl(string $query = ''): string
+    {
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId(), $query);
+        }
+
+        return Router::manageUrl('records', $query);
+    }
+
 }

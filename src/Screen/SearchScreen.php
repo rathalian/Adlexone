@@ -12,6 +12,7 @@ use Adlexone\support\Database;
 use Adlexone\support\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
+use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -239,7 +240,7 @@ final class SearchScreen
         ];
         Page::current()->setBody(Form::form(
             Wording::application('TXT_62', TXT_376),
-            \Adlexone\Http\Router::continueUrl('search') . '&option=quick_search',
+            self::address('search', 'option=quick_search'),
             $fields,
             [Form::button('submit', 'search', TXT_3, $javascript)]
         ));
@@ -300,9 +301,7 @@ final class SearchScreen
             : (string)Wording::application('TXT_1', (string)Wording::get('LA_44', 'TXT_44'));
 
         if (empty($ids)) {
-            $again = defined('MAN_BASE_URL')
-                ? (string) MAN_BASE_URL . (Page::current()->inApplication() ? '&option=show_item_search' : '&option=show_quick_search')
-                : '';
+            $again = self::address('search', Page::current()->inApplication() ? 'option=show_item_search' : 'option=show_quick_search');
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => $heading,
@@ -324,7 +323,7 @@ final class SearchScreen
         $columns = ['item_id', 'item_title', 'create_date', 'item_type_id'];
         $result = Database::select('items', $columns, $where, $params, RecordListQuery::order((string) $orderSQL));
 
-        $base = \Adlexone\Http\Router::continueUrl('items');
+        $base = self::address('records');
         $rows = [];
         foreach ($result as $row) {
             $itemId = (int)$row['item_id'];
@@ -582,8 +581,7 @@ final class SearchScreen
     		$i = 0;
     		$countUpdate = (defined('APP_COUNT_ITEM_TYPE')) ? '&event_id=view_item' : '';
     		$formHTML = '';
-    		$controller = Request::queryPart('controller');
-    		if (count($result) > 0) {
+        		if (count($result) > 0) {
     			$itemTypeID = '';
     			$itemTypeName = '';
     			$tableRows = '';
@@ -602,7 +600,7 @@ final class SearchScreen
     							}
     							$logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
     							$attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-    							$showHref = '?controller=' . $controller . '&subcontroller=item_management_manage&option=show_item&item_id=' . (int) $row['item_id'] . $logEntry . $attachments . $countUpdate;
+    							$showHref = self::address('records', 'item=' . (int) $row['item_id'] . '&option=show_item' . $logEntry . $attachments . $countUpdate);
     							$cellData[] = '<a href="' . Html::e($showHref) . '" class="URL">' . Html::e((string) $title) . '</a>';
     							break;
     						case 'create_date':
@@ -665,7 +663,7 @@ final class SearchScreen
     				}
     				$actions = (string) Access::outputIfRoleAllowed(
     				    Blocks::link(
-    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=log_entry&item_id=' . (int) $row['item_id'],
+    				        self::address('records', 'item=' . (int) $row['item_id'] . '&option=log_entry'),
     				        TXT_246
     				    ),
     				    $_SESSION['access_role_id'],
@@ -674,7 +672,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=show_attachments&item_id=' . (int) $row['item_id'],
+    				        self::address('records', 'item=' . (int) $row['item_id'] . '&option=show_attachments'),
     				        TXT_389
     				    ),
     				    $_SESSION['access_role_id'],
@@ -683,7 +681,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=change_security&item_id=' . (int) $row['item_id'],
+    				        self::address('records', 'item=' . (int) $row['item_id'] . '&option=change_security'),
     				        TXT_28
     				    ),
     				    $_SESSION['access_role_id'],
@@ -692,7 +690,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=full_page_view&option=print_item&item_id=' . $row['item_id'],
+    				        Router::manageUrl('print', 'item=' . (int) $row['item_id']),
     				        TXT_625,
     				        '',      // spriteName
     				        'URL',   // class
@@ -705,7 +703,7 @@ final class SearchScreen
 
     				$actions .= (string) Access::outputIfRoleAllowed(
     				    ' - ' . Blocks::link(
-    				        '?controller=' . $controller . '&subcontroller=item_management_manage&option=delete_item&item_id=' . (int) $row['item_id'],
+    				        self::address('records', 'item=' . (int) $row['item_id'] . '&option=delete_item'),
     				        TXT_315,
     				        '', // spriteName
     				        'URL',
@@ -724,7 +722,7 @@ final class SearchScreen
     		} else {
     			$html .= Form::fields(array(TXT_115));
     		}
-    		$html = Form::open(\Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results','POST','form-horizontal');
+    		$html = Form::open(self::address('search', 'option=show_search_results'),'POST','form-horizontal');
 
     		$html .= $formHTML;
     		unset($tableRows);
@@ -1057,7 +1055,7 @@ final class SearchScreen
             $sql = "SELECT * FROM saved_searches WHERE (user = ? OR user = 'all') $applicationClause ORDER BY search_name ASC";
         }
         $result = Database::rows($sql, $params);
-        $base = \Adlexone\Http\Router::continueUrl('search');
+        $base = self::address('search');
         $rows = [];
         if (count($result) > 0) {
             foreach ($result as $row) {
@@ -1178,7 +1176,7 @@ final class SearchScreen
         }
         $row = $result[0] ?? null;
         if ($row === null) {
-            View::respond(TXT_115, Blocks::link(\Adlexone\Http\Router::continueUrl('search') . '&option=show_saved_searches', TXT_313));
+            View::respond(TXT_115, Blocks::link(self::address('search', 'option=show_saved_searches'), TXT_313));
             return;
         }
 
@@ -1217,7 +1215,7 @@ final class SearchScreen
             foreach ($itemArray as $id) {
                 $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
                 $item = $result[0] ?? null;
-                $linkArray[] = Blocks::link('?controller=' . Request::queryPart('controller') . '&subcontroller=search_management_manage&option=saved_search&id=' . (int) ($item['item_id'] ?? 0), '', 'URL');
+                $linkArray[] = Blocks::link(self::address('records', 'item=' . (int) ($item['item_id'] ?? 0) . '&option=show_item'), '', 'URL');
                 $titleArray[] = (string) ($item['item_title'] ?? '');
             }
             RssFeed::send(SET_DATE_FORMAT, $search['search_name'], $search['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
@@ -1566,7 +1564,7 @@ final class SearchScreen
 
         Page::current()->setBody(Form::form(
             Wording::application('TXT_61', (string)Wording::get('LA_96', 'TXT_96')),
-            \Adlexone\Http\Router::continueUrl('search') . '&option=show_search_results' . $eventId,
+            self::address('search', 'option=show_search_results' . $eventId),
             $fields,
             [
                 Form::button('submit', 'search', TXT_3),
@@ -1589,7 +1587,7 @@ final class SearchScreen
             return;
         }
 
-        $action = \Adlexone\Http\Router::continueUrl('search') . '&option=update_saved_search&id=' . $id;
+        $action = self::address('search', 'search=' . $id . '&option=update_saved_search');
         $fields = [
             TXT_627 => Form::text('search_name', $row['search_name']),
         ];
@@ -1619,5 +1617,19 @@ final class SearchScreen
         Database::update('saved_searches', ['search_name' => $name], 'search_id = ?', [$id]);
         // Success messagae
         View::respond(TXT_628,TXT_629);
+    }
+
+    /**
+     * The next address on this screen. Inside an application that is the application.
+     * Outside, records and search are separate places.
+     */
+    private static function address(string $manage, string $query = ''): string
+    {
+        $page = Page::current();
+        if ($page->inApplication()) {
+            return Router::applicationUrl($page->applicationSlug(), $page->navId(), $query);
+        }
+
+        return Router::manageUrl($manage, $query);
     }
 }
