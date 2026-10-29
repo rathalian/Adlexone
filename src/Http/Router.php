@@ -24,9 +24,9 @@ use Adlexone\Screen\SiteSettingsScreen;
 /**
  * One map from a request to a screen class.
  *
- * Home is the site root. Manage pages use manage. An application uses
- * application and nav. item and search name the record on that page.
- * A name that is not in the map is not opened.
+ * Home is the site root. Manage pages use a public manage name. An application
+ * uses application and nav. item and search name the record on that page.
+ * A manage value that is not a public name opens home.
  */
 final class Router
 {
@@ -94,9 +94,9 @@ final class Router
         Request::prepare();
         $manage = self::queryName(Request::query('manage'));
         if ($manage !== '') {
-            return $manage;
+            return self::isPublicManage($manage) ? $manage : 'home';
         }
-        if (Request::has('application') || Request::has('app')) {
+        if (Request::has('application')) {
             return 'application';
         }
 
@@ -319,6 +319,11 @@ final class Router
         if ($canonical === 'full_page_view' && Request::has('item_id')) {
             Request::fill('option', 'print_item');
         }
+    }
+
+    private static function isPublicManage(string $name): bool
+    {
+        return $name === 'palette' || isset(self::ALIASES[$name]);
     }
 
     private static function canonical(string $name): string

@@ -76,6 +76,20 @@ $check(Request::query('focus') === 'overdue', 'a screen filter stays on the quer
 $load(['manage' => 'palette']);
 $check(Router::requested() === 'palette', 'manage=palette asks for the palette');
 
+foreach ([
+    'item_management_manage' => 'the record list',
+    'search_management_manage' => 'search',
+    'full_page_view' => 'print',
+    'home_activity' => 'recent activity',
+    'home_assigned' => 'assigned work',
+    'manage_fields' => 'Fields',
+    'manage_security' => 'People',
+    'manage_items' => 'Fields',
+] as $internal => $screen) {
+    $load(['manage' => $internal]);
+    $check(Router::requested() === 'home', 'manage=' . $internal . ' does not open ' . $screen);
+}
+
 $check(Router::manageUrl('records') === '?manage=records', 'records is a manage address');
 $check(Router::manageUrl('search') === '?manage=search', 'search is a manage address');
 $check(Router::manageUrl('activity', 'scope=mine') === '?manage=activity&scope=mine', 'activity keeps its filter after the place');
@@ -101,8 +115,9 @@ $check(
     'the next link inside Publishing is the application address'
 );
 
-$load(['controller' => 'application', 'app' => 'publishing']);
-$check(Router::requested() === 'application', 'app still names the application when the page has already set it');
+$load(['app' => 'publishing']);
+$check(Router::requested() === 'home', 'app alone does not open an application');
+$check(Request::query('app') === 'publishing', 'app stays on the query for a screen that reads it');
 
 $check(Router::homeTarget('application:publishing') === '?application=publishing', 'a stored application home stays on the application address');
 $check(Router::homeTarget('home') === './', 'a stored home opens the site root');

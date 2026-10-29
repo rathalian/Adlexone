@@ -4,7 +4,7 @@ Commit and push directly to `main`. Do not create feature branches and do not op
 
 Adlexone is PHP 8.1+ with SQLite. The cloud environment installs Composer dependencies, copies any missing files from `config.example/` into `config/`, and serves the app on port 8000 with the document root at `public/`.
 
-Open the forwarded port **8000** to view the site. Routes use query strings such as `/?controller=home`. nginx listens on that port, compresses CSS and JavaScript, and keeps the connection open. Four PHP workers behind it run `public/index.php`. See `.cursor/rules/forwarded-dev-server.mdc`.
+Open the forwarded port **8000** to view the site. Home is `./`. A manage page is `?manage=records`. An application is `?application=publishing`. nginx listens on that port, compresses CSS and JavaScript, and keeps the connection open. Four PHP workers behind it run `public/index.php`. See `.cursor/rules/forwarded-dev-server.mdc`.
 
 Do not commit `config/*.json` or `storage/database/*.sqlite`. Those are created on the server. `config.example/` is the template. The first visit with an empty database shows setup. `SchemaMigrator` upgrades an existing sqlite file on boot. A SaaS host sets `INLAY_STORES` and `INLAY_OPERATOR_HOST` (environment or `config/platform.json`) and opens the operator host to add customer folders.
 
