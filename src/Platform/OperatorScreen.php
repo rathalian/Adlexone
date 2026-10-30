@@ -6,7 +6,6 @@ namespace Adlexone\Platform;
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
-use Adlexone\Theme\Theme;
 
 /**
  * Operator console. One login for the person who creates and retires customer stores.
@@ -753,13 +752,13 @@ final class OperatorScreen
     private static function theme(): void
     {
         if (!defined('SET_DEFAULT_THEME')) {
-            define('SET_DEFAULT_THEME', 'inlay-stone');
+            define('SET_DEFAULT_THEME', 'inlay-slate');
         }
         if (!defined('SET_DEFAULT_LANGUAGE')) {
             define('SET_DEFAULT_LANGUAGE', 'English');
         }
         if (!defined('SET_THEME')) {
-            define('SET_THEME', Theme::forLogin());
+            define('SET_THEME', 'inlay-slate');
         }
     }
 }

@@ -2364,15 +2364,103 @@ input[type="file"]::file-selector-button:hover{ background:var(--hover); }
     .btn--primary{ border:1px solid ButtonText; }
 }
 
+/* Setup, the SaaS installer, and the operator console. Cool paper, near-black actions, one blue for the mark. */
+body.page-setup{
+    --ink:#0b1220;
+    --inlay:#0b1220;
+    --stone:#e7edf5;
+    --brand:#0b1220;
+    --brand2:#1f2937;
+    --text:#0b1220;
+    --panel:#ffffff;
+    --surface:#ffffff;
+    --mix-base:#ffffff;
+    --border:#e4e8ee;
+    --hover:rgba(11, 18, 32, 0.05);
+    --ring:rgba(37, 99, 235, 0.35);
+    --title:#3c4658;
+    --label:#1e293b;
+    --body:#1c2636;
+    --input:#0b1220;
+    --placeholder:#64748b;
+    --title-strip:#f4f7fb;
+    --title-strip-border:#e4e8ee;
+    --form-surface:#ffffff;
+    --form-border:#d5dbe3;
+    --field-border:#c9d1dc;
+    --form-hover-shadow:0 0 0 3px rgba(37, 99, 235, 0.18);
+    --page-bg:#f3f5f8;
+    --brandbar-border:#e4e8ee;
+    --logo-ground:#0b1220;
+    --logo-bar:#2563eb;
+    --logo-piece:#f8fafc;
+    --logo-joint:#d7e0ea;
+    --btn-primary-hover:#1f2937;
+    --neutral:#64748b;
+    --neutral-ink:#475569;
+    --install-shadow:0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 44px rgba(15, 23, 42, 0.07);
+    background:
+        radial-gradient(920px 420px at 8% -8%, rgba(37, 99, 235, 0.09), transparent 62%),
+        radial-gradient(640px 320px at 100% 0, rgba(15, 23, 42, 0.04), transparent 58%),
+        var(--page-bg);
+}
+html[data-mode="dark"] body.page-setup{
+    --ink:#f4f7fb;
+    --inlay:#93c5fd;
+    --stone:#1c2736;
+    --brand:#3b82f6;
+    --brand2:#93c5fd;
+    --text:#f4f7fb;
+    --panel:#121826;
+    --surface:#121826;
+    --mix-base:#121826;
+    --border:#2a3548;
+    --hover:rgba(147, 197, 253, 0.08);
+    --ring:rgba(96, 165, 250, 0.45);
+    --title:#c5d0de;
+    --label:#e2e8f0;
+    --body:#c5d0de;
+    --input:#f8fafc;
+    --placeholder:#8b9cb3;
+    --title-strip:#182232;
+    --title-strip-border:#2a3548;
+    --form-surface:#0d1420;
+    --form-border:#334155;
+    --field-border:#3d4e66;
+    --form-hover-shadow:0 0 0 3px rgba(59, 130, 246, 0.28);
+    --page-bg:#090d14;
+    --brandbar-border:#243044;
+    --logo-ground:#090d14;
+    --logo-bar:#60a5fa;
+    --logo-piece:#e8eef6;
+    --logo-joint:#334155;
+    --btn-primary-hover:#60a5fa;
+    --neutral:#94a3b8;
+    --neutral-ink:#cbd5e1;
+    --install-shadow:0 1px 2px rgba(0, 0, 0, 0.35), 0 18px 44px rgba(0, 0, 0, 0.45);
+    background:
+        radial-gradient(920px 420px at 8% -8%, rgba(59, 130, 246, 0.16), transparent 62%),
+        var(--page-bg);
+}
+
 .setup-choice{ border:0; margin:8px 0 16px; padding:0; }
 .setup-choice__option{ display:flex; gap:10px; align-items:flex-start; margin:12px 0; cursor:pointer; }
 .setup-choice__label{ display:block; font-weight:600; }
 .setup-choice__text .form-help{ margin:2px 0 0; }
-.page-setup .login-shell{ grid-template-columns:minmax(0,40rem) minmax(0,520px); align-content:start; }
-.page-setup .login-atmosphere{ overflow:auto; justify-content:flex-start; }
-.page-setup .login-card{ max-width:520px; }
-.page-setup .login-atmosphere__copy{ max-width:40rem; }
-.page-setup .login-center{ justify-content:flex-start; padding-top:32px; }
+.page-setup .login-shell{ grid-template-columns:minmax(0,36rem) minmax(280px,36rem); align-content:start; }
+.page-setup .login-atmosphere{ overflow:auto; justify-content:flex-start; padding-top:56px; }
+.page-setup .login-card{
+    max-width:36rem;
+    padding:28px 28px 24px;
+    border:1px solid color-mix(in srgb, var(--ink) 8%, var(--border));
+    border-radius:16px;
+    background:var(--surface);
+    box-shadow:var(--install-shadow);
+}
+.page-setup .login-atmosphere__copy{ max-width:36rem; }
+.page-setup .login-center{ justify-content:flex-start; padding-top:56px; }
+.page-setup .login-title{ font-size:1.7rem; letter-spacing:-0.035em; line-height:1.15; }
+.page-setup .login-lead{ font-size:15px; line-height:1.5; color:var(--title); }
 .setup-help{ font-size:14px; line-height:1.5; color:var(--ink); }
 .setup-help__title{ margin:0 0 10px; font-size:22px; letter-spacing:-0.03em; }
 .setup-help__heading{ margin:16px 0 6px; font-size:14px; letter-spacing:-0.01em; }
@@ -2420,23 +2508,23 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
     .page-setup .login-shell{ grid-template-columns:minmax(0,1fr); }
 }
 
-.page-install{
-    background:var(--page-bg);
-}
 .install{
-    width:min(42rem, 100%);
+    width:min(46rem, 100%);
     margin:0 auto;
-    padding:40px var(--page-gutter) 64px;
+    padding:48px var(--page-gutter) 72px;
     display:flex;
     flex-direction:column;
-    gap:18px;
+    gap:20px;
 }
 .install__brand .brandwrap{ align-items:center; }
+.install__brand .logoA,
+.install__brand .logoA svg{ width:44px; height:44px; }
+.install__brand .brandtext{ font-size:22px; letter-spacing:-0.04em; }
 .install-kicker{
-    margin:8px 0 0;
-    font-size:13px;
+    margin:10px 0 0;
+    font-size:11px;
     font-weight:700;
-    letter-spacing:.06em;
+    letter-spacing:.14em;
     text-transform:uppercase;
     color:var(--placeholder);
 }
@@ -2445,7 +2533,11 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
     max-width:none;
     display:flex;
     flex-direction:column;
-    gap:14px;
+    gap:16px;
+    padding:32px 32px 28px;
+    border-radius:16px;
+    border-color:color-mix(in srgb, var(--ink) 8%, var(--border));
+    box-shadow:var(--install-shadow);
 }
 .install-head{
     display:flex;
@@ -2453,7 +2545,7 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
     justify-content:space-between;
     gap:12px;
 }
-.install-head .login-title{ font-size:1.55rem; letter-spacing:-0.03em; }
+.install-head .login-title{ font-size:1.85rem; letter-spacing:-0.04em; line-height:1.12; }
 .install-help{
     flex:0 0 auto;
     margin-top:4px;
@@ -2480,49 +2572,73 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
     list-style:none;
     margin:0;
     padding:0;
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
-    gap:8px;
+    display:flex;
+    align-items:center;
+    gap:0;
 }
-.install-steps--four{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.install-steps li{
+    flex:1 1 auto;
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.install-steps li:not(:last-child)::after{
+    content:"";
+    flex:1 1 12px;
+    height:1px;
+    min-width:12px;
+    background:var(--border);
+}
 .install-steps__item{
     display:flex;
     align-items:center;
     gap:8px;
-    min-height:44px;
-    padding:8px 10px;
-    border:1px solid var(--border);
-    border-radius:10px;
-    background:var(--surface);
+    width:auto;
+    flex:0 0 auto;
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
     color:var(--placeholder);
     text-decoration:none;
     font-size:13px;
-    font-weight:700;
+    font-weight:600;
+    line-height:1.2;
+    box-shadow:none;
+    white-space:nowrap;
 }
+.install-steps__label{ min-width:0; }
 .install-steps .is-done .install-steps__item{ color:var(--ink); }
 .install-steps .is-current .install-steps__item{
     color:var(--ink);
-    border-color:var(--brand);
-    box-shadow:inset 0 0 0 1px var(--brand);
+    background:transparent;
+    border-color:transparent;
+    box-shadow:none;
 }
 .install-steps__num{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    width:1.45rem;
-    height:1.45rem;
+    width:1.5rem;
+    height:1.5rem;
     border-radius:999px;
     background:color-mix(in srgb, var(--ink) 8%, transparent);
     font-size:12px;
+    font-weight:700;
     flex:0 0 auto;
 }
-.install-steps .is-current .install-steps__num{
+.install-steps .is-done .install-steps__num{
     background:var(--brand);
     color:#fff;
 }
-.install-steps a.install-steps__item:hover{
-    border-color:color-mix(in srgb, var(--brand) 45%, var(--border));
+.install-steps .is-current .install-steps__num{
+    background:var(--logo-bar, var(--brand));
+    color:#fff;
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--logo-bar, var(--brand)) 16%, transparent);
 }
+.install-steps a.install-steps__item:hover{ color:var(--ink); }
 .install-steps a.install-steps__item:focus-visible{
     outline:2px solid var(--ring);
     outline-offset:2px;
@@ -2604,9 +2720,11 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
 .install-option input{
     margin-top:3px;
 }
+body.page-setup :where(input[type="checkbox"], input[type="radio"]){ accent-color:var(--logo-bar, var(--brand)); }
 .install-option:has(input:checked){
-    border-color:var(--brand);
-    box-shadow:inset 0 0 0 1px var(--brand);
+    border-color:var(--logo-bar, var(--brand));
+    background:color-mix(in srgb, var(--logo-bar, var(--brand)) 7%, var(--surface));
+    box-shadow:none;
 }
 .install-option:focus-within{
     outline:2px solid var(--ring);
@@ -2707,7 +2825,7 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
 .install-checks li:first-child{ border-top:0; }
 .install-checks__name{ font-weight:700; }
 .install-checks__result{ font-weight:700; }
-.install-checks .is-pass .install-checks__result{ color:var(--brand); }
+.install-checks .is-pass .install-checks__result{ color:var(--success-ink, var(--success)); }
 .install-checks .is-fail .install-checks__result{ color:var(--danger-ink, var(--danger)); }
 .install-checks__detail{ color:var(--title); overflow-wrap:anywhere; }
 .install-actions{
@@ -2723,10 +2841,14 @@ a.setup-store__name{ color:inherit; text-decoration:underline; text-underline-of
 .install-actions .btn--primary{ margin-left:auto; min-width:9rem; }
 .install-form .form-help{ overflow-wrap:anywhere; }
 .page-install .sheet-pop{ width:min(36rem, calc(100vw - 24px)); }
+@media (max-width:780px){
+    .install-steps{ flex-direction:column; align-items:stretch; gap:10px; }
+    .install-steps li:not(:last-child)::after{ display:none; }
+    .install-steps__item{ white-space:normal; }
+}
 @media (max-width:640px){
-    .install{ padding:24px 16px 48px; }
-    .install__panel{ padding:20px 16px; }
-    .install-steps{ grid-template-columns:1fr; }
+    .install{ padding:28px 16px 48px; }
+    .install__panel{ padding:22px 16px; }
     .install-facts div,
     .install-checks li{ grid-template-columns:1fr; gap:2px; }
     .install-actions{ flex-direction:column; align-items:stretch; }
