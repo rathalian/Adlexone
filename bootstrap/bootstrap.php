@@ -70,8 +70,15 @@ if (defined('SET_DEBUG_MODE') && SET_DEBUG_MODE == 'Yes') {
 
 Runtime::startSession();
 
-if (SaasInstallScreen::handles((string) (Runtime::paths()['stores'] ?? ''), (string) ($_GET['install'] ?? ''))) {
+$hostQuery = strtolower(trim((string) ($_GET['host'] ?? '')));
+if (SaasInstallScreen::handles((string) (Runtime::paths()['stores'] ?? ''), (string) ($_GET['install'] ?? ''), $hostQuery)) {
     SaasInstallScreen::handle();
+    Page::current()->send();
+    exit;
+}
+
+if ($hostQuery === 'manage' && Runtime::mode() !== Runtime::OPERATOR) {
+    OperatorScreen::manageUnavailable();
     Page::current()->send();
     exit;
 }

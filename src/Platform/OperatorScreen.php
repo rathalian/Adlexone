@@ -12,6 +12,18 @@ use Adlexone\Http\Page;
  */
 final class OperatorScreen
 {
+    public static function manageUnavailable(): void
+    {
+        self::theme();
+        Page::current()->useLayout('setup', [
+            'title' => 'Customer sites',
+            'lead' => 'This copy is not hosting customer sites. Open ?host=install to turn it into a host.',
+            'error' => '',
+            'helpHtml' => '',
+            'formHtml' => '<p><a href="?host=install">Open the SaaS installer</a></p>',
+        ]);
+    }
+
     public static function handle(): void
     {
         self::theme();
@@ -80,7 +92,7 @@ final class OperatorScreen
                     'error' => '',
                     'notice' => $notice,
                     'helpHtml' => HelpText::operator($paths),
-                    'formHtml' => '<p><a href="./">Customer sites</a></p>',
+                    'formHtml' => '<p><a href="' . Html::e(Runtime::operatorAddress()) . '">Customer sites</a></p>',
                 ]);
 
                 return;
@@ -115,28 +127,28 @@ final class OperatorScreen
         $db = $paths['platform_db'];
         if ($action === 'sign_out') {
             unset($_SESSION['operator_id'], $_SESSION['operator_name']);
-            header('Location: ./');
+            header('Location: ' . Runtime::operatorAddress());
             exit;
         }
         if ($action === 'create_store') {
             $slug = self::createStore($paths);
-            header('Location: ./?site=' . rawurlencode($slug));
+            header('Location: ' . Runtime::operatorAddress('site=' . rawurlencode($slug)));
             exit;
         }
         if ($action === 'measure') {
             $_SESSION['operator_notice'] = SiteUsage::measureAll($db, $paths['stores'], PlatformDb::stores($db));
-            header('Location: ./');
+            header('Location: ' . Runtime::operatorAddress());
             exit;
         }
         if ($action === 'save_rate') {
             self::saveRate($db);
-            header('Location: ./');
+            header('Location: ' . Runtime::operatorAddress());
             exit;
         }
         if ($action === 'clear_rate') {
             PlatformDb::deleteRate($db);
             $_SESSION['operator_notice'] = 'The rate is cleared. Cost is not calculated.';
-            header('Location: ./');
+            header('Location: ' . Runtime::operatorAddress());
             exit;
         }
         $store = PlatformDb::storeById($db, (int) ($_POST['store_id'] ?? 0));
@@ -145,7 +157,7 @@ final class OperatorScreen
         }
         $slug = (string) $store['slug'];
         $folder = SiteUsage::folder($paths['stores'], $slug);
-        $site = './?site=' . rawurlencode($slug);
+        $site = Runtime::operatorAddress('site=' . rawurlencode($slug));
         if ($action === 'save_site') {
             self::saveSite($paths, $store);
             header('Location: ' . $site);
@@ -178,7 +190,7 @@ final class OperatorScreen
         if ($action === 'delete') {
             SiteUsage::deleteSite($db, $paths['stores'], $store, trim((string) ($_POST['confirm_slug'] ?? '')));
             $_SESSION['operator_notice'] = $store['label'] . ' was deleted from disk.';
-            header('Location: ./');
+            header('Location: ' . Runtime::operatorAddress());
             exit;
         }
         throw new \RuntimeException('Unknown action.');
@@ -376,7 +388,7 @@ final class OperatorScreen
             $figures = SiteUsage::formatSize($bytes) . ' · ' . $cost;
         }
         $html = '<li class="setup-store">';
-        $html .= '<a class="setup-store__name" href="?site=' . Html::e(rawurlencode($slug)) . '">' . Html::e((string) $store['label']) . '</a>';
+        $html .= '<a class="setup-store__name" href="' . Html::e(Runtime::operatorAddress('site=' . rawurlencode($slug))) . '">' . Html::e((string) $store['label']) . '</a>';
         $html .= '<p class="form-help">' . Html::e((string) $store['host']) . ' · ' . Html::e($status)
             . ' · ' . Html::e($figures) . '</p>';
         $html .= '</li>';
@@ -395,9 +407,9 @@ final class OperatorScreen
         $id = (int) $store['store_id'];
         $usage = PlatformDb::usage($paths['platform_db'], $id);
         $rate = PlatformDb::rate($paths['platform_db']);
-        $action = '?site=' . rawurlencode($slug);
+        $action = Runtime::operatorAddress('site=' . rawurlencode($slug));
         $html = self::sessionBar();
-        $html .= '<p><a href="./">Customer sites</a></p>';
+        $html .= '<p><a href="' . Html::e(Runtime::operatorAddress()) . '">Customer sites</a></p>';
         $html .= '<dl class="setup-facts">';
         $html .= '<dt>Slug</dt><dd><code>' . Html::e($slug) . '</code></dd>';
         $html .= '<dt>Database</dt><dd><code>' . Html::e($folder . 'adlexone.sqlite') . '</code></dd>';

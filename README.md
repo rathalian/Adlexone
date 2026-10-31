@@ -35,7 +35,9 @@ The root `.htaccess` lets only `index.php` run and refuses requests for `config/
 
 ## Several customers on one server
 
-On a copy that is not in SaaS mode yet and has no administrator, open `./?install=host`. The SaaS installer confirms the document root, chooses the stores directory, checks that PHP can use it and that a browser cannot read it, and saves the operator hostname. The operator account is created on that hostname. The same keys can live in the environment or in `config/platform.json` next to the code. Environment values win. Leave both `INLAY_STORES` and `INLAY_OPERATOR_HOST` empty for one self-hosted site.
+On a copy that is not in SaaS mode yet and has no administrator, open `./?host=install`. `./?install=host` is the same page. The SaaS installer confirms the document root, chooses the stores directory, checks that PHP can use it and that a browser cannot read it, and saves the operator hostname. The operator account is created on that hostname. The same keys can live in the environment or in `config/platform.json` next to the code. Environment values win. Leave both `INLAY_STORES` and `INLAY_OPERATOR_HOST` empty for one self-hosted site.
+
+Open `./?host=manage` on any address this server answers to reach the customer sites screen. The operator hostname opens that screen with no query.
 
 Open the operator host to add a customer, change the display name, hostname, or contact email, and read usage and cost. Each customer gets `{stores}/{slug}/adlexone.sqlite`, `config/`, and `attachments/`. Leave the admin password blank and their first visit is the same setup page, with their own paths. The operator login, the site list, the rate, and the usage measurement are stored in `platform.sqlite` beside the stores directory, not inside a customer database. Put the stores directory inside a folder this account owns, such as `/home/health/adlexone-stores`. That parent is mode 700, so a shared directory such as `/tmp` is refused. The design notes are in `design/saas-installer/`.
 

@@ -10,8 +10,8 @@ use Adlexone\Http\Page;
 /**
  * First visit that turns this copy into a host of customer sites.
  *
- * The self-hosted installer stays on SetupScreen. This page is ./?install=host,
- * and only while INLAY_STORES is empty.
+ * The self-hosted installer stays on SetupScreen. This page is ./?host=install,
+ * and ./?install=host is the same page. It runs only while INLAY_STORES is empty.
  */
 final class SaasInstallScreen
 {
@@ -25,9 +25,14 @@ final class SaasInstallScreen
 
     private const STEP_ACCOUNT = 'account';
 
-    public static function handles(string $stores, string $installQuery): bool
+    public static function handles(string $stores, string $installQuery, string $hostQuery = ''): bool
     {
-        return $stores === '' && $installQuery === 'host';
+        if (strtolower(trim($hostQuery)) === 'manage') {
+            return false;
+        }
+        $asked = $installQuery === 'host' || strtolower(trim($hostQuery)) === 'install';
+
+        return $stores === '' && $asked;
     }
 
     public static function blockReason(string $install): string

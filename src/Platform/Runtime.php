@@ -56,7 +56,14 @@ final class Runtime
         $host = self::requestHost();
 
         if ($stores !== '') {
+            if (self::wantsManage() && $operatorHost !== '') {
+                $host = $operatorHost;
+            }
             self::definePlatform($install, $stores, $operatorHost, $platformDb, $host);
+            if (self::wantsManage() && $platformDb !== '' && self::$mode !== self::OPERATOR) {
+                self::$notice = '';
+                self::$mode = self::OPERATOR;
+            }
             return;
         }
 
@@ -165,6 +172,24 @@ final class Runtime
         }
 
         return is_writable($parent);
+    }
+
+    /**
+     * Address of the customer-sites screen. ?host=manage stays on the query so a
+     * later request on another hostname still opens the operator database.
+     */
+    public static function operatorAddress(string $query = ''): string
+    {
+        if (!self::wantsManage()) {
+            return $query === '' ? './' : './?' . $query;
+        }
+
+        return $query === '' ? './?host=manage' : './?host=manage&' . $query;
+    }
+
+    public static function wantsManage(): bool
+    {
+        return strtolower(trim((string) ($_GET['host'] ?? ''))) === 'manage';
     }
 
     public static function requestHost(): string

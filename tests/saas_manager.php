@@ -25,8 +25,17 @@ $check = static function (bool $ok, string $message) use ($fail): void {
 };
 
 $check(SaasInstallScreen::handles('', 'host') === true, 'the installer route is open when no stores directory is set');
+$check(SaasInstallScreen::handles('', '', 'install') === true, '?host=install opens the installer');
+$check(SaasInstallScreen::handles('', 'host', 'manage') === false, '?host=manage is not the installer');
 $check(SaasInstallScreen::handles('/var/stores', 'host') === false, 'the installer route does not render when INLAY_STORES is set');
 $check(SaasInstallScreen::handles('', 'site') === false, 'another install query is not the SaaS installer');
+$check(Runtime::operatorAddress() === './', 'the operator address stays on this host');
+$check(Runtime::operatorAddress('site=health') === './?site=health', 'a site link stays on this host');
+$_GET['host'] = 'manage';
+$check(Runtime::wantsManage() === true, '?host=manage asks for the customer sites screen');
+$check(Runtime::operatorAddress() === './?host=manage', 'manage stays on the management address');
+$check(Runtime::operatorAddress('site=health') === './?host=manage&site=health', 'a site link keeps manage');
+unset($_GET['host']);
 
 $check(SiteUsage::parseAmount('12.50') === 1250, '12.50 is 1250 cents');
 $check(SiteUsage::parseAmount('0') === 0, 'zero is a real amount');
@@ -272,5 +281,29 @@ $check(is_dir($other), 'delete removes only that site’s folder');
 $check(is_file($platform), 'delete does not remove the operator database');
 $check(PlatformDb::storeBySlug($platform, 'health') === null, 'the operator row is removed');
 $check(PlatformDb::usage($platform, (int) $updated['store_id']) === null, 'the measurement row is removed with the site');
+
+$manageRoot = sys_get_temp_dir() . '/adlexone-manage-' . bin2hex(random_bytes(4));
+$manageStores = $manageRoot . '/stores';
+if (!mkdir($manageRoot . '/config', 0700, true) && !is_dir($manageRoot . '/config')) {
+    $fail('Cannot create the manage install');
+}
+mkdir($manageStores, 0700, true);
+file_put_contents(
+    $manageRoot . '/config/platform.json',
+    json_encode([
+        'INLAY_STORES' => $manageStores,
+        'INLAY_OPERATOR_HOST' => 'operate.example.com',
+        'INLAY_PLATFORM_DB' => $manageRoot . '/platform.sqlite',
+    ], JSON_PRETTY_PRINT) . "\n"
+);
+$_SERVER['HTTP_HOST'] = 'health.example.com';
+unset($_GET['host']);
+Runtime::define($manageRoot . DIRECTORY_SEPARATOR);
+$check(Runtime::mode() === Runtime::UNKNOWN, 'a hostname with no site is not the operator, got ' . Runtime::mode());
+$_GET['host'] = 'manage';
+Runtime::define($manageRoot . DIRECTORY_SEPARATOR);
+$check(Runtime::mode() === Runtime::OPERATOR, '?host=manage opens the operator on another hostname, got ' . Runtime::mode());
+$check(Runtime::paths()['platform_db'] === $manageRoot . '/platform.sqlite', 'manage uses the operator database');
+unset($_GET['host']);
 
 echo "saas manager checks passed\n";
