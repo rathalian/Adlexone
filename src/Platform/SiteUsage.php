@@ -194,6 +194,23 @@ final class SiteUsage
         }
     }
 
+    /**
+     * The operator address. A public hostname still needs a dot. localhost is the name this machine uses.
+     */
+    public static function assertOperatorHost(string $host): string
+    {
+        $host = strtolower(trim($host));
+        $host = preg_replace('/:\d+$/', '', $host) ?? $host;
+        if ($host === 'localhost') {
+            return $host;
+        }
+        if (strlen($host) > 253 || preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
+            throw new \RuntimeException('Enter the full hostname for the operator site, such as operate.example.com. localhost is also accepted.');
+        }
+
+        return $host;
+    }
+
     public static function assertHostname(string $host, string $operatorHost): string
     {
         $host = strtolower(trim($host));

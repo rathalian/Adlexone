@@ -56,7 +56,7 @@ When `INLAY_PLATFORM_DB` is already set in the environment, that path is used in
 
 ### 3. Operator hostname
 
-The field defaults to `Runtime::requestHost()`. The value is stored in lower case. It uses the same rule as a customer hostname: letters, numbers, dots, and hyphens, and it contains a dot. For example, `operate.example.com`.
+The field defaults to `Runtime::requestHost()`. The value is stored in lower case. A public hostname uses the same rule as a customer hostname: letters, numbers, dots, and hyphens, and it contains a dot. For example, `operate.example.com`. `localhost` is accepted, including when the field is filled from a browser on this machine. A port on the end, such as `localhost:8000`, is not stored.
 
 Saving writes `config/platform.json` beside the code, the way `InstallLayout::remember()` merges one key into the existing JSON. The installer sets `INLAY_STORES`, `INLAY_OPERATOR_HOST`, and `INLAY_PLATFORM_DB`. It leaves `INLAY_STORAGE` in place when that key is already there. While `INLAY_STORES` is set, `Runtime` does not use `INLAY_STORAGE`. The installer does not delete a self-hosted folder. The file is mode 600. `config.example/platform.json` is not changed.
 

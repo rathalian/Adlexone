@@ -24,6 +24,24 @@ $check = static function (bool $ok, string $message) use ($fail): void {
     }
 };
 
+$check(SiteUsage::assertOperatorHost('LocalHost') === 'localhost', 'localhost is an operator hostname');
+$check(SiteUsage::assertOperatorHost('localhost:8000') === 'localhost', 'a port on localhost is not stored');
+$check(SiteUsage::assertOperatorHost('Operate.Example.com') === 'operate.example.com', 'a dotted operator hostname is stored in lower case');
+$threw = false;
+try {
+    SiteUsage::assertOperatorHost('health');
+} catch (\Throwable $e) {
+    $threw = str_contains($e->getMessage(), 'localhost is also accepted');
+}
+$check($threw, 'a name with no dot, other than localhost, is refused for the operator');
+$threw = false;
+try {
+    SiteUsage::assertHostname('localhost', 'operate.example.com');
+} catch (\Throwable) {
+    $threw = true;
+}
+$check($threw, 'localhost is not a customer hostname');
+
 $check(SaasInstallScreen::handles('', 'host') === true, 'the installer route is open when no stores directory is set');
 $check(SaasInstallScreen::handles('', '', 'install') === true, '?host=install opens the installer');
 $check(SaasInstallScreen::handles('', 'host', 'manage') === false, '?host=manage is not the installer');

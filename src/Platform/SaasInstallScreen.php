@@ -252,10 +252,7 @@ final class SaasInstallScreen
         if ($state['placement'] !== InstallLayout::detect($paths['install'])) {
             throw new \RuntimeException(InstallLayout::placementMessage($paths['install']));
         }
-        $host = strtolower(trim((string) ($_POST['operator_host'] ?? '')));
-        if (preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
-            throw new \RuntimeException('Enter the full hostname for the operator site, such as operate.example.com.');
-        }
+        $host = SiteUsage::assertOperatorHost((string) ($_POST['operator_host'] ?? ''));
         $report = self::assessStores($paths['install'], $state['stores'], $state['placement']);
         if (!$report['ok'] || $report['platform_db'] === '') {
             throw new \RuntimeException($report['message'] !== '' ? $report['message'] : 'This folder cannot be used yet.');
@@ -584,7 +581,7 @@ final class SaasInstallScreen
         $html .= '<input class="input" type="text" id="host_operator_host" name="operator_host" value="' . Html::e($host) . '" required'
             . ($focus ? ' autofocus' : '')
             . ' spellcheck="false" autocapitalize="off" autocorrect="off">';
-        $html .= '<p class="form-help">The address you will use to manage customer sites. For example, operate.example.com.</p>';
+        $html .= '<p class="form-help">The address you will use to manage customer sites. For example, operate.example.com. localhost is accepted on this machine.</p>';
         $html .= '</div>';
         $html .= self::actions('Save and continue', 'save_host', '', '', '?install=host&step=stores');
         $html .= '</form>';

@@ -151,7 +151,7 @@ final class HelpText
             self::p('The operator login and the list of sites are stored in platform.sqlite beside the stores directory, not inside a customer folder and not inside the website. Directories are mode 700. The database file is mode 600.'),
             $dirs === [] ? '' : self::pre(self::commands($user, $dirs, $platformDb !== '' ? [$platformDb] : [])),
             self::h('Operator hostname'),
-            self::p('For example, operate.example.com. Point that name at this server. It must not be a customer hostname. Environment values for INLAY_STORES and INLAY_OPERATOR_HOST win over the file this step writes.'),
+            self::p('For example, operate.example.com. On this machine, localhost is accepted. Point that name at this server. It must not be a customer hostname. Environment values for INLAY_STORES and INLAY_OPERATOR_HOST win over the file this step writes.'),
         ]);
     }
 
