@@ -25,18 +25,20 @@
 }
 
 :root {
-    --page-bg: #f4f7fb;
+    --page-bg: #f7f8fa;
     --ink: #0f2340;
     --inlay: #1a4f8b;
     --inlay-ink: #143f70;
-    --muted: #596d88;
-    --line: #d3deeb;
+    --punch: #1b928a;
+    --punch-ink: #146e68;
+    --muted: #5b6573;
+    --line: #e4e7ec;
     --panel: #ffffff;
-    --soft: #eef3f9;
+    --soft: #f0f2f5;
     --serif: "Newsreader", "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
     --radius: 8px;
-    --shadow: 0 1px 2px rgba(15, 35, 64, 0.06), 0 8px 24px rgba(15, 35, 64, 0.06);
+    --shadow: 0 1px 2px rgba(15, 35, 64, 0.05), 0 8px 24px rgba(15, 35, 64, 0.05);
 }
 
 *,
@@ -61,7 +63,7 @@ body::before {
     content: "";
     display: block;
     height: 3px;
-    background: var(--inlay);
+    background: var(--punch);
 }
 
 img,
@@ -76,11 +78,11 @@ a {
 }
 
 a:hover {
-    color: var(--inlay);
+    color: var(--punch);
 }
 
 :focus-visible {
-    outline: 2px solid var(--inlay);
+    outline: 2px solid var(--punch);
     outline-offset: 3px;
 }
 
@@ -116,7 +118,7 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: 20;
-    background: rgba(244, 247, 251, 0.94);
+    background: rgba(247, 248, 250, 0.94);
     border-bottom: 1px solid var(--line);
 }
 
@@ -194,18 +196,18 @@ a:hover {
 }
 
 .nav a.ask {
-    border: 1px solid var(--inlay);
+    border: 1px solid var(--punch);
     border-radius: 8px;
     padding: 0.4rem 0.8rem;
-    background: var(--inlay);
+    background: var(--punch);
     color: #fff;
 }
 
 .nav a.ask:hover,
 .nav a.ask[aria-current="page"] {
-    background: var(--inlay-ink);
+    background: var(--punch-ink);
     color: #fff;
-    border-bottom-color: var(--inlay-ink);
+    border-bottom-color: var(--punch-ink);
 }
 
 main {
@@ -283,12 +285,12 @@ dd {
 }
 
 .btn--ink {
-    background: var(--inlay);
+    background: var(--punch);
     color: #fff;
 }
 
 .btn--ink:hover {
-    background: var(--inlay-ink);
+    background: var(--punch-ink);
     color: #fff;
 }
 
@@ -392,7 +394,7 @@ dd {
 
 a.tile:hover {
     color: inherit;
-    border-color: #cfc4b4;
+    border-color: var(--punch);
 }
 
 .tile .picture,
@@ -450,6 +452,11 @@ a.tile:hover {
 
 .more a {
     font-weight: 650;
+    color: var(--punch);
+}
+
+.more a:hover {
+    color: var(--punch-ink);
 }
 
 .specimen {
@@ -459,7 +466,7 @@ a.tile:hover {
 
 .specimen__head {
     padding: 0.95rem 1.05rem 1rem;
-    background: #0f3a6b;
+    background: var(--inlay);
     color: #fff;
 }
 
@@ -601,7 +608,7 @@ a.tile:hover {
 
 .choice .steps,
 .choice .letter {
-    margin-left: 2.35rem;
+    margin-left: 1.15rem;
     margin-right: 1.15rem;
 }
 
@@ -625,34 +632,9 @@ a.tile:hover {
     margin-top: 1.35rem;
 }
 
-.strip {
-    display: grid;
-    gap: 1rem;
-    margin: 3.6rem 0;
-    padding: 1.6rem 1.4rem;
-    background: #0f3a6b;
-    color: #fff;
-    border-radius: 12px;
-}
-
-.strip h2,
-.strip p {
-    color: #fff;
-}
-
-.strip .lede,
-.strip p {
-    max-width: 36rem;
-}
-
-.strip .btn--ink {
-    background: #fff;
-    color: var(--ink);
-}
-
-.strip .btn--ink:hover {
-    background: #e8eef6;
-    color: var(--ink);
+.also {
+    margin: 1rem 0 0;
+    color: var(--muted);
 }
 
 .colophon {
@@ -702,7 +684,6 @@ a.tile:hover {
     }
 
     .pair,
-    .strip,
     .colophon__grid {
         grid-template-columns: 1.2fr 0.8fr;
         align-items: center;
@@ -736,7 +717,7 @@ a.tile:hover {
     }
 
     .screens {
-        grid-template-columns: 1fr 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
     }
 
     .catalogue {
@@ -803,7 +784,6 @@ a.tile:hover {
 @media print {
     .bar,
     .menu-btn,
-    .strip .btn,
     .actions {
         position: static;
         box-shadow: none;
@@ -822,19 +802,7 @@ a.tile:hover {
     }
 
     .picture,
-    .specimen,
-    .strip {
+    .specimen {
         box-shadow: none;
-    }
-
-    .strip {
-        background: transparent;
-        color: var(--ink);
-        border: 1px solid var(--line);
-    }
-
-    .strip h2,
-    .strip p {
-        color: var(--ink);
     }
 }
