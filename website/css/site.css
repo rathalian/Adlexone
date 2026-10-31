@@ -25,17 +25,18 @@
 }
 
 :root {
-    --paper: #f4f0ea;
-    --ink: #1c1917;
-    --muted: #57534e;
-    --line: #e4ddd4;
-    --panel: #fffcf8;
-    --brass: #8a6432;
-    --brass-soft: #f3ebe0;
+    --page-bg: #f4f7fb;
+    --ink: #0f2340;
+    --inlay: #1a4f8b;
+    --inlay-ink: #143f70;
+    --muted: #596d88;
+    --line: #d3deeb;
+    --panel: #ffffff;
+    --soft: #eef3f9;
     --serif: "Newsreader", "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
-    --radius: 14px;
-    --shadow: 0 18px 40px rgba(28, 25, 23, 0.07);
+    --radius: 8px;
+    --shadow: 0 1px 2px rgba(15, 35, 64, 0.06), 0 8px 24px rgba(15, 35, 64, 0.06);
 }
 
 *,
@@ -50,17 +51,17 @@ html {
 
 body {
     margin: 0;
-    background: var(--paper);
+    background: var(--page-bg);
     color: var(--ink);
-    font: 1.0625rem/1.6 var(--sans);
+    font: 1.0625rem/1.55 var(--sans);
     text-rendering: optimizeLegibility;
 }
 
 body::before {
     content: "";
     display: block;
-    height: 4px;
-    background: var(--brass);
+    height: 3px;
+    background: var(--inlay);
 }
 
 img,
@@ -75,11 +76,11 @@ a {
 }
 
 a:hover {
-    color: var(--brass);
+    color: var(--inlay);
 }
 
 :focus-visible {
-    outline: 2px solid var(--brass);
+    outline: 2px solid var(--inlay);
     outline-offset: 3px;
 }
 
@@ -89,7 +90,7 @@ a:hover {
     top: 0.5rem;
     transform: translateY(-160%);
     background: var(--ink);
-    color: var(--paper);
+    color: #fff;
     padding: 0.4rem 0.7rem;
     z-index: 30;
 }
@@ -115,7 +116,7 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: 20;
-    background: rgba(244, 240, 234, 0.94);
+    background: rgba(244, 247, 251, 0.94);
     border-bottom: 1px solid var(--line);
 }
 
@@ -161,7 +162,7 @@ a:hover {
     min-height: 2.4rem;
     padding: 0.3rem 0.65rem;
     border: 1px solid var(--ink);
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
     color: var(--ink);
     font: inherit;
@@ -189,20 +190,22 @@ a:hover {
 .nav a:hover,
 .nav a[aria-current="page"] {
     color: var(--ink);
-    border-bottom-color: var(--brass);
+    border-bottom-color: var(--inlay);
 }
 
 .nav a.ask {
-    border: 1px solid var(--ink);
-    border-radius: 6px;
+    border: 1px solid var(--inlay);
+    border-radius: 8px;
     padding: 0.4rem 0.8rem;
+    background: var(--inlay);
+    color: #fff;
 }
 
 .nav a.ask:hover,
 .nav a.ask[aria-current="page"] {
-    background: var(--ink);
-    color: var(--paper);
-    border-bottom-color: var(--ink);
+    background: var(--inlay-ink);
+    color: #fff;
+    border-bottom-color: var(--inlay-ink);
 }
 
 main {
@@ -216,7 +219,7 @@ h3,
 .rows__title,
 .tile__name {
     font-family: var(--serif);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1.15;
 }
@@ -274,29 +277,29 @@ dd {
     justify-content: center;
     min-height: 2.7rem;
     padding: 0.55rem 1rem;
-    border-radius: 7px;
+    border-radius: 8px;
     text-decoration: none;
     font-weight: 650;
 }
 
 .btn--ink {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--inlay);
+    color: #fff;
 }
 
 .btn--ink:hover {
-    background: #3f3a34;
-    color: var(--paper);
+    background: var(--inlay-ink);
+    color: #fff;
 }
 
 .btn--line {
-    border: 1px solid var(--ink);
-    color: var(--ink);
+    border: 1px solid var(--inlay);
+    color: var(--inlay);
 }
 
 .btn--line:hover {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--inlay);
+    color: #fff;
 }
 
 .hero {
@@ -310,7 +313,7 @@ dd {
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--brass-soft);
+    background: var(--soft);
     box-shadow: var(--shadow);
 }
 
@@ -454,8 +457,14 @@ a.tile:hover {
     box-shadow: var(--shadow);
 }
 
-.specimen > .kicker {
-    padding: 0.85rem 1rem 0;
+.specimen__head {
+    padding: 0.95rem 1.05rem 1rem;
+    background: #0f3a6b;
+    color: #fff;
+}
+
+.specimen__head .kicker {
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .app__bar {
@@ -463,12 +472,12 @@ a.tile:hover {
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 0.35rem 1rem;
-    padding: 0.15rem 1rem 0.85rem;
 }
 
 .app__name {
     margin: 0;
     font-size: 1.65rem;
+    color: #fff;
 }
 
 .app__hint,
@@ -477,6 +486,11 @@ a.tile:hover {
     margin: 0.15rem 0 0;
     color: var(--muted);
     font-size: 0.92rem;
+}
+
+.specimen__head .app__hint,
+.specimen__head .app__host {
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .app__host {
@@ -503,7 +517,7 @@ a.tile:hover {
 
 .tabs .is-on {
     color: var(--ink);
-    box-shadow: inset 0 -2px 0 var(--brass);
+    box-shadow: inset 0 -2px 0 var(--inlay);
 }
 
 .rows {
@@ -533,7 +547,7 @@ a.tile:hover {
 .notice {
     margin: 0;
     padding: 0.85rem 1rem;
-    background: var(--brass-soft);
+    background: var(--soft);
     border-bottom: 1px solid var(--line);
 }
 
@@ -616,14 +630,14 @@ a.tile:hover {
     gap: 1rem;
     margin: 3.6rem 0;
     padding: 1.6rem 1.4rem;
-    background: var(--ink);
-    color: var(--paper);
-    border-radius: var(--radius);
+    background: #0f3a6b;
+    color: #fff;
+    border-radius: 12px;
 }
 
 .strip h2,
 .strip p {
-    color: var(--paper);
+    color: #fff;
 }
 
 .strip .lede,
@@ -632,12 +646,12 @@ a.tile:hover {
 }
 
 .strip .btn--ink {
-    background: var(--paper);
+    background: #fff;
     color: var(--ink);
 }
 
 .strip .btn--ink:hover {
-    background: #e8e0d4;
+    background: #e8eef6;
     color: var(--ink);
 }
 
