@@ -2839,6 +2839,51 @@ body.page-setup :where(input[type="checkbox"], input[type="radio"]){ accent-colo
     width:auto;
 }
 .install-actions .btn--primary{ margin-left:auto; min-width:9rem; }
+.install-actions form{ margin:0; width:auto; }
+.install-actions .btn{ width:auto; }
+.install-head__tools{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+    gap:12px 16px;
+}
+.install-signout{ margin:0; }
+.install-head__tools .install-help{ margin-top:0; }
+.install-who{
+    font-size:13px;
+    font-weight:600;
+    color:var(--title);
+}
+.manage-sites{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.manage-site{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:14px 16px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--surface);
+    color:inherit;
+    text-decoration:none;
+}
+.manage-site:hover{
+    border-color:var(--logo-bar, var(--brand));
+    background:color-mix(in srgb, var(--logo-bar, var(--brand)) 7%, var(--surface));
+}
+.manage-site:focus-visible{
+    outline:2px solid var(--ring);
+    outline-offset:2px;
+}
+.manage-site__name{ font-weight:700; color:var(--ink); }
+.manage-site__meta{ font-size:13px; line-height:1.4; color:var(--title); }
 .install-form .form-help{ overflow-wrap:anywhere; }
 .page-install .sheet-pop{ width:min(36rem, calc(100vw - 24px)); }
 @media (max-width:780px){
@@ -2849,11 +2894,14 @@ body.page-setup :where(input[type="checkbox"], input[type="radio"]){ accent-colo
 @media (max-width:640px){
     .install{ padding:28px 16px 48px; }
     .install__panel{ padding:22px 16px; }
+    .install-head{ flex-direction:column; align-items:stretch; }
+    .install-head__tools{ justify-content:flex-start; }
     .install-facts div,
     .install-checks li{ grid-template-columns:1fr; gap:2px; }
     .install-actions{ flex-direction:column; align-items:stretch; }
     .install-actions .btn,
-    .install-actions .btn--primary{ width:100%; margin-left:0; }
+    .install-actions .btn--primary,
+    .install-actions form{ width:100%; margin-left:0; }
 }
 
 .skip-link{

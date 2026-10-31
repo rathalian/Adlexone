@@ -104,7 +104,7 @@ final class HelpText
             self::p('SQLite also writes -wal and -shm files next to each database while it is in use. Backup on this screen checkpoints those into the main file, then downloads the folder.'),
             self::h('Turning SaaS mode on'),
             self::p('Open ' . self::code('./?host=install') . ' on a copy that is not in SaaS mode yet and has no administrator. ' . self::code('./?install=host') . ' is the same page. That installer writes INLAY_STORES and INLAY_OPERATOR_HOST into ' . self::code('config/platform.json') . ' next to the code. Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
-            self::p('Open ' . self::code('./?host=manage') . ' on any address this server answers to reach the customer sites screen. The operator hostname opens that screen with no query. The operator password is still required.'),
+            self::p('Open ' . self::code('./?host=manage') . ' on any address this server answers to reach the customer sites screen. The operator hostname opens that screen with no query. The operator password is still required. Sites, Rate, and Add a site are separate places on that screen. Details holds the notes.'),
             self::h('Creating a customer'),
             self::p('Choose a short slug, the hostname they will use, and a display name. Leave the admin password blank if they should open that hostname and finish setup themselves. The setup page they see names their database, settings folder, and attachments folder, and it repeats the permission commands. Fill in the admin username and password here if you are creating the first account for them.'),
             self::h('Changing a site'),
