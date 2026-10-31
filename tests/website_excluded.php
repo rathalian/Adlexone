@@ -18,6 +18,16 @@ if (!preg_match('/RewriteRule \^\([^)]*\|website\)/', $htaccess)) {
     exit(1);
 }
 
+$home = (string) file_get_contents($root . '/website/index.html');
+if (!str_contains($home, 'Approve Home to Roost') || !str_contains($home, 'id="approved"') || !str_contains($home, 'id="view-parties"')) {
+    fwrite(STDERR, "The home page hero must let a visitor approve Home to Roost and open Parties.\n");
+    exit(1);
+}
+if (str_contains($home, 'hero-desk.jpg') || str_contains($home, 'How a record looks in use')) {
+    fwrite(STDERR, "The home page hero is the Publishing specimen. The desk photograph and the second specimen are gone.\n");
+    exit(1);
+}
+
 $pages = ['index.html', 'work.html', 'hosting.html', 'ask.html'];
 foreach ($pages as $page) {
     $path = $root . '/website/' . $page;

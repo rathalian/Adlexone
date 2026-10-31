@@ -536,15 +536,39 @@ a.tile:hover {
     list-style: none;
 }
 
-.tabs li {
+.tabs li,
+.tab {
     padding: 0.55rem 0;
     color: var(--muted);
     white-space: nowrap;
 }
 
-.tabs .is-on {
+.tabs .is-on,
+.tab:has(input:checked) {
     color: var(--ink);
     box-shadow: inset 0 -2px 0 var(--inlay);
+}
+
+.tab {
+    position: relative;
+    cursor: pointer;
+}
+
+.tab input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.tab input:focus {
+    outline: none;
+}
+
+.tab:focus-within {
+    outline: 2px solid var(--punch);
+    outline-offset: 3px;
 }
 
 .rows {
@@ -560,6 +584,10 @@ a.tile:hover {
     align-items: baseline;
     padding: 0.8rem 1rem;
     border-bottom: 1px solid var(--line);
+}
+
+.rows li.is-subject {
+    box-shadow: inset 2px 0 0 var(--inlay);
 }
 
 .rows__title {
@@ -587,6 +615,114 @@ a.tile:hover {
     padding: 0.85rem 1rem 1rem;
     color: var(--muted);
     font-size: 0.92rem;
+}
+
+.actions--desk {
+    display: none;
+}
+
+.specimen__foot,
+.party {
+    padding: 0.95rem 1rem 1.05rem;
+}
+
+.specimen__foot p,
+.party p {
+    margin: 0;
+}
+
+.party .rows__title {
+    margin-bottom: 0.35rem;
+}
+
+.party__note {
+    margin-top: 0.7rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.specimen__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin-top: 0.85rem;
+}
+
+.when-done {
+    display: none;
+}
+
+.panel-parties {
+    display: none;
+}
+
+.demo:has(#approved:checked) .when-open {
+    display: none;
+}
+
+.demo:has(#approved:checked) .notice.when-done,
+.demo:has(#approved:checked) .specimen__foot > .when-done,
+.demo:has(#approved:checked) .party .when-done {
+    display: block;
+}
+
+.demo:has(#approved:checked) a.when-done {
+    display: inline-flex;
+}
+
+.demo:has(#approved:checked) .demo__approve .when-done,
+.demo:has(#approved:checked) .rows__status .when-done {
+    display: inline;
+}
+
+.demo:has(#view-parties:checked) .panel-work {
+    display: none;
+}
+
+.demo:has(#view-parties:checked) .panel-parties {
+    display: block;
+}
+
+.demo__approve {
+    position: relative;
+    border: 0;
+    background: var(--punch);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+}
+
+.demo__approve:hover {
+    background: var(--punch-ink);
+    color: #fff;
+}
+
+.demo:has(#approved:checked) .demo__approve {
+    border: 1px solid var(--inlay);
+    background: transparent;
+    color: var(--inlay);
+}
+
+.demo:has(#approved:checked) .demo__approve:hover {
+    background: var(--inlay);
+    color: #fff;
+}
+
+.demo__approve input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.demo__approve input:focus {
+    outline: none;
+}
+
+.demo__approve:focus-within {
+    outline: 2px solid var(--punch);
+    outline-offset: 3px;
 }
 
 .catalogue,
@@ -719,8 +855,16 @@ a.tile:hover {
     .hero {
         grid-template-columns: minmax(0, 1fr) minmax(20rem, 1.05fr);
         gap: 3.4rem;
-        align-items: center;
+        align-items: start;
         padding: 1.2rem 0 1.6rem;
+    }
+
+    .actions--desk {
+        display: flex;
+    }
+
+    .actions--hand {
+        display: none;
     }
 
     .hero--stack {

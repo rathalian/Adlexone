@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Adlexone</title>
-    <meta name="description" content="Adlexone keeps the applications, records, and rules for the work. You run it on your server, for one organisation or for many customers.">
+    <meta name="description" content="Adlexone keeps the applications, records, and rules for the work. You move the status, and the application writes the date, the log, the notice, and the email.">
     <meta name="robots" content="noindex, nofollow, noarchive">
     <meta name="theme-color" content="#f7f8fa">
     <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
@@ -38,64 +38,83 @@
     <main id="content">
         <div class="sheet">
             <div class="hero">
-                <div>
+                <div class="hero__copy">
                     <h1>Adlexone keeps the applications, records, and rules for the work.</h1>
-                    <p class="lede">A person signs in, opens an application, and works the records. You run the software on your server.</p>
-                    <p class="actions">
+                    <p class="lede">You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
+                    <p class="actions actions--desk">
                         <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
                         <a class="btn btn--line" href="work.html">See the work</a>
                     </p>
                 </div>
-                <figure class="picture picture--wide">
-                    <img src="assets/pictures/hero-desk.jpg" width="1280" height="720" alt="A white desk with a notepad, a navy card index, a pen, and a paperclip.">
-                    <figcaption>The work is the records. The desk is yours.</figcaption>
-                </figure>
-            </div>
-
-            <section class="section" aria-labelledby="example">
-                <h2 id="example">How a record looks in use</h2>
-                <figure class="specimen">
-                    <div class="specimen__head">
-                    <p class="kicker">Publishing at Health</p>
-                    <div class="app__bar">
-                        <div>
-                            <p class="app__name">Publishing</p>
-                            <p class="app__hint">A manuscript from the day it arrives until it is approved or declined.</p>
+                <div class="demo">
+                    <div class="specimen">
+                        <div class="specimen__head">
+                            <p class="kicker">Publishing at Health</p>
+                            <div class="app__bar">
+                                <div>
+                                    <p class="app__name">Publishing</p>
+                                    <p class="app__hint">A manuscript from the day it arrives until it is approved or declined.</p>
+                                </div>
+                                <p class="app__host">health.example.com</p>
+                            </div>
                         </div>
-                        <p class="app__host">health.example.com</p>
+                        <div class="tabs">
+                            <label class="tab">
+                                <input type="radio" name="publishing-view" id="view-work" checked>
+                                Work
+                            </label>
+                            <label class="tab">
+                                <input type="radio" name="publishing-view" id="view-parties">
+                                Parties
+                            </label>
+                        </div>
+                        <div class="panel-work">
+                            <ol class="rows">
+                                <li class="is-subject">
+                                    <span class="rows__title">Home to Roost</span>
+                                    <span class="rows__meta">Carole Hocking</span>
+                                    <span class="rows__status"><span class="when-open">Editing</span><span class="when-done">Approved</span></span>
+                                </li>
+                                <li>
+                                    <span class="rows__title">A Place In Time</span>
+                                    <span class="rows__meta">Finish the edit.</span>
+                                    <span class="rows__status">Editing</span>
+                                </li>
+                                <li>
+                                    <span class="rows__title">Damaged Good</span>
+                                    <span class="rows__meta">Finish the reading.</span>
+                                    <span class="rows__status">Reading</span>
+                                </li>
+                            </ol>
+                            <p class="notice when-done"><strong>Notice.</strong> Home to Roost has been approved for publication.</p>
+                            <div class="specimen__foot">
+                                <p class="when-open">Home to Roost is ready to approve.</p>
+                                <p class="when-done">Approving it stamped Approved on, wrote the log, posted the notice, and sent the email. Next step was cleared.</p>
+                                <div class="specimen__actions">
+                                    <a class="btn btn--ink when-done" href="ask.html">Ask for a copy</a>
+                                    <label class="btn demo__approve">
+                                        <input type="checkbox" id="approved">
+                                        <span class="when-open">Approve Home to Roost</span>
+                                        <span class="when-done">Show it again</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-parties">
+                            <div class="party">
+                                <p class="rows__title">Carole Hocking</p>
+                                <p class="when-open">Home to Roost is in editing. A Place In Time is in editing. Damaged Good is being read.</p>
+                                <p class="when-done">Home to Roost is approved. A Place In Time is in editing. Damaged Good is being read.</p>
+                                <p class="party__note">Parties is every manuscript under the writer’s name. The same screen groups matters by client.</p>
+                            </div>
+                        </div>
                     </div>
-                    </div>
-                    <ul class="tabs">
-                        <li class="is-on">Work</li>
-                        <li>Next steps</li>
-                        <li>Diary</li>
-                        <li>Parties</li>
-                        <li>Files</li>
-                    </ul>
-                    <ol class="rows">
-                        <li>
-                            <span class="rows__title">Home to Roost</span>
-                            <span class="rows__meta">Carole Hocking</span>
-                            <span class="rows__status">Approved</span>
-                        </li>
-                        <li>
-                            <span class="rows__title">A Place In Time</span>
-                            <span class="rows__meta">Finish the edit.</span>
-                            <span class="rows__status">Editing</span>
-                        </li>
-                        <li>
-                            <span class="rows__title">Damaged Good</span>
-                            <span class="rows__meta">Finish the reading.</span>
-                            <span class="rows__status">Reading</span>
-                        </li>
-                    </ol>
-                    <p class="notice"><strong>Notice.</strong> Home to Roost has been approved for publication.</p>
-                    <p class="specimen__note">When Status becomes Approved, the application stamps the date, writes the log, posts the notice, and sends the email.</p>
-                </figure>
-                <p class="actions">
+                </div>
+                <p class="actions actions--hand">
                     <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
+                    <a class="btn btn--line" href="work.html">See the work</a>
                 </p>
-            </section>
+            </div>
 
             <section class="section section--last" aria-labelledby="ways">
                 <h2 id="ways">Two ways to run it</h2>
