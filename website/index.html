@@ -21,7 +21,6 @@
                         <img src="assets/mark.svg" alt="" width="36" height="36">
                         <span class="brand__name">Adlexone</span>
                     </a>
-                    <p class="build-tag">Under construction</p>
                 </div>
                 <label class="menu-btn" for="menu">
                     <span class="menu-btn__open">Menu</span>
@@ -37,80 +36,10 @@
     </header>
     <main id="content">
         <div class="sheet">
-            <div class="hero">
-                <div class="hero__copy">
-                    <h1>Adlexone keeps the applications, records, and rules for the work.</h1>
-                    <p class="lede">You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
-                    <p class="actions actions--desk">
-                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                        <a class="btn btn--line" href="work.html">See the work</a>
-                    </p>
-                </div>
-                <div class="demo">
-                    <div class="specimen">
-                        <div class="specimen__head">
-                            <p class="kicker">Publishing at Health</p>
-                            <div class="app__bar">
-                                <div>
-                                    <p class="app__name">Publishing</p>
-                                    <p class="app__hint">A manuscript from the day it arrives until it is approved or declined.</p>
-                                </div>
-                                <p class="app__host">health.example.com</p>
-                            </div>
-                        </div>
-                        <div class="tabs">
-                            <label class="tab">
-                                <input type="radio" name="publishing-view" id="view-work" checked>
-                                Work
-                            </label>
-                            <label class="tab">
-                                <input type="radio" name="publishing-view" id="view-parties">
-                                Parties
-                            </label>
-                        </div>
-                        <div class="panel-work">
-                            <ol class="rows">
-                                <li class="is-subject">
-                                    <span class="rows__title">Home to Roost</span>
-                                    <span class="rows__meta">Carole Hocking</span>
-                                    <span class="rows__status"><span class="when-open">Editing</span><span class="when-done">Approved</span></span>
-                                </li>
-                                <li>
-                                    <span class="rows__title">A Place In Time</span>
-                                    <span class="rows__meta">Finish the edit.</span>
-                                    <span class="rows__status">Editing</span>
-                                </li>
-                                <li>
-                                    <span class="rows__title">Damaged Good</span>
-                                    <span class="rows__meta">Finish the reading.</span>
-                                    <span class="rows__status">Reading</span>
-                                </li>
-                            </ol>
-                            <p class="notice when-done"><strong>Notice.</strong> Home to Roost has been approved for publication.</p>
-                            <div class="specimen__foot">
-                                <p class="when-open">Home to Roost is ready to approve.</p>
-                                <p class="when-done">Approving it stamped Approved on, wrote the log, posted the notice, and sent the email. Next step was cleared.</p>
-                                <div class="specimen__actions">
-                                    <a class="btn btn--ink when-done" href="ask.html">Ask for a copy</a>
-                                    <label class="btn demo__approve">
-                                        <input type="checkbox" id="approved">
-                                        <span class="when-open">Approve Home to Roost</span>
-                                        <span class="when-done">Show it again</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel-parties">
-                            <div class="party">
-                                <p class="rows__title">Carole Hocking</p>
-                                <p class="when-open">Home to Roost is in editing. A Place In Time is in editing. Damaged Good is being read.</p>
-                                <p class="when-done">Home to Roost is approved. A Place In Time is in editing. Damaged Good is being read.</p>
-                                <p class="party__note">Parties is every manuscript under the writer’s name. The same screen groups matters by client.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <p class="actions actions--hand">
+            <div class="hero hero--open">
+                <h1>You move the status. The application writes the rest.</h1>
+                <p class="lede">Adlexone keeps the applications, records, and rules for the work. A move writes the date, the log, the notice, and the email. You run the software on your server.</p>
+                <p class="actions">
                     <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
                     <a class="btn btn--line" href="work.html">See the work</a>
                 </p>
@@ -120,18 +49,12 @@
                 <h2 id="ways">Two ways to run it</h2>
                 <div class="tiles">
                     <a class="tile" href="hosting.html#one-site">
-                        <figure class="picture picture--card">
-                            <img src="assets/pictures/one-folder.jpg" width="1152" height="864" alt="One white folder standing on a desk." loading="lazy">
-                        </figure>
                         <div class="tile__body">
                             <h3 class="tile__name">One site</h3>
                             <p>For an organisation that keeps its own records, such as Health at health.example.com.</p>
                         </div>
                     </a>
                     <a class="tile" href="hosting.html#customers">
-                        <figure class="picture picture--card">
-                            <img src="assets/pictures/many-folders.jpg" width="1152" height="864" alt="A white pigeonhole holding several folders, with a navy notebook and a key." loading="lazy">
-                        </figure>
                         <div class="tile__body">
                             <h3 class="tile__name">Several customer sites</h3>
                             <p>One copy for many hostnames. The operator is at operate.example.com.</p>
@@ -142,28 +65,32 @@
         </div>
     </main>
     <footer class="colophon">
-        <div class="sheet colophon__grid">
-            <div>
-                <a class="brand" href="index.html">
-                    <img src="assets/mark.svg" alt="" width="36" height="36">
-                    <span class="brand__name">Adlexone</span>
-                </a>
-                <p>Adlexone keeps the applications, records, and rules for the work.</p>
-            </div>
-            <div>
-                <strong>Pages</strong>
-                <nav aria-label="Footer">
-                    <a href="index.html">Home</a>
-                    <a href="work.html">Work</a>
-                    <a href="hosting.html">Hosting</a>
-                    <a href="ask.html">Ask for a copy</a>
-                </nav>
-            </div>
-            <div>
-                <strong>Write</strong>
-                <p><a href="mailto:info@oneorzero.com">info@oneorzero.com</a></p>
+        <div class="sheet">
+            <p class="build-tag">Under construction</p>
+            <div class="colophon__grid">
+                <div>
+                    <a class="brand" href="index.html">
+                        <img src="assets/mark.svg" alt="" width="36" height="36">
+                        <span class="brand__name">Adlexone</span>
+                    </a>
+                    <p>Adlexone keeps the applications, records, and rules for the work.</p>
+                </div>
+                <div>
+                    <strong>Pages</strong>
+                    <nav aria-label="Footer">
+                        <a href="index.html">Home</a>
+                        <a href="work.html">Work</a>
+                        <a href="hosting.html">Hosting</a>
+                        <a href="ask.html">Ask for a copy</a>
+                    </nav>
+                </div>
+                <div>
+                    <strong>Write</strong>
+                    <p><a href="mailto:info@oneorzero.com">info@oneorzero.com</a></p>
+                </div>
             </div>
         </div>
     </footer>
+
 </body>
 </html>

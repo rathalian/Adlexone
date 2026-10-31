@@ -19,13 +19,16 @@ if (!preg_match('/RewriteRule \^\([^)]*\|website\)/', $htaccess)) {
 }
 
 $home = (string) file_get_contents($root . '/website/index.html');
-if (!str_contains($home, 'Approve Home to Roost') || !str_contains($home, 'id="approved"') || !str_contains($home, 'id="view-parties"')) {
-    fwrite(STDERR, "The home page hero must let a visitor approve Home to Roost and open Parties.\n");
+if (!str_contains($home, 'You move the status. The application writes the rest.')) {
+    fwrite(STDERR, "The home page states that a status move writes the rest.\n");
     exit(1);
 }
-if (str_contains($home, 'hero-desk.jpg') || str_contains($home, 'How a record looks in use')) {
-    fwrite(STDERR, "The home page hero is the Publishing specimen. The desk photograph and the second specimen are gone.\n");
-    exit(1);
+$gone = ['Approve Home to Roost', 'id="approved"', 'id="view-parties"', 'Publishing at Health', 'hero-desk.jpg', 'one-folder.jpg', 'many-folders.jpg', 'How a record looks in use'];
+foreach ($gone as $phrase) {
+    if (str_contains($home, $phrase)) {
+        fwrite(STDERR, "The home page does not show the Publishing specimen or the folder photographs.\n");
+        exit(1);
+    }
 }
 
 $pages = ['index.html', 'work.html', 'hosting.html', 'ask.html'];
@@ -50,6 +53,14 @@ foreach ($pages as $page) {
     }
     if (!str_contains($html, 'Under construction')) {
         fwrite(STDERR, "website/{$page} must show the under-construction tag.\n");
+        exit(1);
+    }
+    if (preg_match('/<div class="brand-lockup">(.*?)<\\/div>/s', $html, $lockup) && str_contains($lockup[1], 'Under construction')) {
+        fwrite(STDERR, "website/{$page} keeps Under construction out of the brand lockup.\n");
+        exit(1);
+    }
+    if (!preg_match('/<footer class="colophon">.*?Under construction/s', $html)) {
+        fwrite(STDERR, "website/{$page} shows Under construction in the footer.\n");
         exit(1);
     }
 }
