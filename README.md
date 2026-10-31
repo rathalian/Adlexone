@@ -25,13 +25,13 @@ PHP 8.1+ / SQLite action and information management system. The database is a **
 
 ## Release zip for shared Apache hosting
 
-`php bin/build-release.php` builds `dist/adlexone-{version}-{commit}.zip` from the last commit. It needs PHP 8.1+ with `phar` and `zlib`, and git. The zip holds the code only. It never holds `config/*.json`, a SQLite file, or attachments.
+`php bin/build-release.php` builds `dist/adlexone-{version}-{commit}.zip` from the last commit. It needs PHP 8.1+ with `phar` and `zlib`, and git. The zip holds the code only. It never holds `config/*.json`, a SQLite file, or attachments. The `website/` folder is the sales site. It is left out of the zip, and the application does not serve it.
 
 1. Unzip it into the domain's document root. The file manager on most hosts can do this. Apache needs `mod_rewrite` and `AllowOverride All`.
 2. Open the site and follow the self-hosted installer. Confirm the document root, then choose the storage directory. The account that runs PHP must be able to create, read, update, and delete files there.
 3. To update, unzip the next release over the same folder. `config/` and `storage/` are left as they are, and `SchemaMigrator` upgrades the database on the next request.
 
-The root `.htaccess` lets only `index.php` run and refuses requests for `config/`, `storage/`, `src/`, `vendor/`, and other code or data paths. A host that lets you set the document root should use `php bin/build-release.php --with-public` and point the domain at `public/` instead. That zip adds the `public/` folder, and the code, settings, and data then sit outside the web folder.
+The root `.htaccess` lets only `index.php` run and refuses requests for `config/`, `storage/`, `src/`, `vendor/`, `website/`, and other code or data paths. A host that lets you set the document root should use `php bin/build-release.php --with-public` and point the domain at `public/` instead. That zip adds the `public/` folder, and the code, settings, and data then sit outside the web folder.
 
 ## Several customers on one server
 

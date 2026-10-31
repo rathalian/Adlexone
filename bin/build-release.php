@@ -14,6 +14,7 @@ declare(strict_types=1);
  * .htaccess keeps settings, data, and code closed. It leaves out public/,
  * because public/.htaccess would reopen that folder under the install root.
  * Pass --with-public for a host that lets you set the document root to public/.
+ * website/ is the sales site and is left out.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -56,6 +57,7 @@ const EXCLUDE = [
     'composer.phar',
     'dist',
     'tests',
+    'website',
     'site/themes/workos-demo.html',
 ];
 

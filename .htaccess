@@ -5,7 +5,7 @@
 # Only index.php may run from a browser. Settings, data, and code stay closed.
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(storage|config|config\.example|bootstrap|src|vendor|translations|tests|public)(/|$) - [F,L]
+    RewriteRule ^(storage|config|config\.example|bootstrap|src|vendor|translations|tests|public|website)(/|$) - [F,L]
     RewriteRule ^composer\.(json|lock|phar)$ - [F,L]
     RewriteRule ^index\.php$ - [L]
     RewriteRule \.php$ - [F,L]

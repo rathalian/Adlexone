@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hosting — Adlexone</title>
+    <meta name="description" content="Run one Adlexone site for your organisation, or one copy that hosts a site for each customer. The database stays on your server.">
+    <meta name="theme-color" content="#f4f0ea">
+    <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+    <a class="skip" href="#content">Skip to content</a>
+    <header class="bar">
+        <div class="sheet">
+            <input class="menu-switch" id="menu" type="checkbox">
+            <div class="bar__row">
+                <a class="brand" href="index.html">
+                    <img src="assets/mark.svg" alt="" width="36" height="36">
+                    <span class="brand__name">Adlexone</span>
+                </a>
+                <label class="menu-btn" for="menu">
+                    <span class="menu-btn__open">Menu</span>
+                    <span class="menu-btn__close">Close</span>
+                </label>
+                <nav class="nav" aria-label="Pages">
+                    <a href="work.html">Work</a>
+                    <a href="hosting.html" aria-current="page">Hosting</a>
+                    <a class="ask" href="ask.html">Ask for a copy</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <main id="content">
+        <div class="sheet">
+            <div class="hero hero--stack">
+                <div>
+                    <p class="kicker">The server</p>
+                    <h1>You run it on your server.</h1>
+                    <p class="lede">Adlexone is the software. The database, the settings, and the uploaded files stay on the server you choose. A browser must not be able to download them by guessing an address.</p>
+                    <ul class="contents">
+                        <li><a href="#one-site">One site</a></li>
+                        <li><a href="#customers">Several customers</a></li>
+                        <li><a href="#customer-folder">A customer folder</a></li>
+                        <li><a href="#needs">What the server needs</a></li>
+                    </ul>
+                </div>
+                <figure class="picture picture--wide">
+                    <img src="assets/pictures/locked-cabinet.jpg" width="1280" height="720" alt="A wooden cabinet with a locked drawer and an open shelf of folders.">
+                    <figcaption>The records sit in a folder a browser cannot open.</figcaption>
+                </figure>
+            </div>
+
+            <div class="section split">
+                <article class="choice" id="one-site">
+                    <figure class="picture picture--card">
+                        <img src="assets/pictures/one-folder.jpg" width="1152" height="864" alt="One manila folder on a desk." loading="lazy">
+                    </figure>
+                    <h2>One site</h2>
+                    <p>Open the site when it has no administrator. Setup has three steps.</p>
+                    <ol class="steps">
+                        <li>Confirm the document root. On shared hosting, point the domain at the public folder. If the host cannot change the document root, the install folder itself can be the document root.</li>
+                        <li>Choose the storage directory. Adlexone creates the settings, the database, and the attachments folder there, and checks that PHP can write them. A folder inside the website is refused when a browser can read it.</li>
+                        <li>Set the name shown on the sign-in page. It can be the organisation, such as Health. Then create the first administrator.</li>
+                    </ol>
+                </article>
+                <article class="choice" id="customers">
+                    <figure class="picture picture--card">
+                        <img src="assets/pictures/many-folders.jpg" width="1152" height="864" alt="Several manila folders in a wooden pigeonhole." loading="lazy">
+                    </figure>
+                    <h2>Several customer sites</h2>
+                    <p>The host installer is a different page. It turns one copy into a host of customer sites. A customer finishing setup on their own hostname is not this page.</p>
+                    <ol class="steps">
+                        <li>Confirm the document root, and choose a stores directory outside the website. For example, a folder the account owns. Setup checks that PHP can write there, and that a browser cannot read it.</li>
+                        <li>Set the operator hostname, such as operate.example.com. It must not be a customer hostname.</li>
+                        <li>Create the operator account on that hostname. The operator is a separate login. It is not a user inside a customer site.</li>
+                    </ol>
+                </article>
+            </div>
+
+            <section class="section" aria-labelledby="customer-folder">
+                <h2 id="customer-folder">What one customer has</h2>
+                <p class="intro">Each customer gets one folder. For example, Health, at health.example.com. The folder holds the database, the settings, and the uploaded files. One request opens one database. Leave the administrator password blank and their first visit is setup, on their own paths.</p>
+                <p>The operator can change the display name, the hostname, and the contact email. The folder name stays as it is. Measure usage reads the folder and stores the figures. The rate is a monthly amount, an amount per person, and an amount per gigabyte of that folder. There is no invoice.</p>
+                <p>Suspend stops sign-in and leaves every file in place. Resume turns the site back on. Backup downloads the database, the settings, and the files. Delete removes the folder after you type its name. Delete is permanent.</p>
+            </section>
+
+            <section class="section" aria-labelledby="sign-in">
+                <h2 id="sign-in">Sign-in, email, and the theme</h2>
+                <p class="intro">A person signs in with a local account. OpenID Connect can be added when you want sign-in to come from an identity service you already run. Mail leaves through the SMTP settings an administrator saves. A password field left blank keeps the current value.</p>
+                <p>The site has one colour, set by its theme. The first application uses that colour. A person can choose another theme on their own account.</p>
+            </section>
+
+            <section class="section section--last" aria-labelledby="needs">
+                <h2 id="needs">What the server needs</h2>
+                <ul class="steps">
+                    <li>PHP 8.1 or later, with the pdo_sqlite, dom, libxml, and xml extensions.</li>
+                    <li>SQLite. The database file sits in the storage directory, off the public folder.</li>
+                    <li>A server that sends requests to index.php. Apache with mod_rewrite is the path when the install folder is the document root.</li>
+                </ul>
+                <p class="more">To update, unzip the next release over the same folder. The settings and the database stay where they are, and the database is brought up to date on the next request.</p>
+            </section>
+
+            <section class="strip" aria-labelledby="copy">
+                <div>
+                    <p class="kicker">A copy</p>
+                    <h2 id="copy">Ask for a release zip.</h2>
+                    <p>Name the organisation, the hostname, and whether you want one site or several customers.</p>
+                </div>
+                <p class="actions">
+                    <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
+                </p>
+            </section>
+        </div>
+    </main>
+    <footer class="colophon">
+        <div class="sheet colophon__grid">
+            <div>
+                <a class="brand" href="index.html">
+                    <img src="assets/mark.svg" alt="" width="36" height="36">
+                    <span class="brand__name">Adlexone</span>
+                </a>
+                <p>Adlexone keeps the applications, records, and rules for the work.</p>
+            </div>
+            <div>
+                <strong>Pages</strong>
+                <nav aria-label="Footer">
+                    <a href="index.html">Home</a>
+                    <a href="work.html">Work</a>
+                    <a href="hosting.html">Hosting</a>
+                    <a href="ask.html">Ask for a copy</a>
+                </nav>
+            </div>
+            <div>
+                <strong>Write</strong>
+                <p><a href="mailto:info@oneorzero.com">info@oneorzero.com</a></p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

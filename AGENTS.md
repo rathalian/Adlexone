@@ -18,3 +18,7 @@ Installation-specific work belongs under **`site/`** (not the product core):
 - `site/apps/{pack}/` — extra screen packs
 
 Shared page chrome lives in `layouts/`. Screens live in `src/Screen/`. See `site/README.md`.
+
+## Sales site
+
+`website/` is the public site that describes Adlexone. It is static HTML and CSS. It is not product code. Do not add screens, PHP, or classes there, and do not include it in a release. The application does not serve it. See `.cursor/rules/exclude-website.mdc`.

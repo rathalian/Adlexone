@@ -1,0 +1,18 @@
+---
+description: website/ is the sales site, not Adlexone product code
+alwaysApply: true
+---
+
+# Leave website/ out of product work
+
+`website/` is the public site used to describe Adlexone and ask for a copy. It is static HTML, CSS, and assets. It is not part of the application.
+
+When the task is the application:
+
+- Do not treat files under `website/` as product code.
+- Do not add PHP, screens, classes, or routes there.
+- Do not wire the application to serve `website/`.
+- Do not include `website/` in a release. `bin/build-release.php` leaves that folder out, and the root `.htaccess` refuses it.
+- Point product searches at `src/`, `layouts/`, `bootstrap/`, and `public/`.
+
+Work in `website/` only when the task is the sales site. Keep that copy in the same voice as the product.
