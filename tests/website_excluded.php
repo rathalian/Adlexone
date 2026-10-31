@@ -34,6 +34,26 @@ foreach ($pages as $page) {
         fwrite(STDERR, "website/{$page} must stay self-contained. No scripts and no remote addresses.\n");
         exit(1);
     }
+    if (!str_contains($html, 'name="robots" content="noindex, nofollow, noarchive"')) {
+        fwrite(STDERR, "website/{$page} must stay out of search indexes while the live site is under construction.\n");
+        exit(1);
+    }
+    if (!str_contains($html, 'Under construction')) {
+        fwrite(STDERR, "website/{$page} must show the under-construction tag.\n");
+        exit(1);
+    }
+}
+
+$robots = (string) file_get_contents($root . '/website/robots.txt');
+if (!preg_match('/User-agent:\\s*\\*/i', $robots) || !preg_match('/Disallow:\\s*\\//', $robots)) {
+    fwrite(STDERR, "website/robots.txt must refuse every crawler.\n");
+    exit(1);
+}
+
+$siteHtaccess = (string) file_get_contents($root . '/website/.htaccess');
+if (!str_contains($siteHtaccess, 'X-Robots-Tag') || !str_contains($siteHtaccess, 'noindex')) {
+    fwrite(STDERR, "website/.htaccess must send X-Robots-Tag noindex.\n");
+    exit(1);
 }
 
 if (!is_file($root . '/website/css/site.css') || !is_file($root . '/website/fonts/OFL.txt')) {

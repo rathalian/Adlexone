@@ -132,6 +132,14 @@ a:hover {
     padding: 0.7rem 0;
 }
 
+.brand-lockup {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem 0.85rem;
+    margin-right: auto;
+}
+
 .brand {
     display: flex;
     align-items: center;
@@ -155,6 +163,18 @@ a:hover {
     font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1;
+}
+
+.build-tag {
+    margin: 0;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--punch);
+    border-radius: 4px;
+    color: var(--punch-ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .menu-btn {

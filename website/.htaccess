@@ -1,0 +1,4 @@
+# Sales site is under construction. Do not index it.
+<IfModule mod_headers.c>
+    Header set X-Robots-Tag "noindex, nofollow, noarchive"
+</IfModule>
