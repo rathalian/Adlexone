@@ -109,6 +109,9 @@ final class Runtime
         if (session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
+        if (self::$mode === self::OPERATOR) {
+            session_name('ADLEXONE_OPERATOR');
+        }
         $secure = PublicBaseUrl::https($_SERVER);
         session_set_cookie_params([
             'lifetime' => 0,

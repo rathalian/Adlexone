@@ -79,15 +79,24 @@ final class Provisioner
 
     public static function removeTree(string $dir): void
     {
-        if (!is_dir($dir)) {
+        $trimmed = rtrim($dir, '/\\');
+        if ($trimmed !== '' && is_link($trimmed)) {
+            @unlink($trimmed);
+
             return;
         }
+        if (!is_dir($trimmed)) {
+            return;
+        }
+        $dir = $trimmed;
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($iterator as $file) {
-            if ($file->isDir()) {
+            if ($file->isLink()) {
+                @unlink($file->getPathname());
+            } elseif ($file->isDir()) {
                 @rmdir($file->getPathname());
             } else {
                 @unlink($file->getPathname());

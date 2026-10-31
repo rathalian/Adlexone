@@ -172,10 +172,39 @@ final class SiteUsage
             }
             $root = realpath($stores);
         }
-        $parent = realpath(dirname(rtrim($folder, '/\\')));
-        if ($root === false || $parent === false || (!str_starts_with($parent . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR) && $parent !== $root)) {
+        if ($root === false) {
             throw new \RuntimeException('The store folder must stay inside the stores directory.');
         }
+        $rootPrefix = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
+        $candidate = rtrim($folder, '/\\');
+        if ($candidate === '' || is_link($candidate)) {
+            throw new \RuntimeException('The store folder must stay inside the stores directory.');
+        }
+        $real = realpath($candidate);
+        if ($real !== false) {
+            if ($real === $root || !str_starts_with($real . DIRECTORY_SEPARATOR, $rootPrefix)) {
+                throw new \RuntimeException('The store folder must stay inside the stores directory.');
+            }
+
+            return;
+        }
+        $parent = realpath(dirname($candidate));
+        if ($parent === false || (!str_starts_with($parent . DIRECTORY_SEPARATOR, $rootPrefix) && $parent !== $root)) {
+            throw new \RuntimeException('The store folder must stay inside the stores directory.');
+        }
+    }
+
+    public static function assertHostname(string $host, string $operatorHost): string
+    {
+        $host = strtolower(trim($host));
+        if (strlen($host) > 253 || preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
+            throw new \RuntimeException('Enter the full hostname customers will use, such as health.example.com.');
+        }
+        if (strcasecmp($host, $operatorHost) === 0) {
+            throw new \RuntimeException('That hostname is the operator site. Use a different hostname for the customer.');
+        }
+
+        return $host;
     }
 
     /**
@@ -191,16 +220,10 @@ final class SiteUsage
         string $operatorHost
     ): void {
         $label = trim($label);
-        $host = strtolower(trim($host));
+        $host = self::assertHostname($host, $operatorHost);
         $email = trim($email);
         if ($label === '' || strlen($label) > 80) {
             throw new \RuntimeException('Enter a display name (80 characters or fewer).');
-        }
-        if (preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
-            throw new \RuntimeException('Enter the full hostname customers will use, such as health.example.com.');
-        }
-        if (strcasecmp($host, $operatorHost) === 0) {
-            throw new \RuntimeException('That hostname is the operator site. Use a different hostname for the customer.');
         }
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new \RuntimeException('The admin email does not look valid.');

@@ -1054,3 +1054,26 @@ html[data-mode="dark"] .menu__item--mode .icon--moon{ display:block; }
     .finder__save > summary{ display:flex; justify-content:center; }
     .finder__saveform{ position:static; width:auto; margin-top:8px; box-shadow:none; }
 }
+
+/* Site manager, inside the same shell as a customer site. */
+.host-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.host-actions form,
+.menu__signout{ margin:0; }
+.topnav .menu__signout .menu__item,
+.topnav button.menu__item{
+    width:100%;
+    border:0;
+    background:transparent;
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+}
+.home__heading .host-actions{ flex:none; }
+.appcard__foot .pill{ flex:none; }
+.install-facts + .form-grid{ margin-top:20px; }
+@media (max-width:720px){
+    .home--host > .homehero{ order:1; }
+    .home--host > .banner{ order:2; }
+    .home--host > .kpis{ order:3; }
+    .home--host > .home__section{ order:4; }
+}

@@ -49,6 +49,14 @@ final class Csrf
         return hash_equals($expected, $got);
     }
 
+    public static function rotate(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+        $_SESSION[self::SESSION_KEY] = bin2hex(random_bytes(32));
+    }
+
     public static function enforceOrDeny(): void
     {
         if (self::valid()) {

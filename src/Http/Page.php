@@ -265,7 +265,7 @@ final class Page
         self::sendSecurityHeaders();
 
         $vars = $this->layoutVars + ['page' => $this];
-        if ($this->layout === self::SHELL) {
+        if ($this->layout === self::SHELL && !array_key_exists('nav', $vars)) {
             $vars['nav'] = TopNav::build();
         }
         View::render($this->layout, $vars);

@@ -12,17 +12,21 @@ $sprite = Html::e(Theme::spriteHref());
 $apps = $nav['apps'];
 $account = $nav['account'];
 $siteName = defined('SET_SITE_NAME') ? trim((string) SET_SITE_NAME) : '';
-$homeLabel = $siteName !== '' ? $siteName . ' home' : 'Adlexone home';
+$homeHref = (string) ($nav['home'] ?? './');
+$homeLabel = trim((string) ($nav['homeLabel'] ?? ''));
+if ($homeLabel === '') {
+    $homeLabel = $siteName !== '' ? $siteName . ' home' : 'Adlexone home';
+}
 ?>
     <div class="brandrow">
-        <a class="brandhome" href="./" aria-label="<?php echo Html::e($homeLabel); ?>">
+        <a class="brandhome" href="<?php echo Html::e($homeHref); ?>" aria-label="<?php echo Html::e($homeLabel); ?>">
         <div class="brandwrap">
             <?php View::partial('brand_lockup'); ?>
         </div>
         </a>
 
         <nav class="topnav" aria-label="Top">
-            <?php if ($account !== null): ?>
+            <?php if ($account !== null && ($nav['search'] ?? true)): ?>
             <button class="topnav__search" type="button" data-palette-open aria-label="Search and commands">
                 <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-search"></use></svg>
                 <span class="topnav__search-label">Search</span>
@@ -68,10 +72,14 @@ $homeLabel = $siteName !== '' ? $siteName . ' home' : 'Adlexone home';
                         <span>Switch between light and dark</span>
                     </button>
                     <div class="menu__divider" role="separator"></div>
+                    <?php if (!empty($nav['signOutHtml'])): ?>
+                    <?php echo $nav['signOutHtml']; ?>
+                    <?php else: ?>
                     <a role="menuitem" class="menu__item" href="?action=logoff">
                         <svg class="icon" aria-hidden="true"><use href="<?php echo $sprite; ?>#ic-logoff"></use></svg>
                         <span>Sign out</span>
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php else: ?>

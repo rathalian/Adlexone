@@ -8,6 +8,10 @@ namespace Adlexone\Platform;
  */
 final class PlatformDb
 {
+    public const LOGIN_LIMIT = 5;
+
+    public const LOGIN_WINDOW = 900;
+
     public static function pdo(string $path): \PDO
     {
         $dir = dirname($path);
@@ -100,6 +104,13 @@ final class PlatformDb
                 cost_cents INTEGER,
                 counts_note TEXT NOT NULL DEFAULT "",
                 FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+            )'
+        );
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS operator_attempts (
+                attempt_id INTEGER PRIMARY KEY,
+                ip TEXT NOT NULL,
+                failed_at INTEGER NOT NULL
             )'
         );
     }
@@ -335,5 +346,28 @@ final class PlatformDb
     {
         $statement = self::pdo($path)->prepare('UPDATE store_usage SET cost_cents = ? WHERE store_id = ?');
         $statement->execute([$cents, $storeId]);
+    }
+
+    public static function loginFailureCount(string $path, string $ip): int
+    {
+        $since = time() - self::LOGIN_WINDOW;
+        $pdo = self::pdo($path);
+        $pdo->prepare('DELETE FROM operator_attempts WHERE failed_at < ?')->execute([$since]);
+        $statement = $pdo->prepare('SELECT COUNT(*) FROM operator_attempts WHERE ip = ? AND failed_at >= ?');
+        $statement->execute([$ip, $since]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    public static function recordLoginFailure(string $path, string $ip): void
+    {
+        $statement = self::pdo($path)->prepare('INSERT INTO operator_attempts (ip, failed_at) VALUES (?, ?)');
+        $statement->execute([$ip, time()]);
+    }
+
+    public static function clearLoginFailures(string $path, string $ip): void
+    {
+        $statement = self::pdo($path)->prepare('DELETE FROM operator_attempts WHERE ip = ?');
+        $statement->execute([$ip]);
     }
 }

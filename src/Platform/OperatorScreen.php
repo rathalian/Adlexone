@@ -12,9 +12,16 @@ use Adlexone\Http\Page;
  */
 final class OperatorScreen
 {
+    /**
+     * A real bcrypt hash so a missing username takes as long to reject as a wrong password.
+     * It is not an account.
+     */
+    private const DUMMY_HASH = '$2y$10$TOgp5fleJ1tJfx1/SLOxIuDFLP5hVOQwqs1kvCfwHYkfEgOW9InKq';
+
     public static function manageUnavailable(): void
     {
         self::theme();
+        self::privateResponse();
         Page::current()->useLayout('setup', [
             'title' => 'Customer sites',
             'documentTitle' => 'Customer sites — Site manager',
@@ -31,6 +38,7 @@ final class OperatorScreen
     public static function handle(): void
     {
         self::theme();
+        self::privateResponse();
         $paths = Runtime::paths();
         $db = $paths['platform_db'];
         $error = '';
@@ -45,7 +53,10 @@ final class OperatorScreen
             } else {
                 $action = (string) ($_POST['operator_action'] ?? '');
                 try {
-                    if ($needsAccount || $action === 'create_operator') {
+                    if ($needsAccount) {
+                        if ($action !== 'create_operator') {
+                            throw new \RuntimeException('Create the operator account first.');
+                        }
                         self::createOperator($db);
                         $needsAccount = false;
                         $notice = (string) ($_SESSION['operator_notice'] ?? '');
@@ -58,8 +69,14 @@ final class OperatorScreen
                         self::dispatch($paths, $action);
                         return;
                     }
-                } catch (\Throwable $e) {
+                } catch (\PDOException $e) {
+                    error_log('Operator database: ' . $e->getMessage());
+                    $error = 'The operator database could not complete that.';
+                } catch (\RuntimeException $e) {
                     $error = $e->getMessage();
+                } catch (\Throwable $e) {
+                    error_log('Operator: ' . $e->getMessage());
+                    $error = 'The operator site could not complete that.';
                 }
             }
         }
@@ -70,8 +87,7 @@ final class OperatorScreen
                 'This account manages customer sites. It is stored in the operator database, not in a customer SQLite file.',
                 self::accountForm('Create the operator account', 'create_operator'),
                 $error,
-                $notice,
-                ''
+                $notice
             );
             return;
         }
@@ -82,8 +98,7 @@ final class OperatorScreen
                 'Sign in to add a site, change its hostname, or read what it costs.',
                 self::loginForm(),
                 $error,
-                $notice,
-                ''
+                $notice
             );
             return;
         }
@@ -92,63 +107,28 @@ final class OperatorScreen
         if ($siteSlug !== '') {
             $store = PlatformDb::storeBySlug($paths['platform_db'], $siteSlug);
             if ($store === null) {
-                self::show(
-                    'Customer site',
-                    $error !== '' ? $error : 'That customer site was not found.',
-                    '<div class="install-actions"><a class="btn" href="' . Html::e(Runtime::operatorAddress()) . '">Sites</a></div>',
-                    '',
-                    $notice,
-                    'sites'
-                );
+                HostConsole::missing($error, $notice);
 
                 return;
             }
-            self::show(
-                (string) $store['label'],
-                (string) $store['host'] . '. These figures are the last measurement of this site.',
-                self::sitePage($paths, $store),
-                $error,
-                $notice,
-                'site'
-            );
+            HostConsole::site($paths, $store, $error, $notice);
 
             return;
         }
 
         $view = strtolower(trim((string) ($_GET['view'] ?? '')));
         if ($view === 'rate') {
-            self::show(
-                'Rate',
-                'One rate for every site. There is no invoice. The cost is this rate applied to the last measurement.',
-                self::rateForm($paths),
-                $error,
-                $notice,
-                'rate'
-            );
+            HostConsole::rate($paths, $error, $notice);
 
             return;
         }
         if ($view === 'add') {
-            self::show(
-                'Add a customer site',
-                'The folder is created under the stores directory. Leave the admin username and password blank and they finish setup on their hostname.',
-                self::addForm($paths),
-                $error,
-                $notice,
-                'add'
-            );
+            HostConsole::add($paths, $error, $notice);
 
             return;
         }
 
-        self::show(
-            'Customer sites',
-            'Each row is one site. The totals are the last measurement of those sites.',
-            self::sitesPage($paths),
-            $error,
-            $notice,
-            'sites'
-        );
+        HostConsole::dashboard($paths, $error, $notice);
     }
 
     private static function show(
@@ -156,10 +136,8 @@ final class OperatorScreen
         string $lead,
         string $body,
         string $error,
-        string $notice,
-        string $place
+        string $notice
     ): void {
-        $signedIn = $place !== '';
         Page::current()->useLayout('setup', [
             'title' => $title,
             'documentTitle' => $title . ' — Site manager',
@@ -170,8 +148,8 @@ final class OperatorScreen
             'helpHtml' => '',
             'formHtml' => $body . self::dialog('manage-help', 'Customer sites', HelpText::operator(Runtime::paths())),
             'installer' => true,
-            'stepsHtml' => $signedIn ? self::steps($place) : '',
-            'headingAction' => self::headingActions($signedIn),
+            'stepsHtml' => '',
+            'headingAction' => self::headingActions(),
         ]);
     }
 
@@ -182,7 +160,9 @@ final class OperatorScreen
     {
         $db = $paths['platform_db'];
         if ($action === 'sign_out') {
-            unset($_SESSION['operator_id'], $_SESSION['operator_name']);
+            unset($_SESSION['operator_id'], $_SESSION['operator_name'], $_SESSION['operator_notice']);
+            Csrf::rotate();
+            session_regenerate_id(true);
             header('Location: ' . Runtime::operatorAddress());
             exit;
         }
@@ -270,12 +250,7 @@ final class OperatorScreen
         if (preg_match('/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/', $slug) !== 1) {
             throw new \RuntimeException('The slug must be lowercase letters, numbers, and hyphens, and it must start and end with a letter or number.');
         }
-        if (preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
-            throw new \RuntimeException('Enter the full hostname customers will use, such as health.example.com.');
-        }
-        if (strcasecmp($host, $paths['operator_host']) === 0) {
-            throw new \RuntimeException('That hostname is the operator site. Use a different hostname for the customer.');
-        }
+        $host = SiteUsage::assertHostname($host, $paths['operator_host']);
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new \RuntimeException('The admin email does not look valid.');
         }
@@ -343,6 +318,7 @@ final class OperatorScreen
         }
         PlatformDb::addOperator($db, $username, $password);
         session_regenerate_id(true);
+        Csrf::rotate();
         $row = PlatformDb::operatorByName($db, $username);
         $_SESSION['operator_id'] = (int) ($row['operator_id'] ?? 0);
         $_SESSION['operator_name'] = $username;
@@ -351,15 +327,29 @@ final class OperatorScreen
 
     private static function login(string $db): void
     {
+        $ip = trim((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        if ($ip === '' || strlen($ip) > 64) {
+            $ip = 'unknown';
+        }
+        if (PlatformDb::loginFailureCount($db, $ip) >= PlatformDb::LOGIN_LIMIT) {
+            usleep(200000);
+            throw new \RuntimeException('Too many attempts. Try again in 15 minutes.');
+        }
         $username = trim((string) ($_POST['user_name'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
         $row = PlatformDb::operatorByName($db, $username);
         $hash = (string) ($row['password'] ?? '');
-        if ($row === null || !password_verify($password, $hash)) {
+        $check = $row === null || $hash === '' ? self::DUMMY_HASH : $hash;
+        $verified = password_verify($password, $check);
+        $ok = $row !== null && $hash !== '' && $verified;
+        if (!$ok) {
+            PlatformDb::recordLoginFailure($db, $ip);
             usleep(500000);
             throw new \RuntimeException('That operator username or password is not recognised.');
         }
+        PlatformDb::clearLoginFailures($db, $ip);
         session_regenerate_id(true);
+        Csrf::rotate();
         $_SESSION['operator_id'] = (int) $row['operator_id'];
         $_SESSION['operator_name'] = (string) $row['user_name'];
     }
@@ -367,300 +357,6 @@ final class OperatorScreen
     private static function signedIn(): bool
     {
         return (int) ($_SESSION['operator_id'] ?? 0) > 0;
-    }
-
-    /**
-     * @param array<string, string> $paths
-     */
-    private static function sitesPage(array $paths): string
-    {
-        $stores = PlatformDb::stores($paths['platform_db']);
-        $html = self::totals($paths);
-        $html .= '<p class="install-section">Sites</p>';
-        if ($stores === []) {
-            $html .= '<p class="install-callout">No customer sites yet. Add a site to create the first folder.</p>';
-            $html .= '<div class="install-actions"><a class="btn btn--primary" href="' . Html::e(Runtime::operatorAddress('view=add')) . '">Add a site</a></div>';
-
-            return $html;
-        }
-        $html .= '<ul class="manage-sites">';
-        foreach ($stores as $store) {
-            $html .= self::storeRow($paths, $store);
-        }
-        $html .= '</ul>';
-
-        return $html;
-    }
-
-    /**
-     * @param array<string, string> $paths
-     */
-    private static function addForm(array $paths): string
-    {
-        $folder = rtrim($paths['stores'], '/\\') . DIRECTORY_SEPARATOR . '{slug}' . DIRECTORY_SEPARATOR;
-        $action = Runtime::operatorAddress('view=add');
-        $html = '<p class="install-section">Folder</p>';
-        $html .= self::facts([
-            'Stores directory' => rtrim($paths['stores'], '/\\') . DIRECTORY_SEPARATOR,
-            'This site' => $folder,
-            'PHP is running as' => $paths['php_user'],
-        ], true);
-        $html .= '<form method="post" action="' . Html::e($action) . '" class="login-form install-form" autocomplete="off">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="create_store">';
-        $html .= self::field('Display name', 'label', 'text', '', true, 'Shown on their setup page. For example, Health.');
-        $html .= self::field('Slug', 'slug', 'text', '', true, 'Folder name. Lowercase letters, numbers, and hyphens. For example, health.');
-        $html .= self::field('Hostname', 'host', 'text', '', true, 'The address their browser uses. For example, health.example.com. Point DNS at this server. Do not use the operator hostname.');
-        $html .= self::field('Admin email', 'admin_email', 'email', '', false, 'Stored on the operator list so you know who to contact. Optional.');
-        $html .= self::field(
-            'Admin username',
-            'admin_user',
-            'text',
-            DefaultAccount::allowed() ? DefaultAccount::USERNAME : '',
-            false,
-            'The customer application login. Leave username and password blank and they choose the first account on their hostname.'
-        );
-        $html .= self::field(
-            'Admin password',
-            'admin_password',
-            'password',
-            DefaultAccount::allowed() ? DefaultAccount::PASSWORD : '',
-            false,
-            DefaultAccount::allowed()
-                ? 'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in their SQLite file.'
-                : 'At least 12 characters, or leave blank to let them choose on first visit. Stored as a hash in their SQLite file.'
-        );
-        $html .= '<div class="install-actions">';
-        $html .= '<a class="btn" href="' . Html::e(Runtime::operatorAddress()) . '">Sites</a>';
-        $html .= '<button type="submit" class="btn btn--primary">Create the store</button>';
-        $html .= '</div></form>';
-
-        return $html;
-    }
-
-    /**
-     * @param array<string, string> $paths
-     * @param array<string, mixed> $store
-     */
-    private static function storeRow(array $paths, array $store): string
-    {
-        $slug = (string) $store['slug'];
-        $usage = PlatformDb::usage($paths['platform_db'], (int) $store['store_id']);
-        $status = (string) $store['status'];
-        $figures = 'Not measured';
-        if ($usage !== null) {
-            $bytes = (int) $usage['database_bytes'] + (int) $usage['wal_bytes'] + (int) $usage['shm_bytes']
-                + (int) $usage['settings_bytes'] + (int) $usage['uploads_bytes'] + (int) $usage['other_bytes'];
-            $rate = PlatformDb::rate($paths['platform_db']);
-            $cost = $usage['cost_cents'] === null || $rate === null
-                ? 'No cost'
-                : SiteUsage::formatMoney((int) $usage['cost_cents'], (string) $rate['currency']);
-            $figures = SiteUsage::formatSize($bytes) . ' · ' . $cost;
-        }
-        $html = '<li><a class="manage-site" href="' . Html::e(Runtime::operatorAddress('site=' . rawurlencode($slug))) . '">';
-        $html .= '<span class="manage-site__name">' . Html::e((string) $store['label']) . '</span>';
-        $html .= '<span class="manage-site__meta">' . Html::e((string) $store['host']) . ' · ' . Html::e($status)
-            . ' · ' . Html::e($figures) . '</span>';
-        $html .= '</a></li>';
-
-        return $html;
-    }
-
-    /**
-     * @param array<string, string> $paths
-     * @param array<string, mixed> $store
-     */
-    private static function sitePage(array $paths, array $store): string
-    {
-        $slug = (string) $store['slug'];
-        $folder = SiteUsage::folder($paths['stores'], $slug);
-        $id = (int) $store['store_id'];
-        $usage = PlatformDb::usage($paths['platform_db'], $id);
-        $rate = PlatformDb::rate($paths['platform_db']);
-        $action = Runtime::operatorAddress('site=' . rawurlencode($slug));
-        $html = '<p class="install-section">Folder</p>';
-        $html .= self::facts([
-            'Slug' => $slug,
-            'Database' => $folder . 'adlexone.sqlite',
-            'Settings' => $folder . 'config' . DIRECTORY_SEPARATOR,
-            'Uploads' => $folder . 'attachments' . DIRECTORY_SEPARATOR,
-        ], true);
-        $html .= '<p class="form-help">The slug is ' . Html::e($slug) . '. It is the folder name and it is not changed here.</p>';
-        $html .= self::usageBlock($usage, $rate);
-        $html .= '<div class="install-actions">' . self::miniForm($id, 'measure_site', 'Measure this site', $action) . '</div>';
-        $html .= '<p class="install-section">Update this site</p>';
-        $html .= '<form method="post" action="' . Html::e($action) . '" class="login-form install-form" autocomplete="off">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="save_site">';
-        $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
-        $html .= '<input type="hidden" name="slug" value="' . Html::e($slug) . '">';
-        $html .= self::field('Display name', 'label', 'text', (string) $store['label'], true, 'Shown on their sign-in page. For example, Health.');
-        $html .= self::field('Hostname', 'host', 'text', (string) $store['host'], true, 'The address their browser uses. For example, health.example.com.');
-        $html .= self::field('Admin email', 'admin_email', 'email', (string) $store['admin_email'], false, 'Stored on the operator list so you know who to contact. Optional.');
-        $html .= '<div class="install-actions"><button type="submit" class="btn btn--primary">Save changes</button></div>';
-        $html .= '</form>';
-        $status = (string) $store['status'];
-        $html .= '<div class="install-actions">';
-        $html .= self::miniForm($id, $status === 'active' ? 'suspend' : 'resume', $status === 'active' ? 'Suspend' : 'Resume', $action);
-        $html .= self::miniForm($id, 'backup', 'Download backup', $action);
-        $html .= '</div>';
-        $html .= '<p class="install-section">Remove this site</p>';
-        $html .= '<p class="form-help">Type the slug ' . Html::e($slug) . '. Delete removes that folder from disk.</p>';
-        $html .= '<form method="post" action="' . Html::e($action) . '" class="login-form install-form" autocomplete="off">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="delete">';
-        $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
-        $html .= '<div class="field"><label class="login-label label" for="op_confirm_slug">Slug</label>';
-        $html .= '<input class="input" type="text" id="op_confirm_slug" name="confirm_slug" autocomplete="off" spellcheck="false">';
-        $html .= '</div>';
-        $html .= '<div class="install-actions"><button type="submit" class="btn">Delete from disk</button></div>';
-        $html .= '</form>';
-
-        return $html;
-    }
-
-    /**
-     * @param array<string, mixed>|null $usage
-     * @param array<string, mixed>|null $rate
-     */
-    private static function usageBlock(?array $usage, ?array $rate): string
-    {
-        if ($usage === null) {
-            return '<p class="form-help">This site has not been measured.</p>';
-        }
-        $html = '<p class="install-section">Usage</p>';
-        $html .= '<p class="form-help">Measured ' . Html::e(SiteUsage::formatMeasured((int) $usage['measured_at'])) . '.</p>';
-        $rows = [
-            'Database' => SiteUsage::formatSize((int) $usage['database_bytes']),
-            'Write-ahead log' => SiteUsage::formatSize((int) $usage['wal_bytes']),
-            'Shared memory' => SiteUsage::formatSize((int) $usage['shm_bytes']),
-            'Settings' => SiteUsage::formatSize((int) $usage['settings_bytes']),
-            'Uploads' => SiteUsage::formatSize((int) $usage['uploads_bytes']),
-        ];
-        if ((int) $usage['other_bytes'] > 0) {
-            $rows['Other'] = SiteUsage::formatSize((int) $usage['other_bytes']);
-        }
-        $total = (int) $usage['database_bytes'] + (int) $usage['wal_bytes'] + (int) $usage['shm_bytes']
-            + (int) $usage['settings_bytes'] + (int) $usage['uploads_bytes'] + (int) $usage['other_bytes'];
-        $rows['Folder total'] = SiteUsage::formatSize($total);
-        $rows['People'] = self::countText($usage['people'] ?? null);
-        $rows['Applications'] = self::countText($usage['applications'] ?? null);
-        $rows['Records'] = self::countText($usage['records'] ?? null);
-        $html .= self::facts($rows, false);
-        if ($usage['people'] === null) {
-            $html .= '<p class="form-help">This site has no administrator yet.</p>';
-        }
-        $note = trim((string) ($usage['counts_note'] ?? ''));
-        if ($note !== '') {
-            $html .= '<p class="form-help">' . Html::e($note) . '</p>';
-        }
-        if ($rate === null || $usage['cost_cents'] === null) {
-            $html .= '<p class="form-help">No rate is set. Set a rate to calculate a cost. Usage is already shown.</p>';
-        } else {
-            $html .= '<p class="form-help">Cost ' . Html::e(SiteUsage::formatMoney((int) $usage['cost_cents'], (string) $rate['currency'])) . '.</p>';
-        }
-
-        return $html;
-    }
-
-    private static function countText(mixed $value): string
-    {
-        if ($value === null || $value === '') {
-            return 'Not set up';
-        }
-
-        return (string) (int) $value;
-    }
-
-    /**
-     * @param array<string, string> $paths
-     */
-    private static function totals(array $paths): string
-    {
-        $figures = SiteUsage::hostFigures($paths['platform_db']);
-        $rate = PlatformDb::rate($paths['platform_db']);
-        $cost = $figures['cost'] === null || $rate === null
-            ? 'No rate is set'
-            : SiteUsage::formatMoney($figures['cost'], (string) $rate['currency']);
-        $html = '<p class="install-section">Host</p>';
-        $html .= self::facts([
-            'Sites' => (string) $figures['sites'],
-            'Active' => (string) $figures['active'],
-            'Suspended' => (string) $figures['suspended'],
-            'Folder total' => SiteUsage::formatSize($figures['bytes']),
-            'People' => (string) $figures['people'],
-            'Applications' => (string) $figures['applications'],
-            'Records' => (string) $figures['records'],
-            'Cost' => $cost,
-        ], false);
-        if ($figures['cost'] === null || $rate === null) {
-            $html .= '<p class="form-help">Set a rate to calculate a cost. Usage is already shown.</p>';
-        }
-        if ($figures['unmeasured'] > 0) {
-            $n = $figures['unmeasured'];
-            $html .= '<p class="form-help">' . $n . ' ' . ($n === 1 ? 'site has not been measured and is not in this cost.' : 'sites have not been measured and are not in this cost.') . '</p>';
-        }
-        if ($figures['unset_counts'] > 0) {
-            $n = $figures['unset_counts'];
-            $html .= '<p class="form-help">' . $n . ' ' . ($n === 1 ? 'site has' : 'sites have') . ' no administrator yet. Their people, applications, and records are not in these totals.</p>';
-        }
-        $html .= '<form method="post" action="' . Html::e(Runtime::operatorAddress()) . '" class="install-actions">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="measure">';
-        $html .= '<button type="submit" class="btn">Measure usage</button>';
-        $html .= '</form>';
-
-        return $html;
-    }
-
-    /**
-     * @param array<string, string> $paths
-     */
-    private static function rateForm(array $paths): string
-    {
-        $rate = PlatformDb::rate($paths['platform_db']);
-        $action = Runtime::operatorAddress('view=rate');
-        $html = '<form method="post" id="manage-rate" action="' . Html::e($action) . '" class="login-form install-form" autocomplete="off">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="save_rate">';
-        $html .= self::field('Currency', 'currency', 'text', $rate === null ? 'AUD' : (string) $rate['currency'], true, 'Three letters. For example, AUD.');
-        $html .= self::field(
-            'Monthly amount',
-            'monthly',
-            'text',
-            $rate === null ? '' : SiteUsage::formatAmount((int) $rate['monthly_cents']),
-            true,
-            'Applied once to each site. For example, 12.50.'
-        );
-        $html .= self::field(
-            'Amount per person',
-            'person',
-            'text',
-            $rate === null ? '' : SiteUsage::formatAmount((int) $rate['person_cents']),
-            true,
-            'Multiplied by the number of people on the site.'
-        );
-        $html .= self::field(
-            'Amount per gigabyte',
-            'gigabyte',
-            'text',
-            $rate === null ? '' : SiteUsage::formatAmount((int) $rate['gigabyte_cents']),
-            true,
-            'A gigabyte is 1,024 MB. The figure uses the folder total.'
-        );
-        $html .= '</form>';
-        $html .= '<div class="install-actions">';
-        if ($rate !== null) {
-            $html .= '<form method="post" action="' . Html::e($action) . '">';
-            $html .= Csrf::field();
-            $html .= '<input type="hidden" name="operator_action" value="clear_rate">';
-            $html .= '<button type="submit" class="btn">Clear the rate</button>';
-            $html .= '</form>';
-        }
-        $html .= '<button type="submit" class="btn btn--primary" form="manage-rate">Save the rate</button>';
-        $html .= '</div>';
-
-        return $html;
     }
 
     private static function saveRate(string $db): void
@@ -699,43 +395,11 @@ final class OperatorScreen
         $_SESSION['operator_notice'] = $label . ' was updated.';
     }
 
-    private static function headingActions(bool $signedIn): string
+    private static function headingActions(): string
     {
-        $html = '<div class="install-head__tools">';
-        $html .= '<button type="button" class="install-help" data-sheet-pop aria-controls="manage-help">Details</button>';
-        if ($signedIn) {
-            $html .= '<span class="install-who">' . Html::e((string) ($_SESSION['operator_name'] ?? '')) . '</span>';
-            $html .= '<form method="post" action="' . Html::e(Runtime::operatorAddress()) . '" class="install-signout">';
-            $html .= Csrf::field();
-            $html .= '<input type="hidden" name="operator_action" value="sign_out">';
-            $html .= '<button type="submit" class="install-help">Sign out</button>';
-            $html .= '</form>';
-        }
-        $html .= '</div>';
-
-        return $html;
-    }
-
-    private static function steps(string $place): string
-    {
-        $items = [
-            'sites' => ['Sites', Runtime::operatorAddress()],
-            'rate' => ['Rate', Runtime::operatorAddress('view=rate')],
-            'add' => ['Add a site', Runtime::operatorAddress('view=add')],
-        ];
-        $current = $place === 'site' ? 'sites' : $place;
-        $html = '<nav aria-label="Site manager"><ol class="install-steps">';
-        $index = 1;
-        foreach ($items as $id => [$label, $href]) {
-            $class = $id === $current ? 'is-current' : 'is-done';
-            $inner = '<span class="install-steps__num">' . $index . '</span><span class="install-steps__label">' . Html::e($label) . '</span>';
-            $currentAttr = $id === $current ? ' aria-current="page"' : '';
-            $item = '<a class="install-steps__item" href="' . Html::e($href) . '"' . $currentAttr . '>' . $inner . '</a>';
-            $html .= '<li class="' . $class . '">' . $item . '</li>';
-            $index++;
-        }
-
-        return $html . '</ol></nav>';
+        return '<div class="install-head__tools">'
+            . '<button type="button" class="install-help" data-sheet-pop aria-controls="manage-help">Details</button>'
+            . '</div>';
     }
 
     /**
@@ -761,18 +425,6 @@ final class OperatorScreen
             . '<div class="sheet-pop__body setup-help">' . $body . '</div>'
             . '<div class="sheet-pop__actions"><button type="button" class="btn btn--primary" data-sheet-pop-close>Done</button></div>'
             . '</div></dialog>';
-    }
-
-    private static function miniForm(int $id, string $action, string $label, string $target = ''): string
-    {
-        $html = '<form method="post" action="' . Html::e($target) . '">';
-        $html .= Csrf::field();
-        $html .= '<input type="hidden" name="operator_action" value="' . Html::e($action) . '">';
-        $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
-        $html .= '<button type="submit" class="btn">' . Html::e($label) . '</button>';
-        $html .= '</form>';
-
-        return $html;
     }
 
     private static function accountForm(string $button, string $action): string
@@ -856,7 +508,15 @@ final class OperatorScreen
 
     private static function backup(string $folder, string $slug): void
     {
+        if (preg_match('/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/', $slug) !== 1) {
+            throw new \RuntimeException('That customer site was not found.');
+        }
         SiteUsage::assertInside((string) (Runtime::paths()['stores'] ?? ''), $folder);
+        $root = realpath($folder);
+        if ($root === false) {
+            throw new \RuntimeException('That customer site was not found.');
+        }
+        $prefix = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
         $sqlite = $folder . 'adlexone.sqlite';
         Provisioner::checkpoint($sqlite);
         $tmp = tempnam(sys_get_temp_dir(), 'inlay');
@@ -867,27 +527,40 @@ final class OperatorScreen
         @unlink($tmp);
         $files = [];
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($folder, \FilesystemIterator::SKIP_DOTS)
+            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)
         );
         foreach ($iterator as $file) {
-            if (!$file->isFile()) {
+            if (!$file->isFile() || $file->isLink()) {
                 continue;
             }
             $full = $file->getPathname();
-            $relative = substr($full, strlen($folder));
-            if (str_ends_with($relative, '-wal') || str_ends_with($relative, '-shm')) {
+            $real = realpath($full);
+            if ($real === false || !str_starts_with($real, $prefix)) {
                 continue;
             }
-            $files[$slug . '/' . str_replace('\\', '/', ltrim($relative, '/\\'))] = $full;
+            $relative = substr($real, strlen($prefix));
+            if ($relative === '' || str_contains($relative, '..') || str_ends_with($relative, '-wal') || str_ends_with($relative, '-shm')) {
+                continue;
+            }
+            $files[$slug . '/' . str_replace('\\', '/', $relative)] = $real;
         }
         ZipStore::write($zipPath, $files);
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="' . $slug . '-backup.zip"');
         header('Content-Length: ' . (string) filesize($zipPath));
         header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store');
         readfile($zipPath);
         @unlink($zipPath);
         exit;
+    }
+
+    private static function privateResponse(): void
+    {
+        if (headers_sent()) {
+            return;
+        }
+        header('Cache-Control: no-store');
     }
 
     private static function theme(): void

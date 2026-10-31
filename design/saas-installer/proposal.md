@@ -72,18 +72,19 @@ Submitting the account form signs that person in and opens the manager.
 
 ## The manager
 
-The manager is the signed-in page of `OperatorScreen`. Sign-in and sign-out stay as they are. The setup layout stays.
+The manager is the signed-in page of `OperatorScreen`. Sign-in and the first operator account stay on the installer layout. After sign-in the manager uses the same shell as a customer site: the top bar, the section bar, and the home dashboard.
 
-Two addresses, both on the operator hostname:
+`./?host=manage` opens the manager on any address this server answers. On the operator hostname the same screen is `./` with no query. `Runtime::operatorAddress()` keeps that difference in every link and form.
 
-- `./` is the host page. The title is “Customer sites”. The lead is “Each row is one site. The totals are the last measurement of those sites.”
+- `./` (or `./?host=manage`) is the dashboard. The lead is “Each row is one site. The totals are the last measurement of those sites.” The section bar is Host, with Sites, Rate, and Add a site.
+- `./?view=rate` is the rate. `./?view=add` is the form that adds a site.
 - `./?site=health` is one site. The title is the display name, for example “Health”. The lead names the hostname and the measurement, for example “health.example.com. These figures are the last measurement of this site.” The value is the slug. A slug that is not in `stores` says that customer site was not found.
 
 `?site=` is read only in operator mode. Bootstrap already exits before the customer router on that hostname.
 
-The host page shows, in this order: the host totals, the rate, the list of sites, and the form that adds a site. The add form is the one on the console today: display name, slug, hostname, admin email, and the optional admin username and password. The same validation stays. Leave the username and password blank and the customer’s first visit to their hostname is still their setup page. After a site is created, the browser opens `?site=` for that slug, and the notice names the folder as it does now.
+The dashboard shows the host totals, then one card for each site. The card shows the display name, the hostname, the status, the folder total from the last measurement, and the cost. The name opens the site page. The rate and the add form are their own screens. Suspend, backup, and delete stay on the site page.
 
-Each list row shows the display name, the hostname, the status, the folder total from the last measurement, and the cost. The name links to the site page. Suspend, backup, and delete are on the site page.
+The add form is unchanged: display name, slug, hostname, admin email, and the optional admin username and password. The same validation stays. Leave the username and password blank and the customer’s first visit to their hostname is still their setup page. After a site is created, the browser opens `?site=` for that slug, and the notice names the folder as it does now.
 
 The site page shows the folder paths, the usage split, the cost, the update form, and the suspend, resume, backup, and delete actions.
 
