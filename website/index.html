@@ -37,83 +37,181 @@
     </header>
     <main id="content">
         <div class="sheet">
-            <div class="hero">
-                <div class="hero__copy">
-                    <h1>Adlexone keeps the applications, records, and rules for the work.</h1>
-                    <p class="lede">You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
-                    <p class="actions actions--desk">
-                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                        <a class="btn btn--line" href="work.html">See the work</a>
-                    </p>
-                </div>
-                <div class="demo">
-                    <div class="specimen">
-                        <div class="specimen__head">
-                            <p class="kicker">Publishing at Health</p>
-                            <div class="app__bar">
-                                <div>
-                                    <p class="app__name">Publishing</p>
-                                    <p class="app__hint">A manuscript from the day it arrives until it is approved or declined.</p>
-                                </div>
-                                <p class="app__host">health.example.com</p>
-                            </div>
-                        </div>
-                        <div class="tabs">
-                            <label class="tab">
-                                <input type="radio" name="publishing-view" id="view-work" checked>
-                                Work
-                            </label>
-                            <label class="tab">
-                                <input type="radio" name="publishing-view" id="view-parties">
-                                Parties
-                            </label>
-                        </div>
-                        <div class="panel-work">
-                            <ol class="rows">
-                                <li class="is-subject">
-                                    <span class="rows__title">Home to Roost</span>
-                                    <span class="rows__meta">Carole Hocking</span>
-                                    <span class="rows__status"><span class="when-open">Editing</span><span class="when-done">Approved</span></span>
-                                </li>
-                                <li>
-                                    <span class="rows__title">A Place In Time</span>
-                                    <span class="rows__meta">Finish the edit.</span>
-                                    <span class="rows__status">Editing</span>
-                                </li>
-                                <li>
-                                    <span class="rows__title">Damaged Good</span>
-                                    <span class="rows__meta">Finish the reading.</span>
-                                    <span class="rows__status">Reading</span>
-                                </li>
-                            </ol>
-                            <p class="notice when-done"><strong>Notice.</strong> Home to Roost has been approved for publication.</p>
-                            <div class="specimen__foot">
-                                <p class="when-open">Home to Roost is ready to approve.</p>
-                                <p class="when-done">Approving it stamped Approved on, wrote the log, posted the notice, and sent the email. Next step was cleared.</p>
-                                <div class="specimen__actions">
-                                    <a class="btn btn--ink when-done" href="ask.html">Ask for a copy</a>
-                                    <label class="btn demo__approve">
-                                        <input type="checkbox" id="approved">
-                                        <span class="when-open">Approve Home to Roost</span>
-                                        <span class="when-done">Show it again</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="panel-parties">
-                            <div class="party">
-                                <p class="rows__title">Carole Hocking</p>
-                                <p class="when-open">Home to Roost is in editing. A Place In Time is in editing. Damaged Good is being read.</p>
-                                <p class="when-done">Home to Roost is approved. A Place In Time is in editing. Damaged Good is being read.</p>
-                                <p class="party__note">Parties is every manuscript under the writer’s name. The same screen groups matters by client.</p>
-                            </div>
+            <div class="walk">
+                <div class="hero">
+                    <div class="hero__copy">
+                        <h1>Adlexone keeps the applications, records, and rules for the work.</h1>
+                        <p class="lede">You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
+                        <div class="actions">
+                            <input class="switch" type="radio" name="demo" id="demo-off" checked>
+                            <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
+                            <label class="btn btn--line" for="demo-user">User demo</label>
+                            <label class="btn btn--line" for="demo-admin">Administrators demo</label>
+                            <a class="btn btn--line" href="work.html">See the work</a>
                         </div>
                     </div>
                 </div>
-                <p class="actions actions--hand">
-                    <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                    <a class="btn btn--line" href="work.html">See the work</a>
-                </p>
+                <div class="demos">
+                    <input class="switch" type="radio" name="demo" id="demo-user">
+                    <input class="switch" type="radio" name="demo" id="demo-admin">
+                    <section class="tour tour--user" aria-labelledby="user-demo">
+                        <div class="tour__head">
+                            <div>
+                                <h2 id="user-demo">Using Leave requests</h2>
+                                <p>Reid asks for Thursday 12 November. You approve the request. The application writes the date, the log, the notice, and the email.</p>
+                            </div>
+                            <label class="tour__close" for="demo-off">Close</label>
+                        </div>
+                        <div class="stage">
+                            <input class="switch" type="radio" name="user-step" id="user-step-1" checked>
+                            <input class="switch" type="radio" name="user-step" id="user-step-2">
+                            <input class="switch" type="radio" name="user-step" id="user-step-3">
+                            <input class="switch" type="radio" name="user-step" id="user-step-4">
+                            <figure class="shot shot--1">
+                                <label class="shot__frame" for="user-step-2">
+                                    <img src="assets/demo/user-1.png" width="1280" height="900" alt="Leave requests at Health. Four requests are listed. Reid, 12 November is Asked.">
+                                </label>
+                                <figcaption>
+                                    <p>Leave requests is the list. Reid, 12 November is still to be decided.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="user-step-1">1 List</label>
+                                            <label for="user-step-2">2 Request</label>
+                                            <label for="user-step-3">3 Approved</label>
+                                            <label for="user-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">1 of 4</span>
+                                        <label class="btn btn--line" for="user-step-2">Next</label>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                            <figure class="shot shot--2">
+                                <label class="shot__frame" for="user-step-3">
+                                    <img src="assets/demo/user-2.png" width="1280" height="1405" alt="The request Reid, 12 November. Status is Asked, and the next step is to decide it.">
+                                </label>
+                                <figcaption>
+                                    <p>Open the request. Status is Asked, and the next step is to decide it.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="user-step-1">1 List</label>
+                                            <label for="user-step-2">2 Request</label>
+                                            <label for="user-step-3">3 Approved</label>
+                                            <label for="user-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">2 of 4</span>
+                                        <label class="btn btn--line" for="user-step-1">Back</label>
+                                        <label class="btn btn--line" for="user-step-3">Next</label>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                            <figure class="shot shot--3">
+                                <label class="shot__frame" for="user-step-4">
+                                    <img src="assets/demo/user-3.png" width="1280" height="1296" alt="Reid, 12 November after it is approved. Approved on is filled, Next step is clear, and the log says Approved Reid, 12 November.">
+                                </label>
+                                <figcaption>
+                                    <p>Move Status to Approved and save. The application stamps Approved on, writes the log, and clears Next step.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="user-step-1">1 List</label>
+                                            <label for="user-step-2">2 Request</label>
+                                            <label for="user-step-3">3 Approved</label>
+                                            <label for="user-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">3 of 4</span>
+                                        <label class="btn btn--line" for="user-step-2">Back</label>
+                                        <label class="btn btn--line" for="user-step-4">Next</label>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                            <figure class="shot shot--4">
+                                <div class="shot__frame">
+                                    <img src="assets/demo/user-4.png" width="1280" height="678" alt="Announcements for Leave requests. The latest notice says Reid, 12 November has been approved.">
+                                </div>
+                                <figcaption>
+                                    <p>A notice is posted that Reid, 12 November has been approved. The same words are the email.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="user-step-1">1 List</label>
+                                            <label for="user-step-2">2 Request</label>
+                                            <label for="user-step-3">3 Approved</label>
+                                            <label for="user-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">4 of 4</span>
+                                        <label class="btn btn--line" for="user-step-3">Back</label>
+                                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                        </div>
+                    </section>
+                    <section class="tour tour--admin" aria-labelledby="admin-demo">
+                        <div class="tour__head">
+                            <div>
+                                <h2 id="admin-demo">Setting up Leave requests</h2>
+                                <p>An administrator creates the application from the Leave requests blueprint. The fields and the rules are already there.</p>
+                            </div>
+                            <label class="tour__close" for="demo-off">Close</label>
+                        </div>
+                        <div class="stage">
+                            <input class="switch" type="radio" name="admin-step" id="admin-step-1" checked>
+                            <input class="switch" type="radio" name="admin-step" id="admin-step-2">
+                            <input class="switch" type="radio" name="admin-step" id="admin-step-3">
+                            <figure class="shot shot--1">
+                                <label class="shot__frame" for="admin-step-2">
+                                    <img src="assets/demo/admin-1.png" width="1280" height="980" alt="Create an application. The name is Leave requests, and the preview shows the fields and the approval rule.">
+                                </label>
+                                <figcaption>
+                                    <p>Create an application. The name is Leave requests, and the guide explains how a request moves.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="admin-step-1">1 Create</label>
+                                            <label for="admin-step-2">2 Blueprint</label>
+                                            <label for="admin-step-3">3 Rules</label>
+                                        </div>
+                                        <span class="shot__count">1 of 3</span>
+                                        <label class="btn btn--line" for="admin-step-2">Next</label>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                            <figure class="shot shot--2">
+                                <label class="shot__frame" for="admin-step-3">
+                                    <img src="assets/demo/admin-2.png" width="1280" height="932" alt="The Leave requests blueprint is selected. It sets the fields, and the rule that runs when a request is approved.">
+                                </label>
+                                <figcaption>
+                                    <p>Choose the Leave requests blueprint. It sets the fields, and the rule that runs when a request is approved.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="admin-step-1">1 Create</label>
+                                            <label for="admin-step-2">2 Blueprint</label>
+                                            <label for="admin-step-3">3 Rules</label>
+                                        </div>
+                                        <span class="shot__count">2 of 3</span>
+                                        <label class="btn btn--line" for="admin-step-1">Back</label>
+                                        <label class="btn btn--line" for="admin-step-3">Next</label>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                            <figure class="shot shot--3">
+                                <div class="shot__frame">
+                                    <img src="assets/demo/admin-3.png" width="1280" height="927" alt="The rules on Leave requests. Approve the request stamps the date, writes the log, posts a notice, sends an email, and clears Next step.">
+                                </div>
+                                <figcaption>
+                                    <p>Those rules are on the application. Approve the request stamps the date, writes the log, posts the notice, sends the email, and clears Next step.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="admin-step-1">1 Create</label>
+                                            <label for="admin-step-2">2 Blueprint</label>
+                                            <label for="admin-step-3">3 Rules</label>
+                                        </div>
+                                        <span class="shot__count">3 of 3</span>
+                                        <label class="btn btn--line" for="admin-step-2">Back</label>
+                                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
+                                    </div>
+                                </figcaption>
+                            </figure>
+                        </div>
+                    </section>
+                </div>
             </div>
 
             <section class="section section--last" aria-labelledby="ways">

@@ -35,8 +35,12 @@ function statusValues(array $blueprint): array
 /** @param array<string, mixed> $blueprint */
 function nextStepFor(array $blueprint, string $status): ?string
 {
+    $statuses = statusValues($blueprint);
+    $first = $statuses[0] ?? '';
     foreach ($blueprint['rules'] as $rule) {
-        if (($rule['match'] ?? '') !== $status || ($rule['operator'] ?? '') !== Rules::OP_BECOMES) {
+        $onCreate = $status === $first && ($rule['event'] ?? '') === Rules::EVENT_CREATE;
+        $onMove = ($rule['operator'] ?? '') === Rules::OP_BECOMES && ($rule['match'] ?? '') === $status;
+        if (!$onCreate && !$onMove) {
             continue;
         }
         foreach ($rule['steps'] as $step) {
@@ -139,7 +143,7 @@ foreach ($blueprints as $key => $blueprint) {
     );
 }
 
-$partyNames = ['writer', 'client', 'applicant', 'place', 'insurer', 'reported by'];
+$partyNames = ['writer', 'client', 'applicant', 'place', 'insurer', 'reported by', 'person'];
 foreach ($showcase as $slug => $spec) {
     $blueprint = $blueprints[$spec['blueprint']];
     $label = (string) $blueprint['label'];

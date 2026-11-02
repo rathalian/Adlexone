@@ -19,12 +19,25 @@ if (!preg_match('/RewriteRule \^\([^)]*\|website\)/', $htaccess)) {
 }
 
 $home = (string) file_get_contents($root . '/website/index.html');
-if (!str_contains($home, 'Approve Home to Roost') || !str_contains($home, 'id="approved"') || !str_contains($home, 'id="view-parties"')) {
-    fwrite(STDERR, "The home page hero must let a visitor approve Home to Roost and open Parties.\n");
+foreach (['User demo', 'Administrators demo', 'Using Leave requests', 'Setting up Leave requests', 'id="demo-user"', 'id="demo-admin"'] as $needle) {
+    if (!str_contains($home, $needle)) {
+        fwrite(STDERR, "The home page must offer the Leave requests demos ({$needle}).\n");
+        exit(1);
+    }
+}
+$shots = ['user-1.png', 'user-2.png', 'user-3.png', 'user-4.png', 'admin-1.png', 'admin-2.png', 'admin-3.png'];
+foreach ($shots as $shot) {
+    if (!str_contains($home, 'assets/demo/' . $shot) || !is_file($root . '/website/assets/demo/' . $shot)) {
+        fwrite(STDERR, "The home page is missing the demo picture {$shot}.\n");
+        exit(1);
+    }
+}
+if (str_contains($home, 'Approve Home to Roost') || str_contains($home, 'id="approved"') || str_contains($home, 'id="view-parties"')) {
+    fwrite(STDERR, "The Publishing specimen is no longer the home page.\n");
     exit(1);
 }
 if (str_contains($home, 'hero-desk.jpg') || str_contains($home, 'How a record looks in use')) {
-    fwrite(STDERR, "The home page hero is the Publishing specimen. The desk photograph and the second specimen are gone.\n");
+    fwrite(STDERR, "The home page hero is the Leave requests demos. The desk photograph and the second specimen are gone.\n");
     exit(1);
 }
 

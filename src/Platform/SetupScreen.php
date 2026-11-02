@@ -937,7 +937,7 @@ final class SetupScreen
 
     private static function helpApplications(): string
     {
-        return self::para('Sample applications installs Publishing, Matters, Conveyancing, Claims, Repairs, Complaints, Committee, Audit, Incidents, Candidates, and Contracts, with example records. You can delete them. Deleting one does not install it again.')
+        return self::para('Sample applications installs Publishing, Matters, Conveyancing, Claims, Leave requests, Complaints, Committee, Audit, Incidents, Candidates, and Contracts, with example records. You can delete them. Deleting one does not install it again.')
             . self::para('Publishing (Example) installs only that application, with its fields, rules, guide, and sample records.')
             . self::para('No applications leaves the home empty. After you sign in, you create an application.');
     }

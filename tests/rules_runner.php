@@ -337,11 +337,68 @@ $ownerMail = Rules::add(1, [
     ]],
 ]);
 $_SESSION['access_user_id'] = 1;
+$_POST = [];
 Rules::run(3, 'update_item');
 $ownerRun = Database::first('application_rule_runs', ['detail'], 'rule_id = ?', [$ownerMail]);
 $ownerDetail = (string) ($ownerRun['detail'] ?? '');
 check(str_contains($ownerDetail, 'ada@example.com'), 'the owner is emailed when they made the change');
 check(!str_contains($ownerDetail, 'nobody to email'), 'the owner is not dropped from their own notice');
+
+Database::insert('item_type_custom_fields', ['item_type_id' => 4, 'custom_field_id' => 7, 'custom_field_order' => 1]);
+Database::insert('item_type_custom_fields', ['item_type_id' => 4, 'custom_field_id' => 9, 'custom_field_order' => 2]);
+Database::insert('item_type_custom_fields', ['item_type_id' => 4, 'custom_field_id' => 10, 'custom_field_order' => 3]);
+Database::insert('items', [
+    'item_id' => 4,
+    'create_date' => time(),
+    'item_type_id' => 4,
+    'creator_security' => 1,
+    'user_security' => 1,
+    'item_title' => 'Reid, 12 November',
+]);
+Database::insert('item_field_values', ['item_id' => 4, 'custom_field_id' => 7, 'value' => 'Asked']);
+Database::insert('item_field_values', ['item_id' => 4, 'custom_field_id' => 9, 'value' => 'Decide the request.']);
+Rules::add(1, [
+    'item_type_id' => 4,
+    'name' => 'Approve the request',
+    'event' => Rules::EVENT_UPDATE,
+    'field_key' => 'custom_field_7',
+    'operator' => Rules::OP_BECOMES,
+    'match_value' => 'Approved',
+    'sort_order' => 70,
+    'steps' => [
+        ['outcome' => Rules::OUTCOME_STAMP, 'action_field' => 'custom_field_10'],
+        ['outcome' => Rules::OUTCOME_LOG, 'body' => 'Approved ITEM_TITLE.'],
+        ['outcome' => Rules::OUTCOME_SET_FIELD, 'action_field' => 'custom_field_9', 'action_value' => ''],
+    ],
+]);
+$_POST = [
+    'item_title' => 'Reid, 12 November',
+    'custom_field_7' => 'Approved',
+    'custom_field_9' => 'Decide the request.',
+    'custom_field_10' => '',
+];
+Rules::run(4, 'update_item');
+\Adlexone\Data\ItemFields::saveFromArray(4, $_POST);
+$next = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [4, 9]);
+$stampedOn = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [4, 10]);
+check((string) ($next['value'] ?? 'missing') === '', 'a later form save keeps the cleared next step');
+check((string) ($stampedOn['value'] ?? '') === Rules::today(), 'a later form save keeps the stamped date');
+$approvedLog = Database::first('core_log', ['log_text'], 'item_id = ? AND log_text LIKE ?', [4, 'Approved %']);
+check((string) ($approvedLog['log_text'] ?? '') === 'Approved Reid, 12 November.', 'approving writes the log line');
+
+$askedSummary = Rules::summary([
+    'event' => Rules::EVENT_CREATE,
+    'operator' => Rules::OP_ALWAYS,
+    'steps' => [[
+        'outcome' => Rules::OUTCOME_SET_FIELD,
+        'action_field' => 'custom_field_9',
+        'action_value' => 'Decide the request.',
+    ]],
+], ['custom_field_9' => 'Next step']);
+check(
+    $askedSummary === 'Record is created. Always. Set Next step to Decide the request.',
+    'a value that already ends with a stop is not given another'
+);
 
 if ($failed > 0) {
     fwrite(STDERR, $failed . " check(s) failed\n");

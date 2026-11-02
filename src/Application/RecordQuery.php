@@ -470,7 +470,7 @@ final class RecordQuery
      */
     private static function party(array $fields): ?array
     {
-        $named = self::prefer($fields, FieldTypes::TEXT_BOX, ['writer', 'client', 'applicant', 'place', 'insurer', 'reported by']);
+        $named = self::prefer($fields, FieldTypes::TEXT_BOX, ['writer', 'client', 'applicant', 'place', 'insurer', 'reported by', 'person']);
         if ($named !== null) {
             return $named;
         }

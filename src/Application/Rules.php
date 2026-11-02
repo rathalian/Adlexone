@@ -333,7 +333,9 @@ final class Rules
             $thens[] = 'Do nothing';
         }
 
-        return $when . '. ' . $condition . '. ' . implode(', then ', $thens) . '.';
+        $done = rtrim(implode(', then ', $thens), '.');
+
+        return $when . '. ' . $condition . '. ' . $done . '.';
     }
 
     /**
@@ -1436,6 +1438,7 @@ final class Rules
             }
             Database::update('items', ['item_title' => $value], 'item_id = ?', [$itemId]);
             $current['item_title'] = $value;
+            self::keepPosted($key, $value);
             return true;
         }
         $fieldId = ItemFields::fieldIdFromKey($key);
@@ -1453,7 +1456,19 @@ final class Rules
         }
         ItemFields::saveFromArray($itemId, [$key => $value]);
         $current[$key] = $value;
+        self::keepPosted($key, $value);
         return true;
+    }
+
+    /**
+     * The record form writes $_POST after the rule has run. Keep the value the rule just set.
+     */
+    private static function keepPosted(string $key, string $value): void
+    {
+        if ($key === '' || !is_array($_POST ?? null)) {
+            return;
+        }
+        $_POST[$key] = $value;
     }
 
     /**
@@ -1475,6 +1490,7 @@ final class Rules
         }
         Database::update('items', ['user_security' => $userId], 'item_id = ?', [$itemId]);
         $current['user_security'] = $userId;
+        self::keepPosted('user_security', (string) $userId);
         return true;
     }
 

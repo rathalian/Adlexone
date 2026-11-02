@@ -20,7 +20,7 @@ final class ApplicationBuilder
     public const BLUEPRINT_MATTERS = 'matters';
     public const BLUEPRINT_CONVEYANCING = 'conveyancing';
     public const BLUEPRINT_CLAIMS = 'claims';
-    public const BLUEPRINT_REPAIRS = 'repairs';
+    public const BLUEPRINT_LEAVE = 'leave';
     public const BLUEPRINT_COMPLAINTS = 'complaints';
     public const BLUEPRINT_COMMITTEE = 'committee';
     public const BLUEPRINT_AUDIT = 'audit';
@@ -207,34 +207,37 @@ final class ApplicationBuilder
                 ['Settled', 'Withdrawn'],
                 self::claimsGuide()
             ),
-            self::BLUEPRINT_REPAIRS => self::shape(
-                'Repairs',
-                'A repair from the report until it is done.',
-                'Repair',
-                'ic-wrench',
-                'Booked for',
-                'Emails the owner when a repair is on site.',
-                [$status(['Reported', 'Booked', 'On site', 'Done'], ['Booked']), self::text('Place'), self::menu('Trade', ['Plumbing', 'Electrical', 'Joinery', 'Roof', 'Other']), self::text('Reported by'), self::text('Next step'), self::note(), self::check('Urgent'), self::date('Booked for'), self::date('Reported on'), self::date('Done on')],
+            self::BLUEPRINT_LEAVE => self::shape(
+                'Leave requests',
+                'A request from the day it is asked until it is approved or declined.',
+                'Request',
+                'ic-leave',
+                'First day',
+                'Posts a notice and stamps the approved date when a request is approved.',
+                [$status(['Asked', 'Approved', 'Declined']), self::text('Person'), self::date('First day'), self::date('Last day'), self::text('Next step'), self::note(), self::date('Asked on'), self::date('Approved on'), self::date('Declined on')],
                 [
-                    self::when('Note the report', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
-                        self::stamp('Reported on'),
-                        self::logLine('Reported ITEM_TITLE.'),
+                    self::when('Note the request', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Asked on'),
+                        self::logLine('Asked for ITEM_TITLE.'),
+                        self::setField('Next step', 'Decide the request.'),
                     ]),
-                    self::when('Note the booking', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Booked', [
-                        self::logLine('Booked ITEM_TITLE.'),
-                        self::setField('Next step', 'Attend on the booked day.'),
+                    self::when('Approve the request', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Approved', [
+                        self::stamp('Approved on'),
+                        self::logLine('Approved ITEM_TITLE.'),
+                        self::notice('Approved: ITEM_TITLE', 'ITEM_TITLE has been approved.'),
+                        self::email('Approved: ITEM_TITLE', 'ITEM_TITLE has been approved.'),
+                        self::setField('Next step', ''),
                     ]),
-                    self::when('Tell the owner someone is on site', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'On site', [
-                        self::email('On site: ITEM_TITLE', 'ITEM_TITLE is on site.'),
-                        self::logLine('ITEM_TITLE is on site.'),
-                        self::setField('Next step', 'On site.'),
+                    self::when('Decline the request', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Declined', [
+                        self::stamp('Declined on'),
+                        self::logLine('Declined ITEM_TITLE.'),
+                        self::setField('Next step', ''),
                     ]),
-                    $close('Finish the repair', 'Done', 'Done on', 'Finished ITEM_TITLE.'),
                 ],
-                self::workScreens(true, true, false, true),
-                self::search('On site', 'Repairs where someone is there now.', 'On site'),
-                ['Done'],
-                self::repairsGuide()
+                self::workScreens(true, true, true, false),
+                self::search('Asked', 'Requests still to decide.', 'Asked'),
+                ['Approved', 'Declined'],
+                self::leaveGuide()
             ),
             self::BLUEPRINT_COMPLAINTS => self::shape(
                 'Complaints',
@@ -926,6 +929,13 @@ final class ApplicationBuilder
     {
         self::dropSlug('studio');
         self::dropSlug('house');
+        if (
+            self::slugExists('repairs')
+            && !self::recordTypeWasChosen('repairs')
+            && self::applicationHasMark('repairs', 'Booked for')
+        ) {
+            self::dropSlug('repairs');
+        }
         self::deleteUnlinkedFields();
         $blueprints = self::blueprints();
         foreach (self::showcase() as $slug => $spec) {
@@ -1177,14 +1187,18 @@ final class ApplicationBuilder
                     'message' => 'Walsh flood has been settled.',
                 ],
             ],
-            'repairs' => [
-                'blueprint' => self::BLUEPRINT_REPAIRS,
+            'leave' => [
+                'blueprint' => self::BLUEPRINT_LEAVE,
                 'sort' => 40,
                 'cards' => [
-                    ['title' => 'Boiler, flat 4', 'fields' => ['Status' => 'On site', 'Place' => 'Flat 4', 'Trade' => 'Plumbing', 'Reported by' => 'Porter', 'Next step' => 'On site.', 'Urgent' => 'Yes', 'Booked for' => '27-10-2026', 'Reported on' => '22-10-2026']],
-                    ['title' => 'Tap, flat 4', 'fields' => ['Status' => 'Booked', 'Place' => 'Flat 4', 'Trade' => 'Plumbing', 'Reported by' => 'Porter', 'Next step' => 'Attend on the booked day.', 'Booked for' => '30-10-2026', 'Reported on' => '25-10-2026']],
-                    ['title' => 'Gate latch', 'fields' => ['Status' => 'Reported', 'Place' => 'Yard', 'Trade' => 'Joinery', 'Reported by' => 'Reid', 'Note' => 'The latch does not catch.', 'Reported on' => '26-10-2026']],
-                    ['title' => 'Roof, block C', 'fields' => ['Status' => 'Done', 'Place' => 'Block C', 'Trade' => 'Roof', 'Reported by' => 'Estate', 'Note' => 'The invoice is on the file.', 'Reported on' => '01-10-2026', 'Done on' => '11-10-2026']],
+                    ['title' => 'Reid, 12 November', 'fields' => ['Status' => 'Asked', 'Person' => 'Reid', 'First day' => '12-11-2026', 'Last day' => '12-11-2026', 'Next step' => 'Decide the request.', 'Note' => 'A Thursday.', 'Asked on' => '19-10-2026']],
+                    ['title' => 'Reid, 4 December', 'fields' => ['Status' => 'Asked', 'Person' => 'Reid', 'First day' => '04-12-2026', 'Last day' => '04-12-2026', 'Next step' => 'Decide the request.', 'Asked on' => '15-10-2026']],
+                    ['title' => 'Nguyen, 20 November', 'fields' => ['Status' => 'Asked', 'Person' => 'Nguyen', 'First day' => '20-11-2026', 'Last day' => '20-11-2026', 'Next step' => 'Decide the request.', 'Asked on' => '16-10-2026']],
+                    ['title' => 'Walsh, 6 November', 'fields' => ['Status' => 'Approved', 'Person' => 'Walsh', 'First day' => '06-11-2026', 'Last day' => '06-11-2026', 'Note' => 'The day is covered.', 'Asked on' => '01-10-2026', 'Approved on' => '17-10-2026']],
+                ],
+                'notice' => [
+                    'subject' => 'Walsh, 6 November',
+                    'message' => 'Walsh, 6 November has been approved.',
                 ],
             ],
             'complaints' => [
@@ -1444,14 +1458,16 @@ A notice is posted when a claim is settled. A withdrawal is written in the log a
 TEXT;
     }
 
-    private static function repairsGuide(): string
+    private static function leaveGuide(): string
     {
         return <<<'TEXT'
-Each record is one repair. The name of the repair is the name of the record. The place is named on the card, and the person arranging the repair is the owner.
+Each record is one request. The name of the record is the person and the day. The person is named on the card, and the person who decides the request is the owner.
 
-Move Status as the job moves. Reported means it has been raised. Booked means a day has been set. On site means someone is there. Done means the repair is finished.
+Move Status as the request moves. Asked means it has been made and is still to be decided. Approved means the leave is agreed. Declined means it is not.
 
-Set Booked for to the day of the visit. Report a repair from Intake, or add the record yourself. The application stamps Reported on when the record is created, writes the log, and emails you when someone is on site. An urgent repair is attended first. Parties lists every repair under the place. The diary shows a booking that is due. A finished repair is stamped Done on.
+Set First day and Last day to the days away. The application stamps Asked on when the request is created, writes the log, and sets Next step to Decide the request. Approving it stamps Approved on, writes the log, posts a notice, sends an email, and clears Next step. Parties lists every request under the person's name. The diary shows a first day that is due.
+
+A notice is posted when a request is approved. A decline is written in the log and stays off the wall.
 TEXT;
     }
 
