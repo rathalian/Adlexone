@@ -120,6 +120,44 @@ $check(str_contains($shared['message'], 'shared directory'), 'the refusal names 
 $check(PlatformDb::mayRestrictDirectory(sys_get_temp_dir()) === false, 'the system temp directory is not made private');
 $check(PlatformDb::mayRestrictDirectory($tmp) === true, 'a private folder can be mode 700');
 
+$accountHome = $tmp . '/home-adleehzm';
+mkdir($accountHome . '/public_html', 0755, true);
+mkdir($accountHome . '/storage-saas', 0755, true);
+chmod($accountHome, 0755);
+$check(PlatformDb::directoryLock($accountHome) === PlatformDb::LOCK_OPEN, 'a directory that holds public_html stays open');
+$check(PlatformDb::mayRestrictDirectory($accountHome) === false, 'the home directory is not made private');
+$homeStores = SaasInstallScreen::assessStores($install, $accountHome . '/storage-saas', InstallLayout::PUBLIC_FOLDER, $public);
+$check($homeStores['ok'] === false, 'stores directly under the home are refused');
+$check(str_contains($homeStores['message'], 'has to stay open'), 'the refusal says the website has to stay reachable');
+$check(str_contains($homeStores['message'], '/home/health/adlexone/stores'), 'the refusal shows a stores directory nested under the home');
+$nestedStores = $accountHome . '/adlexone/stores';
+$nested = SaasInstallScreen::assessStores($install, $nestedStores, InstallLayout::PUBLIC_FOLDER, $public);
+$check($nested['ok'] === true, 'a stores directory nested under the home passes: ' . $nested['message']);
+$check($nested['platform_db'] === $accountHome . '/adlexone/platform.sqlite', 'the operator database sits beside the stores directory, not in the home');
+$savedHome = getenv('HOME');
+putenv('HOME=' . $accountHome);
+try {
+    $check(PlatformDb::mayRestrictDirectory($accountHome) === false, 'HOME is not made private');
+} finally {
+    if ($savedHome === false) {
+        putenv('HOME');
+    } else {
+        putenv('HOME=' . $savedHome);
+    }
+}
+chmod($accountHome, 0755);
+PlatformDb::addOperator($accountHome . '/platform.sqlite', 'admin', 'operator-secret');
+$homeMode = fileperms($accountHome) & 0777;
+$check($homeMode === 0755, 'opening the operator database leaves the home directory mode alone, got ' . decoct($homeMode));
+$sqliteMode = fileperms($accountHome . '/platform.sqlite') & 0777;
+$check($sqliteMode === 0600, 'the operator database file is mode 600, got ' . decoct($sqliteMode));
+$privateDir = $accountHome . '/adlexone';
+chmod($privateDir, 0755);
+PlatformDb::addOperator($privateDir . '/platform.sqlite', 'admin', 'operator-secret');
+$privateMode = fileperms($privateDir) & 0777;
+$check($privateMode === 0700, 'the folder above the stores directory is mode 700, got ' . decoct($privateMode));
+$check((fileperms($accountHome) & 0777) === 0755, 'making the private folder mode 700 does not change the home');
+
 $siteFolder = $stores . '/health';
 if (!mkdir($siteFolder, 0700, true) && !is_dir($siteFolder)) {
     $fail('Cannot create a site folder');

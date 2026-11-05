@@ -36,25 +36,104 @@ final class PlatformDb
     }
 
     /**
+     * A stores directory nested under the home. The folder above it can be mode 700.
+     * The home directory itself cannot, because the website has to pass through it.
+     */
+    public const STORES_EXAMPLE = '/home/health/adlexone/stores';
+
+    public const LOCK_SHARED = 'shared';
+
+    public const LOCK_OPEN = 'open';
+
+    /**
      * Mode 700 is for a folder this account owns. A shared directory such as /tmp stays as it is.
+     * The account home stays as the host set it. Mode 700 there hides public_html and the site answers 404.
      */
     public static function mayRestrictDirectory(string $dir): bool
+    {
+        return self::directoryLock($dir) === '';
+    }
+
+    /**
+     * Empty when the directory may be mode 700. LOCK_SHARED or LOCK_OPEN when it must be left alone.
+     */
+    public static function directoryLock(string $dir): string
+    {
+        $normalized = self::normalizedDirectory($dir);
+        if ($normalized === '' || in_array($normalized, self::sharedDirectories(), true)) {
+            return self::LOCK_SHARED;
+        }
+        if (self::websitePassesThrough($normalized)) {
+            return self::LOCK_OPEN;
+        }
+
+        return '';
+    }
+
+    private static function normalizedDirectory(string $dir): string
     {
         $normalized = rtrim(str_replace('\\', '/', $dir), '/');
         $real = realpath($dir);
         if ($real !== false) {
             $normalized = rtrim(str_replace('\\', '/', $real), '/');
         }
-        if ($normalized === '') {
-            return false;
-        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function sharedDirectories(): array
+    {
         $blocked = ['/', '/tmp', '/var', '/var/tmp', '/var/lib', '/home', '/usr', '/usr/local', '/opt', '/root', '/etc'];
         $temp = realpath(sys_get_temp_dir());
         if (is_string($temp) && $temp !== '') {
             $blocked[] = rtrim(str_replace('\\', '/', $temp), '/');
         }
 
-        return !in_array($normalized, $blocked, true);
+        return $blocked;
+    }
+
+    private static function websitePassesThrough(string $normalized): bool
+    {
+        foreach (self::accountHomes() as $home) {
+            if ($normalized === $home) {
+                return true;
+            }
+        }
+
+        return is_dir($normalized . '/public_html');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function accountHomes(): array
+    {
+        $candidates = [];
+        $env = getenv('HOME');
+        if (is_string($env) && $env !== '') {
+            $candidates[] = $env;
+        }
+        if (isset($_SERVER['HOME']) && is_string($_SERVER['HOME']) && $_SERVER['HOME'] !== '') {
+            $candidates[] = $_SERVER['HOME'];
+        }
+        if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+            $info = posix_getpwuid(posix_geteuid());
+            if (is_array($info) && is_string($info['dir'] ?? null) && $info['dir'] !== '') {
+                $candidates[] = $info['dir'];
+            }
+        }
+        $homes = [];
+        foreach ($candidates as $candidate) {
+            $normalized = self::normalizedDirectory($candidate);
+            if ($normalized !== '') {
+                $homes[$normalized] = $normalized;
+            }
+        }
+
+        return array_values($homes);
     }
 
     public static function ensureSchema(\PDO $pdo): void

@@ -298,13 +298,15 @@ final class SaasInstallScreen
             );
         }
         $parent = dirname($absolute);
-        if (!PlatformDb::mayRestrictDirectory($parent)) {
-            return self::check(
-                'platform',
-                'Operator database',
-                false,
-                'The operator database would be ' . $absolute . '. ' . $parent . ' is a shared directory and cannot be made private. Put the stores directory inside a folder this account owns, such as /home/health/adlexone-stores.'
-            );
+        $lock = PlatformDb::directoryLock($parent);
+        if ($lock !== '') {
+            $example = PlatformDb::STORES_EXAMPLE;
+            $detail = 'The operator database would be ' . $absolute . '. ';
+            $detail .= $lock === PlatformDb::LOCK_OPEN
+                ? $parent . ' has to stay open so the website can be reached. Put the stores directory in a folder under the home, such as ' . $example . '. That folder is made private. The home directory is left as it is.'
+                : $parent . ' is a shared directory and cannot be made private. Put the stores directory inside a folder this account owns, such as ' . $example . '.';
+
+            return self::check('platform', 'Operator database', false, $detail);
         }
         $created = false;
         if (!is_dir($parent)) {
@@ -543,7 +545,7 @@ final class SaasInstallScreen
             'Stores directory',
             'stores_path',
             $path,
-            'Full path on this server, outside the website. For example, /home/health/adlexone-stores.',
+            'Full path on this server, outside the website. For example, ' . PlatformDb::STORES_EXAMPLE . '.',
             $focus
         );
         if ($preview !== '') {
