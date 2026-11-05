@@ -140,7 +140,9 @@ final class Provisioner
         if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
             throw new \RuntimeException('Cannot create ' . $dir);
         }
-        @chmod($dir, 0700);
+        if (PlatformDb::mayRestrictDirectory($dir)) {
+            @chmod($dir, 0700);
+        }
     }
 
     private static function copyConfig(string $install, string $configDir, string $siteName, string $publicUrl, string $starting = ''): void
@@ -250,7 +252,9 @@ final class Provisioner
     private static function lockDown(string $configDir, string $databaseDir, string $attachments, string $sqlite): void
     {
         foreach ([$configDir, $databaseDir, $attachments] as $dir) {
-            @chmod($dir, 0700);
+            if (PlatformDb::mayRestrictDirectory($dir)) {
+                @chmod($dir, 0700);
+            }
         }
         foreach (glob(rtrim($databaseDir, '/\\') . DIRECTORY_SEPARATOR . '*.sqlite*') ?: [] as $file) {
             if (is_file($file)) {

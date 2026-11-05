@@ -905,7 +905,7 @@ final class SetupScreen
         if ($record) {
             $html .= self::para('Adlexone writes the path into ' . self::code($pointer) . '. That file stays next to the code so the next visit uses the same folder. It does not hold records. If the code folder cannot be written, set INLAY_STORAGE to this path in the server environment and reload. The environment wins over the file.');
         }
-        $html .= self::para('Adlexone sets the folders to mode 700 and the database file to mode 600 when it creates them. If you set the permissions yourself, use those modes, and use ' . self::code($user) . ', not root.');
+        $html .= self::para('Adlexone sets the folders it creates to mode 700 and the database file to mode 600. The home directory is left as the host set it. Making the home private stops the website from opening. If you set the permissions yourself, use those modes, and use ' . self::code($user) . ', not root.');
         $html .= '<pre class="setup-help__pre">' . Html::e(self::commands($user, $dirs)) . '</pre>';
         $html .= self::para('While the site is open, SQLite may add ' . self::code('adlexone.sqlite-wal') . ' and ' . self::code('adlexone.sqlite-shm') . ' beside the database. They are part of the live database. Copy them with the database if you take a manual backup.');
 
@@ -963,7 +963,10 @@ final class SetupScreen
      */
     private static function commands(string $user, array $dirs): string
     {
-        $dirs = array_values(array_filter($dirs, static fn (string $dir): bool => $dir !== '' && $dir !== '.'));
+        $dirs = array_values(array_filter(
+            $dirs,
+            static fn (string $dir): bool => $dir !== '' && $dir !== '.' && PlatformDb::mayRestrictDirectory($dir)
+        ));
         $lines = [];
         foreach ($dirs as $dir) {
             $lines[] = 'mkdir -p ' . escapeshellarg($dir);

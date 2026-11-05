@@ -284,6 +284,35 @@ $check(
     'a web server that serves the trial file is refused: ' . ($opened['detail'] ?? '')
 );
 
+$accountHome = $tmp . '/home-adleehzm';
+mkdir($accountHome . '/public_html', 0755, true);
+chmod($accountHome, 0755);
+$homeProbe = InstallLayout::probe($install, $accountHome, InstallLayout::PUBLIC_FOLDER, $public, false);
+$check($homeProbe['ok'] === false && str_contains($homeProbe['message'], 'has to stay open'), 'the home directory cannot be the storage directory');
+$dataDir = $accountHome . '/adlexone-data';
+$dataProbe = InstallLayout::probe($install, $dataDir, InstallLayout::PUBLIC_FOLDER, $public, false);
+$check($dataProbe['ok'] === true, 'a folder under the home can be the storage directory: ' . $dataProbe['message']);
+chmod($accountHome, 0755);
+$stored = InstallLayout::storagePaths($dataDir);
+Provisioner::install($root, $stored['config'], $stored['sqlite'], $stored['attachments'], [
+    'site_name' => 'Health',
+    'public_url' => 'https://health.example.com',
+    'username' => 'reid',
+    'password' => 'correct-horse',
+    'first_name' => 'Alex',
+    'last_name' => 'Reid',
+    'email' => 'records@health.example.com',
+]);
+$homeMode = fileperms($accountHome) & 0777;
+$check($homeMode === 0755, 'self-hosted setup leaves the home directory mode alone, got ' . decoct($homeMode));
+$check((fileperms(rtrim($stored['config'], '/')) & 0777) === 0700, 'the settings folder is mode 700');
+$check((fileperms(dirname($stored['sqlite'])) & 0777) === 0700, 'the database folder is mode 700');
+$check((fileperms(rtrim($stored['attachments'], '/')) & 0777) === 0700, 'the uploads folder is mode 700');
+chmod($accountHome, 0755);
+Provisioner::prepareDatabase($root, $accountHome . '/adlexone.sqlite', null);
+$check((fileperms($accountHome) & 0777) === 0755, 'a database placed in the home directory does not make the home private');
+@unlink($accountHome . '/adlexone.sqlite');
+
 Provisioner::removeTree($tmp);
 
 echo "install layout ok\n";

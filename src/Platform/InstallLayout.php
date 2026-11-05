@@ -510,6 +510,13 @@ final class InstallLayout
         if (self::contains($root . DIRECTORY_SEPARATOR . 'config', $dir)) {
             return 'That folder is where Adlexone records the storage path. Choose a different folder for the database and uploads.';
         }
+        $lock = PlatformDb::directoryLock($dir);
+        if ($lock === PlatformDb::LOCK_OPEN) {
+            return $dir . ' has to stay open so the website can be reached. Choose a folder under the home, such as /home/health/adlexone-data. That folder is made private. The home directory is left as it is.';
+        }
+        if ($lock === PlatformDb::LOCK_SHARED) {
+            return $dir . ' is a shared directory and cannot be made private. Choose a folder this account owns, such as /home/health/adlexone-data.';
+        }
 
         return null;
     }
