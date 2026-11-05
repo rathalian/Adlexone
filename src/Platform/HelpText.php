@@ -106,9 +106,10 @@ final class HelpText
             self::p('Open ' . self::code('./?host=install') . ' on a copy that is not in SaaS mode yet and has no administrator. ' . self::code('./?install=host') . ' is the same page. That installer writes INLAY_STORES and INLAY_OPERATOR_HOST into ' . self::code('config/platform.json') . ' next to the code. Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
             self::p('Open ' . self::code('./?host=manage') . ' on any address this server answers to reach the customer sites screen. The operator hostname opens that screen with no query. The operator password is still required. Sites, Rate, and Add a site are separate places on that screen. Details holds the notes.'),
             self::h('Creating a customer'),
-            self::p('Choose a short slug, the hostname they will use, and a display name. Leave the admin password blank if they should open that hostname and finish setup themselves. The setup page they see names their database, settings folder, and attachments folder, and it repeats the permission commands. Fill in the admin username and password here if you are creating the first account for them.'),
+            self::p(self::customerAddressSentence($operatorHost)),
+            self::p('Leave the admin password blank if they should finish setup themselves. The setup page they see names their database, settings folder, and attachments folder, and it repeats the permission commands. Fill in the admin username and password here if you are creating the first account for them.'),
             self::h('Changing a site'),
-            self::p('Open the site from the dashboard. You can change the display name, the hostname, and the contact email. The slug is the folder name and it stays as it is. The display name is written to that site’s settings. When the hostname changes, that site’s public URL is updated. The contact email stays on this list.'),
+            self::p('Open the site from the dashboard. You can change the display name, the own domain, and the contact email. The slug is the folder name and it stays as it is. The display name is written to that site’s settings. When an own domain is saved, that name becomes the public address, and the slug address keeps working. The contact email stays on this list.'),
             self::h('Usage and cost'),
             self::p('Measure usage reads each site’s folder and database, then stores the figures in the operator database. The dashboard uses that measurement. It does not open every customer database on each view.'),
             self::p('The rate is a monthly amount, an amount per person, and an amount per gigabyte, kept in the operator database. A gigabyte is 1,024 MB. The figure uses the folder total. There is no invoice. Clear the rate and cost is not calculated.'),
@@ -146,8 +147,32 @@ final class HelpText
             self::p('The operator login and the list of sites are stored in platform.sqlite inside the stores directory, not inside a customer folder and not inside the website. That file is mode 600. A customer folder created inside the stores directory is mode 700. The stores directory and every folder above it are left as they are.'),
             $database !== '' ? self::pre(self::commands($user, [], [$database])) : '',
             self::h('Operator hostname'),
-            self::p('For example, operate.example.com. On this machine, localhost is accepted. Point that name at this server. It must not be a customer hostname. Environment values for INLAY_STORES and INLAY_OPERATOR_HOST win over the file this step writes.'),
+            self::p('For example, brospd.adlexone.com. On this machine, localhost is accepted. Point that name at this server. It must not be a customer hostname. A customer slug then opens under the rest of that name. For brospd.adlexone.com, Health is health.adlexone.com, from one wildcard, *.adlexone.com. Environment values for INLAY_STORES and INLAY_OPERATOR_HOST win over the file this step writes.'),
         ]);
+    }
+
+    public static function customerDns(string $parent): string
+    {
+        $example = 'health.' . $parent;
+        $own = 'records.health.example.com';
+
+        return self::article('Point a name at this site', [
+            self::p('The site address is the slug, then ' . self::code($parent) . '. For example, ' . self::code($example) . '. Creating the site does not add a DNS record. One wildcard, ' . self::code('*.' . $parent) . ', already points every name under that parent at this server.'),
+            self::h('A name the customer owns'),
+            self::p('Enter that name in Own domain. For example, ' . self::code($own) . '. At their DNS host, add a CNAME. The name is the one you entered. The target is this site’s address, ' . self::code($example) . '. When the name resolves, open it. The slug address keeps working.'),
+            self::p('A name with nothing in front of the customer’s domain, such as ' . self::code('health.example.com') . ', cannot be a CNAME. Use an A record to the address ' . self::code($example) . ' resolves to.'),
+            self::p('The certificate has to cover the name. On this server that is the host’s certificate tool. Adlexone does not request a certificate and does not change DNS.'),
+        ]);
+    }
+
+    private static function customerAddressSentence(string $operatorHost): string
+    {
+        $parent = SiteUsage::siteParent($operatorHost);
+        if ($parent === '') {
+            return 'Choose a short slug, the hostname they will use, and a display name. Point that hostname at this server.';
+        }
+
+        return 'Choose a short slug and a display name. The address is the slug, then ' . self::code($parent) . '. For example, ' . self::code('health.' . $parent) . '. Creating the site does not add a DNS record. Own domain is optional. The Details button on this form explains the CNAME.';
     }
 
     /**

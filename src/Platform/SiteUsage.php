@@ -219,6 +219,49 @@ final class SiteUsage
     }
 
     /**
+     * The names under this parent are one wildcard. brospd.adlexone.com gives adlexone.com.
+     * An address, localhost, and a two-label name have no parent, so the hostname is typed.
+     */
+    public static function siteParent(string $operatorHost): string
+    {
+        $operatorHost = strtolower(trim($operatorHost));
+        if ($operatorHost === '' || $operatorHost === 'localhost' || filter_var($operatorHost, FILTER_VALIDATE_IP) !== false) {
+            return '';
+        }
+        $labels = explode('.', $operatorHost);
+        if (count($labels) < 3) {
+            return '';
+        }
+        array_shift($labels);
+
+        return implode('.', $labels);
+    }
+
+    public static function siteAddress(string $slug, string $operatorHost): string
+    {
+        $parent = self::siteParent($operatorHost);
+        if ($parent === '' || $slug === '') {
+            return '';
+        }
+
+        return $slug . '.' . $parent;
+    }
+
+    public static function assertCustomHost(string $host, string $primary, string $operatorHost): string
+    {
+        $host = strtolower(trim($host));
+        if ($host === '') {
+            return '';
+        }
+        $host = self::assertHostname($host, $operatorHost);
+        if (strcasecmp($host, $primary) === 0) {
+            throw new \RuntimeException('That domain is already this site\'s address. Leave Own domain empty.');
+        }
+
+        return $host;
+    }
+
+    /**
      * @param array<string, mixed> $store
      */
     public static function updateSite(
@@ -228,10 +271,10 @@ final class SiteUsage
         string $label,
         string $host,
         string $email,
-        string $operatorHost
+        string $operatorHost,
+        string $customHost = ''
     ): void {
         $label = trim($label);
-        $host = self::assertHostname($host, $operatorHost);
         $email = trim($email);
         if ($label === '' || strlen($label) > 80) {
             throw new \RuntimeException('Enter a display name (80 characters or fewer).');
@@ -239,20 +282,48 @@ final class SiteUsage
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new \RuntimeException('The admin email does not look valid.');
         }
-        $id = (int) $store['store_id'];
-        $taken = PlatformDb::storeByHost($platformDb, $host);
-        if ($taken !== null && (int) $taken['store_id'] !== $id) {
-            throw new \RuntimeException('A customer site already uses that hostname.');
+        $slug = (string) $store['slug'];
+        $posted = strtolower(trim($host));
+        $custom = strtolower(trim($customHost));
+        $parent = self::siteParent($operatorHost);
+        if ($parent !== '') {
+            $primary = self::siteAddress($slug, $operatorHost);
+            if ($custom === '' && $posted !== '' && strcasecmp($posted, $primary) !== 0 && strcasecmp($posted, (string) $store['host']) !== 0) {
+                $custom = $posted;
+            }
+            $host = self::assertHostname($primary, $operatorHost);
+            $custom = self::assertCustomHost($custom, $host, $operatorHost);
+        } else {
+            $host = self::assertHostname($posted, $operatorHost);
+            $custom = '';
         }
-        $folder = self::folder($stores, (string) $store['slug']);
+        $id = (int) $store['store_id'];
+        self::claimHost($platformDb, $host, $custom, $id);
+        $folder = self::folder($stores, $slug);
         self::assertInside($stores, $folder);
         $settings = $folder . 'config' . DIRECTORY_SEPARATOR . 'adlexone_settings.json';
         if (!is_file($settings)) {
             throw new \RuntimeException('The settings file is missing: ' . $settings);
         }
-        $publicUrl = strcasecmp($host, (string) $store['host']) === 0 ? null : 'https://' . $host;
+        $public = $custom !== '' ? $custom : $host;
+        $previousCustom = strtolower(trim((string) ($store['custom_host'] ?? '')));
+        $previousPublic = $previousCustom !== '' ? $previousCustom : strtolower((string) $store['host']);
+        $publicUrl = strcasecmp($public, $previousPublic) === 0 ? null : 'https://' . $public;
         self::writeSiteSettings($settings, $label, $publicUrl);
-        PlatformDb::updateStore($platformDb, $id, $label, $host, $email);
+        PlatformDb::updateStore($platformDb, $id, $label, $host, $email, $custom);
+    }
+
+    public static function claimHost(string $platformDb, string $host, string $custom, int $exceptId): void
+    {
+        foreach ([$host, $custom] as $name) {
+            if ($name === '') {
+                continue;
+            }
+            $taken = PlatformDb::storeByHost($platformDb, $name);
+            if ($taken !== null && (int) $taken['store_id'] !== $exceptId) {
+                throw new \RuntimeException('A customer site already uses that hostname.');
+            }
+        }
     }
 
     public static function writeSiteSettings(string $file, string $label, ?string $publicUrl): void

@@ -145,9 +145,11 @@ final class PlatformDb
                 host TEXT NOT NULL UNIQUE,
                 status TEXT NOT NULL DEFAULT "active",
                 admin_email TEXT NOT NULL DEFAULT "",
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                custom_host TEXT
             )'
         );
+        self::ensureCustomHost($pdo);
         $pdo->exec(
             'CREATE TABLE IF NOT EXISTS host_rate (
                 rate_id INTEGER PRIMARY KEY,
@@ -182,6 +184,20 @@ final class PlatformDb
                 ip TEXT NOT NULL,
                 failed_at INTEGER NOT NULL
             )'
+        );
+    }
+
+    private static function ensureCustomHost(\PDO $pdo): void
+    {
+        $names = [];
+        foreach ($pdo->query('PRAGMA table_info(stores)') as $column) {
+            $names[] = (string) ($column['name'] ?? '');
+        }
+        if (!in_array('custom_host', $names, true)) {
+            $pdo->exec('ALTER TABLE stores ADD COLUMN custom_host TEXT');
+        }
+        $pdo->exec(
+            'CREATE UNIQUE INDEX IF NOT EXISTS stores_custom_host ON stores (custom_host) WHERE custom_host IS NOT NULL'
         );
     }
 
@@ -233,8 +249,9 @@ final class PlatformDb
      */
     public static function storeByHost(string $path, string $host): ?array
     {
-        $statement = self::pdo($path)->prepare('SELECT * FROM stores WHERE host = ?');
-        $statement->execute([strtolower($host)]);
+        $name = strtolower($host);
+        $statement = self::pdo($path)->prepare('SELECT * FROM stores WHERE host = ? OR custom_host = ?');
+        $statement->execute([$name, $name]);
         $row = $statement->fetch();
 
         return is_array($row) ? $row : null;
@@ -264,12 +281,21 @@ final class PlatformDb
         return is_array($row) ? $row : null;
     }
 
-    public static function addStore(string $path, string $slug, string $label, string $host, string $email): void
+    public static function addStore(string $path, string $slug, string $label, string $host, string $email, string $customHost = ''): void
     {
+        $custom = strtolower(trim($customHost));
         $statement = self::pdo($path)->prepare(
-            'INSERT INTO stores (slug, label, host, status, admin_email, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO stores (slug, label, host, status, admin_email, created_at, custom_host) VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
-        $statement->execute([$slug, $label, strtolower($host), 'active', $email, time()]);
+        $statement->execute([
+            $slug,
+            $label,
+            strtolower($host),
+            'active',
+            $email,
+            time(),
+            $custom === '' ? null : $custom,
+        ]);
     }
 
     public static function setStatus(string $path, int $id, string $status): void
@@ -285,12 +311,13 @@ final class PlatformDb
         $pdo->prepare('DELETE FROM stores WHERE store_id = ?')->execute([$id]);
     }
 
-    public static function updateStore(string $path, int $id, string $label, string $host, string $email): void
+    public static function updateStore(string $path, int $id, string $label, string $host, string $email, ?string $customHost = null): void
     {
+        $custom = $customHost === null ? '' : strtolower(trim($customHost));
         $statement = self::pdo($path)->prepare(
-            'UPDATE stores SET label = ?, host = ?, admin_email = ? WHERE store_id = ?'
+            'UPDATE stores SET label = ?, host = ?, admin_email = ?, custom_host = ? WHERE store_id = ?'
         );
-        $statement->execute([$label, strtolower($host), $email, $id]);
+        $statement->execute([$label, strtolower($host), $email, $custom === '' ? null : $custom, $id]);
     }
 
     /**

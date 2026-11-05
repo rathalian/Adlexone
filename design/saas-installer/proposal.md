@@ -84,7 +84,7 @@ The manager is the signed-in page of `OperatorScreen`. Sign-in and the first ope
 
 The dashboard shows the host totals, then one card for each site. The card shows the display name, the hostname, the status, the folder total from the last measurement, and the cost. The name opens the site page. The rate and the add form are their own screens. Suspend, backup, and delete stay on the site page.
 
-The add form is unchanged: display name, slug, hostname, admin email, and the optional admin username and password. The same validation stays. Leave the username and password blank and the customer’s first visit to their hostname is still their setup page. After a site is created, the browser opens `?site=` for that slug, and the notice names the folder as it does now.
+The add form asks for a display name, a slug, an optional own domain, an admin email, and the optional admin username and password. The address is the slug under the parent of the operator hostname. For `brospd.adlexone.com`, a slug of `health` is `health.adlexone.com`. The own domain, when set, opens the same folder. Leave the username and password blank and the customer’s first visit to their address is still their setup page. After a site is created, the browser opens `?site=` for that slug, and the notice names the folder as it does now.
 
 The site page shows the folder paths, the usage split, the cost, the update form, and the suspend, resume, backup, and delete actions.
 
@@ -95,7 +95,7 @@ Update is a save on the site page. It posts the store id and the slug. Both have
 Update changes three values.
 
 - **Display name.** `stores.label`, and `SET_SITE_NAME` in that site’s `config/adlexone_settings.json`. The sign-in page reads the settings file. The name is 1 to 80 characters, the same limit as create. For example, Health.
-- **Hostname.** `stores.host`, in lower case, unique, and not the operator hostname. The same pattern as create. When the hostname changes, that site’s `SET_PUBLIC_BASE_URL` becomes `https://` plus the new hostname, which is what create writes. When the hostname is unchanged, `SET_PUBLIC_BASE_URL` is left as it is. The old hostname then has no site. The new hostname opens the same folder.
+- **Address.** `stores.host` is the slug under the site parent, in lower case, unique, and not the operator hostname. `stores.custom_host` is the optional own domain, unique when set. The public address is the own domain when it is set, and the slug address otherwise. Both names open the same folder. Clearing the own domain returns the public address to the slug address.
 - **Contact.** `stores.admin_email`. This is the address on the operator list. It may be blank. When it is not blank it has to be an email address. It is not written into the customer `users` table, and it does not change the administrator’s password or username.
 
 The settings file is patched for those keys only. SMTP passwords and other keys in the file stay. The write is that site’s `config/adlexone_settings.json` and no other file. If that file is missing, the save stops and the `stores` row is not changed. Suspend, backup, and delete still work.

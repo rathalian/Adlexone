@@ -239,7 +239,6 @@ final class OperatorScreen
     {
         $label = trim((string) ($_POST['label'] ?? ''));
         $slug = strtolower(trim((string) ($_POST['slug'] ?? '')));
-        $host = strtolower(trim((string) ($_POST['host'] ?? '')));
         $email = trim((string) ($_POST['admin_email'] ?? ''));
         $username = trim((string) ($_POST['admin_user'] ?? ''));
         $password = (string) ($_POST['admin_password'] ?? '');
@@ -250,7 +249,15 @@ final class OperatorScreen
         if (preg_match('/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/', $slug) !== 1) {
             throw new \RuntimeException('The slug must be lowercase letters, numbers, and hyphens, and it must start and end with a letter or number.');
         }
-        $host = SiteUsage::assertHostname($host, $paths['operator_host']);
+        $parent = SiteUsage::siteParent($paths['operator_host']);
+        if ($parent !== '') {
+            $host = SiteUsage::assertHostname(SiteUsage::siteAddress($slug, $paths['operator_host']), $paths['operator_host']);
+            $custom = SiteUsage::assertCustomHost((string) ($_POST['custom_host'] ?? ''), $host, $paths['operator_host']);
+        } else {
+            $host = SiteUsage::assertHostname((string) ($_POST['host'] ?? ''), $paths['operator_host']);
+            $custom = '';
+        }
+        SiteUsage::claimHost($paths['platform_db'], $host, $custom, 0);
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new \RuntimeException('The admin email does not look valid.');
         }
@@ -266,9 +273,10 @@ final class OperatorScreen
 
         $folder = SiteUsage::folder($paths['stores'], $slug);
         SiteUsage::assertInside($paths['stores'], $folder);
+        $open = $custom !== '' ? $custom : $host;
         $admin = [
             'site_name' => $label,
-            'public_url' => 'https://' . $host,
+            'public_url' => 'https://' . $open,
             'username' => $username,
             'password' => $password,
             'first_name' => '',
@@ -283,14 +291,17 @@ final class OperatorScreen
                 $folder . 'attachments' . DIRECTORY_SEPARATOR,
                 $admin
             );
-            PlatformDb::addStore($paths['platform_db'], $slug, $label, $host, $email);
+            PlatformDb::addStore($paths['platform_db'], $slug, $label, $host, $email, $custom);
         } catch (\Throwable $e) {
             Provisioner::removeTree($folder);
             throw $e;
         }
         $ready = $username !== ''
-            ? ' The first admin can sign in now.'
-            : ' The first visit to https://' . $host . ' shows setup, including where that store’s SQLite file, settings, and attachments live.';
+            ? ' The first admin can sign in at https://' . $open . '.'
+            : ' The first visit to https://' . $open . ' shows setup, including where that store’s SQLite file, settings, and attachments live.';
+        if ($custom !== '') {
+            $ready .= ' https://' . $host . ' opens the same site.';
+        }
         $created = PlatformDb::storeByHost($paths['platform_db'], $host);
         if ($created !== null) {
             try {
@@ -383,14 +394,19 @@ final class OperatorScreen
             throw new \RuntimeException('That customer site was not found.');
         }
         $label = trim((string) ($_POST['label'] ?? ''));
+        $parent = SiteUsage::siteParent($paths['operator_host']);
+        $host = $parent !== ''
+            ? SiteUsage::siteAddress((string) $store['slug'], $paths['operator_host'])
+            : (string) ($_POST['host'] ?? '');
         SiteUsage::updateSite(
             $paths['platform_db'],
             $paths['stores'],
             $store,
             $label,
-            (string) ($_POST['host'] ?? ''),
+            $host,
             (string) ($_POST['admin_email'] ?? ''),
-            $paths['operator_host']
+            $paths['operator_host'],
+            $parent !== '' ? (string) ($_POST['custom_host'] ?? '') : ''
         );
         $_SESSION['operator_notice'] = $label . ' was updated.';
     }

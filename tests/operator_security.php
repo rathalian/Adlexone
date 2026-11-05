@@ -151,6 +151,10 @@ OperatorScreen::handle();
 Page::current()->send();
 $add = (string) ob_get_clean();
 $check(str_contains($add, 'Create the store'), 'add a site is its own screen');
+$check(str_contains($add, 'Own domain'), 'add a site asks for an own domain when the operator hostname has a parent');
+$check(str_contains($add, 'health.example.com'), 'the slug example is the site parent');
+$check(str_contains($add, 'id="host-dns"'), 'details explains how to point DNS at the site');
+$check(!str_contains($add, 'name="host"'), 'the address is the slug, so the hostname is not typed');
 $check(!str_contains($add, DefaultAccount::PASSWORD), 'a public address does not receive the default admin password');
 unset($_GET['view']);
 

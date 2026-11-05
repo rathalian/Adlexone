@@ -117,8 +117,30 @@ final class HostConsole
         $html .= Csrf::field();
         $html .= '<input type="hidden" name="operator_action" value="create_store">';
         $html .= self::field('Display name', 'label', 'text', '', true, 'Shown on their setup page. For example, Health.');
-        $html .= self::field('Slug', 'slug', 'text', '', true, 'Folder name. Lowercase letters, numbers, and hyphens. For example, health.');
-        $html .= self::field('Hostname', 'host', 'text', '', true, 'The address their browser uses. For example, health.example.com. Point DNS at this server. Do not use the operator hostname.');
+        $parent = SiteUsage::siteParent($paths['operator_host']);
+        $html .= self::field(
+            'Slug',
+            'slug',
+            'text',
+            '',
+            true,
+            $parent !== ''
+                ? 'Folder name, and the address. Lowercase letters, numbers, and hyphens. For example, health, which opens health.' . $parent . '.'
+                : 'Folder name. Lowercase letters, numbers, and hyphens. For example, health.'
+        );
+        if ($parent !== '') {
+            $html .= self::field(
+                'Own domain',
+                'custom_host',
+                'text',
+                '',
+                false,
+                'Optional. A name the customer already owns, such as records.health.example.com. Leave this empty and the site answers on the slug.'
+            );
+            $html .= self::dnsButton();
+        } else {
+            $html .= self::field('Hostname', 'host', 'text', '', true, 'The address their browser uses. For example, health.example.com. Point DNS at this server. Do not use the operator hostname.');
+        }
         $html .= self::field('Admin email', 'admin_email', 'email', '', false, 'Stored on the operator list so you know who to contact. Optional.');
         $html .= self::field(
             'Admin username',
@@ -142,6 +164,9 @@ final class HostConsole
         $html .= '<a class="btn" href="' . Html::e(Runtime::operatorAddress()) . '">Sites</a>';
         $html .= '<button type="submit" class="btn btn--primary">Create the store</button>';
         $html .= '</div></form>';
+        if ($parent !== '') {
+            $html .= self::dnsDialog($parent);
+        }
 
         self::present(
             'Add a site',
@@ -547,7 +572,7 @@ final class HostConsole
             . '<span class="appcard__top"><span class="appcard__icon">' . Charts::icon('ic-building') . '</span>'
             . '<span class="appcard__go" aria-hidden="true">' . Charts::icon('ic-arrow-right') . '</span></span>'
             . '<span class="appcard__name">' . Html::e((string) $store['label']) . '</span>'
-            . '<span class="appcard__hint">' . Html::e((string) $store['host']) . '</span>'
+            . '<span class="appcard__hint">' . Html::e(self::publicHost($store)) . '</span>'
             . '<span class="appcard__figures"><span class="appcard__count">' . Html::e($figures) . '</span></span>'
             . '<span class="appcard__foot">' . Presence::pill($active ? 'Active' : 'Suspended', $active ? 'success' : 'warning')
             . '<span class="appcard__when">' . Html::e($when) . '</span></span></a>';
@@ -586,7 +611,7 @@ final class HostConsole
             . '<span class="apphero__icon">' . Charts::icon('ic-building') . '</span>'
             . '<div class="apphero__copy">' . Breadcrumb::BAND_SLOT
             . '<p class="apphero__name">' . Html::e((string) $store['label']) . '</p>'
-            . '<p class="apphero__hint">' . Html::e((string) $store['host'] . '. These figures are the last measurement of this site.') . '</p>'
+            . '<p class="apphero__hint">' . Html::e(self::heroHost($store)) . '</p>'
             . '</div>' . $facts
             . '<div class="apphero__tools">' . $measure . '</div>'
             . '</div></header>';
@@ -658,13 +683,78 @@ final class HostConsole
         $html .= '<input type="hidden" name="operator_action" value="save_site">';
         $html .= '<input type="hidden" name="store_id" value="' . $id . '">';
         $html .= '<input type="hidden" name="slug" value="' . Html::e($slug) . '">';
+        $operatorHost = (string) (Runtime::paths()['operator_host'] ?? '');
+        $parent = SiteUsage::siteParent($operatorHost);
         $html .= self::field('Display name', 'label', 'text', (string) $store['label'], true, 'Shown on their sign-in page. For example, Health.');
-        $html .= self::field('Hostname', 'host', 'text', (string) $store['host'], true, 'The address their browser uses. For example, health.example.com.');
+        if ($parent !== '') {
+            $address = SiteUsage::siteAddress($slug, $operatorHost);
+            $custom = trim((string) ($store['custom_host'] ?? ''));
+            if ($custom === '' && strcasecmp((string) $store['host'], $address) !== 0) {
+                $custom = (string) $store['host'];
+            }
+            $html .= '<div class="field"><span class="label">Address</span>';
+            $html .= '<p class="install-locked"><code>' . Html::e($address) . '</code></p>';
+            $html .= '<p class="form-help">The slug is the name in front of ' . Html::e($parent) . '. Creating or saving the site does not add a DNS record.</p></div>';
+            $html .= self::field(
+                'Own domain',
+                'custom_host',
+                'text',
+                $custom,
+                false,
+                'Optional. A name the customer already owns, such as records.health.example.com. Leave this empty and the site answers on the address above.'
+            );
+            $html .= self::dnsButton();
+        } else {
+            $html .= self::field('Hostname', 'host', 'text', (string) $store['host'], true, 'The address their browser uses. For example, health.example.com.');
+        }
         $html .= self::field('Admin email', 'admin_email', 'email', (string) $store['admin_email'], false, 'Stored on the operator list so you know who to contact. Optional.');
         $html .= '<div class="form-actions"><button type="submit" class="btn btn--primary">Save changes</button></div>';
         $html .= '</form>';
+        if ($parent !== '') {
+            $html .= self::dnsDialog($parent);
+        }
 
         return $html;
+    }
+
+    /**
+     * @param array<string, mixed> $store
+     */
+    private static function publicHost(array $store): string
+    {
+        $custom = trim((string) ($store['custom_host'] ?? ''));
+
+        return $custom !== '' ? $custom : (string) $store['host'];
+    }
+
+    /**
+     * @param array<string, mixed> $store
+     */
+    private static function heroHost(array $store): string
+    {
+        $host = (string) $store['host'];
+        $custom = trim((string) ($store['custom_host'] ?? ''));
+        if ($custom === '') {
+            return $host . '. These figures are the last measurement of this site.';
+        }
+
+        return $custom . '. This site also answers on ' . $host . '. These figures are the last measurement of this site.';
+    }
+
+    private static function dnsButton(): string
+    {
+        return '<p class="form-help"><button type="button" class="install-help" data-sheet-pop aria-controls="host-dns">Details</button> How to point their DNS at this site.</p>';
+    }
+
+    private static function dnsDialog(string $parent): string
+    {
+        return '<dialog id="host-dns" class="sheet-pop" aria-labelledby="host-dns-title">'
+            . '<div class="sheet-pop__panel">'
+            . '<div class="sheet-pop__head"><h2 class="sheet-pop__title" id="host-dns-title">Own domain</h2>'
+            . '<button type="button" class="btn btn--sm sheet-pop__close" data-sheet-pop-close>Close</button></div>'
+            . '<div class="sheet-pop__body setup-help">' . HelpText::customerDns($parent) . '</div>'
+            . '<div class="sheet-pop__actions"><button type="button" class="btn btn--primary" data-sheet-pop-close>Done</button></div>'
+            . '</div></dialog>';
     }
 
     /**

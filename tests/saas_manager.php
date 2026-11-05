@@ -41,6 +41,22 @@ try {
     $threw = true;
 }
 $check($threw, 'localhost is not a customer hostname');
+$check(SiteUsage::siteParent('brospd.adlexone.com') === 'adlexone.com', 'the site parent drops the first label of the operator hostname');
+$check(SiteUsage::siteAddress('health', 'brospd.adlexone.com') === 'health.adlexone.com', 'a slug opens under the site parent');
+$check(SiteUsage::siteParent('127.0.0.1') === '', 'an IP address has no site parent');
+$check(SiteUsage::siteParent('localhost') === '', 'localhost has no site parent');
+$check(SiteUsage::siteParent('adlexone.com') === '', 'a two-label operator hostname has no site parent');
+$refusedOwn = false;
+try {
+    SiteUsage::assertCustomHost('health.adlexone.com', 'health.adlexone.com', 'brospd.adlexone.com');
+} catch (\Throwable $e) {
+    $refusedOwn = str_contains($e->getMessage(), 'already this site');
+}
+$check($refusedOwn, 'an own domain that repeats the slug address is refused');
+$dns = \Adlexone\Platform\HelpText::customerDns('adlexone.com');
+$check(str_contains($dns, '*.adlexone.com'), 'the DNS note names the wildcard');
+$check(str_contains($dns, 'health.adlexone.com'), 'the DNS note names the slug address as the CNAME target');
+$check(str_contains($dns, 'CNAME'), 'the DNS note tells them to add a CNAME');
 
 $check(SaasInstallScreen::handles('', 'host') === true, 'the installer route is open when no stores directory is set');
 $check(SaasInstallScreen::handles('', '', 'install') === true, '?host=install opens the installer');
@@ -347,12 +363,24 @@ $check(($settings['SMTP_PASSWORD'] ?? '') === 'secret', 'other settings keys sta
 $updated = PlatformDb::storeBySlug($platform, 'health');
 $check(($updated['label'] ?? '') === 'Health records', 'the operator list stores the new display name');
 $check(($updated['host'] ?? '') === 'health.example.com', 'the hostname is unchanged');
+$check(($updated['custom_host'] ?? '') === '' || $updated['custom_host'] === null, 'an unchanged address has no own domain');
 $check(is_dir($folder), 'the slug directory stays');
 
 SiteUsage::updateSite($platform, $stores, $updated, 'Health records', 'care.example.com', 'office@health.example.com', 'operate.example.com');
 $settings = json_decode((string) file_get_contents($folder . '/config/adlexone_settings.json'), true);
-$check(($settings['SET_PUBLIC_BASE_URL'] ?? '') === 'https://care.example.com', 'a new hostname updates the public URL');
-$check(PlatformDb::storeByHost($platform, 'care.example.com') !== null, 'the operator list stores the new hostname');
+$check(($settings['SET_PUBLIC_BASE_URL'] ?? '') === 'https://care.example.com', 'an own domain updates the public URL');
+$updated = PlatformDb::storeBySlug($platform, 'health');
+$check(($updated['host'] ?? '') === 'health.example.com', 'the slug address stays in place');
+$check(($updated['custom_host'] ?? '') === 'care.example.com', 'the own domain is stored');
+$check((PlatformDb::storeByHost($platform, 'care.example.com')['slug'] ?? '') === 'health', 'the own domain opens this site');
+$check((PlatformDb::storeByHost($platform, 'health.example.com')['slug'] ?? '') === 'health', 'the slug address still opens this site');
+$duplicate = false;
+try {
+    SiteUsage::updateSite($platform, $stores, $records, 'Records', 'care.example.com', '', 'operate.example.com');
+} catch (\Throwable $e) {
+    $duplicate = str_contains($e->getMessage(), 'already uses');
+}
+$check($duplicate, 'two sites cannot use the same own domain');
 $otherSettings = json_decode((string) file_get_contents($other . '/config/adlexone_settings.json'), true);
 $check(($otherSettings['SET_SITE_NAME'] ?? '') === 'Records', 'another site’s settings are untouched');
 $check(($otherSettings['SMTP_PASSWORD'] ?? '') === 'keep', 'another site’s secrets are untouched');
