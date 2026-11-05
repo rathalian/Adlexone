@@ -326,7 +326,7 @@ final class SetupScreen
         }
         self::render(
             'Document root',
-            'Shared hosting needs the Adlexone package in the document root. If the package is not in the document root, the document root must be the public folder.',
+            'The selected choice is the document root this server reported.',
             $error,
             self::placementForm($paths, $focus),
             self::steps(self::STEP_ROOT),
@@ -435,6 +435,10 @@ final class SetupScreen
             'Document root' => $doc !== '' ? $doc : 'Not reported',
         ]);
         $html .= self::matchLine($detected);
+        $note = InstallLayout::publicFolderNote($paths['install']);
+        if ($note !== '') {
+            $html .= '<p class="install-match">' . Html::e($note) . '</p>';
+        }
         $html .= self::options(
             'Where is this copy of Adlexone?',
             'placement',
@@ -503,7 +507,7 @@ final class SetupScreen
                 'text',
                 $path,
                 true,
-                'Full path on this server, outside the web folder. A folder inside the website is strongly recommended against.',
+                'One folder higher than the document root. Create this folder, then check it. For example, ' . InstallLayout::suggest($install) . '.',
                 '',
                 'off',
                 $focus,
@@ -881,7 +885,7 @@ final class SetupScreen
         return self::para('The document root is the folder the website serves.')
             . self::para('Shared hosting, such as cPanel, often cannot change that folder. Unzip Adlexone into it. The package and the document root are the same folder. A file named .htaccess in the package refuses requests for the database, settings, and code, and only index.php runs. The host must be Apache with mod_rewrite, and it must allow .htaccess (AllowOverride All).')
             . self::para('If you can set the document root, set it to the public folder inside the package. For a package at ' . self::code($install) . ', the document root is ' . self::code($publicShow) . '. Browsers can then open only the files in public. The database, settings, and code are not on the website.')
-            . self::para('This page reads the document root from the server. Continue accepts only the choice that matches it.')
+            . self::para('This page reads the document root from the server and selects that choice. When it is not the public folder, the public folder is the better document root. Continue accepts the detected document root.')
             . self::para('Package: ' . self::code(rtrim($install, '/\\')) . '. public folder: ' . self::code($publicShow) . '. Document root: ' . self::code($docShow) . '.');
     }
 
@@ -890,11 +894,8 @@ final class SetupScreen
         $planned = $shape === 'legacy' ? InstallLayout::legacyPaths($directory) : InstallLayout::storagePaths($directory);
         $user = Runtime::phpUser();
         $pointer = InstallLayout::pointerFile($install);
-        $dirs = [$directory];
-        if ($record) {
-            $dirs[] = dirname($pointer);
-        }
-        $html = self::para('The storage directory holds the database, the settings, and the uploaded files. A browser must not be able to open it.');
+        $dirs = [$planned['config'], $planned['database_dir'], $planned['attachments']];
+        $html = self::para('The storage directory holds the database, the settings, and the uploaded files. A browser must not be able to open it. Create the directory before you check it. This page does not create it.');
         if ($shape === 'legacy') {
             $html .= self::para('This server chose the directory. Settings are in ' . self::code($planned['config']) . '. The database is ' . self::code($planned['sqlite']) . '. Uploads are in ' . self::code($planned['attachments']) . '.');
         } else {
@@ -905,7 +906,7 @@ final class SetupScreen
         if ($record) {
             $html .= self::para('Adlexone writes the path into ' . self::code($pointer) . '. That file stays next to the code so the next visit uses the same folder. It does not hold records. If the code folder cannot be written, set INLAY_STORAGE to this path in the server environment and reload. The environment wins over the file.');
         }
-        $html .= self::para('Adlexone sets the folders it creates to mode 700 and the database file to mode 600. The home directory is left as the host set it. Making the home private stops the website from opening. If you set the permissions yourself, use those modes, and use ' . self::code($user) . ', not root.');
+        $html .= self::para('Adlexone sets mode 700 on the folders it creates inside this directory, and mode 600 on the database file and the settings files. It does not change this directory or any folder above it. If you set the permissions yourself, use those modes, and use ' . self::code($user) . ', not root.');
         $html .= '<pre class="setup-help__pre">' . Html::e(self::commands($user, $dirs)) . '</pre>';
         $html .= self::para('While the site is open, SQLite may add ' . self::code('adlexone.sqlite-wal') . ' and ' . self::code('adlexone.sqlite-shm') . ' beside the database. They are part of the live database. Copy them with the database if you take a manual backup.');
 

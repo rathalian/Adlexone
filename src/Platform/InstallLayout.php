@@ -50,9 +50,40 @@ final class InstallLayout
         return 'This server\'s document root is ' . $doc . '. That is neither the package nor the public folder. Point it at the public folder, or unzip Adlexone into the document root, then reload this page.';
     }
 
-    public static function suggest(string $install): string
+    public static function suggest(string $install, ?string $documentRoot = null): string
     {
-        return rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'storage';
+        return self::besideDocumentRoot($install, 'storage-host', $documentRoot);
+    }
+
+    public static function suggestStores(string $install, ?string $documentRoot = null): string
+    {
+        return self::besideDocumentRoot($install, 'storage-saas', $documentRoot);
+    }
+
+    public static function publicFolderNote(string $install, ?string $documentRoot = null): string
+    {
+        if (self::detect($install, $documentRoot) === self::PUBLIC_FOLDER) {
+            return '';
+        }
+        $public = self::canonical(rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'public');
+        if ($public === '') {
+            return '';
+        }
+
+        return 'The document root should be the public folder, ' . $public . '. The selected choice stays the document root this server reported.';
+    }
+
+    private static function besideDocumentRoot(string $install, string $name, ?string $documentRoot): string
+    {
+        $doc = $documentRoot !== null
+            ? self::canonical($documentRoot)
+            : self::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $parent = $doc !== '' ? dirname($doc) : '';
+        if ($parent === '' || $parent === $doc || $parent === '.') {
+            $parent = dirname(rtrim($install, '/\\'));
+        }
+
+        return $parent . DIRECTORY_SEPARATOR . $name;
     }
 
     public static function pointerFile(string $install): string
@@ -215,13 +246,10 @@ final class InstallLayout
         }
         $created = false;
         if (!is_dir($absolute)) {
-            if (!@mkdir($absolute, 0700, true) && !is_dir($absolute)) {
-                $result['message'] = 'PHP, running as ' . $user . ', cannot create ' . $absolute . '. Create that folder for ' . $user . ', then check again.';
-                $result['directory'] = $absolute;
+            $result['message'] = 'Create ' . $absolute . ', then check again. This page does not create that folder.';
+            $result['directory'] = $absolute;
 
-                return $result;
-            }
-            $created = true;
+            return $result;
         }
         $real = realpath($absolute);
         $dir = $real !== false ? rtrim($real, '/\\') : $absolute;
@@ -511,11 +539,12 @@ final class InstallLayout
             return 'That folder is where Adlexone records the storage path. Choose a different folder for the database and uploads.';
         }
         $lock = PlatformDb::directoryLock($dir);
+        $example = self::suggest($install);
         if ($lock === PlatformDb::LOCK_OPEN) {
-            return $dir . ' has to stay open so the website can be reached. Choose a folder under the home, such as /home/health/adlexone-data. That folder is made private. The home directory is left as it is.';
+            return $dir . ' has to stay open so the website can be reached. Choose a folder next to the website, such as ' . $example . '. Create that folder first.';
         }
         if ($lock === PlatformDb::LOCK_SHARED) {
-            return $dir . ' is a shared directory and cannot be made private. Choose a folder this account owns, such as /home/health/adlexone-data.';
+            return $dir . ' is a shared directory and cannot be used for storage. Choose a folder next to the website, such as ' . $example . '.';
         }
 
         return null;

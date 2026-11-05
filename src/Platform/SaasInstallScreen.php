@@ -72,13 +72,10 @@ final class SaasInstallScreen
         $probe = InstallLayout::probe($install, $directory, $placement, $documentRoot, true);
         $result = $probe;
         $result['platform_db'] = '';
-        if ($result['directory'] === '') {
-            return $result;
-        }
         $dir = $result['directory'];
         $doc = InstallLayout::canonical($documentRoot ?? (string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
         $where = $doc !== '' ? $doc : 'the web folder';
-        if (InstallLayout::inWebFolder($dir, $documentRoot)) {
+        if ($dir !== '' && InstallLayout::inWebFolder($dir, $documentRoot)) {
             $detail = 'This folder is inside the web folder (' . $where . '). The stores directory has to sit outside the website, because it holds every customer’s database, settings, and uploads.';
             $result['checks'][] = self::check('outside', 'Outside the website', false, $detail);
             $result['ok'] = false;
@@ -87,9 +84,15 @@ final class SaasInstallScreen
 
             return $result;
         }
+        if ($dir === '' || !$result['ok']) {
+            return $result;
+        }
         $result['checks'][] = self::check('outside', 'Outside the website', true, 'This folder is outside the web folder (' . $where . ').');
 
-        $storageRoot = (string) (InstallLayout::resolve($install)['root'] ?? '');
+        $envStorage = InstallLayout::environmentStorage($install);
+        $storageRoot = $envStorage['locked'] && $envStorage['path'] !== ''
+            ? $envStorage['path']
+            : InstallLayout::savedStorage($install);
         if ($storageRoot !== '' && (InstallLayout::contains($storageRoot, $dir) || InstallLayout::canonical($storageRoot) === InstallLayout::canonical($dir))) {
             $detail = 'That folder is inside the self-hosted storage directory (' . $storageRoot . '). Choose a different folder.';
             $result['checks'][] = self::check('storage', 'Separate from this site', false, $detail);
@@ -132,7 +135,7 @@ final class SaasInstallScreen
             return $settings['platform_db'];
         }
 
-        return dirname(rtrim($stores, '/\\')) . DIRECTORY_SEPARATOR . 'platform.sqlite';
+        return rtrim($stores, '/\\') . DIRECTORY_SEPARATOR . 'platform.sqlite';
     }
 
     public static function handle(): void
@@ -284,63 +287,25 @@ final class SaasInstallScreen
      */
     private static function assessPlatformDatabase(string $platformDb, string $stores, ?string $documentRoot): array
     {
-        $user = Runtime::phpUser();
         $absolute = InstallLayout::absolute($platformDb);
         if ($absolute === null) {
             return self::check('platform', 'Operator database', false, 'The operator database needs a full path.');
         }
-        if (InstallLayout::contains($stores, $absolute) || InstallLayout::inWebFolder(dirname($absolute), $documentRoot)) {
+        if (InstallLayout::inWebFolder($absolute, $documentRoot)) {
             return self::check(
                 'platform',
                 'Operator database',
                 false,
-                'The operator database ' . $absolute . ' has to sit outside the stores directory and outside the website.'
+                'The operator database ' . $absolute . ' has to sit outside the website.'
             );
         }
         $parent = dirname($absolute);
-        $lock = PlatformDb::directoryLock($parent);
-        if ($lock !== '') {
-            $example = PlatformDb::STORES_EXAMPLE;
-            $detail = 'The operator database would be ' . $absolute . '. ';
-            $detail .= $lock === PlatformDb::LOCK_OPEN
-                ? $parent . ' has to stay open so the website can be reached. Put the stores directory in a folder under the home, such as ' . $example . '. That folder is made private. The home directory is left as it is.'
-                : $parent . ' is a shared directory and cannot be made private. Put the stores directory inside a folder this account owns, such as ' . $example . '.';
-
-            return self::check('platform', 'Operator database', false, $detail);
-        }
-        $created = false;
         if (!is_dir($parent)) {
-            if (!@mkdir($parent, 0700, true) && !is_dir($parent)) {
-                return self::check(
-                    'platform',
-                    'Operator database',
-                    false,
-                    'PHP, running as ' . $user . ', cannot create ' . $parent . '.'
-                );
-            }
-            $created = true;
-        }
-        $probe = $parent . DIRECTORY_SEPARATOR . '.adlexone-probe-' . bin2hex(random_bytes(4));
-        $ok = false;
-        try {
-            $ok = @file_put_contents($probe, 'ok') !== false
-                && @file_get_contents($probe) === 'ok'
-                && @unlink($probe)
-                && !is_file($probe);
-        } finally {
-            if (is_file($probe)) {
-                @unlink($probe);
-            }
-            if ($created && !$ok) {
-                @rmdir($parent);
-            }
-        }
-        if (!$ok) {
             return self::check(
                 'platform',
                 'Operator database',
                 false,
-                'PHP, running as ' . $user . ', cannot create ' . $absolute . '.'
+                'Create ' . $parent . ', then check again. This page does not create that folder.'
             );
         }
 
@@ -460,7 +425,7 @@ final class SaasInstallScreen
         }
         self::render(
             'Document root',
-            'Shared hosting needs the Adlexone package in the document root. If the package is not in the document root, the document root must be the public folder.',
+            'The selected choice is the document root this server reported.',
             $error,
             self::placementForm($paths, $focus),
             self::steps(self::STEP_ROOT),
@@ -491,6 +456,10 @@ final class SaasInstallScreen
             'Document root' => $doc !== '' ? $doc : 'Not reported',
         ]);
         $html .= self::matchLine($detected);
+        $note = InstallLayout::publicFolderNote($paths['install']);
+        if ($note !== '') {
+            $html .= '<p class="install-match">' . Html::e($note) . '</p>';
+        }
         $html .= self::options(
             'Where is this copy of Adlexone?',
             'placement',
@@ -529,7 +498,7 @@ final class SaasInstallScreen
         } elseif ($state['passed'] !== '') {
             $path = $state['passed'];
         } else {
-            $path = '';
+            $path = InstallLayout::suggestStores($paths['install']);
         }
         if ($report !== null && $report['directory'] !== '') {
             $path = $report['directory'];
@@ -545,7 +514,7 @@ final class SaasInstallScreen
             'Stores directory',
             'stores_path',
             $path,
-            'Full path on this server, outside the website. For example, ' . PlatformDb::STORES_EXAMPLE . '.',
+            'One folder higher than the document root. Create this folder, then check it. For example, ' . InstallLayout::suggestStores($paths['install']) . '.',
             $focus
         );
         if ($preview !== '') {

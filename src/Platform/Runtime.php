@@ -264,7 +264,9 @@ final class Runtime
         }
         $stores = $stores === '' ? '' : rtrim($stores, '/\\');
         if ($stores !== '' && $db === '') {
-            $db = dirname($stores) . DIRECTORY_SEPARATOR . 'platform.sqlite';
+            $inside = $stores . DIRECTORY_SEPARATOR . 'platform.sqlite';
+            $legacy = dirname($stores) . DIRECTORY_SEPARATOR . 'platform.sqlite';
+            $db = is_file($legacy) && !is_file($inside) ? $legacy : $inside;
         }
 
         return [

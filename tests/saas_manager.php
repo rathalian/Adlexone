@@ -91,6 +91,9 @@ $tmp = sys_get_temp_dir() . '/adlexone-saas-' . bin2hex(random_bytes(4));
 $install = $tmp . '/app';
 $public = $install . '/public';
 $stores = $tmp . '/adlexone-stores';
+if (!mkdir($stores, 0755, true) && !is_dir($stores)) {
+    $fail('Cannot create the stores directory');
+}
 if (!mkdir($public, 0700, true) && !is_dir($public)) {
     $fail('Cannot create ' . $public);
 }
@@ -113,10 +116,38 @@ $check(str_contains($inside['message'], 'outside the website'), 'the refusal say
 
 $report = SaasInstallScreen::assessStores($install, $stores, InstallLayout::PUBLIC_FOLDER, $public);
 $check($report['ok'] === true, 'a stores directory outside the website passes: ' . $report['message']);
-$check($report['platform_db'] === $tmp . '/platform.sqlite', 'the operator database sits beside the stores directory, got ' . $report['platform_db']);
-$shared = SaasInstallScreen::assessStores($install, sys_get_temp_dir() . '/adlexone-stores-shared', InstallLayout::PUBLIC_FOLDER, $public);
-$check($shared['ok'] === false, 'a stores directory in the system temp directory is refused');
-$check(str_contains($shared['message'], 'shared directory'), 'the refusal names the shared directory');
+$check($report['platform_db'] === $stores . '/platform.sqlite', 'the operator database sits inside the stores directory, got ' . $report['platform_db']);
+$check((fileperms($stores) & 0777) === 0755, 'checking the stores directory does not change its mode');
+$platformFile = $install . '/config/platform.json';
+$originalPlatform = (string) file_get_contents($platformFile);
+file_put_contents(
+    $platformFile,
+    json_encode(['INLAY_STORAGE' => '', 'INLAY_STORES' => '', 'INLAY_OPERATOR_HOST' => ''], JSON_PRETTY_PRINT) . "\n"
+);
+$besidePublic = $install . '/storage-saas';
+mkdir($besidePublic, 0755);
+chmod($besidePublic, 0755);
+$beside = SaasInstallScreen::assessStores($install, $besidePublic, InstallLayout::PUBLIC_FOLDER, $public);
+$check($beside['ok'] === true, 'storage-saas beside the public folder passes when no storage directory is saved: ' . $beside['message']);
+$check((fileperms($besidePublic) & 0777) === 0755, 'a passing stores check leaves that folder at mode 755');
+file_put_contents(
+    $platformFile,
+    json_encode(['INLAY_STORAGE' => $besidePublic, 'INLAY_STORES' => '', 'INLAY_OPERATOR_HOST' => ''], JSON_PRETTY_PRINT) . "\n"
+);
+$insideStorage = SaasInstallScreen::assessStores($install, $besidePublic, InstallLayout::PUBLIC_FOLDER, $public);
+$check($insideStorage['ok'] === false && str_contains($insideStorage['message'], 'self-hosted storage'), 'a stores directory inside the saved storage directory is refused');
+file_put_contents($platformFile, $originalPlatform);
+$sharedDir = '';
+foreach (['/usr', '/var', '/opt', '/home', '/etc'] as $candidate) {
+    if (is_dir($candidate)) {
+        $sharedDir = $candidate;
+        break;
+    }
+}
+$check($sharedDir !== '', 'a shared directory is available to refuse');
+$shared = SaasInstallScreen::assessStores($install, $sharedDir, InstallLayout::PUBLIC_FOLDER, $public);
+$check($shared['ok'] === false, 'a shared directory is refused: ' . $shared['message']);
+$check(str_contains($shared['message'], 'shared directory'), 'the refusal names the shared directory, got: ' . $shared['message']);
 $check(PlatformDb::mayRestrictDirectory(sys_get_temp_dir()) === false, 'the system temp directory is not made private');
 $check(PlatformDb::mayRestrictDirectory($tmp) === true, 'a private folder can be mode 700');
 
@@ -126,14 +157,16 @@ mkdir($accountHome . '/storage-saas', 0755, true);
 chmod($accountHome, 0755);
 $check(PlatformDb::directoryLock($accountHome) === PlatformDb::LOCK_OPEN, 'a directory that holds public_html stays open');
 $check(PlatformDb::mayRestrictDirectory($accountHome) === false, 'the home directory is not made private');
-$homeStores = SaasInstallScreen::assessStores($install, $accountHome . '/storage-saas', InstallLayout::PUBLIC_FOLDER, $public);
-$check($homeStores['ok'] === false, 'stores directly under the home are refused');
-$check(str_contains($homeStores['message'], 'has to stay open'), 'the refusal says the website has to stay reachable');
-$check(str_contains($homeStores['message'], '/home/health/adlexone/stores'), 'the refusal shows a stores directory nested under the home');
-$nestedStores = $accountHome . '/adlexone/stores';
-$nested = SaasInstallScreen::assessStores($install, $nestedStores, InstallLayout::PUBLIC_FOLDER, $public);
-$check($nested['ok'] === true, 'a stores directory nested under the home passes: ' . $nested['message']);
-$check($nested['platform_db'] === $accountHome . '/adlexone/platform.sqlite', 'the operator database sits beside the stores directory, not in the home');
+$saasDir = $accountHome . '/storage-saas';
+chmod($saasDir, 0755);
+$missingSaas = $accountHome . '/storage-saas-missing';
+$missingReport = SaasInstallScreen::assessStores($install, $missingSaas, InstallLayout::PUBLIC_FOLDER, $accountHome . '/public_html');
+$check($missingReport['ok'] === false && str_contains($missingReport['message'], 'Create ' . $missingSaas), 'a missing stores directory is not created');
+$check(!is_dir($missingSaas), 'the stores check does not create the folder');
+$homeStores = SaasInstallScreen::assessStores($install, $saasDir, InstallLayout::PUBLIC_FOLDER, $accountHome . '/public_html');
+$check($homeStores['ok'] === true, 'storage-saas next to public_html passes: ' . $homeStores['message']);
+$check($homeStores['platform_db'] === $saasDir . '/platform.sqlite', 'the operator database is inside storage-saas');
+$check(InstallLayout::suggestStores($install, $accountHome . '/public_html') === $saasDir, 'the stores field suggests storage-saas above the document root');
 $savedHome = getenv('HOME');
 putenv('HOME=' . $accountHome);
 try {
@@ -146,17 +179,29 @@ try {
     }
 }
 chmod($accountHome, 0755);
-PlatformDb::addOperator($accountHome . '/platform.sqlite', 'admin', 'operator-secret');
+chmod($saasDir, 0755);
+PlatformDb::addOperator($saasDir . '/platform.sqlite', 'admin', 'operator-secret');
 $homeMode = fileperms($accountHome) & 0777;
 $check($homeMode === 0755, 'opening the operator database leaves the home directory mode alone, got ' . decoct($homeMode));
-$sqliteMode = fileperms($accountHome . '/platform.sqlite') & 0777;
+$check((fileperms($saasDir) & 0777) === 0755, 'opening the operator database leaves the stores directory mode alone, got ' . decoct(fileperms($saasDir) & 0777));
+$sqliteMode = fileperms($saasDir . '/platform.sqlite') & 0777;
 $check($sqliteMode === 0600, 'the operator database file is mode 600, got ' . decoct($sqliteMode));
-$privateDir = $accountHome . '/adlexone';
-chmod($privateDir, 0755);
-PlatformDb::addOperator($privateDir . '/platform.sqlite', 'admin', 'operator-secret');
-$privateMode = fileperms($privateDir) & 0777;
-$check($privateMode === 0700, 'the folder above the stores directory is mode 700, got ' . decoct($privateMode));
-$check((fileperms($accountHome) & 0777) === 0755, 'making the private folder mode 700 does not change the home');
+$legacyParent = $tmp . '/legacy-parent';
+$legacyStores = $legacyParent . '/storage-saas';
+mkdir($legacyStores, 0755, true);
+$legacyInstall = $tmp . '/legacy-app';
+mkdir($legacyInstall . '/config', 0700, true);
+file_put_contents($legacyParent . '/platform.sqlite', '');
+file_put_contents($legacyInstall . '/config/platform.json', json_encode([
+    'INLAY_STORES' => $legacyStores,
+    'INLAY_OPERATOR_HOST' => 'operate.example.com',
+    'INLAY_PLATFORM_DB' => '',
+], JSON_PRETTY_PRINT) . "\n");
+$legacySettings = Runtime::saasSettings($legacyInstall);
+$check($legacySettings['platform_db'] === $legacyParent . '/platform.sqlite', 'an existing database beside the stores directory stays there');
+file_put_contents($legacyStores . '/platform.sqlite', '');
+$insideSettings = Runtime::saasSettings($legacyInstall);
+$check($insideSettings['platform_db'] === $legacyStores . '/platform.sqlite', 'a database inside the stores directory is used when both files exist');
 
 $siteFolder = $stores . '/health';
 if (!mkdir($siteFolder, 0700, true) && !is_dir($siteFolder)) {

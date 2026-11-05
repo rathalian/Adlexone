@@ -167,13 +167,7 @@ final class SiteUsage
     {
         $root = realpath($stores);
         if ($root === false) {
-            if (!is_dir($stores) && !mkdir($stores, 0700, true) && !is_dir($stores)) {
-                throw new \RuntimeException('Cannot create the stores folder: ' . $stores);
-            }
-            $root = realpath($stores);
-        }
-        if ($root === false) {
-            throw new \RuntimeException('The store folder must stay inside the stores directory.');
+            throw new \RuntimeException('The stores directory does not exist: ' . $stores);
         }
         $rootPrefix = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
         $candidate = rtrim($folder, '/\\');

@@ -42,7 +42,7 @@ The page reads the document root with `InstallLayout::detect()` and offers the s
 
 ### 2. Stores directory
 
-The field is a full path. The example is `/home/health/adlexone/stores`. The field is not prefilled with `storage/`. That path is the self-hosted storage directory, and it sits inside the website when the package is the document root. The stores directory sits one folder under the home so the home itself is not made private.
+The field is a full path. It is filled with `storage-saas` one folder higher than the detected document root. For a document root of `/home/health/public_html`, the field shows `/home/health/storage-saas`. The folder has to exist before the check. The installer does not create it.
 
 Check this folder runs `InstallLayout::probe()`: create, read, update, delete, and create then remove a folder, as the account that runs PHP. The trial files are removed before the page answers. The probe also checks that PHP can write `config/platform.json` beside the code.
 
@@ -50,7 +50,7 @@ The stores directory has to sit outside the document root. The website then has 
 
 The directory is also refused when it is the package, when it contains the package, when it is inside `src`, `vendor`, `bootstrap`, `layouts`, `site`, `tests`, `translations`, `config.example`, `bin`, or `config`, or when it is inside the self-hosted storage directory `InstallLayout::resolve()` would use. A directory that already has `adlexone.sqlite` as a direct child is one site’s folder, and it is refused. Files already inside a stores directory are left in place. The installer does not add a `stores` row for them.
 
-The operator database is `platform.sqlite` in the parent of the stores directory. For `/home/health/adlexone/stores` that file is `/home/health/adlexone/platform.sqlite`. It sits beside the stores directory, outside `public/`, and outside every customer folder. The check requires that PHP can create that file and that the path is outside the document root and outside the stores directory. That parent is mode 700. The database file is mode 600. The account home is not changed. Mode 700 on the home hides `public_html` and the host answers 404.
+The operator database is `platform.sqlite` inside the stores directory. For `/home/health/storage-saas` that file is `/home/health/storage-saas/platform.sqlite`. It sits outside the website and outside every customer folder. The database file is mode 600. Customer folders created inside the stores directory are mode 700. The stores directory, the document root, and the home directory are not changed. An existing `platform.sqlite` already saved beside the stores directory stays where it is.
 
 When `INLAY_PLATFORM_DB` is already set in the environment, that path is used instead, after the same checks. The form does not ask for a database path.
 

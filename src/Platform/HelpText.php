@@ -97,10 +97,10 @@ final class HelpText
                 self::code($storeExample . 'config' . DIRECTORY_SEPARATOR) . ' — their settings, including SMTP and OAuth secrets. Mode 700 on the folder, 600 on the JSON files.',
                 self::code($storeExample . 'attachments' . DIRECTORY_SEPARATOR) . ' — their uploaded files. Mode 700.',
             ]),
-            self::p('The operator database holds your username and the list of customer addresses. It does not hold their records. Keep it beside the stores folder, not inside public and not inside a customer folder.'),
+            self::p('The operator database holds your username and the list of customer addresses. It does not hold their records. It is platform.sqlite inside the stores directory, not inside a customer folder.'),
             self::h('Permissions'),
-            self::p('PHP is running as ' . self::code($user) . '. That account must be able to create the stores folder and the operator database. Recommended:'),
-            self::pre(self::commands($user, [dirname($platformDb), $stores], [$platformDb])),
+            self::p('PHP is running as ' . self::code($user) . '. The stores directory must already exist. Adlexone sets mode 700 on each customer folder it creates inside that directory, and mode 600 on the database files. It does not change the stores directory or any folder above it.'),
+            $platformDb !== '' ? self::pre(self::commands($user, [], [$platformDb])) : '',
             self::p('SQLite also writes -wal and -shm files next to each database while it is in use. Backup on this screen checkpoints those into the main file, then downloads the folder.'),
             self::h('Turning SaaS mode on'),
             self::p('Open ' . self::code('./?host=install') . ' on a copy that is not in SaaS mode yet and has no administrator. ' . self::code('./?install=host') . ' is the same page. That installer writes INLAY_STORES and INLAY_OPERATOR_HOST into ' . self::code('config/platform.json') . ' next to the code. Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
@@ -126,13 +126,8 @@ final class HelpText
         $install = $paths['install'] ?? '';
         $public = $paths['public'] ?? '';
         $platformJson = rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'platform.json';
-        $dirs = [];
-        if ($stores !== '') {
-            $dirs[] = $stores;
-        }
-        if ($platformDb !== '') {
-            $dirs[] = dirname($platformDb);
-        }
+        $suggested = $stores !== '' ? $stores : InstallLayout::suggestStores($install);
+        $database = $platformDb !== '' ? $platformDb : rtrim($suggested, '/\\') . DIRECTORY_SEPARATOR . 'platform.sqlite';
 
         return self::article('Hosting customer sites', [
             self::p('This installer turns this copy of Adlexone into a host of customer sites. It is a different page from the self-hosted installer. A customer finishing their own hostname is not this page.'),
@@ -141,15 +136,15 @@ final class HelpText
                 'Code' => $install,
                 'Document root' => $public,
                 'Platform settings file' => $platformJson,
-                'Stores directory' => $stores !== '' ? $stores : PlatformDb::STORES_EXAMPLE,
-                'Operator database' => $platformDb !== '' ? $platformDb : '/home/health/adlexone/platform.sqlite',
+                'Stores directory' => $suggested,
+                'Operator database' => $database,
                 'PHP is running as' => $user,
             ]),
             self::h('Stores directory'),
-            self::p('Each customer gets one folder under the stores directory. For example, ' . self::code('/home/health/adlexone/stores/health/') . '. The directory has to sit outside the website. PHP, running as ' . self::code($user) . ', must be able to create, read, update, and delete files there. The check removes its trial files before the page answers.'),
+            self::p('Each customer gets one folder under the stores directory. For example, ' . self::code(rtrim($suggested, '/\\') . '/health/') . '. The directory has to sit outside the website, one folder higher than the document root. Create it before you check it. This page does not create it. PHP, running as ' . self::code($user) . ', must be able to create, read, update, and delete files there. The check removes its trial files before the page answers.'),
             self::h('Operator database'),
-            self::p('The operator login and the list of sites are stored in platform.sqlite beside the stores directory, not inside a customer folder and not inside the website. The folder that holds that file is mode 700. The database file is mode 600. The home directory is left as the host set it. Making the home private stops the website from opening.'),
-            $dirs === [] ? '' : self::pre(self::commands($user, $dirs, $platformDb !== '' ? [$platformDb] : [])),
+            self::p('The operator login and the list of sites are stored in platform.sqlite inside the stores directory, not inside a customer folder and not inside the website. That file is mode 600. A customer folder created inside the stores directory is mode 700. The stores directory and every folder above it are left as they are.'),
+            $database !== '' ? self::pre(self::commands($user, [], [$database])) : '',
             self::h('Operator hostname'),
             self::p('For example, operate.example.com. On this machine, localhost is accepted. Point that name at this server. It must not be a customer hostname. Environment values for INLAY_STORES and INLAY_OPERATOR_HOST win over the file this step writes.'),
         ]);

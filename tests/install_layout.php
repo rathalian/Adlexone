@@ -44,6 +44,7 @@ $check(InstallLayout::absolute('/tmp//adlexone-data/') === '/tmp/adlexone-data',
 unset($_SERVER['HTTP_HOST'], $_SERVER['HTTPS'], $_SERVER['REQUEST_SCHEME'], $_SERVER['HTTP_X_FORWARDED_PROTO']);
 
 $insidePublic = $public . '/uploads';
+mkdir($insidePublic, 0755);
 $refused = InstallLayout::probe($install, $insidePublic, InstallLayout::PUBLIC_FOLDER, $public, false);
 $check($refused['ok'] === false, 'a folder inside the web folder is not accepted without a private check');
 $privateRow = null;
@@ -56,6 +57,7 @@ $check(is_array($privateRow) && $privateRow['state'] === 'fail', 'a folder insid
 $check(str_contains((string) ($privateRow['detail'] ?? ''), 'strongly recommended against'), 'the private check says the web folder is strongly recommended against');
 
 $packageData = $install . '/data';
+mkdir($packageData, 0755);
 $refusedPackage = InstallLayout::probe($install, $packageData, InstallLayout::PACKAGE, $install, false);
 $check($refusedPackage['ok'] === false, 'a new folder inside the package is not accepted until the website refuses it');
 
@@ -73,6 +75,7 @@ $linked = InstallLayout::probe($install, $link, InstallLayout::PUBLIC_FOLDER, $p
 $check($linked['ok'] === false, 'a symlink into public is refused');
 
 $storage = $install . '/storage';
+mkdir($storage, 0755);
 $packageOk = InstallLayout::probe($install, $storage, InstallLayout::PACKAGE, $install, true);
 $passed = [];
 foreach ($packageOk['checks'] as $row) {
@@ -89,15 +92,20 @@ $leftConfig = glob($install . '/config/.adlexone-probe-*') ?: [];
 $check($leftConfig === [], 'the path check removes its trial file');
 
 $outside = $tmp . '/outside';
+$missingOutside = InstallLayout::probe($install, $outside, InstallLayout::PUBLIC_FOLDER, $public, true);
+$check($missingOutside['ok'] === false && str_contains($missingOutside['message'], 'Create ' . $outside), 'a missing storage folder is not created');
+$check(!is_dir($outside), 'the check leaves a missing storage folder uncreated');
+mkdir($outside, 0755);
 $outsideOk = InstallLayout::probe($install, $outside, InstallLayout::PUBLIC_FOLDER, $public, true);
 $check($outsideOk['ok'] === true, 'a folder outside public can be used: ' . $outsideOk['message']);
-$check($outsideOk['created'] === true, 'a missing folder is created by the check');
-$check(is_dir($outside), 'the created folder stays');
+$check($outsideOk['created'] === false, 'an existing storage folder is not recreated');
+$check((fileperms($outside) & 0777) === 0755, 'the check does not change the storage folder mode');
 
 $blocked = $tmp . '/blocked-app';
 mkdir($blocked . '/public', 0700, true);
 file_put_contents($blocked . '/config', 'not-a-directory');
 $blockedData = $tmp . '/blocked-data';
+mkdir($blockedData, 0755);
 $blockedProbe = InstallLayout::probe($blocked, $blockedData, InstallLayout::PUBLIC_FOLDER, $blocked . '/public', true);
 $check($blockedProbe['ok'] === false, 'setup refuses a storage directory when the path cannot be recorded');
 $record = null;
@@ -289,10 +297,18 @@ mkdir($accountHome . '/public_html', 0755, true);
 chmod($accountHome, 0755);
 $homeProbe = InstallLayout::probe($install, $accountHome, InstallLayout::PUBLIC_FOLDER, $public, false);
 $check($homeProbe['ok'] === false && str_contains($homeProbe['message'], 'has to stay open'), 'the home directory cannot be the storage directory');
-$dataDir = $accountHome . '/adlexone-data';
+$check(InstallLayout::suggest($install, $accountHome . '/public_html') === $accountHome . '/storage-host', 'storage-host is suggested one folder above the document root');
+$check(InstallLayout::suggestStores($install, $accountHome . '/public_html') === $accountHome . '/storage-saas', 'storage-saas is suggested one folder above the document root');
+$check(str_contains(InstallLayout::publicFolderNote($install, $accountHome . '/public_html'), $install . '/public'), 'a document root that is not public names the public folder');
+$check(InstallLayout::publicFolderNote($install, $install . '/public') === '', 'a public document root does not add a second suggestion');
+$dataDir = $accountHome . '/storage-host';
+$missingData = InstallLayout::probe($install, $dataDir, InstallLayout::PUBLIC_FOLDER, $public, false);
+$check($missingData['ok'] === false && !is_dir($dataDir), 'storage-host is not created by the check');
+mkdir($dataDir, 0755);
 $dataProbe = InstallLayout::probe($install, $dataDir, InstallLayout::PUBLIC_FOLDER, $public, false);
 $check($dataProbe['ok'] === true, 'a folder under the home can be the storage directory: ' . $dataProbe['message']);
 chmod($accountHome, 0755);
+chmod($dataDir, 0755);
 $stored = InstallLayout::storagePaths($dataDir);
 Provisioner::install($root, $stored['config'], $stored['sqlite'], $stored['attachments'], [
     'site_name' => 'Health',
@@ -305,6 +321,7 @@ Provisioner::install($root, $stored['config'], $stored['sqlite'], $stored['attac
 ]);
 $homeMode = fileperms($accountHome) & 0777;
 $check($homeMode === 0755, 'self-hosted setup leaves the home directory mode alone, got ' . decoct($homeMode));
+$check((fileperms($dataDir) & 0777) === 0755, 'self-hosted setup leaves the storage directory mode alone, got ' . decoct(fileperms($dataDir) & 0777));
 $check((fileperms(rtrim($stored['config'], '/')) & 0777) === 0700, 'the settings folder is mode 700');
 $check((fileperms(dirname($stored['sqlite'])) & 0777) === 0700, 'the database folder is mode 700');
 $check((fileperms(rtrim($stored['attachments'], '/')) & 0777) === 0700, 'the uploads folder is mode 700');

@@ -8,7 +8,7 @@ The first task is a design proposal. Do not write the installer, the manager, or
 
 SaaS mode is on when `INLAY_STORES` and `INLAY_OPERATOR_HOST` are set, in the environment or in `config/platform.json` beside the code. Environment values win. Leave both empty and the server is one self-hosted site.
 
-The operator host is a separate login in `platform.sqlite`, beside the stores folder. It is not a user inside a customer site. The screen is `Adlexone\Platform\OperatorScreen`. The tables are `operators` and `stores` in `Adlexone\Platform\PlatformDb`.
+The operator host is a separate login in `platform.sqlite`, inside the stores folder. It is not a user inside a customer site. The screen is `Adlexone\Platform\OperatorScreen`. The tables are `operators` and `stores` in `Adlexone\Platform\PlatformDb`.
 
 Each customer is one folder, `{stores}/{slug}/`, with `adlexone.sqlite`, `config/`, and `attachments/`. One request opens one SQLite file. `Adlexone\Platform\Provisioner` creates and removes that folder. `Provisioner::folderBytes()` is the only usage figure on the operator screen. It is the size of the folder.
 

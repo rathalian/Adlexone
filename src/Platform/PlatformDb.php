@@ -15,8 +15,8 @@ final class PlatformDb
     public static function pdo(string $path): \PDO
     {
         $dir = dirname($path);
-        if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
-            throw new \RuntimeException('Cannot create the folder for the operator database: ' . $dir);
+        if (!is_dir($dir)) {
+            throw new \RuntimeException('The folder for the operator database does not exist: ' . $dir);
         }
         $pdo = new \PDO('sqlite:' . $path, null, null, [
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
@@ -27,19 +27,10 @@ final class PlatformDb
         self::ensureSchema($pdo);
         if (is_file($path)) {
             @chmod($path, 0600);
-            if (self::mayRestrictDirectory($dir)) {
-                @chmod($dir, 0700);
-            }
         }
 
         return $pdo;
     }
-
-    /**
-     * A stores directory nested under the home. The folder above it can be mode 700.
-     * The home directory itself cannot, because the website has to pass through it.
-     */
-    public const STORES_EXAMPLE = '/home/health/adlexone/stores';
 
     public const LOCK_SHARED = 'shared';
 
