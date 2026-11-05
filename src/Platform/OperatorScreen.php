@@ -46,6 +46,13 @@ final class OperatorScreen
         unset($_SESSION['operator_notice']);
 
         $needsAccount = PlatformDb::operatorCount($db) === 0;
+        if ($needsAccount) {
+            try {
+                SetupToken::issue();
+            } catch (\Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
 
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!Csrf::valid()) {
@@ -298,7 +305,7 @@ final class OperatorScreen
         }
         $ready = $username !== ''
             ? ' The first admin can sign in at https://' . $open . '.'
-            : ' The first visit to https://' . $open . ' shows setup, including where that store’s SQLite file, settings, and attachments live.';
+            : ' The first visit to https://' . $open . ' writes a setup token beside that site’s database. Read the file and give the value to the customer. The page does not show it.';
         if ($custom !== '') {
             $ready .= ' https://' . $host . ' opens the same site.';
         }
@@ -327,7 +334,11 @@ final class OperatorScreen
         if (!hash_equals($password, $confirm)) {
             throw new \RuntimeException('The two passwords do not match.');
         }
+        if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''))) {
+            throw new \RuntimeException('The setup token does not match the file beside the operator database. Open that file on the server and enter the value.');
+        }
         PlatformDb::addOperator($db, $username, $password);
+        SetupToken::clear();
         session_regenerate_id(true);
         Csrf::rotate();
         $row = PlatformDb::operatorByName($db, $username);
@@ -478,6 +489,14 @@ final class OperatorScreen
             DefaultAccount::postedPassword($_POST['password_confirm'] ?? null),
             true
         );
+        $html .= self::field(
+            'Setup token',
+            'setup_token',
+            'text',
+            '',
+            true,
+            'Open ' . SetupToken::path() . ' on the server and paste the value. This page does not show it. The file is removed when the account is created.'
+        );
         $html .= '<div class="install-actions"><button type="submit" class="btn btn--primary">' . Html::e($button) . '</button></div>';
         $html .= '</form>';
 
@@ -511,6 +530,9 @@ final class OperatorScreen
         $auto = $type === 'password' ? ' autocomplete="current-password"' : '';
         if ($name === 'password' || $name === 'password_confirm' || $name === 'admin_password') {
             $auto = ' autocomplete="new-password"';
+        }
+        if ($name === 'setup_token') {
+            $auto = ' autocomplete="off" spellcheck="false" autocapitalize="off"';
         }
         $html .= '<input class="input" type="' . Html::e($type) . '" id="' . Html::e($id) . '" name="' . Html::e($name) . '" value="' . Html::e($value) . '"'
             . ($required ? ' required' : '') . $auto . '>';

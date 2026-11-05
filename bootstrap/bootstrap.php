@@ -77,7 +77,10 @@ if (SaasInstallScreen::handles((string) (Runtime::paths()['stores'] ?? ''), (str
     exit;
 }
 
-if ($hostQuery === 'manage' && Runtime::mode() !== Runtime::OPERATOR) {
+// ?host=manage on a copy that is not a host yet explains that. On a host, the
+// manager is the operator hostname only. The same query on a customer hostname
+// is ignored and that site answers as usual.
+if ($hostQuery === 'manage' && (string) (Runtime::paths()['stores'] ?? '') === '' && Runtime::mode() !== Runtime::OPERATOR) {
     OperatorScreen::manageUnavailable();
     Page::current()->send();
     exit;

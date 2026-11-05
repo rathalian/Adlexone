@@ -128,6 +128,21 @@ final class SaasInstallScreen
         return $result;
     }
 
+    /**
+     * The installer token sits one folder above the document root, outside the website.
+     */
+    public static function installTokenPath(string $install): string
+    {
+        $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $anchor = $doc !== '' ? $doc : rtrim($install, '/\\');
+        $parent = dirname($anchor);
+        if ($parent === '' || $parent === '.' || $parent === $anchor) {
+            $parent = rtrim($install, '/\\');
+        }
+
+        return $parent . DIRECTORY_SEPARATOR . 'adlexone-install-token.txt';
+    }
+
     public static function platformDatabase(string $install, string $stores): string
     {
         $settings = Runtime::saasSettings($install);
@@ -151,6 +166,26 @@ final class SaasInstallScreen
 
         $error = '';
         $notice = '';
+        $tokenPath = self::installTokenPath($paths['install']);
+        if (InstallLayout::inWebFolder($tokenPath)) {
+            self::render(
+                'SaaS installer',
+                'The setup token would be saved inside the website, so this page will not write it. Use a document root that is a folder inside the account. The token then sits one folder higher, where a browser cannot read it.',
+                '',
+                '',
+                '',
+                ''
+            );
+
+            return;
+        }
+        try {
+            SetupToken::issue($tokenPath);
+        } catch (\Throwable $e) {
+            self::render('SaaS installer', $e->getMessage(), '', '', '', '');
+
+            return;
+        }
         /** @var array{ok: bool, message: string, user: string, directory: string, created: bool, platform_db: string, checks: list<array{id: string, label: string, ok: bool, detail: string, state: string}>}|null $report */
         $report = null;
         $stale = self::dropStalePlacement($paths);
@@ -164,6 +199,7 @@ final class SaasInstallScreen
             } else {
                 $action = (string) ($_POST['setup_action'] ?? '');
                 try {
+                    self::proveToken($tokenPath);
                     if ($action === 'placement') {
                         self::savePlacement($paths);
 
@@ -261,7 +297,8 @@ final class SaasInstallScreen
             throw new \RuntimeException($report['message'] !== '' ? $report['message'] : 'This folder cannot be used yet.');
         }
         InstallLayout::rememberSaaS($paths['install'], $report['directory'], $host, $report['platform_db']);
-        unset($_SESSION[self::SESSION_KEY]);
+        SetupToken::clear(self::installTokenPath($paths['install']));
+        unset($_SESSION[self::SESSION_KEY], $_SESSION['adlexone_install_proven']);
         if (strcasecmp(Runtime::requestHost(), $host) === 0) {
             header('Location: ./', true, 303);
             exit;
@@ -676,9 +713,33 @@ final class SaasInstallScreen
         return $html . '</dl>';
     }
 
+    private static function proveToken(string $tokenPath): void
+    {
+        if (!empty($_SESSION['adlexone_install_proven'])) {
+            return;
+        }
+        if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''), $tokenPath)) {
+            throw new \RuntimeException('The setup token does not match ' . $tokenPath . '. Open that file on the server and enter the value. This page does not show it.');
+        }
+        session_regenerate_id(true);
+        $_SESSION['adlexone_install_proven'] = true;
+    }
+
     private static function openForm(string $step): string
     {
-        return '<form method="post" action="?install=host&amp;step=' . Html::e($step) . '" class="login-form install-form" autocomplete="off">' . Csrf::field();
+        $html = '<form method="post" action="?install=host&amp;step=' . Html::e($step) . '" class="login-form install-form" autocomplete="off">' . Csrf::field();
+        if (empty($_SESSION['adlexone_install_proven'])) {
+            $path = self::installTokenPath((string) (Runtime::paths()['install'] ?? ''));
+            $html .= self::field(
+                'Setup token',
+                'setup_token',
+                '',
+                'Open ' . $path . ' on the server and paste the value. This page does not show it. One entry is enough for the rest of this installer.',
+                false
+            );
+        }
+
+        return $html;
     }
 
     private static function actions(

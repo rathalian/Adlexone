@@ -366,17 +366,17 @@ $check(($updated['host'] ?? '') === 'health.example.com', 'the hostname is uncha
 $check(($updated['custom_host'] ?? '') === '' || $updated['custom_host'] === null, 'an unchanged address has no own domain');
 $check(is_dir($folder), 'the slug directory stays');
 
-SiteUsage::updateSite($platform, $stores, $updated, 'Health records', 'care.example.com', 'office@health.example.com', 'operate.example.com');
+SiteUsage::updateSite($platform, $stores, $updated, 'Health records', 'care.health.example.org', 'office@health.example.com', 'operate.example.com');
 $settings = json_decode((string) file_get_contents($folder . '/config/adlexone_settings.json'), true);
-$check(($settings['SET_PUBLIC_BASE_URL'] ?? '') === 'https://care.example.com', 'an own domain updates the public URL');
+$check(($settings['SET_PUBLIC_BASE_URL'] ?? '') === 'https://care.health.example.org', 'an own domain updates the public URL');
 $updated = PlatformDb::storeBySlug($platform, 'health');
 $check(($updated['host'] ?? '') === 'health.example.com', 'the slug address stays in place');
-$check(($updated['custom_host'] ?? '') === 'care.example.com', 'the own domain is stored');
-$check((PlatformDb::storeByHost($platform, 'care.example.com')['slug'] ?? '') === 'health', 'the own domain opens this site');
+$check(($updated['custom_host'] ?? '') === 'care.health.example.org', 'the own domain is stored');
+$check((PlatformDb::storeByHost($platform, 'care.health.example.org')['slug'] ?? '') === 'health', 'the own domain opens this site');
 $check((PlatformDb::storeByHost($platform, 'health.example.com')['slug'] ?? '') === 'health', 'the slug address still opens this site');
 $duplicate = false;
 try {
-    SiteUsage::updateSite($platform, $stores, $records, 'Records', 'care.example.com', '', 'operate.example.com');
+    SiteUsage::updateSite($platform, $stores, $records, 'Records', 'care.health.example.org', '', 'operate.example.com');
 } catch (\Throwable $e) {
     $duplicate = str_contains($e->getMessage(), 'already uses');
 }
@@ -389,7 +389,7 @@ unlink($other . '/config/adlexone_settings.json');
 $before = PlatformDb::storeBySlug($platform, 'records');
 $threw = false;
 try {
-    SiteUsage::updateSite($platform, $stores, $records, 'Records', 'files.example.com', '', 'operate.example.com');
+    SiteUsage::updateSite($platform, $stores, $records, 'Records', 'files.health.example.org', '', 'operate.example.com');
 } catch (\Throwable $e) {
     $threw = str_contains($e->getMessage(), 'missing');
 }
@@ -429,10 +429,32 @@ $_SERVER['HTTP_HOST'] = 'health.example.com';
 unset($_GET['host']);
 Runtime::define($manageRoot . DIRECTORY_SEPARATOR);
 $check(Runtime::mode() === Runtime::UNKNOWN, 'a hostname with no site is not the operator, got ' . Runtime::mode());
+$check(!str_contains((string) Runtime::paths()['sqlite'], 'platform.sqlite'), 'an unknown address does not open the operator database');
 $_GET['host'] = 'manage';
 Runtime::define($manageRoot . DIRECTORY_SEPARATOR);
-$check(Runtime::mode() === Runtime::OPERATOR, '?host=manage opens the operator on another hostname, got ' . Runtime::mode());
-$check(Runtime::paths()['platform_db'] === $manageRoot . '/platform.sqlite', 'manage uses the operator database');
+$check(Runtime::mode() === Runtime::UNKNOWN, '?host=manage on another hostname stays off the operator, got ' . Runtime::mode());
+$check(!str_contains((string) Runtime::paths()['sqlite'], 'platform.sqlite'), '?host=manage on another hostname does not open the operator database');
 unset($_GET['host']);
+$_SERVER['HTTP_HOST'] = 'operate.example.com';
+Runtime::define($manageRoot . DIRECTORY_SEPARATOR);
+$check(Runtime::mode() === Runtime::OPERATOR, 'the operator hostname opens the manager, got ' . Runtime::mode());
+
+$accepted = SiteUsage::assertCustomHost('records.health.example.com', 'health.adlexone.com', 'brospd.adlexone.com');
+$check($accepted === 'records.health.example.com', 'an own domain outside the site parent is kept');
+foreach (['other.adlexone.com', 'adlexone.com', 'health..example.com', '.example.com', 'health.example.com.', '203.0.113.10', '-bad.example.com'] as $badHost) {
+    $threw = false;
+    try {
+        SiteUsage::assertCustomHost($badHost, 'health.adlexone.com', 'brospd.adlexone.com');
+    } catch (\Throwable) {
+        $threw = true;
+    }
+    $check($threw, $badHost . ' is refused as an own domain');
+}
+$check(SiteUsage::isDnsName('health.example.com'), 'a normal hostname is a DNS name');
+$check(SaasInstallScreen::installTokenPath('/home/health/public_html/') !== '', 'the installer token has a path');
+$_SERVER['DOCUMENT_ROOT'] = '/home/health/public_html';
+$tokenPath = SaasInstallScreen::installTokenPath('/home/health/public_html/');
+$check($tokenPath === '/home/health/adlexone-install-token.txt', 'the installer token sits one folder above the document root, got ' . $tokenPath);
+$check(InstallLayout::inWebFolder($tokenPath, '/home/health/public_html') === false, 'the installer token is outside the website');
 
 echo "saas manager checks passed\n";

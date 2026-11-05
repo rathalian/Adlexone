@@ -135,7 +135,7 @@ final class HostConsole
                 'text',
                 '',
                 false,
-                'Optional. A name the customer already owns, such as records.health.example.com. Leave this empty and the site answers on the slug.'
+                'Optional. A name the customer already owns, such as records.health.example.com. It cannot be a name under ' . $parent . '. Leave this empty and the site answers on the slug.'
             );
             $html .= self::dnsButton();
         } else {
@@ -701,7 +701,7 @@ final class HostConsole
                 'text',
                 $custom,
                 false,
-                'Optional. A name the customer already owns, such as records.health.example.com. Leave this empty and the site answers on the address above.'
+                'Optional. A name the customer already owns, such as records.health.example.com. It cannot be a name under ' . $parent . '. Leave this empty and the site answers on the address above.'
             );
             $html .= self::dnsButton();
         } else {

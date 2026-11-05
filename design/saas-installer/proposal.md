@@ -74,7 +74,7 @@ Submitting the account form signs that person in and opens the manager.
 
 The manager is the signed-in page of `OperatorScreen`. Sign-in and the first operator account stay on the installer layout. After sign-in the manager uses the same shell as a customer site: the top bar, the section bar, and the home dashboard.
 
-`./?host=manage` opens the manager on any address this server answers. On the operator hostname the same screen is `./` with no query. `Runtime::operatorAddress()` keeps that difference in every link and form.
+The manager is the operator hostname. `./` on that hostname is the screen. `./?host=manage` on a customer hostname does not open it. `Runtime::operatorAddress()` keeps a `?host=manage` query only when the request already carries one, so a bookmark on the operator hostname still posts to the same address.
 
 - `./` (or `./?host=manage`) is the dashboard. The lead is “Each row is one site. The totals are the last measurement of those sites.” The section bar is Host, with Sites, Rate, and Add a site.
 - `./?view=rate` is the rate. `./?view=add` is the form that adds a site.

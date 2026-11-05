@@ -304,8 +304,10 @@ foreach ($foreign['headers'] as $line) {
 $check(!$forwardedSecure, 'a forwarded protocol from an untrusted address does not mark the cookie Secure');
 
 $managed = $http('GET', $base . '?host=manage', [], [], ['Host: civic.example.com']);
-$check(str_contains($managed['body'], 'Operator sign in'), '?host=manage on another hostname asks for the operator password');
+$check(str_contains($managed['body'], 'Not a customer site'), '?host=manage on another hostname is not the manager');
+$check(!str_contains($managed['body'], 'Operator sign in'), '?host=manage on another hostname does not ask for the operator password');
 $check(!str_contains($managed['body'], 'onerror'), '?host=manage does not list sites before sign-in');
+$check(!str_contains($managed['body'], 'platform.sqlite'), '?host=manage on another hostname does not name the operator database');
 
 $token = $tokenOf($open['body']);
 $before = PlatformDb::operatorCount($platform);
@@ -403,6 +405,10 @@ foreach ($made['headers'] as $line) {
 $check($location !== '' && !str_contains($location, '://'), 'the redirect stays on this site, got ' . $location);
 $check(is_dir($stores . '/records'), 'the site folder was created');
 $check(is_file($stores . '/records/config/adlexone_settings.json'), 'the site settings were created');
+$customer = $http('GET', $base . '?host=manage', [], [], ['Host: records.example.com']);
+$check(str_contains($customer['body'], 'The files for this site are already on the server.'), 'a customer address with ?host=manage is that site’s setup');
+$check(!str_contains($customer['body'], 'Operator sign in'), 'a customer address does not show the operator sign-in');
+$check(!str_contains($customer['body'], 'ADLEXONE_OPERATOR'), 'a customer address does not name the operator cookie');
 
 file_put_contents($stores . '/records/inside.txt', 'INSIDE-MARKER');
 file_put_contents($tmp . '/outside.txt', 'OUTSIDE-MARKER-7f3a');

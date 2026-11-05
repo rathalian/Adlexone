@@ -103,11 +103,11 @@ final class HelpText
             $platformDb !== '' ? self::pre(self::commands($user, [], [$platformDb])) : '',
             self::p('SQLite also writes -wal and -shm files next to each database while it is in use. Backup on this screen checkpoints those into the main file, then downloads the folder.'),
             self::h('Turning SaaS mode on'),
-            self::p('Open ' . self::code('./?host=install') . ' on a copy that is not in SaaS mode yet and has no administrator. ' . self::code('./?install=host') . ' is the same page. That installer writes INLAY_STORES and INLAY_OPERATOR_HOST into ' . self::code('config/platform.json') . ' next to the code. Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
-            self::p('Open ' . self::code('./?host=manage') . ' on any address this server answers to reach the customer sites screen. The operator hostname opens that screen with no query. The operator password is still required. Sites, Rate, and Add a site are separate places on that screen. Details holds the notes.'),
+            self::p('Open ' . self::code('./?host=install') . ' on a copy that is not in SaaS mode yet and has no administrator. ' . self::code('./?install=host') . ' is the same page. The page writes a setup token one folder above the document root and asks for that value. It does not show the value. That installer writes INLAY_STORES and INLAY_OPERATOR_HOST into ' . self::code('config/platform.json') . ' next to the code. Environment values win over the file. Leave both empty for a single self-hosted site with no operator screen.'),
+            self::p('The customer sites screen is the operator hostname, with no query. A customer hostname does not open it. The first operator account asks for a setup token written beside the operator database. The operator password is required after that. Sites, Rate, and Add a site are separate places on that screen. Details holds the notes.'),
             self::h('Creating a customer'),
             self::p(self::customerAddressSentence($operatorHost)),
-            self::p('Leave the admin password blank if they should finish setup themselves. The setup page they see names their database, settings folder, and attachments folder, and it repeats the permission commands. Fill in the admin username and password here if you are creating the first account for them.'),
+            self::p('Leave the admin password blank and their first visit writes a setup token beside that site’s database. Read the file and give the value to the customer. The page does not show it. Fill in the admin username and password here if you are creating the first account for them.'),
             self::h('Changing a site'),
             self::p('Open the site from the dashboard. You can change the display name, the own domain, and the contact email. The slug is the folder name and it stays as it is. The display name is written to that site’s settings. When an own domain is saved, that name becomes the public address, and the slug address keeps working. The contact email stays on this list.'),
             self::h('Usage and cost'),
@@ -131,7 +131,7 @@ final class HelpText
         $database = $platformDb !== '' ? $platformDb : rtrim($suggested, '/\\') . DIRECTORY_SEPARATOR . 'platform.sqlite';
 
         return self::article('Hosting customer sites', [
-            self::p('This installer turns this copy of Adlexone into a host of customer sites. It is a different page from the self-hosted installer. A customer finishing their own hostname is not this page.'),
+            self::p('This installer turns this copy of Adlexone into a host of customer sites. It is a different page from the self-hosted installer. A customer finishing their own hostname is not this page. Opening it writes a setup token one folder above the document root. Enter that value. The page does not show it.'),
             self::p('There are four steps. The document root, the stores directory, and the operator hostname are saved together. The operator account is created after that, on the operator hostname.'),
             self::facts([
                 'Code' => $install,
@@ -159,7 +159,7 @@ final class HelpText
         return self::article('Point a name at this site', [
             self::p('The site address is the slug, then ' . self::code($parent) . '. For example, ' . self::code($example) . '. Creating the site does not add a DNS record. One wildcard, ' . self::code('*.' . $parent) . ', already points every name under that parent at this server.'),
             self::h('A name the customer owns'),
-            self::p('Enter that name in Own domain. For example, ' . self::code($own) . '. At their DNS host, add a CNAME. The name is the one you entered. The target is this site’s address, ' . self::code($example) . '. When the name resolves, open it. The slug address keeps working.'),
+            self::p('Enter that name in Own domain. For example, ' . self::code($own) . '. It has to be a name outside ' . self::code($parent) . ', because every name under ' . self::code($parent) . ' is a slug on this server. At their DNS host, add a CNAME. The name is the one you entered. The target is this site’s address, ' . self::code($example) . '. When the name resolves, open it. The slug address keeps working.'),
             self::p('A name with nothing in front of the customer’s domain, such as ' . self::code('health.example.com') . ', cannot be a CNAME. Use an A record to the address ' . self::code($example) . ' resolves to.'),
             self::p('The certificate has to cover the name. On this server that is the host’s certificate tool. Adlexone does not request a certificate and does not change DNS.'),
         ]);
@@ -182,11 +182,6 @@ final class HelpText
     {
         return self::article('This site is turned off', [
             self::p('The operator suspended this address. Nothing was deleted.'),
-            self::facts([
-                'SQLite database' => $paths['sqlite'] ?? '',
-                'Settings' => $paths['config'] ?? '',
-                'Uploaded files' => $paths['attachments'] ?? '',
-            ]),
             self::p('The operator can resume the site from ' . self::code($paths['operator_host'] ?? 'the operator host') . '. Until then this address stays on this page.'),
         ]);
     }
@@ -201,14 +196,10 @@ final class HelpText
             $blocks[] = self::p($notice);
         }
         $blocks[] = self::p('Customer sites answer only on a hostname the operator has registered. This address is not one of them.');
-        $blocks[] = self::facts([
-            'Operator address' => ($paths['operator_host'] ?? '') !== '' ? $paths['operator_host'] : '(not set)',
-            'Customer folders' => ($paths['stores'] ?? '') !== '' ? $paths['stores'] : '(single site, no stores directory)',
-            'Operator database' => $paths['platform_db'] ?? '',
-            'Document root' => $paths['public'] ?? '',
-        ]);
-        $blocks[] = self::p('Open ' . self::code('./?host=manage') . ' on this address to sign in and manage customer sites. The operator hostname opens that screen with no query.');
-        $blocks[] = self::p('A customer database, settings, and uploads are created under the stores folder, outside the document root, owned by ' . self::code($paths['php_user'] ?? Runtime::phpUser()) . ' with directories at mode 700 and the SQLite file at mode 600.');
+        $operator = (string) ($paths['operator_host'] ?? '');
+        if ($operator !== '') {
+            $blocks[] = self::p('The operator site is ' . self::code($operator) . '. Customer sites are not managed from this address.');
+        }
 
         return self::article('Address not recognised', $blocks);
     }

@@ -189,16 +189,62 @@ final class SiteUsage
     }
 
     /**
+     * The host this request asked for, without a port. An empty string means the
+     * header was not a hostname. Callers must not treat that as a customer site.
+     */
+    public static function requestName(string $value): string
+    {
+        $host = strtolower(trim($value));
+        if ($host === '') {
+            return '';
+        }
+        if (str_starts_with($host, '[')) {
+            $end = strpos($host, ']');
+
+            return $end === false ? '' : substr($host, 1, $end - 1);
+        }
+
+        return preg_replace('/:\d+$/', '', $host) ?? $host;
+    }
+
+    public static function isIpAddress(string $host): bool
+    {
+        return filter_var($host, FILTER_VALIDATE_IP) !== false;
+    }
+
+    /**
+     * A DNS name of at least two labels. Each label is letters, digits, and
+     * hyphens, and it does not start or end with a hyphen. A trailing dot, an
+     * empty label, and an address are refused.
+     */
+    public static function isDnsName(string $host): bool
+    {
+        if ($host === '' || strlen($host) > 253) {
+            return false;
+        }
+        $labels = explode('.', $host);
+        if (count($labels) < 2) {
+            return false;
+        }
+        foreach ($labels as $label) {
+            if (preg_match('/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/', $label) !== 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * The operator address. A public hostname still needs a dot. localhost is the name this machine uses.
      */
     public static function assertOperatorHost(string $host): string
     {
-        $host = strtolower(trim($host));
-        $host = preg_replace('/:\d+$/', '', $host) ?? $host;
-        if ($host === 'localhost') {
+        $host = self::requestName($host);
+        if ($host === 'localhost' || self::isIpAddress($host)) {
             return $host;
         }
-        if (strlen($host) > 253 || preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
+        if (!self::isDnsName($host)) {
             throw new \RuntimeException('Enter the full hostname for the operator site, such as operate.example.com. localhost is also accepted.');
         }
 
@@ -207,12 +253,12 @@ final class SiteUsage
 
     public static function assertHostname(string $host, string $operatorHost): string
     {
-        $host = strtolower(trim($host));
-        if (strlen($host) > 253 || preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || !str_contains($host, '.')) {
-            throw new \RuntimeException('Enter the full hostname customers will use, such as health.example.com.');
-        }
-        if (strcasecmp($host, $operatorHost) === 0) {
+        $host = self::requestName($host);
+        if ($host !== '' && strcasecmp($host, $operatorHost) === 0) {
             throw new \RuntimeException('That hostname is the operator site. Use a different hostname for the customer.');
+        }
+        if ($host === 'localhost' || self::isIpAddress($host) || !self::isDnsName($host)) {
+            throw new \RuntimeException('Enter the full hostname customers will use, such as health.example.com.');
         }
 
         return $host;
@@ -256,6 +302,10 @@ final class SiteUsage
         $host = self::assertHostname($host, $operatorHost);
         if (strcasecmp($host, $primary) === 0) {
             throw new \RuntimeException('That domain is already this site\'s address. Leave Own domain empty.');
+        }
+        $parent = self::siteParent($operatorHost);
+        if ($parent !== '' && ($host === $parent || str_ends_with($host, '.' . $parent))) {
+            throw new \RuntimeException('That domain is under ' . $parent . '. Own domain has to be a name the customer controls, such as records.health.example.com.');
         }
 
         return $host;

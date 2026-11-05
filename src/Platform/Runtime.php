@@ -56,14 +56,7 @@ final class Runtime
         $host = self::requestHost();
 
         if ($stores !== '') {
-            if (self::wantsManage() && $operatorHost !== '') {
-                $host = $operatorHost;
-            }
             self::definePlatform($install, $stores, $operatorHost, $platformDb, $host);
-            if (self::wantsManage() && $platformDb !== '' && self::$mode !== self::OPERATOR) {
-                self::$notice = '';
-                self::$mode = self::OPERATOR;
-            }
             return;
         }
 
@@ -104,23 +97,41 @@ final class Runtime
         }
     }
 
+    /**
+     * Cookie name for this request. The operator and each customer site use a
+     * different name. The cookie is not given a Domain, so a browser keeps it
+     * on the hostname that set it.
+     */
+    public static function sessionName(): string
+    {
+        if (self::$mode === self::OPERATOR) {
+            return 'ADLEXONE_OPERATOR';
+        }
+        $slug = (string) (self::$paths['store_slug'] ?? '');
+        if ($slug !== '') {
+            return 'ADLEXONE' . substr(hash('sha256', $slug), 0, 16);
+        }
+
+        return 'PHPSESSID';
+    }
+
     public static function startSession(): void
     {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            return;
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            ini_set('session.use_strict_mode', '1');
+            ini_set('session.use_only_cookies', '1');
+            session_name(self::sessionName());
+            $secure = PublicBaseUrl::https($_SERVER);
+            session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => '/',
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]);
+            session_start();
         }
-        if (self::$mode === self::OPERATOR) {
-            session_name('ADLEXONE_OPERATOR');
-        }
-        $secure = PublicBaseUrl::https($_SERVER);
-        session_set_cookie_params([
-            'lifetime' => 0,
-            'path' => '/',
-            'secure' => $secure,
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
-        session_start();
+        self::bindSession();
     }
 
     public static function needsSetup(string $sqlite): bool
@@ -178,8 +189,10 @@ final class Runtime
     }
 
     /**
-     * Address of the customer-sites screen. ?host=manage stays on the query so a
-     * later request on another hostname still opens the operator database.
+     * Address of the customer-sites screen on this hostname. The manager runs
+     * only when the request host is the operator host. A ?host=manage bookmark
+     * on that host keeps its query. The same query on a customer host does not
+     * open the manager.
      */
     public static function operatorAddress(string $query = ''): string
     {
@@ -197,13 +210,16 @@ final class Runtime
 
     public static function requestHost(): string
     {
-        $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost')));
-        $host = preg_replace('/:\d+$/', '', $host) ?? $host;
-        if (preg_match('/^[a-z0-9.-]+$/', $host) !== 1) {
+        $raw = (string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+        if ($raw === '') {
             return 'localhost';
         }
+        $host = SiteUsage::requestName($raw);
+        if ($host === 'localhost' || SiteUsage::isIpAddress($host) || SiteUsage::isDnsName($host)) {
+            return $host;
+        }
 
-        return $host;
+        return '';
     }
 
     /**
@@ -301,11 +317,12 @@ final class Runtime
             return;
         }
 
-        $store = is_file($platformDb) ? PlatformDb::storeByHost($platformDb, $host) : null;
+        $store = $host !== '' && is_file($platformDb) ? PlatformDb::storeByHost($platformDb, $host) : null;
         if ($store === null) {
             self::$notice = 'No customer site uses this address.';
-            self::constants($install, $installConfig, $installAttachments, $platformDb);
-            self::$paths = self::pathSet($install, $installConfig, $installAttachments, $platformDb, $stores, $operatorHost, $platformDb);
+            $closed = $install . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'not-a-customer.sqlite';
+            self::constants($install, $installConfig, $installAttachments, $closed);
+            self::$paths = self::pathSet($install, $installConfig, $installAttachments, $closed, $stores, $operatorHost, $platformDb);
             self::$mode = self::UNKNOWN;
             return;
         }
@@ -369,6 +386,39 @@ final class Runtime
         if (!defined('DSN')) {
             define('DSN', 'sqlite:' . $sqliteFile);
         }
+    }
+
+    /**
+     * Drops a session that was started for a different site. The session id is
+     * only a file name, so the cookie name alone does not keep customer data apart.
+     */
+    private static function bindSession(): void
+    {
+        if (self::$mode === self::OPERATOR) {
+            self::claimSession('_adlexone_host', (string) (self::$paths['operator_host'] ?? ''));
+
+            return;
+        }
+        $slug = (string) (self::$paths['store_slug'] ?? '');
+        if ($slug !== '') {
+            self::claimSession('_adlexone_store', $slug);
+        }
+    }
+
+    private static function claimSession(string $key, string $value): void
+    {
+        if ($value === '') {
+            return;
+        }
+        $bound = $_SESSION[$key] ?? '';
+        if (!is_string($bound)) {
+            $bound = '';
+        }
+        if ($bound !== '' && !hash_equals($bound, $value)) {
+            $_SESSION = [];
+            session_regenerate_id(true);
+        }
+        $_SESSION[$key] = $value;
     }
 
     private static function env(string $name): string
