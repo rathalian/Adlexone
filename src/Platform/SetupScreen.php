@@ -507,7 +507,7 @@ final class SetupScreen
                 'text',
                 $path,
                 true,
-                'One folder higher than the document root. Create this folder, then check it. For example, ' . InstallLayout::suggest($install) . '.',
+                self::outsideRootHelp(InstallLayout::suggest($install)),
                 '',
                 'off',
                 $focus,
@@ -763,6 +763,14 @@ final class SetupScreen
         }
 
         return $html . '</fieldset>';
+    }
+
+    private static function outsideRootHelp(string $example): string
+    {
+        $web = InstallLayout::publicRoot();
+        $where = $web !== '' ? ', which is ' . $web : '';
+
+        return 'The storage directory must sit outside the public document root' . $where . '. Create it one directory up, then check it. For example, ' . $example . '.';
     }
 
     private static function field(

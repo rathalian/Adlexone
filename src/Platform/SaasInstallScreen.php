@@ -73,9 +73,9 @@ final class SaasInstallScreen
         $result = $probe;
         $result['platform_db'] = '';
         $dir = $result['directory'];
-        $doc = InstallLayout::canonical($documentRoot ?? (string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $doc = InstallLayout::publicRoot($documentRoot);
         $where = $doc !== '' ? $doc : 'the web folder';
-        if ($dir !== '' && InstallLayout::inWebFolder($dir, $documentRoot)) {
+        if ($dir !== '' && $doc !== '' && InstallLayout::inWebFolder($dir, $doc)) {
             $detail = 'This folder is inside the web folder (' . $where . '). The stores directory has to sit outside the website, because it holds every customer’s database, settings, and uploads.';
             $result['checks'][] = self::check('outside', 'Outside the website', false, $detail);
             $result['ok'] = false;
@@ -551,7 +551,7 @@ final class SaasInstallScreen
             'Stores directory',
             'stores_path',
             $path,
-            'One folder higher than the document root. Create this folder, then check it. For example, ' . InstallLayout::suggestStores($paths['install']) . '.',
+            self::outsideRootHelp('stores directory', InstallLayout::suggestStores($paths['install'])),
             $focus
         );
         if ($preview !== '') {
@@ -660,6 +660,14 @@ final class SaasInstallScreen
         }
 
         return $html . '</fieldset>';
+    }
+
+    private static function outsideRootHelp(string $name, string $example): string
+    {
+        $web = InstallLayout::publicRoot();
+        $where = $web !== '' ? ', which is ' . $web : '';
+
+        return 'The ' . $name . ' must sit outside the public document root' . $where . '. Create it one directory up, then check it. For example, ' . $example . '.';
     }
 
     private static function field(string $label, string $name, string $value, string $help, bool $focus): string

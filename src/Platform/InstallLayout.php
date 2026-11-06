@@ -60,6 +60,34 @@ final class InstallLayout
         return self::besideDocumentRoot($install, 'storage-saas', $documentRoot);
     }
 
+    /**
+     * The folder the public site serves. When this virtual host is a directory
+     * inside public_html, the public document root is public_html.
+     */
+    public static function publicRoot(?string $documentRoot = null): string
+    {
+        $doc = $documentRoot !== null
+            ? self::canonical($documentRoot)
+            : self::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($doc === '') {
+            return '';
+        }
+        $found = '';
+        $built = '';
+        foreach (explode(DIRECTORY_SEPARATOR, $doc) as $part) {
+            if ($part === '') {
+                $built = DIRECTORY_SEPARATOR;
+                continue;
+            }
+            $built = rtrim($built, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $part;
+            if ($part === 'public_html') {
+                $found = $built;
+            }
+        }
+
+        return $found !== '' ? $found : $doc;
+    }
+
     public static function publicFolderNote(string $install, ?string $documentRoot = null): string
     {
         if (self::detect($install, $documentRoot) === self::PUBLIC_FOLDER) {
@@ -75,9 +103,7 @@ final class InstallLayout
 
     private static function besideDocumentRoot(string $install, string $name, ?string $documentRoot): string
     {
-        $doc = $documentRoot !== null
-            ? self::canonical($documentRoot)
-            : self::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $doc = self::publicRoot($documentRoot);
         $parent = $doc !== '' ? dirname($doc) : '';
         if ($parent === '' || $parent === $doc || $parent === '.') {
             $parent = dirname(rtrim($install, '/\\'));

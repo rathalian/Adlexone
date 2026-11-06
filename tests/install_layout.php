@@ -299,6 +299,8 @@ $homeProbe = InstallLayout::probe($install, $accountHome, InstallLayout::PUBLIC_
 $check($homeProbe['ok'] === false && str_contains($homeProbe['message'], 'has to stay open'), 'the home directory cannot be the storage directory');
 $check(InstallLayout::suggest($install, $accountHome . '/public_html') === $accountHome . '/storage-host', 'storage-host is suggested one folder above the document root');
 $check(InstallLayout::suggestStores($install, $accountHome . '/public_html') === $accountHome . '/storage-saas', 'storage-saas is suggested one folder above the document root');
+$check(InstallLayout::publicRoot($accountHome . '/public_html/adlexone_cloud') === $accountHome . '/public_html', 'a folder inside public_html keeps public_html as the public document root');
+$check(InstallLayout::suggestStores($install, $accountHome . '/public_html/adlexone_cloud') === $accountHome . '/storage-saas', 'storage-saas stays one directory above public_html when the package is inside it');
 $check(str_contains(InstallLayout::publicFolderNote($install, $accountHome . '/public_html'), $install . '/public'), 'a document root that is not public names the public folder');
 $check(InstallLayout::publicFolderNote($install, $install . '/public') === '', 'a public document root does not add a second suggestion');
 $dataDir = $accountHome . '/storage-host';

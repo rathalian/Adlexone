@@ -142,7 +142,7 @@ final class HelpText
                 'PHP is running as' => $user,
             ]),
             self::h('Stores directory'),
-            self::p('Each customer gets one folder under the stores directory. For example, ' . self::code(rtrim($suggested, '/\\') . '/health/') . '. The directory has to sit outside the website, one folder higher than the document root. Create it before you check it. This page does not create it. PHP, running as ' . self::code($user) . ', must be able to create, read, update, and delete files there. The check removes its trial files before the page answers.'),
+            self::p('Each customer gets one folder under the stores directory. For example, ' . self::code(rtrim($suggested, '/\\') . '/health/') . '. ' . self::outsideRootSentence() . ' This page does not create it. PHP, running as ' . self::code($user) . ', must be able to create, read, update, and delete files there. The check removes its trial files before the page answers.'),
             self::h('Operator database'),
             self::p('The operator login and the list of sites are stored in platform.sqlite inside the stores directory, not inside a customer folder and not inside the website. That file is mode 600. A customer folder created inside the stores directory is mode 700. The stores directory and every folder above it are left as they are.'),
             $database !== '' ? self::pre(self::commands($user, [], [$database])) : '',
@@ -215,6 +215,14 @@ final class HelpText
     private static function h(string $text): string
     {
         return '<h3 class="setup-help__heading">' . Html::e($text) . '</h3>';
+    }
+
+    private static function outsideRootSentence(): string
+    {
+        $web = InstallLayout::publicRoot();
+        $where = $web !== '' ? ', which is ' . self::code($web) : '';
+
+        return 'The stores directory must sit outside the public document root' . $where . '. Create it one directory up, then check it.';
     }
 
     private static function p(string $text): string

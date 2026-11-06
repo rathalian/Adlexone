@@ -183,6 +183,10 @@ $homeStores = SaasInstallScreen::assessStores($install, $saasDir, InstallLayout:
 $check($homeStores['ok'] === true, 'storage-saas next to public_html passes: ' . $homeStores['message']);
 $check($homeStores['platform_db'] === $saasDir . '/platform.sqlite', 'the operator database is inside storage-saas');
 $check(InstallLayout::suggestStores($install, $accountHome . '/public_html') === $saasDir, 'the stores field suggests storage-saas above the document root');
+mkdir($accountHome . '/public_html/adlexone_cloud', 0755, true);
+mkdir($accountHome . '/public_html/storage-saas', 0755, true);
+$nestedWeb = SaasInstallScreen::assessStores($install, $accountHome . '/public_html/storage-saas', InstallLayout::PACKAGE, $accountHome . '/public_html/adlexone_cloud');
+$check($nestedWeb['ok'] === false && str_contains($nestedWeb['message'], $accountHome . '/public_html'), 'a stores directory inside public_html is refused when the package is a folder inside it');
 $savedHome = getenv('HOME');
 putenv('HOME=' . $accountHome);
 try {
