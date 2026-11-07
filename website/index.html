@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Adlexone</title>
-    <meta name="description" content="An application is a line of work. Adlexone keeps the records. You move the status, and the application writes the date, the log, the notice, and the email. You run the software on your server.">
+    <meta name="description" content="Adlexone is the software you use to build an application for a line of work. You choose the fields, the statuses, and the rules. A person opens a record and moves the status. You run it on your server.">
     <meta name="theme-color" content="#f7f8fa">
     <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/site.css">
@@ -26,7 +26,7 @@
                     <span class="menu-btn__close">Close</span>
                 </label>
                 <nav class="nav" aria-label="Pages">
-                    <a href="work.html">Work</a>
+                    <a href="work.html">Applications</a>
                     <a href="hosting.html">Hosting</a>
                     <a class="ask" href="ask.html">Ask for a copy</a>
                 </nav>
@@ -35,33 +35,91 @@
     </header>
     <main id="content">
         <div class="sheet">
-            <div class="walk">
-                <div class="hero">
-                    <div class="hero__copy">
-                        <h1>An application is a line of work.</h1>
-                        <p class="lede">Adlexone keeps the records for that work. You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
-                        <div class="actions">
-                            <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                            <a class="btn btn--line" href="#publishing-demo">Publishing</a>
-                            <a class="btn btn--line" href="#leave-demo">Leave requests</a>
-                            <a class="btn btn--line" href="#admin-demo">Administrators demo</a>
-                            <a class="btn btn--line" href="work.html">See the work</a>
-                        </div>
-                        <p class="stills">The pictures are stills from Health.</p>
+            <div class="hero">
+                <div class="hero__copy">
+                    <h1>Build an application for a line of work.</h1>
+                    <p class="lede">Adlexone is the software you use to build it. You choose the fields on each record, the statuses that record moves through, and the rules that run when a status changes. A person opens a record and moves the status. The application writes the date, the log, the notice, and the email. The timeline and the files stay on the record. You run the software on your server.</p>
+                    <div class="actions">
+                        <a class="btn btn--ink" href="#you-set">See what you set</a>
+                        <a class="btn btn--line" href="ask.html">Ask for a copy</a>
                     </div>
+                </div>
+                <figure class="picture picture--ui">
+                    <img src="assets/demo/publishing-2.png" width="1265" height="1318" alt="A record in Publishing. Damaged Good is a manuscript. Status is Reading, and the next step is to finish the reading. The timeline says the record was opened.">
+                    <figcaption>Publishing is the example. This record is the manuscript Damaged Good. The fields, the status, the next step, and the timeline are on this screen. Files sit on the record.</figcaption>
+                </figure>
+            </div>
+
+            <section class="section" id="using" aria-labelledby="using-title">
+                <h2 id="using-title">The screen a person uses</h2>
+                <p class="intro">The person doing the work opens a record, sees where it stands, and moves the status.</p>
+                <div class="use">
+                    <ul class="points">
+                        <li>
+                            <h3>The list</h3>
+                            <p>The list is the work, with the status on each record.</p>
+                        </li>
+                        <li>
+                            <h3>The fields</h3>
+                            <p>Open a record. The fields are the ones set for that work. On Damaged Good they are the manuscript, the writer, the kind, and the word count.</p>
+                        </li>
+                        <li>
+                            <h3>The timeline</h3>
+                            <p>The timeline is the log of what has happened. Files sit on the record. Next step says what is waiting, such as finish the reading.</p>
+                        </li>
+                        <li>
+                            <h3>The status</h3>
+                            <p>The person moves the status and saves. They do not type the date, the log, or the notice. The rule does that.</p>
+                        </li>
+                    </ul>
                     <figure class="picture picture--ui">
-                        <img src="assets/demo/publishing-1.png" width="1280" height="709" alt="Publishing at Health. Four manuscripts are listed. Damaged Good is Reading.">
-                        <figcaption>Publishing at Health. Damaged Good is being read.</figcaption>
+                        <img src="assets/demo/publishing-1.png" width="1280" height="709" alt="The Publishing list at Health. Four manuscripts are listed, and each row shows a status. Damaged Good is Reading.">
+                        <figcaption>The Publishing list. Each row is a record, and the status is on the row.</figcaption>
                     </figure>
                 </div>
+            </section>
+
+            <section class="section" id="you-set" aria-labelledby="you-set-title">
+                <h2 id="you-set-title">What you set</h2>
+                <p class="intro">An application is one line of work. You decide the fields, the statuses, and what happens when a status changes. Blank starts with no fields.</p>
+                <ul class="points points--grid">
+                    <li>
+                        <h3>Fields</h3>
+                        <p>Text, a date, a menu, and a person. Status is one of the menus, with the words used for that work.</p>
+                    </li>
+                    <li>
+                        <h3>Statuses</h3>
+                        <p>Where the work stands, and the ways it can finish. Publishing uses Received, Reading, With the writer, Editing, Approved, and Declined.</p>
+                    </li>
+                    <li>
+                        <h3>On every record</h3>
+                        <p>The timeline, the files, the dates, and Next step. These are part of the application.</p>
+                    </li>
+                    <li>
+                        <h3>Rules</h3>
+                        <p>When a status changes, a rule can stamp a date, write the log, post a notice, send the email, and set or clear Next step.</p>
+                    </li>
+                </ul>
+            </section>
+
+            <div class="walk">
+                <section class="section" id="example" aria-labelledby="example-title">
+                    <h2 id="example-title">One example</h2>
+                    <p class="intro">Publishing is one application: a manuscript from the day it arrives until it is approved or declined. Leave requests is another: a day off, from the day it is asked until it is approved or declined. Both are a record, a status, and rules.</p>
+                    <div class="actions">
+                        <a class="btn btn--line" href="#publishing-demo">See Publishing in use</a>
+                        <a class="btn btn--line" href="#build-demo">See how it is built</a>
+                        <a class="btn btn--line" href="work.html">Other applications</a>
+                    </div>
+                </section>
                 <div class="demos">
                     <section class="tour tour--publishing" id="publishing-demo" aria-labelledby="publishing-demo-title">
                         <div class="tour__head">
                             <div>
-                                <h2 id="publishing-demo-title">Using Publishing</h2>
-                                <p>Damaged Good is being read. You approve the manuscript. The application writes the date, the log, the notice, and the email.</p>
+                                <h2 id="publishing-demo-title">Publishing in use</h2>
+                                <p>Damaged Good is being read. You approve the manuscript. The application writes the date, the log, the notice, and the email. A leave request is the same kind of record.</p>
                             </div>
-                            <a class="tour__close" href="#content">Close</a>
+                            <a class="tour__close" href="#example">Close</a>
                         </div>
                         <div class="stage">
                             <input class="switch" type="radio" name="publishing-step" id="publishing-step-1" checked>
@@ -145,103 +203,13 @@
                             </figure>
                         </div>
                     </section>
-                    <section class="tour tour--user" id="leave-demo" aria-labelledby="leave-demo-title">
+                    <section class="tour tour--admin" id="build-demo" aria-labelledby="build-demo-title">
                         <div class="tour__head">
                             <div>
-                                <h2 id="leave-demo-title">Using Leave requests</h2>
-                                <p>Reid asks for Thursday 12 November. You approve the request. The application writes the date, the log, the notice, and the email.</p>
+                                <h2 id="build-demo-title">Building an application</h2>
+                                <p>You create the application and choose a blueprint. The fields and the rules are already there. This example is Publishing. Blank starts with no fields.</p>
                             </div>
-                            <a class="tour__close" href="#content">Close</a>
-                        </div>
-                        <div class="stage">
-                            <input class="switch" type="radio" name="user-step" id="user-step-1" checked>
-                            <input class="switch" type="radio" name="user-step" id="user-step-2">
-                            <input class="switch" type="radio" name="user-step" id="user-step-3">
-                            <input class="switch" type="radio" name="user-step" id="user-step-4">
-                            <figure class="shot shot--1">
-                                <figcaption>
-                                    <p>Leave requests is the list. Reid, 12 November is still to be decided.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="user-step-1">1 List</label>
-                                            <label for="user-step-2">2 Request</label>
-                                            <label for="user-step-3">3 Approved</label>
-                                            <label for="user-step-4">4 Notice</label>
-                                        </div>
-                                        <span class="shot__count">1 of 4</span>
-                                        <label class="btn btn--line" for="user-step-2">Next</label>
-                                    </div>
-                                </figcaption>
-                                <label class="shot__frame" for="user-step-2">
-                                    <img src="assets/demo/user-1.png" width="1280" height="900" alt="Leave requests at Health. Four requests are listed. Reid, 12 November is Asked.">
-                                </label>
-                            </figure>
-                            <figure class="shot shot--2">
-                                <figcaption>
-                                    <p>Open the request. Status is Asked, and the next step is to decide it.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="user-step-1">1 List</label>
-                                            <label for="user-step-2">2 Request</label>
-                                            <label for="user-step-3">3 Approved</label>
-                                            <label for="user-step-4">4 Notice</label>
-                                        </div>
-                                        <span class="shot__count">2 of 4</span>
-                                        <label class="btn btn--line" for="user-step-1">Back</label>
-                                        <label class="btn btn--line" for="user-step-3">Next</label>
-                                    </div>
-                                </figcaption>
-                                <label class="shot__frame" for="user-step-3">
-                                    <img src="assets/demo/user-2.png" width="1280" height="1405" alt="The request Reid, 12 November. Status is Asked, and the next step is to decide it.">
-                                </label>
-                            </figure>
-                            <figure class="shot shot--3">
-                                <figcaption>
-                                    <p>Move Status to Approved and save. The application stamps Approved on, writes the log, and clears Next step.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="user-step-1">1 List</label>
-                                            <label for="user-step-2">2 Request</label>
-                                            <label for="user-step-3">3 Approved</label>
-                                            <label for="user-step-4">4 Notice</label>
-                                        </div>
-                                        <span class="shot__count">3 of 4</span>
-                                        <label class="btn btn--line" for="user-step-2">Back</label>
-                                        <label class="btn btn--line" for="user-step-4">Next</label>
-                                    </div>
-                                </figcaption>
-                                <label class="shot__frame" for="user-step-4">
-                                    <img src="assets/demo/user-3.png" width="1280" height="1304" alt="Reid, 12 November after it is approved. Approved on is 7 November 2026, Next step is clear, and the log says Approved Reid, 12 November.">
-                                </label>
-                            </figure>
-                            <figure class="shot shot--4">
-                                <figcaption>
-                                    <p>A notice is posted that Reid, 12 November has been approved. The same words are the email.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="user-step-1">1 List</label>
-                                            <label for="user-step-2">2 Request</label>
-                                            <label for="user-step-3">3 Approved</label>
-                                            <label for="user-step-4">4 Notice</label>
-                                        </div>
-                                        <span class="shot__count">4 of 4</span>
-                                        <label class="btn btn--line" for="user-step-3">Back</label>
-                                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                                    </div>
-                                </figcaption>
-                                <div class="shot__frame">
-                                    <img src="assets/demo/user-4.png" width="1280" height="678" alt="Announcements for Leave requests. The latest notice says Reid, 12 November has been approved.">
-                                </div>
-                            </figure>
-                        </div>
-                    </section>
-                    <section class="tour tour--admin" id="admin-demo" aria-labelledby="admin-demo-title">
-                        <div class="tour__head">
-                            <div>
-                                <h2 id="admin-demo-title">Setting up Publishing</h2>
-                                <p>An administrator creates the application from the Publishing blueprint. The fields and the rules are already there.</p>
-                            </div>
-                            <a class="tour__close" href="#content">Close</a>
+                            <a class="tour__close" href="#example">Close</a>
                         </div>
                         <div class="stage">
                             <input class="switch" type="radio" name="admin-step" id="admin-step-1" checked>
@@ -249,7 +217,7 @@
                             <input class="switch" type="radio" name="admin-step" id="admin-step-3">
                             <figure class="shot shot--1">
                                 <figcaption>
-                                    <p>Create an application. The name is Publishing, and the guide explains how a manuscript moves.</p>
+                                    <p>Create an application. The name in this example is Publishing, and the guide explains how a manuscript moves. Blank starts with no fields.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
                                             <label for="admin-step-1">1 Create</label>
@@ -306,7 +274,7 @@
             </div>
 
             <section class="section section--last" aria-labelledby="ways">
-                <h2 id="ways">Two ways to run it</h2>
+                <h2 id="ways">You run it on your server</h2>
                 <div class="tiles">
                     <a class="tile" href="hosting.html#one-site">
                         <figure class="picture picture--card">
@@ -337,13 +305,13 @@
                     <img src="assets/mark.svg" alt="" width="36" height="36">
                     <span class="brand__name">Adlexone</span>
                 </a>
-                <p>An application is a line of work. Adlexone keeps the records.</p>
+                <p>Build an application for a line of work.</p>
             </div>
             <div>
                 <strong>Pages</strong>
                 <nav aria-label="Footer">
                     <a href="index.html">Home</a>
-                    <a href="work.html">Work</a>
+                    <a href="work.html">Applications</a>
                     <a href="hosting.html">Hosting</a>
                     <a href="ask.html">Ask for a copy</a>
                 </nav>

@@ -20,22 +20,29 @@ if (!preg_match('/RewriteRule \^\([^)]*\|website\)/', $htaccess)) {
 
 $home = (string) file_get_contents($root . '/website/index.html');
 foreach ([
-    'An application is a line of work.',
-    'Using Publishing',
-    'Setting up Publishing',
-    'Using Leave requests',
+    'Build an application for a line of work.',
+    'The screen a person uses',
+    'What you set',
+    'id="you-set"',
+    'See Publishing in use',
+    'Building an application',
+    'Blank starts with no fields.',
+    'a day off',
     'id="publishing-demo"',
-    'id="leave-demo"',
-    'id="admin-demo"',
+    'id="build-demo"',
     'href="#publishing-demo"',
-    'href="#admin-demo"',
+    'href="#build-demo"',
 ] as $needle) {
     if (!str_contains($home, $needle)) {
-        fwrite(STDERR, "The home page must offer the Publishing and Leave requests demos ({$needle}).\n");
+        fwrite(STDERR, "The home page must say what an application is, then offer Publishing as the example ({$needle}).\n");
         exit(1);
     }
 }
-$shots = [
+if (str_contains($home, 'id="leave-demo"') || str_contains($home, 'id="admin-demo"') || str_contains($home, 'Using Leave requests')) {
+    fwrite(STDERR, "Leave requests is one sentence. It is not a second tour.\n");
+    exit(1);
+}
+$homeShots = [
     'publishing-1.png',
     'publishing-2.png',
     'publishing-3.png',
@@ -43,16 +50,24 @@ $shots = [
     'publishing-admin-1.png',
     'publishing-admin-2.png',
     'publishing-admin-3.png',
-    'user-1.png',
-    'user-2.png',
-    'user-3.png',
-    'user-4.png',
 ];
-foreach ($shots as $shot) {
+foreach ($homeShots as $shot) {
     if (!str_contains($home, 'assets/demo/' . $shot) || !is_file($root . '/website/assets/demo/' . $shot)) {
         fwrite(STDERR, "The home page is missing the demo picture {$shot}.\n");
         exit(1);
     }
+}
+$kept = ['user-1.png', 'user-2.png', 'user-3.png', 'user-4.png'];
+foreach ($kept as $shot) {
+    if (!is_file($root . '/website/assets/demo/' . $shot)) {
+        fwrite(STDERR, "The sales site is missing the leave still {$shot}.\n");
+        exit(1);
+    }
+}
+$work = (string) file_get_contents($root . '/website/work.html');
+if (!str_contains($work, 'Applications you can start from.') || str_contains($work, 'index.html#leave-demo')) {
+    fwrite(STDERR, "The applications page lists lines of work and does not open a leave tour.\n");
+    exit(1);
 }
 if (str_contains($home, 'Approve Home to Roost') || str_contains($home, 'id="approved"') || str_contains($home, 'id="view-parties"')) {
     fwrite(STDERR, "The home page uses stills. It does not embed the old Publishing specimen.\n");
