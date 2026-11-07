@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\support;
+namespace Adlexone\Data;
 
 /**
  * Custom field types as stored in custom_fields.field_type.

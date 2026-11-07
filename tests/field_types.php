@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
 
 $failed = 0;
 $check = static function (bool $ok, string $message) use (&$failed): void {
@@ -35,7 +35,7 @@ $check($params === ['password'], 'a type with no alias is bound as itself');
 [$sql, $params] = FieldTypes::sqlInList('password', false);
 $check($sql === '1 = 0' && $params === [], 'an empty alias list matches nothing');
 
-$source = (string) file_get_contents(dirname(__DIR__) . '/src/support/MenuOptions.php');
+$source = (string) file_get_contents(dirname(__DIR__) . '/src/Data/MenuOptions.php');
 $check(str_contains($source, 'FieldTypes::sqlInList(FieldTypes::MENU, false)'), 'menu prepare asks for the older menu names');
 $check(!str_contains($source, "field_type IN ('subMenu'"), 'menu prepare does not interpolate the alias list');
 

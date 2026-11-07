@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
-use Adlexone\support\FieldValidation;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
+use Adlexone\Data\FieldValidation;
 
 /**
  * The fields that drive an application's work surfaces.

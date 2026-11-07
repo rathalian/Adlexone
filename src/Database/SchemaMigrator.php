@@ -6,7 +6,6 @@ namespace Adlexone\Database;
 use Adlexone\Application\Rules;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\SavedSearch;
-use Adlexone\support\Database;
 
 /**
  * Shared platform schema upgrades.
@@ -763,20 +762,20 @@ final class SchemaMigrator
         foreach (Database::select('custom_fields', ['custom_field_id', 'custom_field_name', 'field_type']) as $row) {
             $name = (string) ($row['custom_field_name'] ?? '');
             $base = trim(preg_replace('/\s+\([^)]+\)\s*$/', '', $name) ?? $name);
-            $type = \Adlexone\support\FieldTypes::normalise((string) ($row['field_type'] ?? ''));
+            $type = \Adlexone\Data\FieldTypes::normalise((string) ($row['field_type'] ?? ''));
             $id = (int) $row['custom_field_id'];
-            if (in_array($base, $dates, true) && $type === \Adlexone\support\FieldTypes::TEXT_BOX) {
+            if (in_array($base, $dates, true) && $type === \Adlexone\Data\FieldTypes::TEXT_BOX) {
                 Database::update(
                     'custom_fields',
-                    ['field_type' => \Adlexone\support\FieldTypes::DATE, 'validation_type' => 'date'],
+                    ['field_type' => \Adlexone\Data\FieldTypes::DATE, 'validation_type' => 'date'],
                     'custom_field_id = ?',
                     [$id]
                 );
             }
-            if (in_array($base, ['Amount', 'Reserve'], true) && $type === \Adlexone\support\FieldTypes::TEXT_BOX) {
+            if (in_array($base, ['Amount', 'Reserve'], true) && $type === \Adlexone\Data\FieldTypes::TEXT_BOX) {
                 Database::update(
                     'custom_fields',
-                    ['field_type' => \Adlexone\support\FieldTypes::NUMBER, 'validation_type' => 'numeric'],
+                    ['field_type' => \Adlexone\Data\FieldTypes::NUMBER, 'validation_type' => 'numeric'],
                     'custom_field_id = ?',
                     [$id]
                 );

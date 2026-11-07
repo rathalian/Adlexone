@@ -5,9 +5,9 @@ namespace Adlexone\Application;
 
 use Adlexone\Data\ItemFields;
 use Adlexone\Screen\WorkScreen;
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
-use Adlexone\support\FieldValidation;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
+use Adlexone\Data\FieldValidation;
 
 /**
  * Records and fields for the screens an application adds beyond Work.

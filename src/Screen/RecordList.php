@@ -6,7 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Auth\Access;
 use Adlexone\Database\RecordListQuery;
 use Adlexone\Html\Form;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * One query and one page control for a list of records.

@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Data;
 
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
-use Adlexone\support\FieldValidation;
+use Adlexone\Database\Database;
 
 /**
  * Custom field values for items (EAV).

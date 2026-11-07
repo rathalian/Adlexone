@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Html;
 
-use Adlexone\support\FieldValidation;
+use Adlexone\Data\FieldValidation;
 
 /**
  * Escaped form markup. Class names are the contract with layouts/css/base.css.

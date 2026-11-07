@@ -6,8 +6,8 @@ namespace Adlexone\Application;
 use Adlexone\Auth\Permission;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
 
 /**
  * Guided creation of a business application: record type, fields, and nav.

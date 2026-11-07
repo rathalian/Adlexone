@@ -14,8 +14,8 @@ use Adlexone\Html\Measure;
 use Adlexone\Html\Presence;
 use Adlexone\Html\Timeline;
 use Adlexone\Http\Router;
-use Adlexone\support\Database;
-use Adlexone\support\FieldValidation;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldValidation;
 use Adlexone\Theme\Theme;
 
 /**

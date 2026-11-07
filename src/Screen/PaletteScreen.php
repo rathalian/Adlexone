@@ -11,7 +11,7 @@ use Adlexone\Application\Capabilities;
 use Adlexone\Application\ScreenCatalog;
 use Adlexone\Http\Router;
 use Adlexone\Http\TopNav;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * The data behind the search and command box that opens with Ctrl K.

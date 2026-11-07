@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\support;
+namespace Adlexone\Data;
+
+use Adlexone\Database\Database;
 
 /**
  * Checks a field value against its type (or a stored validation_type on text).

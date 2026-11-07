@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Auth;
 
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Named permissions used for authorization.

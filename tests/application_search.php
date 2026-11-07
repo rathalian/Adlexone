@@ -16,7 +16,7 @@ define('DSN', 'sqlite:' . $tmp);
 define('SET_DATE_FORMAT', 'd-m-Y, h:i A');
 
 use Adlexone\Data\SavedSearch;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 $failed = 0;
 

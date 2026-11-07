@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Adlexone\Database;
 
-use Adlexone\support\Database;
 
 /**
  * Ids, sort, and page for an item list. The sort is one column, optionally DESC.

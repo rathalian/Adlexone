@@ -4,8 +4,8 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Adlexone\Html\FieldControl;
-use Adlexone\support\FieldTypes;
-use Adlexone\support\FieldValidation;
+use Adlexone\Data\FieldTypes;
+use Adlexone\Data\FieldValidation;
 
 $failed = 0;
 
@@ -77,7 +77,7 @@ $textDateMarkup = FieldControl::render(FieldTypes::TEXT_BOX, 'custom_field_12', 
 check(is_string($textDateMarkup) && str_contains($textDateMarkup, 'value="20-10-2026"'), 'text with date validation shows the site format');
 check(is_string($textDateMarkup) && !str_contains($textDateMarkup, 'type="date"'), 'text with date validation does not use the browser date control');
 
-$markup = (new \Adlexone\support\FieldCheck())->withTitle()->onclick();
+$markup = (new \Adlexone\Data\FieldCheck())->withTitle()->onclick();
 check(preg_match('/data-field-check="([^"]*)"/', $markup, $match) === 1, 'field check is a data attribute');
 check(!str_contains($markup, 'onclick='), 'field check does not use an event handler');
 $payload = json_decode(html_entity_decode($match[1] ?? '', ENT_QUOTES), true);

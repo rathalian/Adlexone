@@ -13,7 +13,7 @@ use Adlexone\Auth\Csrf;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ScreenCatalog;
 use Adlexone\Http\Router;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;

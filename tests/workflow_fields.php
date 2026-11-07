@@ -8,7 +8,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Adlexone\Application\WorkflowFields;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 $tmp = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'inlay-workflow-' . getmypid() . '.sqlite';
 @unlink($tmp);

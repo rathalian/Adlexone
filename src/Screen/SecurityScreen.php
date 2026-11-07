@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
@@ -13,7 +13,7 @@ use Adlexone\Auth\Permission;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Breadcrumb;
 use Adlexone\Html\Form;
-use Adlexone\support\FormState;
+use Adlexone\Data\FormState;
 use Adlexone\Http\View;
 use Adlexone\Html\Html;
 use Adlexone\Platform\DefaultAccount;

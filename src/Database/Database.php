@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\support;
+namespace Adlexone\Database;
 
 /**
  * PDO access shared by the whole site.

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Adlexone\Screen;
 
 use Adlexone\Http\Request;

@@ -10,7 +10,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use Adlexone\Application\ApplicationBuilder;
 use Adlexone\Application\Rules;
 use Adlexone\Application\ScreenCatalog;
-use Adlexone\support\FieldTypes;
+use Adlexone\Data\FieldTypes;
 
 $failed = 0;
 function blueprintCheck(bool $ok, string $message): void

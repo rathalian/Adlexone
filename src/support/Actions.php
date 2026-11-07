@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Adlexone FlowIQ License Agreement 1.0
  *

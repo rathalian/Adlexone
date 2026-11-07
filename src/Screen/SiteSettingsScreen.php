@@ -1,8 +1,10 @@
 <?php
+declare(strict_types=1);
+
 namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\support\RenderNavigation;
 use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;

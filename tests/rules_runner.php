@@ -16,7 +16,7 @@ define('DSN', 'sqlite:' . $tmp);
 
 use Adlexone\Application\Rules;
 use Adlexone\Data\GroupMembership;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 $failed = 0;
 

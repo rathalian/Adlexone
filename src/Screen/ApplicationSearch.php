@@ -21,9 +21,9 @@ use Adlexone\Html\Stamp;
 use Adlexone\Http\Page;
 use Adlexone\Http\Router;
 use Adlexone\Http\View;
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
-use Adlexone\support\FieldValidation;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
+use Adlexone\Data\FieldValidation;
 
 /**
  * The Search tab of an application: one box for words, a few plain filters, and any number of field

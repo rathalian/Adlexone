@@ -6,8 +6,8 @@ namespace Adlexone\Application;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Data\GroupMembership;
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
 
 /**
  * Export / import a business application as a portable JSON solution package.

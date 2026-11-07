@@ -4,7 +4,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Adlexone\Http\Request;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 $failed = 0;
 $check = static function (bool $ok, string $message) use (&$failed): void {

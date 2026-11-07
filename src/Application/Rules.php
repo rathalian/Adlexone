@@ -6,7 +6,7 @@ namespace Adlexone\Application;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\support\Communications;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Per-application rules.
@@ -1496,7 +1496,7 @@ final class Rules
 
     public static function today(): string
     {
-        return \Adlexone\support\FieldValidation::today();
+        return \Adlexone\Data\FieldValidation::today();
     }
 
     /**

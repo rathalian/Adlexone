@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\support;
+namespace Adlexone\Data;
 
+use Adlexone\Database\Database;
 use Adlexone\Html\Blocks;
 use Adlexone\Http\Router;
 use Adlexone\Html\Form;

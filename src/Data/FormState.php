@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\support;
+namespace Adlexone\Data;
 
 /**
  * Session keys carried across a form repost, marked with the VBL_ prefix.

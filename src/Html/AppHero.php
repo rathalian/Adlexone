@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Html;
 
 use Adlexone\Application\ApplicationSettings;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * The band above an application's screens: its icon and name, the breadcrumb that says where the person is,

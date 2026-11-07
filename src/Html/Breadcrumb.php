@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Html;
 
 use Adlexone\Http\Router;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * The one breadcrumb used by every screen.

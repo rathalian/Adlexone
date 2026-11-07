@@ -6,7 +6,7 @@ namespace Adlexone\Html;
 use Adlexone\Auth\Access;
 
 use Adlexone\Http\Page;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\Text\Wording;
 use Adlexone\Theme\Theme;
 

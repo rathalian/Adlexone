@@ -8,7 +8,7 @@ use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\support\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;

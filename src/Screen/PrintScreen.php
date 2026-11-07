@@ -1,10 +1,12 @@
 <?php
+declare(strict_types=1);
+
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 
-use Adlexone\support\Database;
-use Adlexone\support\FieldTypes;
+use Adlexone\Database\Database;
+use Adlexone\Data\FieldTypes;
 use Adlexone\support\SharedMethods;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
@@ -113,7 +115,7 @@ final class PrintScreen
     			if ($row['field_type'] == FieldTypes::TEXT_AREA){
     				$value = '<br />' . nl2br(Html::e((string) $value), true) . '<br /><br />';
     			} else {
-    				$value = Html::e(\Adlexone\support\FieldValidation::display($row, $value));
+    				$value = Html::e(\Adlexone\Data\FieldValidation::display($row, $value));
     			}
     			$itemField[$row['custom_field_name']] = $value;
 

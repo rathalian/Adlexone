@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Html;
 
-use Adlexone\support\FieldTypes;
+use Adlexone\Data\FieldTypes;
 
 /**
  * Maps a stored field type to a control.

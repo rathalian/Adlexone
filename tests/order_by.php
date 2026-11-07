@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 $failed = 0;
 

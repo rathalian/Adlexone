@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Auth;
 
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Links an OAuth (OpenID Connect) sign-in to a local Adlexone user.

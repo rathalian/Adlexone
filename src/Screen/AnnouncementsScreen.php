@@ -6,7 +6,7 @@ namespace Adlexone\Screen;
 use Adlexone\Http\Request;
 
 use Adlexone\Application\ApplicationAccess;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\Http\Page;
 use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;

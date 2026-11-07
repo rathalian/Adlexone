@@ -5,7 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Configured applications and their navigation.

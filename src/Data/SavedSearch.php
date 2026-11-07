@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Data;
 
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Saved search criteria (JSON) compiled to SQL against the shared schema.

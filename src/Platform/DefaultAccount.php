@@ -93,7 +93,7 @@ final class DefaultAccount
     public static function stillInUse(): bool
     {
         try {
-            $row = \Adlexone\support\Database::first('users', ['password'], 'user_name = ?', [self::USERNAME]);
+            $row = \Adlexone\Database\Database::first('users', ['password'], 'user_name = ?', [self::USERNAME]);
         } catch (\Throwable) {
             return false;
         }

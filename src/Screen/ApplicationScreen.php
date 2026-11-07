@@ -13,7 +13,7 @@ use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Http\Router;
 use Adlexone\Http\View;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Screen formerly loaded from legacy/.

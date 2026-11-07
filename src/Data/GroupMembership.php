@@ -5,7 +5,7 @@ namespace Adlexone\Data;
 
 use Adlexone\Auth\Access;
 
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Shared group membership for users, items, and item types.

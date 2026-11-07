@@ -14,7 +14,7 @@ if (is_file($tmp)) {
 define('DSN', 'sqlite:' . $tmp);
 
 use Adlexone\Database\SchemaMigrator;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 $failed = 0;
 function check(bool $ok, string $message): void

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 
 /**
  * Settings stored on applications.settings_json for one application.

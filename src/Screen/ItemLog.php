@@ -12,14 +12,14 @@ use Adlexone\Application\RecordQuery;
 use Adlexone\Application\Rules;
 use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
-use Adlexone\support\Database;
+use Adlexone\Database\Database;
 use Adlexone\support\Actions;
-use Adlexone\support\AttachmentUpload;
+use Adlexone\Data\AttachmentUpload;
 use Adlexone\Html\FieldControl;
-use Adlexone\support\FieldCheck;
-use Adlexone\support\FieldTypes;
-use Adlexone\support\FieldValidation;
-use Adlexone\support\MenuOptions;
+use Adlexone\Data\FieldCheck;
+use Adlexone\Data\FieldTypes;
+use Adlexone\Data\FieldValidation;
+use Adlexone\Data\MenuOptions;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
@@ -104,7 +104,7 @@ final class ItemLog
         $columnArray['log_text'] = $logText;
         $columnArray['security_id'] = $_SESSION['access_user_id'];
         $columnArray['role_id'] = 5;
-        if (\Adlexone\support\Database::columnExists('core_log', 'group_id')) {
+        if (\Adlexone\Database\Database::columnExists('core_log', 'group_id')) {
             $columnArray['group_id'] = (int) (Request::postedValue('group_id') ?? 0);
         }
         // Insert into log table
