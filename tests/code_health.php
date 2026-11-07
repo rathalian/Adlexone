@@ -155,13 +155,11 @@ $filesContaining = static function (string $needle) use ($root, $productTrees): 
 
 $urlClassAllowed = [
     'src/Html/Form.php',
-    'src/Screen/FieldsScreen.php',
-    'src/Screen/ItemList.php',
 ];
 $urlExtra = array_values(array_diff($filesContaining('class="URL"'), $urlClassAllowed));
 $check(
     $urlExtra === [],
-    'class="URL" stays in Form, the fields screen, and the item list'
+    'class="URL" stays on the Form sort and page buttons'
     . ($urlExtra === [] ? '' : ': ' . implode(', ', $urlExtra))
 );
 $linkExtra = array_values(array_diff($filesContaining('class="link URL"'), ['src/Html/Form.php']));

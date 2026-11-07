@@ -231,7 +231,7 @@ final class FieldsScreen
             $parentId = (int)(Request::postedValue('parent_menu_value_id') ?? 0);
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
                 $html = TXT_294;
-                $html .= '<br><br><a href ="' . self::url('option=modify_menu_values&custom_field_id=') . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
+                $html .= '<br><br>' . Blocks::link(self::url('option=modify_menu_values&custom_field_id=' . $customFieldID), TXT_31, '', 'URL');
                 Page::current()->setBody($html);
                 return;
             }

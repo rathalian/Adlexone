@@ -106,9 +106,9 @@ final class ItemList
                     $itemTypeID = $row['item_type_id'];
                 }
                 $itemId = (int) $row['item_id'];
-                $action = Access::outputIfAllowed('<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>', Permission::RECORDS_EDIT);
-                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>', Permission::RECORDS_ASSIGN);
-                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>', Permission::RECORDS_EDIT);
+                $action = Access::outputIfAllowed(Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=show_attachments'), TXT_389, '', 'URL'), Permission::RECORDS_EDIT);
+                $action .= Access::outputIfAllowed(' - ' . Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=change_security'), TXT_28, '', 'URL'), Permission::RECORDS_ASSIGN);
+                $action .= Access::outputIfAllowed(' - ' . Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=log_entry'), TXT_246, '', 'URL'), Permission::RECORDS_EDIT);
                 $action .= Access::outputIfAllowed(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'), Permission::APP_ACCESS);
                 $action .= Access::outputIfAllowed(
                     ' - ' . Blocks::link(
@@ -124,7 +124,7 @@ final class ItemList
                 );
                 $listHtml .= Form::fields([
                     Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
-                    Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments)) . '" class="URL">' . Html::e((string) $title) . '</a>',
+                    Wording::get('LA_84', 'TXT_84') => Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments), (string) $title, '', 'URL'),
                     TXT_225 => date(SET_DATE_FORMAT, $row['create_date']),
                     Wording::get('LA_226', 'TXT_226') => (string)$itemTypeName,
                     TXT_388 => $action,
