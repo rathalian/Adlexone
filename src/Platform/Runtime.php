@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Http\PublicBaseUrl;
 
 /**
@@ -205,7 +207,7 @@ final class Runtime
 
     public static function wantsManage(): bool
     {
-        return strtolower(trim((string) ($_GET['host'] ?? ''))) === 'manage';
+        return strtolower(trim((string) (Request::queryValue('host') ?? ''))) === 'manage';
     }
 
     public static function requestHost(): string

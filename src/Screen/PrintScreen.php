@@ -1,6 +1,8 @@
 <?php
 namespace Adlexone\Screen;
 
+use Adlexone\Auth\Access;
+
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\SharedMethods;
@@ -29,7 +31,7 @@ final class PrintScreen
          */
         switch (Request::query('option')) {
         	case 'print_item' :
-        		self::printItem($_GET['item_id']);
+        		self::printItem(Request::queryValue('item_id'));
         		break;
         	default :
         		// Not allowed
@@ -49,7 +51,7 @@ final class PrintScreen
     	}
 
     	$i = 0;
-    	if ($_SESSION['access_role_id'] <=2){//Admin, Adlexone Admin, Global Adlexone Admin have access
+    	if (Access::allowsControl()){//Admin, Adlexone Admin, Global Adlexone Admin have access
     		$i++;
     	}else{
     		if (\Adlexone\Data\GroupMembership::userSharesItemGroup((int) $_SESSION['access_user_id'], (int) $itemID)

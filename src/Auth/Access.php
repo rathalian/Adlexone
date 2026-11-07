@@ -180,6 +180,122 @@ final class Access
     }
 
     /**
+     * Whether the signed-in person meets a privilege ceiling.
+     * Named permissions are checked first. The derived role is the fallback.
+     * A lower ceiling number requires more privilege.
+     */
+    public static function allows(int $ceiling): bool
+    {
+        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($ceiling)) {
+            return true;
+        }
+
+        return self::legacyRole() <= $ceiling;
+    }
+
+    public static function permit(int $ceiling): void
+    {
+        if (!self::allows($ceiling)) {
+            self::deny();
+        }
+    }
+
+    public static function show(mixed $value, int $ceiling): mixed
+    {
+        return self::allows($ceiling) ? $value : null;
+    }
+
+    public static function allowsUse(): bool
+    {
+        return self::allows(5);
+    }
+
+    public static function allowsOpen(): bool
+    {
+        return self::allows(4);
+    }
+
+    public static function allowsEdit(): bool
+    {
+        return self::allows(3);
+    }
+
+    public static function allowsControl(): bool
+    {
+        return self::allows(2);
+    }
+
+    public static function allowsAdminister(): bool
+    {
+        return self::allows(1);
+    }
+
+    public static function allowsSystem(): bool
+    {
+        return self::allows(0);
+    }
+
+    public static function permitUse(): void
+    {
+        self::permit(5);
+    }
+
+    public static function permitOpen(): void
+    {
+        self::permit(4);
+    }
+
+    public static function permitEdit(): void
+    {
+        self::permit(3);
+    }
+
+    public static function permitControl(): void
+    {
+        self::permit(2);
+    }
+
+    public static function permitAdminister(): void
+    {
+        self::permit(1);
+    }
+
+    public static function permitSystem(): void
+    {
+        self::permit(0);
+    }
+
+    public static function showUse(mixed $value): mixed
+    {
+        return self::show($value, 5);
+    }
+
+    public static function showOpen(mixed $value): mixed
+    {
+        return self::show($value, 4);
+    }
+
+    public static function showEdit(mixed $value): mixed
+    {
+        return self::show($value, 3);
+    }
+
+    public static function showControl(mixed $value): mixed
+    {
+        return self::show($value, 2);
+    }
+
+    public static function showAdminister(mixed $value): mixed
+    {
+        return self::show($value, 1);
+    }
+
+    public static function showSystem(mixed $value): mixed
+    {
+        return self::show($value, 0);
+    }
+
+    /**
      * Return $value when the legacy role check passes. Lower role numbers are higher privilege.
      */
     public static function outputIfRoleAllowed(mixed $value, int $userRole, int $allowedRole): mixed

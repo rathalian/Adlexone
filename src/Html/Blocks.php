@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Html;
 
+use Adlexone\Auth\Access;
+
 use Adlexone\Http\Page;
 use Adlexone\support\Database;
 use Adlexone\Text\Wording;
@@ -129,7 +131,7 @@ final class Blocks
     public static function itemActions(int $itemId, string $base): array
     {
         $actions = [];
-        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        $role = Access::legacyRole();
         $inApplication = \Adlexone\Http\Page::current()->inApplication();
         $record = $base . '&item=' . $itemId;
         if ($role <= 4) {

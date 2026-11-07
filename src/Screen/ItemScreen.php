@@ -143,22 +143,22 @@ final class ItemScreen
          */
         switch ($option) {
             case 'my_items' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::permitUse();
                 self::showMyItems($_SESSION['access_user_id'], Request::query('item_id'));
                 break;
             case 'show_item_types' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
+                Access::permitOpen();
                 self::showItemTypes(Request::query('default_item_type'));
                 break;
             case 'new_item' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
+                Access::permitOpen();
                 $itemTypeId = Request::posted('item_type_id');
                 if ($itemTypeId === '') {
                     $itemTypeId = Request::query('item_type_id');
                 }
                 if ($itemTypeId === '') {
                     $target = self::recordUrl('option=show_item_types');
-                    $defaultType = trim((string) ($_GET['default_item_type'] ?? ''));
+                    $defaultType = trim((string) (Request::queryValue('default_item_type') ?? ''));
                     if ($defaultType === '' && Page::current()->inApplication()) {
                         $defaultType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
                     }
@@ -168,73 +168,73 @@ final class ItemScreen
                     header('Location: ' . $target);
                     exit;
                 }
-                self::showItemAdd($itemTypeId, $_POST);
+                self::showItemAdd($itemTypeId, Request::postedAll());
                 break;
             case 'add_item' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
+                Access::permitOpen();
                 self::addItem();
                 break;
             case 'show_item' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::showItem($_GET['item_id'] ?? '', $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
+                Access::permitUse();
+                self::showItem(Request::queryValue('item_id') ?? '', Request::postedAll(), Request::queryValue('log_entry') ?? 'no', Request::queryValue('attachments') ?? 'no');
                 break;
             case 'log_entry' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-                self::returnToItem($_GET['item_id'], '', 'notes');
-                self::showLogEntry($_GET['item_id']);
+                Access::permitOpen();
+                self::returnToItem(Request::queryValue('item_id'), '', 'notes');
+                self::showLogEntry(Request::queryValue('item_id'));
                 break;
             case 'add_log_entry' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-                self::addLogEntry($_POST['item_id']);
+                Access::permitOpen();
+                self::addLogEntry(Request::postedValue('item_id'));
                 break;
             case 'delete_log' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);
-                self::deleteLog($_GET['item_id'], $_GET['log_item_sequence']);
+                Access::permitControl();
+                self::deleteLog(Request::queryValue('item_id'), Request::queryValue('log_item_sequence'));
                 break;
             case 'update_item' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-                self::updateItem($_POST['item_id']);
+                Access::permitOpen();
+                self::updateItem(Request::postedValue('item_id'));
                 break;
             case 'update_owner' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 3);
+                Access::permitEdit();
                 self::updateOwner();
                 break;
             case 'change_security' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 3);
-                self::returnToItem($_GET['item_id'], '', 'access');
-                self::showSecurityAssignment($_GET['item_id']);
+                Access::permitEdit();
+                self::returnToItem(Request::queryValue('item_id'), '', 'access');
+                self::showSecurityAssignment(Request::queryValue('item_id'));
                 break;
             case 'update_security' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 3);
-                self::updateSecurityAssignment($_GET['item_id']);
+                Access::permitEdit();
+                self::updateSecurityAssignment(Request::queryValue('item_id'));
                 break;
             case 'show_attachments' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::returnToItem($_GET['item_id'], '', 'files');
-                self::showAttachments($_GET['item_id']);
+                Access::permitUse();
+                self::returnToItem(Request::queryValue('item_id'), '', 'files');
+                self::showAttachments(Request::queryValue('item_id'));
                 break;
             case 'add_attachment' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 4);
-                self::addAttachment($_GET['item_id']);
+                Access::permitOpen();
+                self::addAttachment(Request::queryValue('item_id'));
                 break;
             case 'download_attachment' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
-                self::downloadAttachment($_GET['id']);
+                Access::permitUse();
+                self::downloadAttachment(Request::queryValue('id'));
                 break;
             case 'delete_attachment' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);
-                self::deleteAttachment($_GET['id'], $_GET['item_id']);
+                Access::permitControl();
+                self::deleteAttachment(Request::queryValue('id'), Request::queryValue('item_id'));
                 break;
             case 'delete_item' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);
-                self::deleteItem($_GET['item_id']);
+                Access::permitControl();
+                self::deleteItem(Request::queryValue('item_id'));
                 break;
             case 'transform_item' :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 2);
-                self::transformItem($_POST['item_id'], $_POST['transform_type'], $_POST['item_type_id']);
+                Access::permitControl();
+                self::transformItem(Request::postedValue('item_id'), Request::postedValue('transform_type'), Request::postedValue('item_type_id'));
                 break;
             default :
-                Access::terminateIfRoleNotAllowed($_SESSION['access_role_id'], 5);
+                Access::permitUse();
                 self::showMyItems($_SESSION['access_user_id']);
         }
     }
@@ -270,12 +270,12 @@ final class ItemScreen
             return true;
         }
         if ($option === 'download_attachment' || $option === 'delete_attachment') {
-            $attachment = Database::first('item_attachments', ['item_id'], 'id = ?', [(int) ($_GET['id'] ?? 0)]);
+            $attachment = Database::first('item_attachments', ['item_id'], 'id = ?', [(int) (Request::queryValue('id') ?? 0)]);
             $itemId = $attachment === null ? 0 : (int) $attachment['item_id'];
         } elseif (in_array($option, ['add_log_entry', 'update_item', 'update_owner', 'transform_item'], true)) {
-            $itemId = (int) ($_POST['item_id'] ?? 0);
+            $itemId = (int) (Request::postedValue('item_id') ?? 0);
         } else {
-            $itemId = (int) ($_GET['item_id'] ?? 0);
+            $itemId = (int) (Request::queryValue('item_id') ?? 0);
         }
         if ($itemId <= 0 || !Database::exists('items', 'item_id = ?', [$itemId])) {
             View::respond(TXT_616);
@@ -293,7 +293,7 @@ final class ItemScreen
      */
     public static function itemRole(int $itemId): int
     {
-        $sessionRole = (int) ($_SESSION['access_role_id'] ?? 5);
+        $sessionRole = Access::legacyRole();
         if ($sessionRole <= 2) {
             return $sessionRole;
         }
@@ -327,7 +327,7 @@ final class ItemScreen
      */
     public static function userCanAccessItem(int $itemId): bool
     {
-        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        $role = Access::legacyRole();
         if ($role <= 2) {
             return true;
         }
@@ -616,7 +616,7 @@ final class ItemScreen
 
     private static function attachmentLines(string $itemID): string
     {
-        $canDelete = (int) ($_SESSION['access_role_id'] ?? 5) <= 2;
+        $canDelete = Access::allowsControl();
         $rows = Database::select('item_attachments', ['*'], 'item_id = ?', [(int) $itemID], 'create_date DESC');
         if ($rows === []) {
             return '<p class="record-list__empty">No files yet.</p>';
@@ -880,7 +880,7 @@ final class ItemScreen
     private static function listOrder(string $fallback, bool $remember): string
     {
         unset($_SESSION['item_sql']);
-        $posted = Database::orderBy(is_scalar($_POST['currsort'] ?? null) ? (string) $_POST['currsort'] : '');
+        $posted = Database::orderBy(is_scalar(Request::postedValue('currsort') ?? null) ? (string) Request::postedValue('currsort') : '');
         $previous = Database::orderBy((string) ($_SESSION['item_sort'] ?? ''));
         if ($posted !== '') {
             $postedColumn = explode(' ', $posted)[0];
@@ -888,7 +888,7 @@ final class ItemScreen
             $order = ($postedColumn === $previousColumn && !str_contains($previous, 'DESC'))
                 ? $postedColumn . ' DESC'
                 : $postedColumn;
-        } elseif ($remember && $previous !== '' && isset($_POST['search_type'])) {
+        } elseif ($remember && $previous !== '' && Request::hasPostedKey('search_type')) {
             $order = $previous;
         } else {
             $order = Database::orderBy($fallback);
@@ -925,7 +925,7 @@ final class ItemScreen
 
         $orderSQL = self::listOrder((string) $orderSQL, (string) $itemID === '');
         $pageSize = max(1, (int) SET_ITEMS_PAGE);
-        $page = RecordListQuery::page($_POST['pageset'] ?? 1);
+        $page = RecordListQuery::page(Request::postedValue('pageset') ?? 1);
         $result = Database::select(
             'items',
             $columnArray,
@@ -940,13 +940,13 @@ final class ItemScreen
         $sortLinks = '';
         if ($countrecs > 1) {
             $sortLinks = '<div>'
-                . Access::outputIfRoleAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), $_SESSION['access_role_id'], 4)
+                . Access::showOpen(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')))
                 . ' '
-                . Access::outputIfRoleAllowed(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')), $_SESSION['access_role_id'], 4)
+                . Access::showOpen(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')))
                 . ' '
-                . Access::outputIfRoleAllowed(Form::sortButton('create_date', TXT_225), $_SESSION['access_role_id'], 4)
+                . Access::showOpen(Form::sortButton('create_date', TXT_225))
                 . ' '
-                . Access::outputIfRoleAllowed(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')), $_SESSION['access_role_id'], 4)
+                . Access::showOpen(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')))
                 . '</div>';
         }
 
@@ -967,11 +967,11 @@ final class ItemScreen
                     $itemTypeID = $row['item_type_id'];
                 }
                 $itemId = (int) $row['item_id'];
-                $action = Access::outputIfRoleAllowed('<a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>', $_SESSION['access_role_id'], 3);
-                $action .= Access::outputIfRoleAllowed(' - <a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>', $_SESSION['access_role_id'], 4);
-                $action .= Access::outputIfRoleAllowed(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'), $_SESSION['access_role_id'], 5);
-                $action .= Access::outputIfRoleAllowed(
+                $action = Access::showOpen('<a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>');
+                $action .= Access::showEdit(' - <a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>');
+                $action .= Access::showOpen(' - <a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>');
+                $action .= Access::showUse(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'));
+                $action .= Access::showControl(
                     ' - ' . Blocks::link(
                         self::recordUrl('item=' . $itemId . '&option=delete_item'),
                         TXT_315,
@@ -980,10 +980,7 @@ final class ItemScreen
                         '',
                         '_parent',
                         TXT_400
-                    ),
-                    $_SESSION['access_role_id'],
-                    2
-                );
+                    ));
                 $listHtml .= Form::fields([
                     Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
                     Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(self::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments)) . '" class="URL">' . Html::e((string) $title) . '</a>',
@@ -1002,9 +999,9 @@ final class ItemScreen
         $pageset = '';
         if ($countBoolean) {
             $paginationHTML = '<div class="pagination pagination-centered "><ul>';
-            $pageset = (isset($_POST['pageset'])) ? $_POST['pageset'] : 1;
+            $pageset = (Request::hasPostedKey('pageset')) ? Request::postedValue('pageset') : 1;
             if ($pageset > 1) {
-                $paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton('prev', 'Prev') . '</li>', $_SESSION['access_role_id'], 5);
+                $paginationHTML .= Access::showUse('<li>' . Form::pageButton('prev', 'Prev') . '</li>');
             } else {
                 $paginationHTML .= "";
             }
@@ -1018,13 +1015,13 @@ final class ItemScreen
                 if ($i == $pageset) {
                     $paginationHTML .= '<li class="active"><a href ="#">' . $i . '</a></li>';
                 } else {
-                    $paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>', $_SESSION['access_role_id'], 5);
+                    $paginationHTML .= Access::showUse('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>');
                 }
             }
             if ($pageset == $iend) {
                 $paginationHTML .= "";
             } else {
-                $paginationHTML .= Access::outputIfRoleAllowed('<li>' . Form::pageButton('next', 'Next') . '</li>', $_SESSION['access_role_id'], 5);
+                $paginationHTML .= Access::showUse('<li>' . Form::pageButton('next', 'Next') . '</li>');
             }
             if ($itemID == '') {
                 $paginationHTML .= '</ul></div>';
@@ -1097,7 +1094,7 @@ final class ItemScreen
                         foreach ($userGroupIds as $group) {
                             if (in_array((int) $group, $typeGroupIds, true)) {
                                 $typeFound = true;
-                                if ($_SESSION['access_role_id'] > 2) {
+                                if (!Access::allowsControl()) {
                                     $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $group]);
                                     if ($groupRow !== null && (string) $groupRow['role'] === '5') {
                                         $viewerGroupFound = true;
@@ -1123,7 +1120,7 @@ final class ItemScreen
         }
 
         if (isset($valueArray) && count($valueArray) < 2) {
-            self::showItemAdd($valueArray[0], $_POST);
+            self::showItemAdd($valueArray[0], Request::postedAll());
             return;
         }
 
@@ -1293,7 +1290,7 @@ final class ItemScreen
             if ($row['enabled'] != 'Yes') {
                 continue;
             }
-            if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and $_SESSION['access_role_id'] > 3) {
+            if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and Access::legacyRole() > 3) {
                 continue;
             }
             if (MenuOptions::coveredByParentOnItemType((int)$row['custom_field_id'], (int)$itemTypeID)) {
@@ -1458,7 +1455,7 @@ final class ItemScreen
                 if ($inApplication) {
                     $peopleHidden = Form::hidden('creator_security', (string) ($itemFields['creator_security'] ?? ''))
                         . Form::hidden('user_security', (string) ($itemFields['user_security'] ?? ''));
-                } elseif ($_SESSION['access_role_id'] < 4) {//Managers, admins and oneorzero admins and global admins
+                } elseif (Access::legacyRole() < 4) {//Managers, admins and oneorzero admins and global admins
                     // Build table array
                     // Security is setup by default from the item
                     $columnArray = array('user_id', 'user_name');
@@ -1500,8 +1497,8 @@ final class ItemScreen
                 }
                 $html = '';
                 //Override at a user level if we have to
-                if ($_SESSION['access_role_id'] <= 2) {//Admin, Adlexone Admin, Global Adlexone Admin and owners have write access
-                    $itemRole = $_SESSION['access_role_id'];
+                if (Access::allowsControl()) {//Admin, Adlexone Admin, Global Adlexone Admin and owners have write access
+                    $itemRole = Access::legacyRole();
                     //they are the administrator so give them administrator rights
                 }
                 //Set at a manager level if the user is the owner but not an administrator
@@ -1559,7 +1556,7 @@ final class ItemScreen
                     if ($row['enabled'] != 'Yes') {
                         continue;
                     }
-                    if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and $_SESSION['access_role_id'] > 3) {
+                    if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and Access::legacyRole() > 3) {
                         continue;
                     }
                     if ($itemRole < 4 && MenuOptions::coveredByParentOnItemType((int)$row['custom_field_id'], (int)($itemFields['item_type_id'] ?? 0))) {
@@ -1740,7 +1737,7 @@ final class ItemScreen
                 $javascript = $fieldCheck->withTitle()->onclick();
                 $formOptions = self::withFormErrors($formOptions);
                 $buttons = [];
-                if ($_SESSION['access_role_id'] <= 4) {
+                if (Access::legacyRole() <= 4) {
                     $buttons[] = Form::button('submit', 'submit_button', 'Save', $javascript);
                 }
 
@@ -1763,7 +1760,7 @@ final class ItemScreen
                 $html .= Form::form($formTitle, self::recordUrl('option=update_item'), $itemField, $buttons, $formOptions);
 
                 //Show transform option
-                if (!$inApplication && $_SESSION['access_role_id'] <= 2) {//Administrator, Adlexone Administrator or Global Administrator
+                if (!$inApplication && Access::allowsControl()) {//Administrator, Adlexone Administrator or Global Administrator
                     // Administrative functions
                     $columnArray = array('item_type_id', 'item_type_name');
                     $result = Database::select('item_types', $columnArray);
@@ -1814,7 +1811,7 @@ final class ItemScreen
      */
     private static function typeRole(int $typeId): int
     {
-        if ((int) ($_SESSION['access_role_id'] ?? 5) <= 2) {
+        if (Access::allowsControl()) {
             return 2;
         }
         $itemRole = 5;
@@ -1839,7 +1836,7 @@ final class ItemScreen
     {
         $me = (int) ($_SESSION['access_user_id'] ?? 0);
         $owner = trim((string) ($post['user_security'] ?? ''));
-        $canAssign = (int) ($_SESSION['access_role_id'] ?? 5) < 4
+        $canAssign = Access::legacyRole() < 4
             || self::typeRole((int) ($post['item_type_id'] ?? 0)) < 4;
         if ($canAssign && $owner === '0') {
             $chosen = 0;
@@ -1862,8 +1859,8 @@ final class ItemScreen
      */
     private static function updateOwner(): void
     {
-        $itemId = (int) ($_POST['item_id'] ?? 0);
-        $next = trim((string) ($_POST['user_security'] ?? ''));
+        $itemId = (int) (Request::postedValue('item_id') ?? 0);
+        $next = trim((string) (Request::postedValue('user_security') ?? ''));
         $allowed = array_map('strval', array_keys(Rules::people()));
         $allowed[] = '0';
         $notice = '';
@@ -1911,25 +1908,25 @@ final class ItemScreen
     public static function addItem()
     {
         // Return to the form if dynamic actions are still occurring, such as sub buildSelectDropdown selection etc
-        if (!isset($_POST['item_type_id'])) {
+        if (!Request::hasPostedKey('item_type_id')) {
             // halt adding the item as we may have shortcutted here
             View::respond(TXT_535);
             return;
         }
-        if (!Database::exists('item_types', 'item_type_id = ?', [(int) $_POST['item_type_id']])) {
+        if (!Database::exists('item_types', 'item_type_id = ?', [(int) Request::postedValue('item_type_id')])) {
             View::respond(TXT_535);
             return;
         }
-        if (!self::applicationAllowsItemType((int) $_POST['item_type_id'])) {
+        if (!self::applicationAllowsItemType((int) Request::postedValue('item_type_id'))) {
             Access::deny();
         }
-        if (!isset($_POST['submit_button'])) {
+        if (!Request::hasPostedKey('submit_button')) {
             // Reload form setting values based on posted form values, triggered from javascript submits
-            self::showItemAdd($_POST['item_type_id'], $_POST);
+            self::showItemAdd(Request::postedValue('item_type_id'), Request::postedAll());
         } else {
-            self::$formErrors = self::postedFieldErrors($_POST);
+            self::$formErrors = self::postedFieldErrors(Request::postedAll());
             if (self::$formErrors !== []) {
-                self::showItemAdd($_POST['item_type_id'], $_POST);
+                self::showItemAdd(Request::postedValue('item_type_id'), Request::postedAll());
                 return;
             }
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') != '') {
@@ -1938,19 +1935,21 @@ final class ItemScreen
             $array = [];
             $array['create_date'] = time();
             $array['core_log_updated'] = time();
-            $groupIds = GroupMembership::idsFromPost($_POST);
-            $logText = trim((string) ($_POST['log_entry'] ?? ''));
-            $roleId = $_POST['role_id'] ?? 5;
-            unset($_POST['submit_button'], $_POST['reset'], $_POST['MAX_FILE_SIZE'], $_POST['attachment'], $_POST['item_id'], $_POST['_csrf'], $_POST['log_entry'], $_POST['role_id']);
-            unset($_POST['groups_posted']);
-            foreach (array_keys($_POST) as $postKey) {
+            $groupIds = GroupMembership::idsFromPost(Request::postedAll());
+            $logText = trim((string) (Request::postedValue('log_entry') ?? ''));
+            $roleId = Request::postedValue('role_id') ?? 5;
+            Request::forgetPosted('submit_button', 'reset', 'MAX_FILE_SIZE', 'attachment', 'item_id', '_csrf', 'log_entry', 'role_id');
+            Request::forgetPosted('groups_posted');
+            foreach (array_keys(Request::postedAll()) as $postKey) {
                 if (str_starts_with((string) $postKey, 'group_')) {
-                    unset($_POST[$postKey]);
+                    Request::forgetPosted($postKey);
                 }
             }
-            MenuOptions::collapseRequest($_POST);
+            $posted = Request::postedAll();
+            MenuOptions::collapseRequest($posted);
+            Request::fillPosted($posted);
             $dbArray = [];
-            foreach ($_POST as $key => $value) {
+            foreach (Request::postedAll() as $key => $value) {
                 if (!stristr($key, 'worker_field') and !stristr($key, 'worker_field_menu')) {
                     $dbArray[$key] = $value;
                 }
@@ -1965,12 +1964,12 @@ final class ItemScreen
                 Actions::executeAction($itemId, 'item_attachment', false);
             }
             if ($logText !== '' && SET_LOG_ENTRY === 'yes') {
-                $_POST['log_entry'] = $logText;
-                $_POST['role_id'] = $roleId;
+                Request::setPosted('log_entry', $logText);
+                Request::setPosted('role_id', $roleId);
                 self::addLogEntry($itemId, false, false);
             }
             Actions::executeAction($itemId, 'create_item', false);
-            $createdTitle = trim((string) ($_POST['item_title'] ?? ''));
+            $createdTitle = trim((string) (Request::postedValue('item_title') ?? ''));
             if (self::returnToItem($itemId, ($createdTitle !== '' ? $createdTitle : 'The record') . ' created.')) {
                 return;
             }
@@ -2063,38 +2062,40 @@ final class ItemScreen
     public static function updateItem($itemID)
     {
         // Return to the form if dynamic actions are still occurring, such as sub buildSelectDropdown selection etc
-        if (!isset($_POST['item_type_id'])) {
+        if (!Request::hasPostedKey('item_type_id')) {
             // halt adding the item as we may have shortcutted here
             View::respond(TXT_535);
             return;
-        } elseif (!isset($_POST['submit_button'])) {
+        } elseif (!Request::hasPostedKey('submit_button')) {
             // Reload form setting values based on posted form values, triggered from javascript submits
-            self::showItem($_POST['item_id'], $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
+            self::showItem(Request::postedValue('item_id'), Request::postedAll(), Request::queryValue('log_entry') ?? 'no', Request::queryValue('attachments') ?? 'no');
         } else {
-            self::$formErrors = self::postedFieldErrors($_POST);
+            self::$formErrors = self::postedFieldErrors(Request::postedAll());
             if (self::$formErrors !== []) {
-                self::showItem($_POST['item_id'], $_POST, $_GET['log_entry'] ?? 'no', $_GET['attachments'] ?? 'no');
+                self::showItem(Request::postedValue('item_id'), Request::postedAll(), Request::queryValue('log_entry') ?? 'no', Request::queryValue('attachments') ?? 'no');
                 return;
             }
             // Remove unwanted posted information
-            unset($_POST['submit_button'], $_POST['reset'], $_POST['item_id'], $_POST['_csrf'], $_POST['MAX_FILE_SIZE']);
-            MenuOptions::collapseRequest($_POST);
-            if (isset($_POST['groups_posted'])) {
-                unset($_POST['groups_posted']);
-                $_POST['group_security'] = \Adlexone\Data\GroupMembership::toDelimited(
-                    \Adlexone\Data\GroupMembership::idsFromPost($_POST)
-                );
-                foreach (array_keys($_POST) as $postKey) {
+            Request::forgetPosted('submit_button', 'reset', 'item_id', '_csrf', 'MAX_FILE_SIZE');
+            $posted = Request::postedAll();
+            MenuOptions::collapseRequest($posted);
+            Request::fillPosted($posted);
+            if (Request::hasPostedKey('groups_posted')) {
+                Request::forgetPosted('groups_posted');
+                Request::setPosted('group_security', \Adlexone\Data\GroupMembership::toDelimited(
+                    \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll())
+                ));
+                foreach (array_keys(Request::postedAll()) as $postKey) {
                     if (preg_match('/^group_\d+$/', (string) $postKey) === 1) {
-                        unset($_POST[$postKey]);
+                        Request::forgetPosted($postKey);
                     }
                 }
             }
-            if (isset($_POST['groups_only'])) {
-                unset($_POST['groups_only']);
+            if (Request::hasPostedKey('groups_only')) {
+                Request::forgetPosted('groups_only');
                 Actions::executeAction($itemID, 'update_item', false);
-                if (isset($_POST['group_security'])) {
-                    self::syncItemGroupsFromSecurity((int) $itemID, (string) $_POST['group_security']);
+                if (Request::hasPostedKey('group_security')) {
+                    self::syncItemGroupsFromSecurity((int) $itemID, (string) Request::postedValue('group_security'));
                 }
                 if (!self::returnToItem($itemID, 'Access saved.', 'access')) {
                     View::respond(TXT_320, Blocks::link(self::recordUrl('item=' . $itemID . '&option=show_item'), TXT_353, 'URL'));
@@ -2102,21 +2103,21 @@ final class ItemScreen
                 return;
             }
             // Handle the log update
-            if (isset($_POST['log_entry']) and $_POST['log_entry'] != '') {
+            if (Request::hasPostedKey('log_entry') and Request::postedValue('log_entry') != '') {
                 self::addLogEntry($itemID, false, false);
             }
             // Execute actions
             Actions::executeAction($itemID, 'update_item', false);
-            unset($_POST['log_entry'], $_POST['role_id']);
+            Request::forgetPosted('log_entry', 'role_id');
             // Remove worker fields
-            foreach ($_POST as $key => $value) {
+            foreach (Request::postedAll() as $key => $value) {
                 //Don't insert work field values - they aren't persistent
                 if (stristr($key, 'worker_field') or stristr($key, 'worker_field_menu')) {
-                    unset($_POST[$key]);
+                    Request::forgetPosted($key);
                 }
             }
             // Update system fields, they are the only remaining POST variables
-            $fieldPayload = $_POST;
+            $fieldPayload = Request::postedAll();
             $itemColumns = self::itemUpdateColumns((int) $itemID, $fieldPayload);
             if ($itemColumns !== []) {
                 Database::update('items', $itemColumns, 'item_id = ?', [(int) $itemID]);
@@ -2128,7 +2129,7 @@ final class ItemScreen
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') !== '') {
                 self::addAttachment($itemID, false, true);
             }
-            $savedTitle = trim((string) ($_POST['item_title'] ?? ''));
+            $savedTitle = trim((string) (Request::postedValue('item_title') ?? ''));
             $message = ($savedTitle !== '') ? $savedTitle . ' updated.' : TXT_272;
             if (self::returnToItem($itemID, (string) $message)) {
                 return;
@@ -2191,7 +2192,7 @@ final class ItemScreen
     public static function addLogEntry($itemID, $showInformation = true, $executeAction = true)
     {
         // Remove unwanted form variables
-        unset($_POST['submit_button'], $_POST['reset']);
+        Request::forgetPosted('submit_button', 'reset');
         // Get new log sequence (id is AUTOINCREMENT)
         $condition = 'WHERE item_id = ' . (int) $itemID;
         $SequenceID = Database::newID('core_log', 'log_item_sequence', $condition);
@@ -2201,7 +2202,7 @@ final class ItemScreen
         $columnArray['item_identifier'] = 0;
         //0 Reserved for item log update
         $columnArray['log_item_sequence'] = $SequenceID;
-        $logText = trim((string) ($_POST['log_entry'] ?? ''));
+        $logText = trim((string) (Request::postedValue('log_entry') ?? ''));
         if ($logText === '') {
             if ($showInformation == true && !self::returnToItem($itemID)) {
                 self::showLogEntry($itemID);
@@ -2212,7 +2213,7 @@ final class ItemScreen
         $columnArray['security_id'] = $_SESSION['access_user_id'];
         $columnArray['role_id'] = 5;
         if (\Adlexone\support\Database::columnExists('core_log', 'group_id')) {
-            $columnArray['group_id'] = (int) ($_POST['group_id'] ?? 0);
+            $columnArray['group_id'] = (int) (Request::postedValue('group_id') ?? 0);
         }
         // Insert into log table
         Database::insert('core_log', $columnArray);
@@ -2225,7 +2226,7 @@ final class ItemScreen
             Actions::executeAction($itemID, 'update_item_log_entry', false);
         }
         if ($showInformation == true) {
-            $fromTimeline = isset($_POST['from_timeline']);
+            $fromTimeline = Request::hasPostedKey('from_timeline');
             if (self::returnToItem($itemID, $fromTimeline ? 'Note added.' : (string) TXT_248, $fromTimeline ? '' : 'notes')) {
                 return;
             }
@@ -2488,12 +2489,12 @@ final class ItemScreen
     public static function updateSecurityAssignment(string $itemID): void
     {
         // Remove unwanted POST variables
-        unset($_POST['submit_button'], $_POST['reset']);
+        Request::forgetPosted('submit_button', 'reset');
 
         // Collect selected group values, trim and ignore empty entries
-        $selected = array_values(array_filter($_POST, fn($v) => trim((string)$v) !== ''));
+        $selected = array_values(array_filter(Request::postedAll(), fn($v) => trim((string)$v) !== ''));
         $ids = array_map(static fn($v) => (int) $v, $selected);
-        $_POST['group_security'] = \Adlexone\Data\GroupMembership::toDelimited($ids);
+        Request::setPosted('group_security', \Adlexone\Data\GroupMembership::toDelimited($ids));
 
         // Execute any configured actions for this update
         Actions::executeAction($itemID, 'update_item', false);
@@ -2543,13 +2544,13 @@ final class ItemScreen
         // Execute actions
 
         if (($columnArray['file_size'] > 0) && ($executeAction == true)) {
-            if (!isset($_POST['creator_security'])) {
+            if (!Request::hasPostedKey('creator_security')) {
                 $sql = 'SELECT * FROM items WHERE item_id = ' . (int) $itemID;
                             $result = Database::rows($sql);
                 $row = $result[0] ?? null;
                 foreach ($row as $key => $value) {
                     if (!is_int($key)) {
-                        $_POST[$key] = $value;
+                        Request::setPosted($key, $value);
                     }
                 }
             }
@@ -2566,7 +2567,7 @@ final class ItemScreen
 
     private static function attachmentListHtml(string $itemID, string $empty): string
     {
-        $canDelete = $_SESSION['access_role_id'] <= 2;
+        $canDelete = Access::allowsControl();
         $sql = 'SELECT * FROM item_attachments WHERE item_id = ' . (int) $itemID;
         $result = Database::rows($sql);
         $rows = [];

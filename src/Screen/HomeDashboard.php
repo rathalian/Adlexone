@@ -282,7 +282,7 @@ final class HomeDashboard
             $byType[(int) $row['item_type_id']][(int) $row['item_id']] = $row;
         }
 
-        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        $role = Access::legacyRole();
         $others = [];
         if ($rows !== []) {
             $ids = implode(',', array_map(static fn (array $row): int => (int) $row['item_id'], $rows));
@@ -767,7 +767,7 @@ final class HomeDashboard
         }
         $list = implode(',', array_map('intval', $typeIds));
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-        $role = (int) ($_SESSION['access_role_id'] ?? 5);
+        $role = Access::legacyRole();
         $visible = '';
         $visibleLog = '';
         if ($role > 2) {

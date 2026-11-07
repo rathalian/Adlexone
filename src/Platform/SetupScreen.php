@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
@@ -54,7 +56,7 @@ final class SetupScreen
                     $error = $e->getMessage();
                 }
             } else {
-                $action = (string) ($_POST['setup_action'] ?? '');
+                $action = (string) (Request::postedValue('setup_action') ?? '');
                 try {
                     if ($action === 'placement') {
                         self::savePlacement($paths);
@@ -75,7 +77,7 @@ final class SetupScreen
         }
 
         if ($hosted) {
-            $hostedStep = (string) ($_GET['step'] ?? '');
+            $hostedStep = (string) (Request::queryValue('step') ?? '');
             $onAccount = $hostedStep === self::STEP_ACCOUNT || (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST');
             if (!$onAccount) {
                 self::renderWelcome(true);
@@ -125,7 +127,7 @@ final class SetupScreen
      */
     private static function savePlacement(array $paths): void
     {
-        $choice = (string) ($_POST['placement'] ?? '');
+        $choice = (string) (Request::postedValue('placement') ?? '');
         if (!in_array($choice, [InstallLayout::PACKAGE, InstallLayout::PUBLIC_FOLDER], true)) {
             throw new \RuntimeException('Choose where this copy of Adlexone is installed.');
         }
@@ -156,7 +158,7 @@ final class SetupScreen
             $shape = $env['shape'];
             $record = false;
         } else {
-            $path = trim((string) ($_POST['storage_path'] ?? ''));
+            $path = trim((string) (Request::postedValue('storage_path') ?? ''));
             $shape = 'children';
             $record = true;
         }
@@ -242,14 +244,14 @@ final class SetupScreen
      */
     private static function adminFromPost(string $tokenPath): array
     {
-        $site = trim((string) ($_POST['site_name'] ?? ''));
-        $username = trim((string) ($_POST['user_name'] ?? ''));
-        $password = (string) ($_POST['password'] ?? '');
-        $confirm = (string) ($_POST['password_confirm'] ?? '');
-        $email = trim((string) ($_POST['email'] ?? ''));
-        $first = trim((string) ($_POST['first_name'] ?? ''));
-        $last = trim((string) ($_POST['last_name'] ?? ''));
-        $public = trim((string) ($_POST['public_url'] ?? ''));
+        $site = trim((string) (Request::postedValue('site_name') ?? ''));
+        $username = trim((string) (Request::postedValue('user_name') ?? ''));
+        $password = (string) (Request::postedValue('password') ?? '');
+        $confirm = (string) (Request::postedValue('password_confirm') ?? '');
+        $email = trim((string) (Request::postedValue('email') ?? ''));
+        $first = trim((string) (Request::postedValue('first_name') ?? ''));
+        $last = trim((string) (Request::postedValue('last_name') ?? ''));
+        $public = trim((string) (Request::postedValue('public_url') ?? ''));
 
         if ($site === '' || strlen($site) > 80) {
             throw new \RuntimeException('Enter the login page application name (80 characters or fewer).');
@@ -267,10 +269,10 @@ final class SetupScreen
         if ($public !== '' && preg_match('#^https?://#', $public) !== 1) {
             throw new \RuntimeException('The public URL should start with https:// or http://, or be left blank.');
         }
-        if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''), $tokenPath)) {
+        if (!SetupToken::check((string) (Request::postedValue('setup_token') ?? ''), $tokenPath)) {
             throw new \RuntimeException('The setup token does not match the file beside the database. Open that file on the server and enter the value.');
         }
-        $starting = (string) ($_POST['starting_applications'] ?? '');
+        $starting = (string) (Request::postedValue('starting_applications') ?? '');
         if (!in_array($starting, ['samples', 'exemplar', 'none'], true)) {
             throw new \RuntimeException('Choose the applications to install.');
         }
@@ -422,7 +424,7 @@ final class SetupScreen
         $public = InstallLayout::canonical($install . DIRECTORY_SEPARATOR . 'public');
         $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
         $detected = InstallLayout::detect($paths['install']);
-        $selected = (string) ($_POST['placement'] ?? '');
+        $selected = (string) (Request::postedValue('placement') ?? '');
         if ($selected === '' && ($detected === InstallLayout::PACKAGE || $detected === InstallLayout::PUBLIC_FOLDER)) {
             $selected = $detected;
         }
@@ -475,7 +477,7 @@ final class SetupScreen
         if ($env['locked']) {
             $path = $env['path'];
         } else {
-            $posted = trim((string) ($_POST['storage_path'] ?? ''));
+            $posted = trim((string) (Request::postedValue('storage_path') ?? ''));
             if ($posted !== '') {
                 $path = $posted;
             } elseif ($state['storage'] !== '') {
@@ -548,8 +550,8 @@ final class SetupScreen
      */
     private static function accountForm(array $paths, bool $hosted, bool $focus): string
     {
-        if (isset($_POST['site_name'])) {
-            $site = (string) $_POST['site_name'];
+        if (Request::hasPostedKey('site_name')) {
+            $site = (string) Request::postedValue('site_name');
         } else {
             $label = trim((string) ($paths['store_label'] ?? ''));
             $site = $label !== '' ? $label : 'Adlexone';
@@ -580,20 +582,20 @@ final class SetupScreen
             'Public URL',
             'public_url',
             'text',
-            (string) ($_POST['public_url'] ?? ''),
+            (string) (Request::postedValue('public_url') ?? ''),
             false,
             'Leave this blank unless a proxy sits in front of the site.',
             'install-help-url',
             'url'
         );
         $html .= '<p class="install-section">Administrator</p>';
-        $html .= self::field('Your name', 'first_name', 'text', (string) ($_POST['first_name'] ?? ''), false, '', '', 'given-name');
-        $html .= self::field('Last name', 'last_name', 'text', (string) ($_POST['last_name'] ?? ''), false, '', '', 'family-name');
+        $html .= self::field('Your name', 'first_name', 'text', (string) (Request::postedValue('first_name') ?? ''), false, '', '', 'given-name');
+        $html .= self::field('Last name', 'last_name', 'text', (string) (Request::postedValue('last_name') ?? ''), false, '', '', 'family-name');
         $html .= self::field(
             'Email',
             'email',
             'email',
-            (string) ($_POST['email'] ?? ''),
+            (string) (Request::postedValue('email') ?? ''),
             false,
             'Saved on the account. Sign-in uses the username.',
             '',
@@ -603,7 +605,7 @@ final class SetupScreen
             'Username',
             'user_name',
             'text',
-            DefaultAccount::postedUsername($_POST['user_name'] ?? null),
+            DefaultAccount::postedUsername(Request::postedValue('user_name') ?? null),
             true,
             '2–40 characters: letters, numbers, dots, underscores, or hyphens.',
             '',
@@ -615,7 +617,7 @@ final class SetupScreen
             'Password',
             'password',
             'password',
-            DefaultAccount::postedPassword($_POST['password'] ?? null),
+            DefaultAccount::postedPassword(Request::postedValue('password') ?? null),
             true,
             $passwordHelp,
             'install-help-password',
@@ -625,7 +627,7 @@ final class SetupScreen
             'Confirm password',
             'password_confirm',
             'password',
-            DefaultAccount::postedPassword($_POST['password_confirm'] ?? null),
+            DefaultAccount::postedPassword(Request::postedValue('password_confirm') ?? null),
             true,
             '',
             '',
@@ -651,7 +653,7 @@ final class SetupScreen
                     'Start with an empty home. You create an application after you sign in.',
                 ],
             ],
-            (string) ($_POST['starting_applications'] ?? ''),
+            (string) (Request::postedValue('starting_applications') ?? ''),
             false,
             'setup-apps-label'
         );
@@ -1033,7 +1035,7 @@ final class SetupScreen
 
     private static function currentStep(): string
     {
-        $requested = (string) ($_GET['step'] ?? self::STEP_WELCOME);
+        $requested = (string) (Request::queryValue('step') ?? self::STEP_WELCOME);
         if (!in_array($requested, [self::STEP_WELCOME, self::STEP_ROOT, self::STEP_STORAGE, self::STEP_ACCOUNT], true)) {
             $requested = self::STEP_WELCOME;
         }

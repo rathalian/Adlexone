@@ -161,7 +161,7 @@ final class SiteSettingsScreen
             case 'update_theme_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SETTINGS);
                 $themes = self::installedThemes();
-                $theme = trim((string) ($_POST['SET_DEFAULT_THEME'] ?? ''));
+                $theme = trim((string) (Request::postedValue('SET_DEFAULT_THEME') ?? ''));
                 if (!isset($themes[$theme])) {
                     View::respond(
                         'Choose an installed theme.',
@@ -199,7 +199,7 @@ final class SiteSettingsScreen
                 }
                 $problems = [];
                 $settings = $existing;
-                $posted = $_POST;
+                $posted = Request::postedAll();
                 if (array_key_exists('SET_ITEMS_PAGE', $posted)) {
                     $perPage = trim((string) $posted['SET_ITEMS_PAGE']);
                     if (preg_match('/^\d{1,3}$/', $perPage) !== 1 || (int) $perPage < 1 || (int) $perPage > 500) {
@@ -260,7 +260,7 @@ final class SiteSettingsScreen
                 break;
             case 'update_advanced_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-                self::saveAdvanced($_POST);
+                self::saveAdvanced(Request::postedAll());
                 break;
             case 'sign_in_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
@@ -269,15 +269,15 @@ final class SiteSettingsScreen
             case 'update_sign_in_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
                 $yes = static function (string $key, string $default = 'No'): string {
-                    return strcasecmp((string) ($_POST[$key] ?? $default), 'Yes') === 0 ? 'Yes' : 'No';
+                    return strcasecmp((string) (Request::postedValue($key) ?? $default), 'Yes') === 0 ? 'Yes' : 'No';
                 };
-                $id = trim((string) ($_POST['connection_id'] ?? 'organisation'));
+                $id = trim((string) (Request::postedValue('connection_id') ?? 'organisation'));
                 if ($id === '') {
                     $id = 'organisation';
                 }
-                $issuer = rtrim(trim((string) ($_POST['connection_issuer'] ?? '')), '/');
-                $clientId = trim((string) ($_POST['connection_client_id'] ?? ''));
-                $clientSecret = (string) ($_POST['connection_client_secret'] ?? '');
+                $issuer = rtrim(trim((string) (Request::postedValue('connection_issuer') ?? '')), '/');
+                $clientId = trim((string) (Request::postedValue('connection_client_id') ?? ''));
+                $clientSecret = (string) (Request::postedValue('connection_client_secret') ?? '');
                 if ($clientSecret === '' && defined('AUTH_OAUTH_CONNECTIONS_JSON')) {
                     $kept = json_decode((string) AUTH_OAUTH_CONNECTIONS_JSON, true);
                     if (is_array($kept)) {
@@ -291,11 +291,11 @@ final class SiteSettingsScreen
                 }
                 $connection = [
                     'id' => $id,
-                    'label' => trim((string) ($_POST['connection_label'] ?? '')) ?: 'Sign in with OAuth',
+                    'label' => trim((string) (Request::postedValue('connection_label') ?? '')) ?: 'Sign in with OAuth',
                     'issuer' => $issuer,
                     'client_id' => $clientId,
                     'client_secret' => $clientSecret,
-                    'scopes' => trim((string) ($_POST['connection_scopes'] ?? '')) ?: 'openid profile email',
+                    'scopes' => trim((string) (Request::postedValue('connection_scopes') ?? '')) ?: 'openid profile email',
                     'auto_provision' => $yes('connection_auto_provision'),
                 ];
                 $existing = [];
@@ -355,12 +355,12 @@ final class SiteSettingsScreen
                 break;
             case 'update_email_settings' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-                $smtpPassword = (string) ($_POST['SET_SMTP_PASSWORD'] ?? '');
+                $smtpPassword = (string) (Request::postedValue('SET_SMTP_PASSWORD') ?? '');
                 if ($smtpPassword === '' && defined('SET_SMTP_PASSWORD')) {
                     $smtpPassword = (string) SET_SMTP_PASSWORD;
                 }
-                $smtpHost = trim((string) ($_POST['SET_SMTP_HOST'] ?? ''));
-                $smtpPort = trim((string) ($_POST['SET_SMTP_PORT'] ?? ''));
+                $smtpHost = trim((string) (Request::postedValue('SET_SMTP_HOST') ?? ''));
+                $smtpPort = trim((string) (Request::postedValue('SET_SMTP_PORT') ?? ''));
                 $problems = [];
                 if ($smtpHost !== '' && preg_match('/^[A-Za-z0-9._:-]{1,255}$/', $smtpHost) !== 1) {
                     $problems[] = 'Enter the mail server as a host name, such as mail.example.com.';
@@ -375,7 +375,7 @@ final class SiteSettingsScreen
                 SharedMethods::saveSettingsToJson(SET_CONFIGURATION_PATH . 'email_settings.json', [
                     'SET_SMTP_HOST' => $smtpHost,
                     'SET_SMTP_PORT' => $smtpPort,
-                    'SET_SMTP_USER' => trim((string) ($_POST['SET_SMTP_USER'] ?? '')),
+                    'SET_SMTP_USER' => trim((string) (Request::postedValue('SET_SMTP_USER') ?? '')),
                     'SET_SMTP_PASSWORD' => $smtpPassword,
                 ]);
                 break;
@@ -501,7 +501,7 @@ final class SiteSettingsScreen
         }
         $themes = \Adlexone\Theme\Theme::installed();
         if ($save) {
-            $theme = \Adlexone\Theme\Theme::canonicalize(trim((string) ($_POST['theme'] ?? '')));
+            $theme = \Adlexone\Theme\Theme::canonicalize(trim((string) (Request::postedValue('theme') ?? '')));
             if ($theme !== '' && !isset($themes[$theme])) {
                 View::respond('Choose an installed theme.', Blocks::link(Router::manageUrl('settings', 'option=my_theme'), 'Theme', '', 'btn btn--primary btn--sm'));
                 return;

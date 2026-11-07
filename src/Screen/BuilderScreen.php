@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationBuilder;
 use Adlexone\Application\ApplicationPackage;
 use Adlexone\Application\Capabilities;
@@ -29,7 +31,7 @@ final class BuilderScreen
             Access::deny();
         }
 
-        $option = (string) ($_GET['option'] ?? '');
+        $option = (string) (Request::queryValue('option') ?? '');
 
         RenderNavigation::applyConfigureNav([['label' => 'Create an application', 'href' => Router::manageUrl('builder')]]);
         Page::current()->suggestTitle('Create an application');
@@ -50,20 +52,20 @@ final class BuilderScreen
     {
         $h = static fn (string $value): string => Html::e($value);
 
-        $nameRaw = (string) ($_POST['name'] ?? '');
-        $slugRaw = (string) ($_POST['slug'] ?? '');
-        $hintRaw = (string) ($_POST['hint'] ?? '');
-        $recordRaw = (string) ($_POST['record_type_name'] ?? '');
-        $icon = (string) ($_POST['icon'] ?? 'ic-grid');
-        $blueprint = (string) ($_POST['blueprint'] ?? ApplicationBuilder::BLUEPRINT_PUBLISHING);
+        $nameRaw = (string) (Request::postedValue('name') ?? '');
+        $slugRaw = (string) (Request::postedValue('slug') ?? '');
+        $hintRaw = (string) (Request::postedValue('hint') ?? '');
+        $recordRaw = (string) (Request::postedValue('record_type_name') ?? '');
+        $icon = (string) (Request::postedValue('icon') ?? 'ic-grid');
+        $blueprint = (string) (Request::postedValue('blueprint') ?? ApplicationBuilder::BLUEPRINT_PUBLISHING);
         $blueprints = ApplicationBuilder::blueprints();
         if (!isset($blueprints[$blueprint])) {
             $blueprint = ApplicationBuilder::BLUEPRINT_PUBLISHING;
         }
-        $guideRaw = array_key_exists('guide', $_POST)
-            ? (string) $_POST['guide']
+        $guideRaw = array_key_exists('guide', Request::postedAll())
+            ? (string) Request::postedValue('guide')
             : (string) ($blueprints[$blueprint]['guide'] ?? '');
-        if (($_POST['icon'] ?? '') === '') {
+        if ((Request::postedValue('icon') ?? '') === '') {
             $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-grid');
         }
         $icon = Capabilities::renamedIcons()[$icon] ?? $icon;
@@ -71,7 +73,7 @@ final class BuilderScreen
             $icon = 'ic-grid';
         }
 
-        $postedScreens = $_POST['screens'] ?? null;
+        $postedScreens = Request::postedValue('screens') ?? null;
         $selectedScreens = is_array($postedScreens) ? $postedScreens : $blueprints[$blueprint]['screens'];
 
         $sprite = $h(\Adlexone\Theme\Theme::spriteHref());
@@ -155,7 +157,7 @@ final class BuilderScreen
         }
         $screensHtml .= '</div>';
 
-        $postedGroups = $_POST['groups'] ?? null;
+        $postedGroups = Request::postedValue('groups') ?? null;
         $selectedGroups = is_array($postedGroups) ? array_map('strval', $postedGroups) : [];
         $groupRows = Database::select('groups', ['group_id', 'group_name'], '', [], 'group_name ASC');
         $groupsHtml = '<div class="builder__choices builder__choices--compact">';
@@ -174,7 +176,7 @@ final class BuilderScreen
         }
         $groupsHtml .= '</div>';
 
-        $postedLevels = $_POST['perm_levels'] ?? null;
+        $postedLevels = Request::postedValue('perm_levels') ?? null;
         $selectedLevels = is_array($postedLevels) ? $postedLevels : ['use', 'settings'];
         $levelsHtml = '<div class="builder__choices">';
         $selectedLevelLabels = [];
@@ -337,27 +339,27 @@ final class BuilderScreen
 
     public static function createBusinessApplication(): void
     {
-        $screens = $_POST['screens'] ?? [];
+        $screens = Request::postedValue('screens') ?? [];
         if (!is_array($screens)) {
             $screens = [];
         }
-        $groups = $_POST['groups'] ?? [];
+        $groups = Request::postedValue('groups') ?? [];
         if (!is_array($groups)) {
             $groups = [];
         }
-        $levels = $_POST['perm_levels'] ?? [];
+        $levels = Request::postedValue('perm_levels') ?? [];
         if (!is_array($levels)) {
             $levels = [];
         }
-        $guide = trim((string) ($_POST['guide'] ?? ''));
+        $guide = trim((string) (Request::postedValue('guide') ?? ''));
         try {
             $created = ApplicationBuilder::create(
-                (string) ($_POST['name'] ?? ''),
-                (string) ($_POST['slug'] ?? ''),
-                (string) ($_POST['hint'] ?? ''),
-                (string) ($_POST['icon'] ?? 'ic-grid'),
-                (string) ($_POST['blueprint'] ?? ''),
-                (string) ($_POST['record_type_name'] ?? ''),
+                (string) (Request::postedValue('name') ?? ''),
+                (string) (Request::postedValue('slug') ?? ''),
+                (string) (Request::postedValue('hint') ?? ''),
+                (string) (Request::postedValue('icon') ?? 'ic-grid'),
+                (string) (Request::postedValue('blueprint') ?? ''),
+                (string) (Request::postedValue('record_type_name') ?? ''),
                 array_map('strval', $screens),
                 array_map('intval', $groups),
                 array_map('strval', $levels),
@@ -389,7 +391,7 @@ final class BuilderScreen
             return;
         }
         try {
-            $created = ApplicationPackage::import($data, (string) ($_POST['slug'] ?? ''));
+            $created = ApplicationPackage::import($data, (string) (Request::postedValue('slug') ?? ''));
         } catch (\InvalidArgumentException $e) {
             self::showBuilderForm($e->getMessage());
             return;

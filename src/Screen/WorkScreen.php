@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\RecordQuery;
 use Adlexone\Application\ScreenCatalog;
@@ -65,11 +67,11 @@ final class WorkScreen
      */
     public static function showApplicationWork(?int $itemTypeId = null, string $title = 'Work'): void
     {
-        if ((string) ($_GET['option'] ?? '') === 'move_card' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+        if ((string) (Request::queryValue('option') ?? '') === 'move_card' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
             self::moveWorkCard($itemTypeId);
             return;
         }
-        if ((string) ($_GET['option'] ?? '') === 'move_cards' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+        if ((string) (Request::queryValue('option') ?? '') === 'move_cards' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
             self::moveWorkCards($itemTypeId);
             return;
         }
@@ -96,7 +98,7 @@ final class WorkScreen
                 'action' => $new,
             ]);
         } elseif ($shown === []) {
-            $focus = (string) ($_GET['focus'] ?? '');
+            $focus = (string) (Request::queryValue('focus') ?? '');
             if ($focus === 'mine') {
                 $body = Blocks::emptyState([
                     'illustration' => 'empty-assigned',
@@ -142,7 +144,7 @@ final class WorkScreen
             }
         }
 
-        $focus = (string) ($_GET['focus'] ?? '');
+        $focus = (string) (Request::queryValue('focus') ?? '');
         if (!in_array($focus, ['', 'mine', 'status', 'empty'], true)) {
             $focus = '';
         }
@@ -166,7 +168,7 @@ final class WorkScreen
      */
     public static function workFocusIds(array $ids, int $fieldId, array $values): array
     {
-        $focus = (string) ($_GET['focus'] ?? '');
+        $focus = (string) (Request::queryValue('focus') ?? '');
         if ($focus === 'mine') {
             $userId = (int) ($_SESSION['access_user_id'] ?? 0);
             if ($userId <= 0 || $ids === []) {
@@ -207,7 +209,7 @@ final class WorkScreen
             return $keep;
         }
         if ($focus === 'status' && $fieldId > 0) {
-            $want = (string) ($_GET['status'] ?? '');
+            $want = (string) (Request::queryValue('status') ?? '');
             $keep = [];
             foreach ($ids as $id) {
                 if (($values[$id] ?? '') === $want) {
@@ -251,12 +253,12 @@ final class WorkScreen
 
     private static function workView(): string
     {
-        return (string) ($_GET['view'] ?? '') === 'board' ? 'board' : 'list';
+        return (string) (Request::queryValue('view') ?? '') === 'board' ? 'board' : 'list';
     }
 
     private static function currentFocus(): string
     {
-        $focus = (string) ($_GET['focus'] ?? '');
+        $focus = (string) (Request::queryValue('focus') ?? '');
 
         return in_array($focus, ['mine', 'status', 'empty'], true) ? $focus : '';
     }
@@ -267,7 +269,7 @@ final class WorkScreen
         if ($focus === 'mine' || $focus === 'status' || $focus === 'empty') {
             $query[] = 'focus=' . rawurlencode($focus);
             if ($focus === 'status') {
-                $query[] = 'status=' . rawurlencode((string) ($_GET['status'] ?? ''));
+                $query[] = 'status=' . rawurlencode((string) (Request::queryValue('status') ?? ''));
             }
         }
         $query[] = 'view=' . rawurlencode($view);
@@ -342,10 +344,10 @@ final class WorkScreen
                 $rows[] = $record;
             }
         }
-        $sort = in_array((string) ($_GET['sort'] ?? ''), ['name', 'status', 'opened'], true)
-            ? (string) $_GET['sort']
+        $sort = in_array((string) (Request::queryValue('sort') ?? ''), ['name', 'status', 'opened'], true)
+            ? (string) Request::queryValue('sort')
             : 'opened';
-        $direction = (string) ($_GET['dir'] ?? '') === 'asc' ? 'asc' : 'desc';
+        $direction = (string) (Request::queryValue('dir') ?? '') === 'asc' ? 'asc' : 'desc';
         usort($rows, static function (array $left, array $right) use ($sort, $direction): int {
             $key = match ($sort) {
                 'name' => 'sortName',
@@ -778,8 +780,8 @@ final class WorkScreen
 
     public static function moveWorkCard(?int $itemTypeId): void
     {
-        $itemId = (int) ($_POST['item_id'] ?? 0);
-        $status = trim((string) ($_POST['status'] ?? ''));
+        $itemId = (int) (Request::postedValue('item_id') ?? 0);
+        $status = trim((string) (Request::postedValue('status') ?? ''));
         $ids = self::applicationAccessibleItemIds($itemTypeId);
         $field = self::workStatusField($itemTypeId);
         if ($itemId <= 0 || !in_array($itemId, $ids, true) || $field === null || !in_array($status, $field['values'], true)) {
@@ -791,10 +793,10 @@ final class WorkScreen
         if ($dueWrite['error'] !== '') {
             self::workJson(['ok' => false, 'error' => $dueWrite['error']], 422);
         }
-        $_POST[$key] = $status;
+        Request::setPosted($key, $status);
         $payload = [$key => $status];
         if ($dueWrite['key'] !== '') {
-            $_POST[$dueWrite['key']] = $dueWrite['value'];
+            Request::setPosted($dueWrite['key'], $dueWrite['value']);
             $payload[$dueWrite['key']] = $dueWrite['value'];
         }
         \Adlexone\Application\Rules::run($itemId, 'update_item');
@@ -840,10 +842,10 @@ final class WorkScreen
 
     public static function moveWorkCards(?int $itemTypeId): void
     {
-        $posted = RecordQuery::ints($_POST['item_ids'] ?? []);
+        $posted = RecordQuery::ints(Request::postedValue('item_ids') ?? []);
         $accessible = self::applicationAccessibleItemIds($itemTypeId);
         $ids = array_values(array_intersect($posted, $accessible));
-        $status = trim((string) ($_POST['status'] ?? ''));
+        $status = trim((string) (Request::postedValue('status') ?? ''));
         $field = self::workStatusField($itemTypeId);
         if ($ids === [] || $field === null || !in_array($status, $field['values'], true)) {
             header('Location: ' . self::place());
@@ -857,10 +859,10 @@ final class WorkScreen
         }
         $key = 'custom_field_' . (int) $field['id'];
         foreach ($ids as $itemId) {
-            $_POST[$key] = $status;
+            Request::setPosted($key, $status);
             $payload = [$key => $status];
             if ($dueWrite['key'] !== '') {
-                $_POST[$dueWrite['key']] = $dueWrite['value'];
+                Request::setPosted($dueWrite['key'], $dueWrite['value']);
                 $payload[$dueWrite['key']] = $dueWrite['value'];
             }
             \Adlexone\Application\Rules::run($itemId, 'update_item');
@@ -912,7 +914,7 @@ final class WorkScreen
         if ($due === null) {
             return $none;
         }
-        $raw = trim((string) ($_POST['due'] ?? ''));
+        $raw = trim((string) (Request::postedValue('due') ?? ''));
         if (FieldValidation::parseDate($raw, false) === null) {
             return ['key' => '', 'value' => '', 'error' => 'Enter ' . $due['label'] . '.'];
         }

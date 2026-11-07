@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
@@ -58,7 +60,7 @@ final class OperatorScreen
             if (!Csrf::valid()) {
                 $error = 'This form expired. Reload the page and try again.';
             } else {
-                $action = (string) ($_POST['operator_action'] ?? '');
+                $action = (string) (Request::postedValue('operator_action') ?? '');
                 try {
                     if ($needsAccount) {
                         if ($action !== 'create_operator') {
@@ -110,7 +112,7 @@ final class OperatorScreen
             return;
         }
 
-        $siteSlug = strtolower(trim((string) ($_GET['site'] ?? '')));
+        $siteSlug = strtolower(trim((string) (Request::queryValue('site') ?? '')));
         if ($siteSlug !== '') {
             $store = PlatformDb::storeBySlug($paths['platform_db'], $siteSlug);
             if ($store === null) {
@@ -123,7 +125,7 @@ final class OperatorScreen
             return;
         }
 
-        $view = strtolower(trim((string) ($_GET['view'] ?? '')));
+        $view = strtolower(trim((string) (Request::queryValue('view') ?? '')));
         if ($view === 'rate') {
             HostConsole::rate($paths, $error, $notice);
 
@@ -194,7 +196,7 @@ final class OperatorScreen
             header('Location: ' . Runtime::operatorAddress('view=rate'));
             exit;
         }
-        $store = PlatformDb::storeById($db, (int) ($_POST['store_id'] ?? 0));
+        $store = PlatformDb::storeById($db, (int) (Request::postedValue('store_id') ?? 0));
         if ($store === null) {
             throw new \RuntimeException('That customer site was not found.');
         }
@@ -231,7 +233,7 @@ final class OperatorScreen
             return;
         }
         if ($action === 'delete') {
-            SiteUsage::deleteSite($db, $paths['stores'], $store, trim((string) ($_POST['confirm_slug'] ?? '')));
+            SiteUsage::deleteSite($db, $paths['stores'], $store, trim((string) (Request::postedValue('confirm_slug') ?? '')));
             $_SESSION['operator_notice'] = $store['label'] . ' was deleted from disk.';
             header('Location: ' . Runtime::operatorAddress());
             exit;
@@ -244,11 +246,11 @@ final class OperatorScreen
      */
     private static function createStore(array $paths): string
     {
-        $label = trim((string) ($_POST['label'] ?? ''));
-        $slug = strtolower(trim((string) ($_POST['slug'] ?? '')));
-        $email = trim((string) ($_POST['admin_email'] ?? ''));
-        $username = trim((string) ($_POST['admin_user'] ?? ''));
-        $password = (string) ($_POST['admin_password'] ?? '');
+        $label = trim((string) (Request::postedValue('label') ?? ''));
+        $slug = strtolower(trim((string) (Request::postedValue('slug') ?? '')));
+        $email = trim((string) (Request::postedValue('admin_email') ?? ''));
+        $username = trim((string) (Request::postedValue('admin_user') ?? ''));
+        $password = (string) (Request::postedValue('admin_password') ?? '');
 
         if ($label === '' || strlen($label) > 80) {
             throw new \RuntimeException('Enter a display name (80 characters or fewer).');
@@ -259,9 +261,9 @@ final class OperatorScreen
         $parent = SiteUsage::siteParent($paths['operator_host']);
         if ($parent !== '') {
             $host = SiteUsage::assertHostname(SiteUsage::siteAddress($slug, $paths['operator_host']), $paths['operator_host']);
-            $custom = SiteUsage::assertCustomHost((string) ($_POST['custom_host'] ?? ''), $host, $paths['operator_host']);
+            $custom = SiteUsage::assertCustomHost((string) (Request::postedValue('custom_host') ?? ''), $host, $paths['operator_host']);
         } else {
-            $host = SiteUsage::assertHostname((string) ($_POST['host'] ?? ''), $paths['operator_host']);
+            $host = SiteUsage::assertHostname((string) (Request::postedValue('host') ?? ''), $paths['operator_host']);
             $custom = '';
         }
         SiteUsage::claimHost($paths['platform_db'], $host, $custom, 0);
@@ -324,9 +326,9 @@ final class OperatorScreen
 
     private static function createOperator(string $db): void
     {
-        $username = trim((string) ($_POST['user_name'] ?? ''));
-        $password = (string) ($_POST['password'] ?? '');
-        $confirm = (string) ($_POST['password_confirm'] ?? '');
+        $username = trim((string) (Request::postedValue('user_name') ?? ''));
+        $password = (string) (Request::postedValue('password') ?? '');
+        $confirm = (string) (Request::postedValue('password_confirm') ?? '');
         if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $username) !== 1) {
             throw new \RuntimeException('The operator username must be 2–40 characters: letters, numbers, dots, underscores, or hyphens.');
         }
@@ -334,7 +336,7 @@ final class OperatorScreen
         if (!hash_equals($password, $confirm)) {
             throw new \RuntimeException('The two passwords do not match.');
         }
-        if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''))) {
+        if (!SetupToken::check((string) (Request::postedValue('setup_token') ?? ''))) {
             throw new \RuntimeException('The setup token does not match the file beside the operator database. Open that file on the server and enter the value.');
         }
         PlatformDb::addOperator($db, $username, $password);
@@ -357,8 +359,8 @@ final class OperatorScreen
             usleep(200000);
             throw new \RuntimeException('Too many attempts. Try again in 15 minutes.');
         }
-        $username = trim((string) ($_POST['user_name'] ?? ''));
-        $password = (string) ($_POST['password'] ?? '');
+        $username = trim((string) (Request::postedValue('user_name') ?? ''));
+        $password = (string) (Request::postedValue('password') ?? '');
         $row = PlatformDb::operatorByName($db, $username);
         $hash = (string) ($row['password'] ?? '');
         $check = $row === null || $hash === '' ? self::DUMMY_HASH : $hash;
@@ -385,10 +387,10 @@ final class OperatorScreen
     {
         PlatformDb::saveRate(
             $db,
-            SiteUsage::parseCurrency((string) ($_POST['currency'] ?? '')),
-            SiteUsage::parseAmount((string) ($_POST['monthly'] ?? '')),
-            SiteUsage::parseAmount((string) ($_POST['person'] ?? '')),
-            SiteUsage::parseAmount((string) ($_POST['gigabyte'] ?? ''))
+            SiteUsage::parseCurrency((string) (Request::postedValue('currency') ?? '')),
+            SiteUsage::parseAmount((string) (Request::postedValue('monthly') ?? '')),
+            SiteUsage::parseAmount((string) (Request::postedValue('person') ?? '')),
+            SiteUsage::parseAmount((string) (Request::postedValue('gigabyte') ?? ''))
         );
         SiteUsage::applyRate($db);
         $_SESSION['operator_notice'] = 'The rate is saved. Cost uses the last measurement.';
@@ -400,24 +402,24 @@ final class OperatorScreen
      */
     private static function saveSite(array $paths, array $store): void
     {
-        $postedSlug = (string) ($_POST['slug'] ?? '');
+        $postedSlug = (string) (Request::postedValue('slug') ?? '');
         if (!hash_equals((string) $store['slug'], $postedSlug)) {
             throw new \RuntimeException('That customer site was not found.');
         }
-        $label = trim((string) ($_POST['label'] ?? ''));
+        $label = trim((string) (Request::postedValue('label') ?? ''));
         $parent = SiteUsage::siteParent($paths['operator_host']);
         $host = $parent !== ''
             ? SiteUsage::siteAddress((string) $store['slug'], $paths['operator_host'])
-            : (string) ($_POST['host'] ?? '');
+            : (string) (Request::postedValue('host') ?? '');
         SiteUsage::updateSite(
             $paths['platform_db'],
             $paths['stores'],
             $store,
             $label,
             $host,
-            (string) ($_POST['admin_email'] ?? ''),
+            (string) (Request::postedValue('admin_email') ?? ''),
             $paths['operator_host'],
-            $parent !== '' ? (string) ($_POST['custom_host'] ?? '') : ''
+            $parent !== '' ? (string) (Request::postedValue('custom_host') ?? '') : ''
         );
         $_SESSION['operator_notice'] = $label . ' was updated.';
     }
@@ -468,7 +470,7 @@ final class OperatorScreen
             'Operator username',
             'user_name',
             'text',
-            DefaultAccount::postedUsername($_POST['user_name'] ?? null),
+            DefaultAccount::postedUsername(Request::postedValue('user_name') ?? null),
             true,
             'Only you use this. It is not created inside customer sites. The default is ' . DefaultAccount::USERNAME . '.'
         );
@@ -476,7 +478,7 @@ final class OperatorScreen
             'Password',
             'password',
             'password',
-            DefaultAccount::postedPassword($_POST['password'] ?? null),
+            DefaultAccount::postedPassword(Request::postedValue('password') ?? null),
             true,
             DefaultAccount::allowed()
                 ? 'The default is ' . DefaultAccount::PASSWORD . '. Stored as a hash in the operator database.'
@@ -486,7 +488,7 @@ final class OperatorScreen
             'Confirm password',
             'password_confirm',
             'password',
-            DefaultAccount::postedPassword($_POST['password_confirm'] ?? null),
+            DefaultAccount::postedPassword(Request::postedValue('password_confirm') ?? null),
             true
         );
         $html .= self::field(

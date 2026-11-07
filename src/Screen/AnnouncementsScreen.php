@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\support\Database;
 use Adlexone\Http\Page;
@@ -24,10 +26,10 @@ final class AnnouncementsScreen
     {
         $slug = ApplicationAccess::slug();
 
-        switch ((string) ($_GET['option'] ?? 'show_announcements')) {
+        switch ((string) (Request::queryValue('option') ?? 'show_announcements')) {
             case 'show_announcement_item':
                 ApplicationAccess::requireUse();
-                self::showOne((string) ($_GET['id'] ?? ''), $slug);
+                self::showOne((string) (Request::queryValue('id') ?? ''), $slug);
                 break;
             case 'new_announcement':
                 if (!ApplicationAccess::canAnnounce()) {
@@ -45,7 +47,7 @@ final class AnnouncementsScreen
                 if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::showEdit((string) ($_GET['id'] ?? ''), $slug);
+                self::showEdit((string) (Request::queryValue('id') ?? ''), $slug);
                 break;
             case 'update_announcement':
                 if (!ApplicationAccess::canAnnounce()) {
@@ -57,7 +59,7 @@ final class AnnouncementsScreen
                 if (!ApplicationAccess::canAnnounce()) {
                     \Adlexone\Auth\Access::deny();
                 }
-                self::delete((string) ($_GET['id'] ?? ''), $slug);
+                self::delete((string) (Request::queryValue('id') ?? ''), $slug);
                 break;
             case 'show_announcements':
             default:
@@ -117,8 +119,8 @@ final class AnnouncementsScreen
     {
         $data = [
             'time' => time(),
-            'message' => (string) ($_POST['message'] ?? ''),
-            'subject' => (string) ($_POST['subject'] ?? ''),
+            'message' => (string) (Request::postedValue('message') ?? ''),
+            'subject' => (string) (Request::postedValue('subject') ?? ''),
             'type' => 'user',
         ];
         if (Database::columnExists('announcements', 'application')) {
@@ -208,14 +210,14 @@ final class AnnouncementsScreen
 
     public static function update(string $slug): void
     {
-        $id = (int) ($_POST['id'] ?? 0);
+        $id = (int) (Request::postedValue('id') ?? 0);
         if (self::find($id, $slug) === null) {
             View::respond('Announcement not found.', Blocks::link(self::place('option=show_announcements'), 'Announcements', 'URL'));
             return;
         }
         Database::update('announcements', [
-            'message' => (string) ($_POST['message'] ?? ''),
-            'subject' => (string) ($_POST['subject'] ?? ''),
+            'message' => (string) (Request::postedValue('message') ?? ''),
+            'subject' => (string) (Request::postedValue('subject') ?? ''),
         ], 'id = ?', [$id]);
         self::showList($slug);
     }

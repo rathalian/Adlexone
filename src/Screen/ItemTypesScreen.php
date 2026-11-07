@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
@@ -67,7 +69,7 @@ final class ItemTypesScreen
 
 
 
-        switch ((string) ($_GET['option'] ?? '')) {
+        switch ((string) (Request::queryValue('option') ?? '')) {
             case 'new_item_type':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showItemType('', FormState::keys($_SESSION, 'remove'));
@@ -79,11 +81,11 @@ final class ItemTypesScreen
                 break;
             case 'modify_item_type':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::showItemType((string) ($_GET['item_type_id'] ?? ''));
+                self::showItemType((string) (Request::queryValue('item_type_id') ?? ''));
                 break;
             case 'update_item_type':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::updateItemType((string) ($_POST['item_type_id'] ?? ''));
+                self::updateItemType((string) (Request::postedValue('item_type_id') ?? ''));
                 break;
             case 'manage_item_types':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
@@ -269,7 +271,7 @@ final class ItemTypesScreen
             return;
         }
         $selectedFields = self::selectedCustomFieldsFromPost();
-        $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
+        $ids = \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll());
         $typeId = Database::insert('item_types', $columns);
         foreach ($selectedFields as $fieldId => $order) {
             Database::insert('item_type_custom_fields', [
@@ -289,7 +291,7 @@ final class ItemTypesScreen
      */
     private static function postedTypeColumns(): array
     {
-        $text = static fn (string $key): string => is_scalar($_POST[$key] ?? null) ? trim((string) $_POST[$key]) : '';
+        $text = static fn (string $key): string => is_scalar(Request::postedValue($key) ?? null) ? trim((string) Request::postedValue($key)) : '';
         $owner = $text('user_security');
 
         return [
@@ -305,13 +307,13 @@ final class ItemTypesScreen
     public static function showItemTypes(): void
     {
         $owners = \Adlexone\Application\ApplicationSettings::typeOwners();
-        $appSlug = trim((string) ($_GET['application'] ?? ''));
+        $appSlug = trim((string) (Request::queryValue('application') ?? ''));
         $appName = '';
         if ($appSlug !== '') {
             $app = \Adlexone\Application\ApplicationStore::findBySlug($appSlug);
             $appName = $app === null ? '' : (string) $app['name'];
         }
-        $unused = ($_GET['unused'] ?? '') === '1' && $appName === '';
+        $unused = (Request::queryValue('unused') ?? '') === '1' && $appName === '';
         $groups = [];
         foreach (Database::select('item_types', '*', '', [], 'item_type_name ASC') as $row) {
             $id = (int) $row['item_type_id'];
@@ -427,7 +429,7 @@ final class ItemTypesScreen
             return;
         }
         $selectedFields = self::selectedCustomFieldsFromPost();
-        $ids = \Adlexone\Data\GroupMembership::idsFromPost($_POST);
+        $ids = \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll());
         Database::delete('item_type_custom_fields', 'item_type_id = ?', [$itemTypeID]);
         foreach ($selectedFields as $fieldId => $order) {
             Database::insert('item_type_custom_fields', [
@@ -450,9 +452,9 @@ final class ItemTypesScreen
     public static function selectedCustomFieldsFromPost(): array
     {
         $selected = [];
-        foreach ($_POST as $key => $value) {
+        foreach (Request::postedAll() as $key => $value) {
             if (str_starts_with((string)$key, 'custom_field_id_') && $value !== '' && $value !== '0') {
-                $order = $_POST['custom_field_sort_' . $value] ?? '0';
+                $order = Request::postedValue('custom_field_sort_' . $value) ?? '0';
                 $selected[(string)$value] = ($order === '' ? '0' : (string)$order);
             }
         }
@@ -465,7 +467,7 @@ final class ItemTypesScreen
     public static function groupSecurityFromPost(): string
     {
         return \Adlexone\Data\GroupMembership::toDelimited(
-            \Adlexone\Data\GroupMembership::idsFromPost($_POST)
+            \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll())
         );
     }
 
@@ -474,11 +476,11 @@ final class ItemTypesScreen
      */
     public static function stripItemTypeFormFields(): void
     {
-        foreach (array_keys($_POST) as $key) {
+        foreach (array_keys(Request::postedAll()) as $key) {
             if (str_starts_with((string)$key, 'custom_field_id_')
                 || str_starts_with((string)$key, 'custom_field_sort_')
                 || str_starts_with((string)$key, 'group_')) {
-                unset($_POST[$key]);
+                Request::forgetPosted($key);
             }
         }
     }
@@ -488,7 +490,7 @@ final class ItemTypesScreen
      */
     public static function deleteItemType(): void
     {
-        $itemTypeID = (string)($_GET['item_type_id'] ?? '');
+        $itemTypeID = (string)(Request::queryValue('item_type_id') ?? '');
         $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
         if ($itemTypeID === '' || !ctype_digit($itemTypeID)) {
             View::respond(TXT_115, $back);
@@ -515,7 +517,7 @@ final class ItemTypesScreen
 
     private static function url(string $query = ''): string
     {
-        $scope = trim((string) ($_GET['application'] ?? ''));
+        $scope = trim((string) (Request::queryValue('application') ?? ''));
         if ($scope !== '') {
             $query = 'application=' . rawurlencode($scope) . ($query !== '' ? '&' . ltrim($query, '&') : '');
         }

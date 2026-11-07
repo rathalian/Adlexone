@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Data;
 
+use Adlexone\Auth\Access;
+
 use Adlexone\support\Database;
 
 /**
@@ -81,7 +83,7 @@ final class GroupMembership
 
             return in_array($groupId, self::userGroupIds($userId), true);
         }
-        $session = (int) ($_SESSION['access_role_id'] ?? 5);
+        $session = Access::legacyRole();
 
         return $roleId <= 0 || $session <= $roleId;
     }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
@@ -21,7 +23,7 @@ final class PaletteScreen
 {
     public static function open(): void
     {
-        $query = trim((string) ($_GET['q'] ?? ''));
+        $query = trim((string) (Request::queryValue('q') ?? ''));
         if ($query !== '') {
             WorkScreen::workJson(['records' => self::records($query)]);
         }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
@@ -38,7 +40,7 @@ final class RecordScreens
      */
     public static function open(string $capability, array $config): void
     {
-        $option = (string) ($_GET['option'] ?? '');
+        $option = (string) (Request::queryValue('option') ?? '');
         if ($option === 'save_steps' && $capability === ScreenCatalog::STEPS) {
             self::saveSteps($config);
             return;
@@ -124,23 +126,23 @@ final class RecordScreens
         }
         $config = [];
         if (in_array($capability, [ScreenCatalog::DIARY, ScreenCatalog::STEPS, ScreenCatalog::AGE], true)) {
-            $open = RecordQuery::strings((string) ($_POST['open_statuses'] ?? ''));
+            $open = RecordQuery::strings((string) (Request::postedValue('open_statuses') ?? ''));
             if ($open !== []) {
                 $config['open_statuses'] = $open;
             }
         }
         if ($capability === ScreenCatalog::ACTIVITY) {
-            $days = (int) ($_POST['days'] ?? 0);
+            $days = (int) (Request::postedValue('days') ?? 0);
             if ($days > 0) {
                 $config['days'] = (string) min($days, 365);
             }
-            $groupId = (int) ($_POST['group_id'] ?? 0);
+            $groupId = (int) (Request::postedValue('group_id') ?? 0);
             if ($groupId > 0 && array_key_exists($groupId, \Adlexone\Application\Rules::groups())) {
                 $config['group_id'] = (string) $groupId;
             }
         }
         if ($capability === ScreenCatalog::INTAKE) {
-            $value = trim((string) ($_POST['status_value'] ?? ''));
+            $value = trim((string) (Request::postedValue('status_value') ?? ''));
             $status = WorkScreen::workStatusField($typeId, $slug);
             if ($value !== '' && $status !== null && in_array($value, $status['values'], true)) {
                 $config['status_value'] = $value;
@@ -164,8 +166,8 @@ final class RecordScreens
             self::missing('Add a menu field on the record type.');
             return;
         }
-        $focus = (string) ($_GET['focus'] ?? '');
-        $focusValue = (string) ($_GET['value'] ?? '');
+        $focus = (string) (Request::queryValue('focus') ?? '');
+        $focusValue = (string) (Request::queryValue('value') ?? '');
         $isStatus = $field['plain'] === 'status' || str_contains($field['plain'], 'status');
         if (!$isStatus && $focus === 'value') {
             self::countRecords($loaded, $field, $focusValue);
@@ -317,10 +319,10 @@ final class RecordScreens
         $allowed[] = '0';
         foreach ($loaded['items'] as $item) {
             $key = 'owner_' . $item['id'];
-            if (!array_key_exists($key, $_POST)) {
+            if (!array_key_exists($key, Request::postedAll())) {
                 continue;
             }
-            $next = trim((string) $_POST[$key]);
+            $next = trim((string) Request::postedValue($key));
             if (!in_array($next, $allowed, true) || (int) $next === $item['owner_id']) {
                 continue;
             }
@@ -420,10 +422,10 @@ final class RecordScreens
                 continue;
             }
             $key = 'step_' . $item['id'];
-            if (!array_key_exists($key, $_POST)) {
+            if (!array_key_exists($key, Request::postedAll())) {
                 continue;
             }
-            $next = trim((string) $_POST[$key]);
+            $next = trim((string) Request::postedValue($key));
             if ($next === ($current[$item['id']] ?? '')) {
                 continue;
             }
@@ -912,16 +914,16 @@ final class RecordScreens
         $opening = self::openingStatus($config, $status);
         $posted = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST';
         $errors = [];
-        if ($posted && (string) ($_GET['option'] ?? '') === 'save_intake') {
+        if ($posted && (string) (Request::queryValue('option') ?? '') === 'save_intake') {
             $errors = self::intakeErrors($typeId);
         }
         $formFields = [];
-        $formFields['Name'] = Form::text('item_title', $posted ? (string) ($_POST['item_title'] ?? '') : '');
+        $formFields['Name'] = Form::text('item_title', $posted ? (string) (Request::postedValue('item_title') ?? '') : '');
         foreach ($shown as $field) {
             if ($status !== null && $field['id'] === $status['id']) {
                 continue;
             }
-            $value = $posted ? (string) ($_POST['custom_field_' . $field['id']] ?? '') : '';
+            $value = $posted ? (string) (Request::postedValue('custom_field_' . $field['id']) ?? '') : '';
             $formFields[$field['label']] = self::control($field, $value);
         }
         $hidden = Form::hidden('item_type_id', (string) $typeId);
@@ -979,12 +981,14 @@ final class RecordScreens
         $fields = RecordQuery::fields($typeId);
         $status = WorkScreen::workStatusField($typeId);
         $opening = self::openingStatus($config, $status);
-        MenuOptions::collapseRequest($_POST);
+        $posted = Request::postedAll();
+        MenuOptions::collapseRequest($posted);
+        Request::fillPosted($posted);
         $payload = [];
         foreach ($fields as $field) {
             $key = 'custom_field_' . $field['id'];
-            if (array_key_exists($key, $_POST) && !is_array($_POST[$key])) {
-                $payload[$key] = (string) $_POST[$key];
+            if (array_key_exists($key, Request::postedAll()) && !is_array(Request::postedValue($key))) {
+                $payload[$key] = (string) Request::postedValue($key);
             }
         }
         if ($status !== null && $opening !== '') {
@@ -997,13 +1001,13 @@ final class RecordScreens
             'item_type_id' => $typeId,
             'creator_security' => $userId,
             'user_security' => $userId,
-            'item_title' => trim((string) ($_POST['item_title'] ?? '')),
+            'item_title' => trim((string) (Request::postedValue('item_title') ?? '')),
         ]);
         ItemFields::saveFromArray($itemId, $payload);
-        GroupMembership::setItemGroups($itemId, GroupMembership::idsFromPost($_POST));
-        $_POST = array_merge($_POST, $payload);
+        GroupMembership::setItemGroups($itemId, GroupMembership::idsFromPost(Request::postedAll()));
+        Request::fillPosted(array_merge(Request::postedAll(), $payload));
         Actions::executeAction($itemId, 'create_item', false);
-        $createdTitle = trim((string) ($_POST['item_title'] ?? ''));
+        $createdTitle = trim((string) (Request::postedValue('item_title') ?? ''));
         View::flash(($createdTitle !== '' ? $createdTitle : 'The record') . ' created.');
         header('Location: ' . self::base() . '&item=' . $itemId);
         exit;
@@ -1015,13 +1019,13 @@ final class RecordScreens
     private static function intakeErrors(int $typeId): array
     {
         $errors = [];
-        if (trim((string) ($_POST['item_title'] ?? '')) === '') {
+        if (trim((string) (Request::postedValue('item_title') ?? '')) === '') {
             $errors['item_title'] = 'Enter a name.';
         }
 
         $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
 
-        return $errors + FieldValidation::postedErrors($_POST, $typeId) + WorkflowFields::dueError($typeId, $slug, $_POST);
+        return $errors + FieldValidation::postedErrors(Request::postedAll(), $typeId) + WorkflowFields::dueError($typeId, $slug, Request::postedAll());
     }
 
     /**
@@ -1179,7 +1183,7 @@ final class RecordScreens
         $name = 'custom_field_' . $field['id'];
         return match ($field['type']) {
             FieldTypes::TEXT_AREA => Form::textarea($name, $value),
-            FieldTypes::MENU => MenuOptions::controls($field['id'], $value, '', $_POST),
+            FieldTypes::MENU => MenuOptions::controls($field['id'], $value, '', Request::postedAll()),
             FieldTypes::CHECK_BOX => Form::checkbox($name, (string) $field['id'], ($value !== '' && $value !== '0') ? (string) $field['id'] : ''),
             FieldTypes::DATE => Form::date($name, $value),
             FieldTypes::DATETIME => Form::datetime($name, $value),

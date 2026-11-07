@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
+use Adlexone\Auth\Access;
+
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
@@ -53,7 +57,7 @@ final class ApplicationSearch
         $types = ApplicationSettings::allowedItemTypeIds($slug);
         $fields = self::fields($types);
 
-        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST' && isset($_POST['search_name'])) {
+        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST' && Request::hasPostedKey('search_name')) {
             self::save($slug, $types, $fields);
             return;
         }
@@ -61,7 +65,7 @@ final class ApplicationSearch
         Page::current()->addScript('search');
         $problems = [];
         $state = self::state($types, $fields, $problems);
-        $run = isset($_GET['go']);
+        $run = Request::hasQueryKey('go');
 
         $body = self::form($state, $types, $fields);
         if ($problems !== []) {
@@ -139,7 +143,7 @@ final class ApplicationSearch
      */
     private static function state(array $types, array $fields, array &$problems): array
     {
-        $text = static fn (string $key): string => is_scalar($_GET[$key] ?? null) ? trim((string) $_GET[$key]) : '';
+        $text = static fn (string $key): string => is_scalar(Request::queryValue($key) ?? null) ? trim((string) Request::queryValue($key)) : '';
 
         $state = ['q' => mb_substr($text('q'), 0, 200)];
 
@@ -166,7 +170,7 @@ final class ApplicationSearch
         }
 
         $filters = [];
-        $posted = $_GET['f'] ?? [];
+        $posted = Request::queryValue('f') ?? [];
         foreach (is_array($posted) ? $posted : [] as $row) {
             if (!is_array($row)) {
                 continue;
@@ -381,7 +385,7 @@ final class ApplicationSearch
             }
         }
 
-        $run = isset($_GET['go']);
+        $run = Request::hasQueryKey('go');
         $q = '<div class="finder__bar">'
             . '<label class="finder__sr" for="finder-q">Search</label>'
             . '<input id="finder-q" class="input finder__q" type="search" name="q" value="' . Html::e((string) $state['q']) . '"'
@@ -577,7 +581,7 @@ final class ApplicationSearch
         $ids = self::matches($state, $types);
         $total = count($ids);
         $pages = max(1, (int) ceil($total / self::PAGE_SIZE));
-        $page = min($pages, max(1, (int) (is_scalar($_GET['sp'] ?? null) ? $_GET['sp'] : 1)));
+        $page = min($pages, max(1, (int) (is_scalar(Request::queryValue('sp') ?? null) ? Request::queryValue('sp') : 1)));
         $shown = array_slice($ids, ($page - 1) * self::PAGE_SIZE, self::PAGE_SIZE);
 
         $count = $total === 1 ? '<strong>1 record</strong> matches.' : '<strong>' . number_format($total) . ' records</strong> match.';
@@ -714,7 +718,7 @@ final class ApplicationSearch
     private static function saveForm(array $state): string
     {
         $scope = '';
-        if ((int) ($_SESSION['access_role_id'] ?? 5) <= 1) {
+        if (Access::allowsAdminister()) {
             $scope = '<label class="finder__filter"><span class="finder__label">Visible to</span>'
                 . '<select class="select" name="security"><option value="mine">Only me</option><option value="all">Everyone with access</option></select></label>';
         }
@@ -903,7 +907,7 @@ final class ApplicationSearch
     {
         $problems = [];
         $state = self::state($types, $fields, $problems);
-        $name = trim((string) ($_POST['search_name'] ?? ''));
+        $name = trim((string) (Request::postedValue('search_name') ?? ''));
         $back = self::href($state);
 
         $app = ApplicationStore::findBySlug($slug);
@@ -916,7 +920,7 @@ final class ApplicationSearch
             View::flash('You already have a saved search called "' . $name . '". Choose another name.', 'danger');
         } else {
             $criteria = self::criteria($state);
-            $everyone = (string) ($_POST['security'] ?? '') === 'all' && (int) ($_SESSION['access_role_id'] ?? 5) <= 1;
+            $everyone = (string) (Request::postedValue('security') ?? '') === 'all' && Access::allowsAdminister();
             Database::insert('saved_searches', [
                 'user' => $everyone ? 'all' : $userId,
                 'search_name' => mb_substr($name, 0, 80),

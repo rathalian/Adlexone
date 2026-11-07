@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
 use Adlexone\Html\Blocks;
@@ -56,7 +58,7 @@ final class HomeScreen
     public static function activity(): void
     {
         $menu = \Adlexone\Application\ApplicationStore::menuItems();
-        $scope = (string) ($_GET['scope'] ?? '');
+        $scope = (string) (Request::queryValue('scope') ?? '');
 
         WorkScreen::workJson(['html' => HomeDashboard::activityHtml($menu, $scope)]);
     }
@@ -65,7 +67,7 @@ final class HomeScreen
      */
     public static function assigned(): void
     {
-        WorkScreen::workJson(['html' => HomeDashboard::assignedHtml(\Adlexone\Application\ApplicationStore::menuItems(), (string) ($_GET['focus'] ?? ''))]);
+        WorkScreen::workJson(['html' => HomeDashboard::assignedHtml(\Adlexone\Application\ApplicationStore::menuItems(), (string) (Request::queryValue('focus') ?? ''))]);
     }
 
     /**

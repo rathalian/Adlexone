@@ -108,7 +108,7 @@ final class SecurityScreen
                 break;
             case 'admin_modify_user' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::showUser((string) ($_GET['user_id'] ?? ''), '', true);
+                self::showUser((string) (Request::queryValue('user_id') ?? ''), '', true);
                 break;
             case 'modify_user' :
                 Access::require(\Adlexone\Auth\Permission::APP_ACCESS);
@@ -127,11 +127,11 @@ final class SecurityScreen
                 break;
             case 'update_user' :
                 Access::require(\Adlexone\Auth\Permission::APP_ACCESS);
-                self::updateUser($_POST['user_id'] ?? 0);
+                self::updateUser(Request::postedValue('user_id') ?? 0);
                 break;
             case 'delete_user' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::deleteUser($_GET['user_id'] ?? 0);
+                self::deleteUser(Request::queryValue('user_id') ?? 0);
                 break;
             case 'add_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
@@ -140,25 +140,25 @@ final class SecurityScreen
             case 'modify_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 // Removes leading VBL_ from any session variables (used for form value persistence)
-                self::showGroup((string) ($_GET['group_id'] ?? ''), FormState::keys($_SESSION, 'remove'));
+                self::showGroup((string) (Request::queryValue('group_id') ?? ''), FormState::keys($_SESSION, 'remove'));
                 // Unset session variables starting with VBL_
                 $_SESSION = FormState::keys($_SESSION, 'unset');
                 break;
             case 'modify_group_membership' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::showGroupMembership($_GET['user_id'] ?? 0);
+                self::showGroupMembership(Request::queryValue('user_id') ?? 0);
                 break;
             case 'update_group_membership' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::updateGroupMembership($_GET['user_id'] ?? 0);
+                self::updateGroupMembership(Request::queryValue('user_id') ?? 0);
                 break;
             case 'update_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::updateGroup($_POST['group_id'] ?? 0);
+                self::updateGroup(Request::postedValue('group_id') ?? 0);
                 break;
             case 'delete_group' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
-                self::deleteGroup($_GET['group_id'] ?? 0);
+                self::deleteGroup(Request::queryValue('group_id') ?? 0);
                 break;
             default :
                 if (\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SECURITY)) {
@@ -602,10 +602,10 @@ final class SecurityScreen
         $allowed = $admin ? array_merge(self::PROFILE_COLUMNS, self::ADMIN_COLUMNS) : self::PROFILE_COLUMNS;
         $columns = [];
         foreach ($allowed as $name) {
-            if (!isset($_POST[$name]) || !is_scalar($_POST[$name])) {
+            if (!Request::hasPostedKey($name) || !is_scalar(Request::postedValue($name))) {
                 continue;
             }
-            $columns[$name] = trim((string) $_POST[$name]);
+            $columns[$name] = trim((string) Request::postedValue($name));
         }
         if (isset($columns['role'])) {
             $role = (int) $columns['role'];
@@ -646,7 +646,7 @@ final class SecurityScreen
      */
     private static function postedHomeController(): array
     {
-        $posted = $_POST['home_controller'] ?? '';
+        $posted = Request::postedValue('home_controller') ?? '';
         $parts = explode('}-{', is_string($posted) ? $posted : '', 2);
 
         return [trim($parts[0]), trim($parts[1] ?? '')];
@@ -654,7 +654,7 @@ final class SecurityScreen
 
     private static function userSettings(string $current = ''): string
     {
-        $flag = ($_POST['show_hide'] ?? '') === 'Yes' ? '{SHOW-HIDE=TRUE}' : '{SHOW-HIDE=FALSE}';
+        $flag = (Request::postedValue('show_hide') ?? '') === 'Yes' ? '{SHOW-HIDE=TRUE}' : '{SHOW-HIDE=FALSE}';
         if ($current === '') {
             return $flag;
         }
@@ -668,10 +668,10 @@ final class SecurityScreen
      */
     public static function addUser()
     {
-        $userName = trim((string) ($_POST['user_name'] ?? ''));
-        $password = (string) ($_POST['password_ftype'] ?? '');
-        $confirm = (string) ($_POST['password_confirm'] ?? '');
-        $email = trim((string) ($_POST['email'] ?? ''));
+        $userName = trim((string) (Request::postedValue('user_name') ?? ''));
+        $password = (string) (Request::postedValue('password_ftype') ?? '');
+        $confirm = (string) (Request::postedValue('password_confirm') ?? '');
+        $email = trim((string) (Request::postedValue('email') ?? ''));
         $back = Blocks::link(self::url('option=new_user'), TXT_161, 'URL');
 
         if (preg_match('/^[A-Za-z0-9._-]{2,40}$/', $userName) !== 1) {
@@ -754,7 +754,7 @@ final class SecurityScreen
             View::respond('You cannot make your own account inactive.', $list);
             return;
         }
-        $password = (string) ($_POST['password_ftype'] ?? '');
+        $password = (string) (Request::postedValue('password_ftype') ?? '');
         if ($password !== '') {
             try {
                 DefaultAccount::assertPassword($password);
@@ -765,10 +765,10 @@ final class SecurityScreen
             $columns['password'] = password_hash($password, PASSWORD_DEFAULT);
         }
 
-        if (isset($_POST['home_controller'])) {
+        if (Request::hasPostedKey('home_controller')) {
             [$columns['home_controller'], $columns['home_controller_name']] = self::postedHomeController();
         }
-        if (isset($_POST['show_hide'])) {
+        if (Request::hasPostedKey('show_hide')) {
             $columns['settings'] = self::userSettings((string) ($current['settings'] ?? ''));
         }
 
@@ -788,9 +788,9 @@ final class SecurityScreen
     private static function postedGroupColumns(): array
     {
         return [
-            'group_name' => trim((string) ($_POST['group_name'] ?? '')),
-            'description' => trim((string) ($_POST['description'] ?? '')),
-            'role' => max(1, min(5, (int) ($_POST['role'] ?? 5))),
+            'group_name' => trim((string) (Request::postedValue('group_name') ?? '')),
+            'description' => trim((string) (Request::postedValue('description') ?? '')),
+            'role' => max(1, min(5, (int) (Request::postedValue('role') ?? 5))),
         ];
     }
 
@@ -799,7 +799,7 @@ final class SecurityScreen
      */
     private static function postedPermissions(): array
     {
-        $posted = $_POST['permissions'] ?? [];
+        $posted = Request::postedValue('permissions') ?? [];
 
         return is_array($posted) ? array_values(array_filter($posted, 'is_string')) : [];
     }
@@ -877,7 +877,7 @@ final class SecurityScreen
 
         \Adlexone\Data\GroupMembership::setUserGroups(
             (int) $userID,
-            \Adlexone\Data\GroupMembership::idsFromPost($_POST)
+            \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll())
         );
 
         View::respond(TXT_241, Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
@@ -897,14 +897,14 @@ final class SecurityScreen
      */
     public static function showUserGroupResults()
     {
-        $type = (string) ($_POST['type'] ?? '');
+        $type = (string) (Request::postedValue('type') ?? '');
         $table = $type === 'group_name' ? 'groups' : 'users';
         $allowed = $table === 'groups' ? ['group_name', 'description'] : ['user_name', 'first_name', 'last_name', 'email'];
         if (!in_array($type, $allowed, true)) {
             $type = $allowed[0];
         }
-        $criteria = (string) ($_POST['criteria'] ?? '');
-        if (($_POST['operator'] ?? '') === '=') {
+        $criteria = (string) (Request::postedValue('criteria') ?? '');
+        if ((Request::postedValue('operator') ?? '') === '=') {
             $result = Database::select($table, '*', $type . ' = ?', [$criteria]);
         } else {
             $result = Database::select($table, '*', $type . " LIKE ? ESCAPE '\\'", ['%' . Database::escapeLike($criteria) . '%']);

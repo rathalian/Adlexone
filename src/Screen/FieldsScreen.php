@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\support\Database;
 use Adlexone\support\FieldTypes;
 use Adlexone\support\MenuOptions;
@@ -74,7 +76,7 @@ final class FieldsScreen
 
 
 
-        switch ((string) ($_GET['option'] ?? '')) {
+        switch ((string) (Request::queryValue('option') ?? '')) {
             case 'new_custom_field':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showCustomField('', FormState::keys($_SESSION, 'remove'));
@@ -86,28 +88,28 @@ final class FieldsScreen
                 break;
             case 'modify_custom_field':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::showCustomField((string) ($_GET['custom_field_id'] ?? ''));
+                self::showCustomField((string) (Request::queryValue('custom_field_id') ?? ''));
                 break;
             case 'modify_menu_values':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::modifyMenuValues((string) ($_GET['custom_field_id'] ?? ''));
+                self::modifyMenuValues((string) (Request::queryValue('custom_field_id') ?? ''));
                 break;
             case 'add_update_menu_value':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::addUpdateMenuValue((string) ($_POST['custom_field_id'] ?? ''));
+                self::addUpdateMenuValue((string) (Request::postedValue('custom_field_id') ?? ''));
                 break;
             case 'update_menu_value_filter':
             case 'modify_menu_value_filters':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::modifyMenuValues((string) ($_GET['custom_field_id'] ?? $_POST['custom_field_id'] ?? ''));
+                self::modifyMenuValues((string) (Request::queryValue('custom_field_id') ?? Request::postedValue('custom_field_id') ?? ''));
                 break;
             case 'delete_menu_value':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::deleteMenuValue((string) ($_GET['menu_value_id'] ?? ''), (string) ($_GET['custom_field_id'] ?? ''));
+                self::deleteMenuValue((string) (Request::queryValue('menu_value_id') ?? ''), (string) (Request::queryValue('custom_field_id') ?? ''));
                 break;
             case 'update_custom_field':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::updateCustomField((string) ($_POST['custom_field_id'] ?? ''));
+                self::updateCustomField((string) (Request::postedValue('custom_field_id') ?? ''));
                 break;
             case 'delete_custom_field':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
@@ -225,9 +227,9 @@ final class FieldsScreen
     public static function addUpdateMenuValue($customFieldID)
     {
         $fieldId = (int)$customFieldID;
-        if (isset($_POST['add_new']) and $_POST['add_new'] != '') {
-            $value = trim((string)($_POST['menu_value'] ?? ''));
-            $parentId = (int)($_POST['parent_menu_value_id'] ?? 0);
+        if (Request::hasPostedKey('add_new') and Request::postedValue('add_new') != '') {
+            $value = trim((string)(Request::postedValue('menu_value') ?? ''));
+            $parentId = (int)(Request::postedValue('parent_menu_value_id') ?? 0);
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
                 $html = TXT_294;
                 $html .= '<br><br><a href ="' . self::url('option=modify_menu_values&custom_field_id=') . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
@@ -240,8 +242,8 @@ final class FieldsScreen
             self::modifyMenuValues($customFieldID);
             return;
         }
-        if (isset($_POST['update_existing']) and $_POST['update_existing'] != '') {
-            MenuOptions::applyEdits($fieldId, $_POST);
+        if (Request::hasPostedKey('update_existing') and Request::postedValue('update_existing') != '') {
+            MenuOptions::applyEdits($fieldId, Request::postedAll());
             self::modifyMenuValues($customFieldID);
         }
     }
@@ -287,7 +289,7 @@ final class FieldsScreen
      */
     private static function postedFieldColumns(): array
     {
-        $text = static fn (string $key): string => is_scalar($_POST[$key] ?? null) ? trim((string) $_POST[$key]) : '';
+        $text = static fn (string $key): string => is_scalar(Request::postedValue($key) ?? null) ? trim((string) Request::postedValue($key)) : '';
         $yesNo = static fn (string $value, string $fallback): string => in_array($value, ['Yes', 'No'], true) ? $value : $fallback;
         $type = $text('field_type');
 
@@ -348,13 +350,13 @@ final class FieldsScreen
     public static function showFields(): void
     {
         $owners = \Adlexone\Application\ApplicationSettings::fieldOwners();
-        $appSlug = trim((string) ($_GET['application'] ?? ''));
+        $appSlug = trim((string) (Request::queryValue('application') ?? ''));
         $appName = '';
         if ($appSlug !== '') {
             $app = \Adlexone\Application\ApplicationStore::findBySlug($appSlug);
             $appName = $app === null ? '' : (string) $app['name'];
         }
-        $unused = ($_GET['unused'] ?? '') === '1' && $appName === '';
+        $unused = (Request::queryValue('unused') ?? '') === '1' && $appName === '';
         $typeNames = \Adlexone\Application\ApplicationSettings::fieldTypeNames();
         $groups = [];
         foreach (Database::select('custom_fields', '*', '', [], 'custom_field_name ASC') as $row) {
@@ -472,9 +474,9 @@ final class FieldsScreen
     {
         $html = '';
         $table = '';
-        if (($_POST['type'] ?? '') == 'custom_field_name') {
+        if ((Request::postedValue('type') ?? '') == 'custom_field_name') {
             $table = 'custom_fields';
-        } elseif (($_POST['type'] ?? '') == 'item_type_name') {
+        } elseif ((Request::postedValue('type') ?? '') == 'item_type_name') {
             $table = 'item_types';
         }
         if ($table === '') {
@@ -483,8 +485,8 @@ final class FieldsScreen
         }
 
         $column = $table === 'custom_fields' ? 'custom_field_name' : 'item_type_name';
-        $criteria = (string) ($_POST['criteria'] ?? '');
-        if (($_POST['operator'] ?? '') === '=') {
+        $criteria = (string) (Request::postedValue('criteria') ?? '');
+        if ((Request::postedValue('operator') ?? '') === '=') {
             $result = Database::select($table, '*', $column . ' = ?', [$criteria], 'enabled DESC, ' . $column . ' ASC');
         } else {
             $result = Database::select($table, '*', $column . " LIKE ? ESCAPE '\\'", ['%' . Database::escapeLike($criteria) . '%'], 'enabled DESC, ' . $column . ' ASC');
@@ -544,7 +546,7 @@ final class FieldsScreen
      */
     public static function deleteCustomField(): void
     {
-        $customFieldID = (string)($_GET['custom_field_id'] ?? '');
+        $customFieldID = (string)(Request::queryValue('custom_field_id') ?? '');
         if ($customFieldID === '' || !ctype_digit($customFieldID)) {
             View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
             return;
@@ -590,7 +592,7 @@ final class FieldsScreen
 
     private static function url(string $query = ''): string
     {
-        $scope = trim((string) ($_GET['application'] ?? ''));
+        $scope = trim((string) (Request::queryValue('application') ?? ''));
         if ($scope !== '') {
             $query = 'application=' . rawurlencode($scope) . ($query !== '' ? '&' . ltrim($query, '&') : '');
         }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
@@ -197,7 +199,7 @@ final class SaasInstallScreen
             if (!Csrf::valid()) {
                 $error = 'This form expired. Reload the page and try again.';
             } else {
-                $action = (string) ($_POST['setup_action'] ?? '');
+                $action = (string) (Request::postedValue('setup_action') ?? '');
                 try {
                     self::proveToken($tokenPath);
                     if ($action === 'placement') {
@@ -239,7 +241,7 @@ final class SaasInstallScreen
      */
     private static function savePlacement(array $paths): void
     {
-        $choice = (string) ($_POST['placement'] ?? '');
+        $choice = (string) (Request::postedValue('placement') ?? '');
         if (!in_array($choice, [InstallLayout::PACKAGE, InstallLayout::PUBLIC_FOLDER], true)) {
             throw new \RuntimeException('Choose where this copy of Adlexone is installed.');
         }
@@ -263,7 +265,7 @@ final class SaasInstallScreen
         if ($state['placement'] === '') {
             throw new \RuntimeException('Confirm the document root first.');
         }
-        $path = trim((string) ($_POST['stores_path'] ?? ''));
+        $path = trim((string) (Request::postedValue('stores_path') ?? ''));
         $report = self::assessStores($paths['install'], $path, $state['placement']);
         $already = $report['ok'] && $state['passed'] === $report['directory'];
         $state['passed'] = $report['ok'] ? $report['directory'] : '';
@@ -291,7 +293,7 @@ final class SaasInstallScreen
         if ($state['placement'] !== InstallLayout::detect($paths['install'])) {
             throw new \RuntimeException(InstallLayout::placementMessage($paths['install']));
         }
-        $host = SiteUsage::assertOperatorHost((string) ($_POST['operator_host'] ?? ''));
+        $host = SiteUsage::assertOperatorHost((string) (Request::postedValue('operator_host') ?? ''));
         $report = self::assessStores($paths['install'], $state['stores'], $state['placement']);
         if (!$report['ok'] || $report['platform_db'] === '') {
             throw new \RuntimeException($report['message'] !== '' ? $report['message'] : 'This folder cannot be used yet.');
@@ -366,7 +368,7 @@ final class SaasInstallScreen
     private static function currentStep(): string
     {
         $state = self::state();
-        $requested = (string) ($_GET['step'] ?? '');
+        $requested = (string) (Request::queryValue('step') ?? '');
         if ($state['placement'] === '') {
             return self::STEP_ROOT;
         }
@@ -481,7 +483,7 @@ final class SaasInstallScreen
         $public = InstallLayout::canonical($install . DIRECTORY_SEPARATOR . 'public');
         $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
         $detected = InstallLayout::detect($paths['install']);
-        $selected = (string) ($_POST['placement'] ?? '');
+        $selected = (string) (Request::postedValue('placement') ?? '');
         if ($selected === '' && ($detected === InstallLayout::PACKAGE || $detected === InstallLayout::PUBLIC_FOLDER)) {
             $selected = $detected;
         }
@@ -527,7 +529,7 @@ final class SaasInstallScreen
     private static function storesForm(array $paths, ?array $report, bool $focus): string
     {
         $state = self::state();
-        $posted = trim((string) ($_POST['stores_path'] ?? ''));
+        $posted = trim((string) (Request::postedValue('stores_path') ?? ''));
         if ($posted !== '') {
             $path = $posted;
         } elseif ($state['stores'] !== '') {
@@ -577,7 +579,7 @@ final class SaasInstallScreen
     private static function hostForm(bool $focus): string
     {
         $state = self::state();
-        $posted = strtolower(trim((string) ($_POST['operator_host'] ?? '')));
+        $posted = strtolower(trim((string) (Request::postedValue('operator_host') ?? '')));
         $host = $posted !== '' ? $posted : Runtime::requestHost();
         $html = self::openForm(self::STEP_HOST);
         $html .= self::facts([
@@ -726,7 +728,7 @@ final class SaasInstallScreen
         if (!empty($_SESSION['adlexone_install_proven'])) {
             return;
         }
-        if (!SetupToken::check((string) ($_POST['setup_token'] ?? ''), $tokenPath)) {
+        if (!SetupToken::check((string) (Request::postedValue('setup_token') ?? ''), $tokenPath)) {
             throw new \RuntimeException('The setup token does not match ' . $tokenPath . '. Open that file on the server and enter the value. This page does not show it.');
         }
         session_regenerate_id(true);

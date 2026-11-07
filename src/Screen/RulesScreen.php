@@ -1,6 +1,8 @@
 <?php
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Rules;
 use Adlexone\Auth\Permission;
@@ -27,8 +29,8 @@ final class RulesScreen
         Page::current()->setNavOption('__section__');
         RenderNavigation::applyConfigureNav([['label' => 'Rules', 'href' => Router::manageUrl('rules')]]);
 
-        $slug = trim((string) ($_GET['app'] ?? $_POST['app'] ?? ''));
-        $option = (string) ($_GET['option'] ?? '');
+        $slug = trim((string) (Request::queryValue('app') ?? Request::postedValue('app') ?? ''));
+        $option = (string) (Request::queryValue('option') ?? '');
 
         switch ($option) {
         	case 'new_rule':
@@ -39,13 +41,13 @@ final class RulesScreen
         		ApplicationSettingsScreen::showRuleForm($slug, null);
         		break;
         	case 'edit_rule':
-        		ApplicationSettingsScreen::showRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
+        		ApplicationSettingsScreen::showRuleForm($slug, (int) (Request::queryValue('rule_id') ?? 0));
         		break;
         	case 'add_rule':
         		ApplicationSettingsScreen::saveRule($slug, 0);
         		break;
         	case 'update_rule':
-        		ApplicationSettingsScreen::saveRule($slug, (int) ($_POST['rule_id'] ?? 0));
+        		ApplicationSettingsScreen::saveRule($slug, (int) (Request::postedValue('rule_id') ?? 0));
         		break;
         	case 'delete_rule':
         		ApplicationSettingsScreen::deleteRule($slug);

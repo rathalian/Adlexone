@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
+use Adlexone\Http\Request;
+
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\Capabilities;
@@ -30,7 +32,7 @@ final class ApplicationsScreen
     {
         Access::require(Permission::ADMIN_SETTINGS);
 
-        $option = (string) ($_GET['option'] ?? '');
+        $option = (string) (Request::queryValue('option') ?? '');
 
         $section = '';
         $trail = [['label' => 'Applications', 'href' => self::url()]];
@@ -40,7 +42,7 @@ final class ApplicationsScreen
             'toggle_rule', 'duplicate_rule', 'move_rule', 'try_rule', 'run_rule',
         ];
         if (in_array($option, $applicationOptions, true)) {
-            $sectionApp = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
+            $sectionApp = (int) (Request::queryValue('application_id') ?? Request::postedValue('application_id') ?? 0);
             if ($sectionApp > 0) {
                 $section = Blocks::link(self::url('option=details&application_id=') . $sectionApp, 'Details', 'ic-sliders');
                 $section .= Blocks::link(self::url('option=navigation&application_id=') . $sectionApp, 'Navigation', 'ic-list-tree');
@@ -71,7 +73,7 @@ final class ApplicationsScreen
 
         switch ($option) {
             case 'export':
-                self::exportApplicationPackage((int) ($_GET['application_id'] ?? 0));
+                self::exportApplicationPackage((int) (Request::queryValue('application_id') ?? 0));
                 break;
             case 'new':
                 self::showApplicationForm();
@@ -80,36 +82,36 @@ final class ApplicationsScreen
                 self::saveApplication(0);
                 break;
             case 'details':
-                self::showApplicationForm((int) ($_GET['application_id'] ?? 0));
+                self::showApplicationForm((int) (Request::queryValue('application_id') ?? 0));
                 break;
             case 'update':
-                self::saveApplication((int) ($_POST['application_id'] ?? 0));
+                self::saveApplication((int) (Request::postedValue('application_id') ?? 0));
                 break;
             case 'delete':
-                ApplicationStore::deleteApplication((int) ($_GET['application_id'] ?? 0));
+                ApplicationStore::deleteApplication((int) (Request::queryValue('application_id') ?? 0));
                 header('Location: ' . self::url());
                 exit;
             case 'move':
-                ApplicationStore::moveApplication((int) ($_GET['application_id'] ?? 0), (string) ($_GET['direction'] ?? ''));
+                ApplicationStore::moveApplication((int) (Request::queryValue('application_id') ?? 0), (string) (Request::queryValue('direction') ?? ''));
                 header('Location: ' . self::url());
                 exit;
             case 'navigation':
-                self::showNavigation((int) ($_GET['application_id'] ?? 0));
+                self::showNavigation((int) (Request::queryValue('application_id') ?? 0));
                 break;
             case 'new_nav':
-                self::showNavForm((int) ($_GET['application_id'] ?? 0));
+                self::showNavForm((int) (Request::queryValue('application_id') ?? 0));
                 break;
             case 'add_nav':
                 self::saveNav(0);
                 break;
             case 'edit_nav':
-                self::showNavForm(0, (int) ($_GET['nav_id'] ?? 0));
+                self::showNavForm(0, (int) (Request::queryValue('nav_id') ?? 0));
                 break;
             case 'update_nav':
-                self::saveNav((int) ($_POST['nav_id'] ?? 0));
+                self::saveNav((int) (Request::postedValue('nav_id') ?? 0));
                 break;
             case 'delete_nav':
-                $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
+                $nav = ApplicationStore::findNav((int) (Request::queryValue('nav_id') ?? 0));
                 if ($nav !== null) {
                     ApplicationStore::deleteNav((int) $nav['nav_id']);
                     header('Location: ' . self::url('option=navigation&application_id=') . (int) $nav['application_id']);
@@ -118,9 +120,9 @@ final class ApplicationsScreen
                 header('Location: ' . self::url());
                 exit;
             case 'move_nav':
-                $nav = ApplicationStore::findNav((int) ($_GET['nav_id'] ?? 0));
+                $nav = ApplicationStore::findNav((int) (Request::queryValue('nav_id') ?? 0));
                 if ($nav !== null) {
-                    ApplicationStore::moveNav((int) $nav['nav_id'], (string) ($_GET['direction'] ?? ''));
+                    ApplicationStore::moveNav((int) $nav['nav_id'], (string) (Request::queryValue('direction') ?? ''));
                     header('Location: ' . self::url('option=navigation&application_id=') . (int) $nav['application_id']);
                     exit;
                 }
@@ -136,7 +138,7 @@ final class ApplicationsScreen
     {
         Access::require(Permission::ADMIN_ACTIONS);
 
-        $applicationId = (int) ($_GET['application_id'] ?? $_POST['application_id'] ?? 0);
+        $applicationId = (int) (Request::queryValue('application_id') ?? Request::postedValue('application_id') ?? 0);
         $app = ApplicationStore::find($applicationId);
         if ($app === null) {
             View::respond('That application does not exist.', Blocks::link(self::url(), 'Applications', 'URL'));
@@ -150,13 +152,13 @@ final class ApplicationsScreen
                 ApplicationSettingsScreen::showRuleForm($slug, null);
                 break;
             case 'edit_rule':
-                ApplicationSettingsScreen::showRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
+                ApplicationSettingsScreen::showRuleForm($slug, (int) (Request::queryValue('rule_id') ?? 0));
                 break;
             case 'add_rule':
                 ApplicationSettingsScreen::saveRule($slug, 0);
                 break;
             case 'update_rule':
-                ApplicationSettingsScreen::saveRule($slug, (int) ($_POST['rule_id'] ?? 0));
+                ApplicationSettingsScreen::saveRule($slug, (int) (Request::postedValue('rule_id') ?? 0));
                 break;
             case 'delete_rule':
                 ApplicationSettingsScreen::deleteRule($slug);
@@ -307,9 +309,9 @@ final class ApplicationsScreen
 
     public static function saveApplication(int $id): void
     {
-        $name = trim((string) ($_POST['name'] ?? ''));
-        $slug = self::slugify((string) ($_POST['slug'] ?? ''), $name);
-        $icon = (string) ($_POST['icon'] ?? 'ic-grid');
+        $name = trim((string) (Request::postedValue('name') ?? ''));
+        $slug = self::slugify((string) (Request::postedValue('slug') ?? ''), $name);
+        $icon = (string) (Request::postedValue('icon') ?? 'ic-grid');
         $recordType = self::postedRecordType();
         $groupIds = self::postedGroupIds();
         if ($recordType === false) {
@@ -331,11 +333,11 @@ final class ApplicationsScreen
         $fields = [
             'slug' => $slug,
             'name' => $name,
-            'hint' => trim((string) ($_POST['hint'] ?? '')),
-            'guide' => trim((string) ($_POST['guide'] ?? '')),
+            'hint' => trim((string) (Request::postedValue('hint') ?? '')),
+            'guide' => trim((string) (Request::postedValue('guide') ?? '')),
             'icon' => $icon,
             'permission' => Permission::appUse($slug),
-            'enabled' => isset($_POST['enabled']) ? 1 : 0,
+            'enabled' => Request::hasPostedKey('enabled') ? 1 : 0,
         ];
         if ($id > 0) {
             $existing = ApplicationStore::find($id);
@@ -468,7 +470,7 @@ final class ApplicationsScreen
 
     public static function saveNav(int $navId): void
     {
-        $applicationId = (int) ($_POST['application_id'] ?? 0);
+        $applicationId = (int) (Request::postedValue('application_id') ?? 0);
         $existing = null;
         if ($navId > 0) {
             $existing = ApplicationStore::findNav($navId);
@@ -479,10 +481,10 @@ final class ApplicationsScreen
             $applicationId = (int) $existing['application_id'];
         }
         $app = ApplicationStore::find($applicationId);
-        $label = trim((string) ($_POST['label'] ?? ''));
-        $capability = (string) ($_POST['capability'] ?? '');
-        $permission = (string) ($_POST['permission'] ?? '');
-        $icon = (string) ($_POST['icon'] ?? '');
+        $label = trim((string) (Request::postedValue('label') ?? ''));
+        $capability = (string) (Request::postedValue('capability') ?? '');
+        $permission = (string) (Request::postedValue('permission') ?? '');
+        $icon = (string) (Request::postedValue('icon') ?? '');
         $catalog = Capabilities::catalog();
         $back = self::url('option=navigation&application_id=') . $applicationId;
         if ($app === null || $label === '' || !isset($catalog[$capability])) {
@@ -512,7 +514,7 @@ final class ApplicationsScreen
             }
         }
         if ($catalog[$capability]['config'] === 'saved_search') {
-            $searchId = trim((string) ($_POST['search_id'] ?? ''));
+            $searchId = trim((string) (Request::postedValue('search_id') ?? ''));
             if ($searchId === '') {
                 View::respond('Choose a saved search. Create one from a Search link first if the list is empty.', Blocks::link($back, 'Navigation', 'URL'));
                 return;
@@ -560,7 +562,7 @@ final class ApplicationsScreen
      */
     public static function postedGroupIds(): array|false
     {
-        $posted = $_POST['groups'] ?? [];
+        $posted = Request::postedValue('groups') ?? [];
         if (!is_array($posted)) {
             return false;
         }
@@ -670,7 +672,7 @@ final class ApplicationsScreen
      */
     public static function postedRecordType(): string|false
     {
-        $typeId = trim((string) ($_POST['default_item_type_id'] ?? ''));
+        $typeId = trim((string) (Request::postedValue('default_item_type_id') ?? ''));
         if ($typeId === '') {
             return '';
         }
@@ -789,12 +791,12 @@ final class ApplicationsScreen
     private static function saveWorkflowFields(string $slug, int $typeId): void
     {
         $fields = RecordQuery::fields($typeId);
-        $statusId = self::validWorkflowField($fields, (int) ($_POST['workflow_status_field_id'] ?? 0), [FieldTypes::MENU]);
-        $stepId = self::validWorkflowField($fields, (int) ($_POST['workflow_step_field_id'] ?? 0), [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA]);
-        $dueId = self::validWorkflowField($fields, (int) ($_POST['workflow_due_field_id'] ?? 0), [FieldTypes::DATE, FieldTypes::DATETIME]);
+        $statusId = self::validWorkflowField($fields, (int) (Request::postedValue('workflow_status_field_id') ?? 0), [FieldTypes::MENU]);
+        $stepId = self::validWorkflowField($fields, (int) (Request::postedValue('workflow_step_field_id') ?? 0), [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA]);
+        $dueId = self::validWorkflowField($fields, (int) (Request::postedValue('workflow_due_field_id') ?? 0), [FieldTypes::DATE, FieldTypes::DATETIME]);
         $status = $statusId > 0 ? RecordQuery::field($fields, $statusId) : WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
         $allowed = is_array($status) ? $status['values'] : [];
-        $postedOpen = RecordQuery::strings($_POST['workflow_open_statuses'] ?? []);
+        $postedOpen = RecordQuery::strings(Request::postedValue('workflow_open_statuses') ?? []);
         $open = array_values(array_intersect($postedOpen, $allowed));
         $settings = WorkflowFields::store(
             ApplicationSettings::get($slug),

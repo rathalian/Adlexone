@@ -38,7 +38,7 @@ final class ApplicationSettingsScreen
             \Adlexone\Auth\Access::deny();
         }
 
-        switch ((string) ($_GET['option'] ?? 'settings')) {
+        switch ((string) (Request::queryValue('option') ?? 'settings')) {
             case 'update_settings':
                 self::save($slug);
                 break;
@@ -46,13 +46,13 @@ final class ApplicationSettingsScreen
                 self::showRuleForm($slug, null);
                 break;
             case 'edit_rule':
-                self::showRuleForm($slug, (int) ($_GET['rule_id'] ?? 0));
+                self::showRuleForm($slug, (int) (Request::queryValue('rule_id') ?? 0));
                 break;
             case 'add_rule':
                 self::saveRule($slug, 0);
                 break;
             case 'update_rule':
-                self::saveRule($slug, (int) ($_POST['rule_id'] ?? 0));
+                self::saveRule($slug, (int) (Request::postedValue('rule_id') ?? 0));
                 break;
             case 'delete_rule':
                 self::deleteRule($slug);
@@ -542,13 +542,13 @@ final class ApplicationSettingsScreen
             return;
         }
         $applicationId = (int) $app['application_id'];
-        $ruleId = (int) ($_GET['rule_id'] ?? $_POST['rule_id'] ?? 0);
+        $ruleId = (int) (Request::queryValue('rule_id') ?? Request::postedValue('rule_id') ?? 0);
         $rule = Rules::find($ruleId, $applicationId);
         if ($rule === null) {
             View::respond('That rule is not on this application.');
             return;
         }
-        $itemId = (int) ($_POST['item_id'] ?? $_GET['item_id'] ?? 0);
+        $itemId = (int) (Request::postedValue('item_id') ?? Request::queryValue('item_id') ?? 0);
         $result = null;
         if ($itemId > 0 && $execute && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $result = Rules::executeOne($ruleId, $applicationId, $itemId);
@@ -628,15 +628,15 @@ final class ApplicationSettingsScreen
             View::respond('Open settings from inside an application.');
             return;
         }
-        $typeId = (int) ($_POST['item_type_id'] ?? 0);
+        $typeId = (int) (Request::postedValue('item_type_id') ?? 0);
         if (!self::ruleTypeAllowed($slug, $typeId, $ruleId)) {
             \Adlexone\Auth\Access::deny();
         }
         $applicationId = (int) $app['application_id'];
         if ($ruleId > 0) {
-            Rules::update($ruleId, $applicationId, $_POST);
+            Rules::update($ruleId, $applicationId, Request::postedAll());
         } else {
-            Rules::add($applicationId, $_POST);
+            Rules::add($applicationId, Request::postedAll());
         }
         header('Location: ' . self::rulesHomeUrl($slug));
         exit;
@@ -649,7 +649,7 @@ final class ApplicationSettingsScreen
             View::respond('Open settings from inside an application.');
             return;
         }
-        Rules::delete((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
+        Rules::delete((int) (Request::queryValue('rule_id') ?? 0), (int) $app['application_id']);
         header('Location: ' . self::rulesHomeUrl($slug));
         exit;
     }
@@ -661,7 +661,7 @@ final class ApplicationSettingsScreen
             View::respond('Open settings from inside an application.');
             return;
         }
-        $rule = Rules::find((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
+        $rule = Rules::find((int) (Request::queryValue('rule_id') ?? 0), (int) $app['application_id']);
         if ($rule !== null) {
             Rules::setEnabled((int) $rule['id'], (int) $app['application_id'], (int) $rule['enabled'] !== 1);
         }
@@ -676,7 +676,7 @@ final class ApplicationSettingsScreen
             View::respond('Open settings from inside an application.');
             return;
         }
-        $id = Rules::duplicate((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id']);
+        $id = Rules::duplicate((int) (Request::queryValue('rule_id') ?? 0), (int) $app['application_id']);
         $target = $id > 0
             ? self::rulesFormAction($slug, 'edit_rule') . '&rule_id=' . $id
             : self::rulesHomeUrl($slug);
@@ -691,7 +691,7 @@ final class ApplicationSettingsScreen
             View::respond('Open settings from inside an application.');
             return;
         }
-        Rules::move((int) ($_GET['rule_id'] ?? 0), (int) $app['application_id'], (string) ($_GET['dir'] ?? 'down'));
+        Rules::move((int) (Request::queryValue('rule_id') ?? 0), (int) $app['application_id'], (string) (Request::queryValue('dir') ?? 'down'));
         header('Location: ' . self::rulesHomeUrl($slug));
         exit;
     }
@@ -699,16 +699,16 @@ final class ApplicationSettingsScreen
     public static function save(string $slug): void
     {
         $settings = ApplicationSettings::get($slug);
-        $default = trim((string) ($_POST['default_item_type_id'] ?? ''));
+        $default = trim((string) (Request::postedValue('default_item_type_id') ?? ''));
         $settings['default_item_type_id'] = $default;
         $typeId = ctype_digit($default) ? (int) $default : 0;
         if ($typeId > 0 && Database::first('item_types', ['item_type_id'], 'item_type_id = ?', [$typeId]) !== null) {
-            $statusId = self::validWorkflowField($typeId, (int) ($_POST['workflow_status_field_id'] ?? 0), [FieldTypes::MENU]);
-            $stepId = self::validWorkflowField($typeId, (int) ($_POST['workflow_step_field_id'] ?? 0), [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA]);
-            $dueId = self::validWorkflowField($typeId, (int) ($_POST['workflow_due_field_id'] ?? 0), [FieldTypes::DATE, FieldTypes::DATETIME]);
+            $statusId = self::validWorkflowField($typeId, (int) (Request::postedValue('workflow_status_field_id') ?? 0), [FieldTypes::MENU]);
+            $stepId = self::validWorkflowField($typeId, (int) (Request::postedValue('workflow_step_field_id') ?? 0), [FieldTypes::TEXT_BOX, FieldTypes::TEXT_AREA]);
+            $dueId = self::validWorkflowField($typeId, (int) (Request::postedValue('workflow_due_field_id') ?? 0), [FieldTypes::DATE, FieldTypes::DATETIME]);
             $status = $statusId > 0 ? RecordQuery::field(RecordQuery::fields($typeId), $statusId) : WorkflowFields::resolve($slug, $typeId, WorkflowFields::STATUS);
             $allowed = is_array($status) ? $status['values'] : [];
-            $postedOpen = RecordQuery::strings($_POST['workflow_open_statuses'] ?? []);
+            $postedOpen = RecordQuery::strings(Request::postedValue('workflow_open_statuses') ?? []);
             $open = array_values(array_intersect($postedOpen, $allowed));
             $settings = WorkflowFields::store($settings, $typeId, $statusId, $stepId, $dueId, $open);
         }
