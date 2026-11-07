@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Database\SchemaMigrator;
+
 /**
  * Creates a customer folder: SQLite file, config JSON, attachments directory, and optional admin.
  */
@@ -51,13 +53,8 @@ final class Provisioner
         $exists = $pdo->query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'")->fetchColumn();
         if ($exists === false) {
             self::applySharedSchema($pdo, $install);
-        }
-        $version = (int) $pdo->query('SELECT COALESCE(MAX(version), 0) FROM schema_migrations')->fetchColumn();
-        // Stay at 9, not SchemaMigrator::VERSION. Steps 10–15 are not safe to skip
-        // on an older file: applyV10 retypes named text fields, and applyV13
-        // rewrites showcase guides. A fresh file still takes this path once.
-        if ($version < 9) {
-            $pdo->prepare('INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (9, ?)')->execute([time()]);
+            $pdo->prepare('INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+                ->execute([SchemaMigrator::version(), time()]);
         }
         if ($admin !== null) {
             $count = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();

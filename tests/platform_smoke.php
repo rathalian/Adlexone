@@ -7,6 +7,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 
+use Adlexone\Database\SchemaMigrator;
 use Adlexone\Platform\PlatformDb;
 use Adlexone\Platform\Provisioner;
 use Adlexone\Platform\Runtime;
@@ -56,8 +57,22 @@ foreach ([$config, dirname($sqlite), $attachments] as $dir) {
 
 $pdo = new PDO('sqlite:' . $sqlite);
 $version = (int) $pdo->query('SELECT MAX(version) FROM schema_migrations')->fetchColumn();
-if ($version !== 9) {
+if ($version !== SchemaMigrator::version()) {
     $fail('schema version is ' . $version);
+}
+$kept = $tmp . '/kept/adlexone.sqlite';
+if (!mkdir($tmp . '/kept', 0700, true) && !is_dir($tmp . '/kept')) {
+    $fail('Cannot create the existing-database directory');
+}
+$existing = new PDO('sqlite:' . $kept);
+$existing->exec('CREATE TABLE users (user_id INTEGER PRIMARY KEY)');
+$existing->exec('CREATE TABLE schema_migrations (version INTEGER NOT NULL PRIMARY KEY, applied_at INTEGER NOT NULL)');
+$existing->exec('INSERT INTO schema_migrations (version, applied_at) VALUES (8, 1)');
+$existing = null;
+Provisioner::prepareDatabase($install, $kept, null);
+$keptVersion = (int) (new PDO('sqlite:' . $kept))->query('SELECT MAX(version) FROM schema_migrations')->fetchColumn();
+if ($keptVersion !== 8) {
+    $fail('an existing database was stamped at version ' . $keptVersion);
 }
 $hash = (string) $pdo->query("SELECT password FROM users WHERE user_name = 'reid'")->fetchColumn();
 if (!password_verify('correct-horse', $hash)) {
