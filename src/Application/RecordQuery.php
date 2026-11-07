@@ -399,7 +399,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @param list<string> $names
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
@@ -424,7 +424,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
     private static function firstOf(array $fields, string $type): ?array
@@ -439,7 +439,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
     private static function dueDate(array $fields): ?array
@@ -465,7 +465,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
     private static function party(array $fields): ?array
