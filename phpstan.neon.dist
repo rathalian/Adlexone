@@ -51,6 +51,10 @@ parameters:
         - src/Database
         - src/support
         - src/Screen
+        - src/Platform
+        - src/Application
+        - src/Data
+        - src/Html
     excludePaths:
         - src/support/SharedMethods.php
     treatPhpDocTypesAsCertain: false

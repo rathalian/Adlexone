@@ -17,6 +17,9 @@ $baseline = (string) file_get_contents($root . '/phpstan-baseline.neon');
 $workflow = (string) file_get_contents($root . '/.github/workflows/tests.yml');
 
 $check(str_contains($neon, "        - src/Screen\n"), 'PHPStan analyses every screen');
+foreach (['Platform', 'Application', 'Data', 'Html'] as $namespace) {
+    $check(str_contains($neon, "        - src/{$namespace}\n"), 'PHPStan analyses ' . $namespace);
+}
 $check(!str_contains($baseline, 'ItemScreen.php'), 'the item screen is clear of the PHPStan baseline');
 $check(!str_contains($baseline, 'SearchScreen.php'), 'the search screen is clear of the PHPStan baseline');
 $check(str_contains($workflow, 'php tests/run.php'), 'CI runs the test command');

@@ -1,6 +1,216 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Static method Adlexone\\Application\\ApplicationBuilder\:\:check\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: src/Application/ApplicationBuilder.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:dueDate\(\) never returns array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\} so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:dueDate\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, plain\: non\-falsy\-string, type\: ''date''\|''datetime''\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:dueDate\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, plain\: string, type\: ''date''\|''datetime''\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:dueDate\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, plain\: string, type\: ''date''\|''datetime''\}\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:firstOf\(\) never returns array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\} so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:firstOf\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, type\: string\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:party\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, plain\: string, type\: ''textBox''\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:prefer\(\) never returns array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\} so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:prefer\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, plain\: non\-falsy\-string, type\: ''menu''\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Method Adlexone\\Application\\RecordQuery\:\:prefer\(\) should return array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\}\|null but returns array\{id\: int, plain\: string, type\: string\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Application/RecordQuery.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 3
+			path: src/Application/Rules.php
+
+		-
+			message: '#^Variable \$_POST on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 3
+			path: src/Application/Rules.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: src/Data/SavedSearch.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: src/Html/Blocks.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: src/Html/Blocks.php
+
+		-
+			message: '#^Offset ''itemId'' does not exist on array\{name\: string, href\: string, meta\?\: string, metaTitle\?\: string, search\?\: string, cells\?\: array\<string, string\>, actions\?\: array\<int, array\{href\?\: string, label\: string, tone\?\: string, confirm\?\: string, target\?\: string, inline\?\: bool, disabled\?\: bool\}\>\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Html/Blocks.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between array\{\} and array\{\} will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 2
+			path: src/Html/Blocks.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: src/Html/Blocks.php
+
+		-
+			message: '#^Parameter \#1 \$array \(non\-empty\-list\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: src/Html/Timeline.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-string and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: src/Platform/HelpText.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: src/Platform/InstallLayout.php
+
+		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: src/Platform/InstallLayout.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: src/Platform/InstallLayout.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-falsy\-string and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: src/Platform/InstallLayout.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: src/Platform/InstallLayout.php
+
+		-
+			message: '#^Variable \$file in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.variable
+			count: 1
+			path: src/Platform/InstallLayout.php
+
+		-
+			message: '#^Cannot unset offset ''operator_notice'' on array\<mixed, mixed\>\.$#'
+			identifier: unset.offset
+			count: 1
+			path: src/Platform/OperatorScreen.php
+
+		-
+			message: '#^Offset ''operator_notice'' on array\<mixed, mixed\> on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Platform/OperatorScreen.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Platform/PlatformDb.php
+
+		-
+			message: '#^Offset ''dir'' on array\{name\: string, passwd\: string, uid\: int, gid\: int, gecos\: string, dir\: string, shell\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Platform/PlatformDb.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-string and '''' will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: src/Platform/PlatformDb.php
+
+		-
+			message: '#^Offset ''name'' on array\{name\: string, passwd\: string, uid\: int, gid\: int, gecos\: string, dir\: string, shell\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Platform/Runtime.php
+
+		-
+			message: '#^Method Adlexone\\Platform\\SaasInstallScreen\:\:takeStores\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Platform/SaasInstallScreen.php
+
+		-
+			message: '#^Method Adlexone\\Platform\\SetupScreen\:\:takeStorage\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Platform/SetupScreen.php
+
+		-
 			message: '#^Offset ''label'' does not exist on array\{id\: int, name\: string, type\: string\}\.$#'
 			identifier: offsetAccess.notFound
 			count: 1

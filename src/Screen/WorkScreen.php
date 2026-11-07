@@ -375,7 +375,7 @@ final class WorkScreen
         $wait = self::waitContext($itemTypeId);
         $dueValues = $wait['field_id'] > 0 ? RecordQuery::values($ids, $wait['field_id']) : [];
         foreach ($rows as $index => $record) {
-            $itemId = (int) ($record['itemId'] ?? 0);
+            $itemId = (int) $record['itemId'];
             $raw = trim((string) ($dueValues[$itemId] ?? ''));
             $rows[$index]['due'] = $raw === '' ? '' : FieldValidation::formatDate($raw);
         }
