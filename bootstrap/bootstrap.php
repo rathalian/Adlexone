@@ -43,7 +43,7 @@ use Adlexone\Platform\Runtime;
 use Adlexone\Platform\SaasInstallScreen;
 use Adlexone\Platform\SetupScreen;
 use Adlexone\Platform\StatusScreen;
-use Adlexone\support\SharedMethods;
+use Adlexone\Platform\SharedMethods;
 
 /**
  * Paths, then settings. The database is opened only for an installed site.
