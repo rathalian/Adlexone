@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Static method Adlexone\\Application\\ApplicationBuilder\:\:check\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: src/Application/ApplicationBuilder.php
-
-		-
 			message: '#^Method Adlexone\\Application\\RecordQuery\:\:dueDate\(\) never returns array\{id\: int, name\: string, plain\: string, label\: string, type\: string, values\: list\<string\>\} so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1

@@ -768,14 +768,6 @@ final class ApplicationBuilder
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private static function check(string $name): array
-    {
-        return ['name' => $name, 'type' => FieldTypes::CHECK_BOX];
-    }
-
-    /**
      * @param list<array<string, mixed>> $rules
      * @param array<string, int> $fieldIdsByName
      */
