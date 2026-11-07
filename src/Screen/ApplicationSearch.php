@@ -741,9 +741,8 @@ final class ApplicationSearch
      */
     private static function table(array $ids, array $state, array $types, array $fields): string
     {
-        $in = implode(',', array_map('intval', $ids));
         $items = [];
-        foreach (Database::rows("SELECT item_id, item_title, create_date, core_log_updated, item_type_id FROM items WHERE item_id IN ({$in})") as $row) {
+        foreach (RecordList::fetch($ids, ['item_id', 'item_title', 'create_date', 'core_log_updated', 'item_type_id']) as $row) {
             $items[(int) $row['item_id']] = $row;
         }
         $facts = WorkScreen::workCardFacts($ids);

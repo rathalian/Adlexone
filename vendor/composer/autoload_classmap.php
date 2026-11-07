@@ -83,6 +83,7 @@ return array(
     'Adlexone\\Screen\\LoginScreen' => $baseDir . '/src/Screen/LoginScreen.php',
     'Adlexone\\Screen\\PaletteScreen' => $baseDir . '/src/Screen/PaletteScreen.php',
     'Adlexone\\Screen\\PrintScreen' => $baseDir . '/src/Screen/PrintScreen.php',
+    'Adlexone\\Screen\\RecordList' => $baseDir . '/src/Screen/RecordList.php',
     'Adlexone\\Screen\\RecordScreens' => $baseDir . '/src/Screen/RecordScreens.php',
     'Adlexone\\Screen\\RulesScreen' => $baseDir . '/src/Screen/RulesScreen.php',
     'Adlexone\\Screen\\SearchScreen' => $baseDir . '/src/Screen/SearchScreen.php',

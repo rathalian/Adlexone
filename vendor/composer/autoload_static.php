@@ -102,6 +102,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Screen\\LoginScreen' => __DIR__ . '/../..' . '/src/Screen/LoginScreen.php',
         'Adlexone\\Screen\\PaletteScreen' => __DIR__ . '/../..' . '/src/Screen/PaletteScreen.php',
         'Adlexone\\Screen\\PrintScreen' => __DIR__ . '/../..' . '/src/Screen/PrintScreen.php',
+        'Adlexone\\Screen\\RecordList' => __DIR__ . '/../..' . '/src/Screen/RecordList.php',
         'Adlexone\\Screen\\RecordScreens' => __DIR__ . '/../..' . '/src/Screen/RecordScreens.php',
         'Adlexone\\Screen\\RulesScreen' => __DIR__ . '/../..' . '/src/Screen/RulesScreen.php',
         'Adlexone\\Screen\\SearchScreen' => __DIR__ . '/../..' . '/src/Screen/SearchScreen.php',

@@ -916,9 +916,9 @@ final class ItemScreen
         global $html;
         $columnArray = array('item_id', 'create_date', 'item_type_id', 'item_title');
         if ((string) $itemID !== '') {
-            [$where, $params] = ['item_id = ?', [(int) $itemID]];
+            $ids = [(int) $itemID];
         } else {
-            [$where, $params] = RecordListQuery::idWhere(RecordListQuery::ids(is_array($itemIDArray) ? $itemIDArray : []));
+            $ids = RecordListQuery::ids(is_array($itemIDArray) ? $itemIDArray : []);
         }
         $countrecs = count((array)$itemIDArray);
         $countBoolean = (($countrecs / (int) SET_ITEMS_PAGE) > 1);
@@ -926,15 +926,7 @@ final class ItemScreen
         $orderSQL = self::listOrder((string) $orderSQL, (string) $itemID === '');
         $pageSize = max(1, (int) SET_ITEMS_PAGE);
         $page = RecordListQuery::page(Request::postedValue('pageset') ?? 1);
-        $result = Database::select(
-            'items',
-            $columnArray,
-            $where,
-            $params,
-            $orderSQL,
-            $pageSize,
-            ($page - 1) * $pageSize
-        );
+        $result = RecordList::fetch($ids, $columnArray, $orderSQL, $pageSize, ($page - 1) * $pageSize);
 
         $listHtml = '';
         $sortLinks = '';
@@ -998,31 +990,10 @@ final class ItemScreen
         $hidden = '';
         $pageset = '';
         if ($countBoolean) {
-            $paginationHTML = '<div class="pagination pagination-centered "><ul>';
             $pageset = (Request::hasPostedKey('pageset')) ? Request::postedValue('pageset') : 1;
-            if ($pageset > 1) {
-                $paginationHTML .= Access::showUse('<li>' . Form::pageButton('prev', 'Prev') . '</li>');
-            } else {
-                $paginationHTML .= "";
-            }
-            $istart = max(1, ($pageset - 3));
-            $iend = max(10, $pageset + 3);
-            $iend = ($iend > (int)(($countrecs / (int) SET_ITEMS_PAGE) + 1)) ? (int)($countrecs / (int) SET_ITEMS_PAGE) + 1 : $iend;
-            if ($istart > 1 && $iend - $istart < 10) {
-                $istart = max($iend - 10, 1);
-            }
-            for ($i = $istart; $i <= $iend; $i++) {
-                if ($i == $pageset) {
-                    $paginationHTML .= '<li class="active"><a href ="#">' . $i . '</a></li>';
-                } else {
-                    $paginationHTML .= Access::showUse('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>');
-                }
-            }
-            if ($pageset == $iend) {
-                $paginationHTML .= "";
-            } else {
-                $paginationHTML .= Access::showUse('<li>' . Form::pageButton('next', 'Next') . '</li>');
-            }
+            $pager = RecordList::pager($countrecs, (int) SET_ITEMS_PAGE, $pageset);
+            $paginationHTML = $pager['html'];
+            $pageset = $pager['page'];
             if ($itemID == '') {
                 $paginationHTML .= '</ul></div>';
                 $hidden .= Form::hidden('pageset', (string)$pageset);

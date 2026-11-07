@@ -39,6 +39,11 @@ check(!str_contains($search, 'ORDER BY $orderSQL'), 'the search list does not sp
 check(!str_contains($search, 'custom_field_id = "'), 'a custom field id is not spliced into the query text');
 check(str_contains($item, 'RecordListQuery::page'), 'the item list reads the page as a number');
 check(str_contains($search, 'RecordListQuery::order'), 'the search list checks the sort');
+check(str_contains($item, 'RecordList::fetch'), 'the record page reads rows through the shared list');
+check(str_contains($search, 'RecordList::fetch'), 'the search page reads rows through the shared list');
+$applicationSearch = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/ApplicationSearch.php');
+check(str_contains($applicationSearch, 'RecordList::fetch'), 'an application search reads rows through the shared list');
+check(!str_contains($search, 'function showItems1'), 'the search page has one result list');
 
 if ($failed > 0) {
     fwrite(STDERR, $failed . " checks failed\n");
