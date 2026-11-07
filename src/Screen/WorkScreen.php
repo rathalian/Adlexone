@@ -67,11 +67,11 @@ final class WorkScreen
     public static function showApplicationWork(?int $itemTypeId = null, string $title = 'Work'): void
     {
         if ((string) (Request::queryValue('option') ?? '') === 'move_card' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
-            self::moveWorkCard($itemTypeId);
+            WorkBoard::moveWorkCard($itemTypeId);
             return;
         }
         if ((string) (Request::queryValue('option') ?? '') === 'move_cards' && strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
-            self::moveWorkCards($itemTypeId);
+            WorkBoard::moveWorkCards($itemTypeId);
             return;
         }
 
@@ -87,7 +87,7 @@ final class WorkScreen
             $createHref = $base . '&option=show_item_types';
         }
         $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
-        $switch = $canBoard ? self::workViewSwitch($base, $view) : '';
+        $switch = $canBoard ? WorkList::workViewSwitch($base, $view) : '';
         $toolbar = '<div class="work-toolbar">' . $switch . $stand['html'] . '</div>';
         if ($ids === []) {
             $body = Blocks::emptyState([
@@ -109,9 +109,9 @@ final class WorkScreen
                 $body = $toolbar . '<p class="work-empty">No records in this view. <a href="' . Html::e(self::workHref($base, $view)) . '">Show all</a></p>';
             }
         } elseif ($view === 'board') {
-            $body = $toolbar . self::workBoard($shown, $itemTypeId, $base, $stand);
+            $body = $toolbar . WorkBoard::workBoard($shown, $itemTypeId, $base, $stand);
         } else {
-            $body = $toolbar . self::workList($shown, $itemTypeId, $base, $stand);
+            $body = $toolbar . WorkList::workList($shown, $itemTypeId, $base, $stand);
         }
         Page::current()->setBody(Blocks::vertical([
             [
@@ -255,14 +255,7 @@ final class WorkScreen
         return (string) (Request::queryValue('view') ?? '') === 'board' ? 'board' : 'list';
     }
 
-    private static function currentFocus(): string
-    {
-        $focus = (string) (Request::queryValue('focus') ?? '');
-
-        return in_array($focus, ['mine', 'status', 'empty'], true) ? $focus : '';
-    }
-
-    private static function workHref(string $base, string $view, string $focus = ''): string
+    public static function workHref(string $base, string $view, string $focus = ''): string
     {
         $query = [];
         if ($focus === 'mine' || $focus === 'status' || $focus === 'empty') {
@@ -276,7 +269,7 @@ final class WorkScreen
         return $base . '&' . implode('&', $query);
     }
 
-    private static function place(): string
+    public static function place(): string
     {
         $page = Page::current();
         if ($page->inApplication()) {
@@ -284,152 +277,6 @@ final class WorkScreen
         }
 
         return Router::page();
-    }
-
-    private static function workViewSwitch(string $base, string $view): string
-    {
-        $focus = self::currentFocus();
-        $links = '';
-        foreach (['list' => 'List', 'board' => 'Board'] as $key => $label) {
-            $selected = $view === $key;
-            $links .= '<a class="work-views__link' . ($selected ? ' is-selected' : '') . '" href="'
-                . Html::e(self::workHref($base, $key, $focus)) . '"'
-                . ($selected ? ' aria-current="page"' : '') . '>'
-                . Html::e($label) . '</a>';
-        }
-
-        return '<div class="work-views" role="group" aria-label="View">' . $links . '</div>';
-    }
-
-    /**
-     * @param list<int> $ids
-     * @param array{html: string, field_id: int, values: array<int, string>} $stand
-     */
-    private static function workList(array $ids, ?int $itemTypeId, string $base, array $stand): string
-    {
-        $facts = self::workCardFacts($ids);
-        $status = self::workStatusField($itemTypeId);
-        $rows = [];
-        if ($ids !== []) {
-            $result = Database::select(
-                'items',
-                ['item_id', 'item_title', 'create_date', 'item_type_id'],
-                'WHERE item_id IN (' . implode(',', array_map('intval', $ids)) . ') ORDER BY item_id DESC'
-            );
-            foreach ($result as $row) {
-                $itemId = (int) $row['item_id'];
-                $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-                $record = Blocks::itemRecord($row, $base . '&item=' . $itemId, Blocks::itemActions($itemId, $base));
-                $bits = array_values(array_filter([
-                    trim((string) ($fact['detail'] ?? '')),
-                    trim((string) ($fact['next'] ?? '')) !== '' ? trim((string) $fact['next']) : trim((string) ($fact['log'] ?? '')),
-                ]));
-                $record['meta'] = implode(' · ', $bits);
-                $record['mark'] = trim((string) ($fact['owner'] ?? ''));
-                $record['itemId'] = $itemId;
-                $record['sortName'] = strtolower((string) $record['name']);
-                $opened = (int) ($row['create_date'] ?? 0);
-                $record['sortOpened'] = $opened;
-                if ($opened > 0) {
-                    $record['cells']['opened'] = Presence::ago($opened);
-                    $record['titles']['opened'] = date(SET_DATE_FORMAT, $opened);
-                }
-                $standValue = trim((string) ($stand['values'][$itemId] ?? ''));
-                $record['sortStand'] = strtolower($standValue);
-                $record['cells']['stand'] = $standValue;
-                if ($standValue !== '') {
-                    $record['tones']['stand'] = Presence::tone($standValue);
-                }
-                $rows[] = $record;
-            }
-        }
-        $sort = in_array((string) (Request::queryValue('sort') ?? ''), ['name', 'status', 'opened'], true)
-            ? (string) Request::queryValue('sort')
-            : 'opened';
-        $direction = (string) (Request::queryValue('dir') ?? '') === 'asc' ? 'asc' : 'desc';
-        usort($rows, static function (array $left, array $right) use ($sort, $direction): int {
-            $key = match ($sort) {
-                'name' => 'sortName',
-                'status' => 'sortStand',
-                default => 'sortOpened',
-            };
-            $result = ($left[$key] ?? '') <=> ($right[$key] ?? '');
-
-            return $direction === 'asc' ? $result : -$result;
-        });
-        $columns = [];
-        if ($status !== null && $status['values'] !== []) {
-            $columns[] = [
-                'key' => 'stand',
-                'label' => self::workFieldLabel((string) $status['name']),
-                'sortHref' => self::workSortHref($base, 'status', $sort, $direction),
-                'ariaSort' => $sort === 'status' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
-            ];
-        }
-        $columns[] = [
-            'key' => 'opened',
-            'label' => 'Opened',
-            'sortHref' => self::workSortHref($base, 'opened', $sort, $direction),
-            'ariaSort' => $sort === 'opened' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
-        ];
-
-        $wait = self::waitContext($itemTypeId);
-        $dueValues = $wait['field_id'] > 0 ? RecordQuery::values($ids, $wait['field_id']) : [];
-        foreach ($rows as $index => $record) {
-            $itemId = (int) $record['itemId'];
-            $raw = trim((string) ($dueValues[$itemId] ?? ''));
-            $rows[$index]['due'] = $raw === '' ? '' : FieldValidation::formatDate($raw);
-        }
-        $bulk = '';
-        if ($status !== null && $status['values'] !== []) {
-            $options = '<option value="">Set status to</option>';
-            foreach ($status['values'] as $value) {
-                $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
-            }
-            $due = '';
-            if ($wait['waits'] !== []) {
-                $due = '<label class="work-bulk__due"> ' . Html::e($wait['label'])
-                    . ' <input class="input" type="text" name="due" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="'
-                    . Html::e($wait['example']) . '" aria-label="' . Html::e($wait['label']) . '" data-due-input>'
-                    . '</label>';
-            }
-            $bulk = '<div class="record-list__tools work-bulk__tools">'
-                . '<span class="record-list__meta" data-selected-count>0 selected</span>'
-                . '<select class="select work-bulk__status" name="status" aria-label="Status for selected records" required>' . $options . '</select>'
-                . $due
-                . '<button class="btn btn--sm" type="submit" data-bulk-submit disabled>Apply</button></div>';
-        }
-
-        $list = Blocks::recordList([
-            'column' => self::workColumnName($itemTypeId),
-            'columnSortHref' => self::workSortHref($base, 'name', $sort, $direction),
-            'columnAriaSort' => $sort === 'name' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
-            'columns' => $columns,
-            'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
-            'toolbar' => $bulk,
-            'selectName' => $bulk !== '' ? 'item_ids' : '',
-            'empty' => 'No records yet',
-            'groups' => [['rows' => $rows]],
-        ]);
-        if ($bulk === '') {
-            return $list;
-        }
-
-        Page::current()->addScript('work-board');
-        $waitAttr = $wait['waits'] === []
-            ? ''
-            : ' data-waits="' . Html::e(implode('|', $wait['waits'])) . '" data-due-label="' . Html::e($wait['label']) . '"';
-
-        return '<form class="work-bulk" method="post" action="' . Html::e($base . '&option=move_cards') . '"' . $waitAttr . '>'
-            . Csrf::field() . $list . '</form>';
-    }
-
-    private static function workSortHref(string $base, string $key, string $current, string $direction): string
-    {
-        $next = $current === $key && $direction === 'asc' ? 'desc' : 'asc';
-
-        return self::workHref($base, 'list', self::currentFocus())
-            . '&sort=' . rawurlencode($key) . '&dir=' . $next;
     }
 
     /**
@@ -458,154 +305,9 @@ final class WorkScreen
 
         return '';
     }
-
-    private static function workColumnName(?int $itemTypeId): string
-    {
-        if ($itemTypeId === null || $itemTypeId <= 0) {
-            return 'Name';
-        }
-        $row = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [$itemTypeId]);
-        $name = trim((string) ($row['item_type_name'] ?? ''));
-
-        return $name !== '' ? $name : 'Name';
-    }
-
-    private static function workFieldLabel(string $name): string
-    {
-        $plain = self::plainFieldName($name);
-
-        return $plain === '' ? $name : ucfirst($plain);
-    }
-
-    /**
-     * Status columns for the same records as the list. Dragging a card sets that status and runs rules.
-     *
-     * @param list<int> $ids
-     * @param array{html: string, field_id: int, values: array<int, string>} $stand
-     */
     public static function workBoard(array $ids, ?int $itemTypeId, string $base, array $stand): string
     {
-        $status = self::workStatusField($itemTypeId);
-        if ($status === null || $status['values'] === [] || $ids === []) {
-            return '';
-        }
-        $fieldId = (int) $status['id'];
-        $values = $stand['field_id'] === $fieldId ? $stand['values'] : self::workStatusValues($ids, $fieldId);
-        $columns = [];
-        foreach ($status['values'] as $value) {
-            $columns[$value] = [];
-        }
-        $unset = [];
-        $facts = self::workCardFacts($ids);
-        $wait = self::waitContext($itemTypeId);
-        $dueValues = $wait['field_id'] > 0 ? RecordQuery::values($ids, $wait['field_id']) : [];
-        foreach ($ids as $id) {
-            $value = $values[$id] ?? '';
-            $fact = $facts[$id] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-            $rawDue = trim((string) ($dueValues[$id] ?? ''));
-            $card = self::workCard($id, $fact, $base, $value, $status['values'], $rawDue === '' ? '' : FieldValidation::formatDate($rawDue));
-            if (isset($columns[$value])) {
-                $columns[$value][] = $card;
-            } else {
-                $unset[] = $card;
-            }
-        }
-
-        $html = '';
-        foreach ($columns as $value => $cards) {
-            $html .= self::workColumn((string) $value, $cards, true);
-        }
-        if ($unset !== []) {
-            $html .= self::workColumn('Not set', $unset, false);
-        }
-
-        $move = Html::e($base . '&option=move_card');
-        $token = Html::e(Csrf::token());
-        $waitAttr = $wait['waits'] === []
-            ? ''
-            : ' data-waits="' . Html::e(implode('|', $wait['waits'])) . '" data-due-label="' . Html::e($wait['label'])
-                . '" data-due-example="' . Html::e($wait['example']) . '"';
-        $dialog = $wait['waits'] === []
-            ? ''
-            : '<dialog class="due-ask" data-due-ask><form method="dialog" class="due-ask__form">'
-                . '<h2 class="due-ask__title">' . Html::e($wait['label']) . '</h2>'
-                . '<p class="due-ask__copy">Enter the date this is due.</p>'
-                . '<label class="label" for="work-due-date">' . Html::e($wait['label']) . '</label>'
-                . '<input class="input" id="work-due-date" type="text" name="due" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="'
-                . Html::e($wait['example']) . '" data-due-input>'
-                . '<p class="form-help">Site format: ' . Html::e($wait['example']) . '.</p>'
-                . '<div class="due-ask__actions"><button class="btn btn--quiet" type="button" value="cancel" data-due-cancel>Cancel</button>'
-                . '<button class="btn btn--primary" type="submit" value="ok" data-due-ok>Move</button></div>'
-                . '</form></dialog>';
-
-        Page::current()->addScript('work-board');
-
-        return '<section class="work-board" aria-label="Board" data-move="' . $move . '" data-csrf="' . $token . '"' . $waitAttr . '>'
-            . $html
-            . $dialog
-            . '</section>';
-    }
-
-    /**
-     * @param list<string> $cards
-     */
-    private static function workColumn(string $label, array $cards, bool $drop): string
-    {
-        $dropAttr = $drop ? ' data-status="' . Html::e($label) . '"' : '';
-
-        $tone = Presence::tone($drop ? $label : '');
-        $state = Presence::stateClass($label);
-
-        return '<div class="work-board__col" data-tone="' . Html::e($tone) . '"'
-            . ($state !== '' ? ' data-state="' . Html::e($state) . '"' : '') . $dropAttr . '>'
-            . '<div class="work-board__head"><span class="work-board__label"><span class="work-board__dot" aria-hidden="true"></span>'
-            . Html::e($label) . '</span>'
-            . '<span class="work-board__count">' . count($cards) . '</span></div>'
-            . '<div class="work-board__cards">' . implode('', $cards) . '</div>'
-            . '</div>';
-    }
-
-    /**
-     * @param array{title: string, owner: string, log: string, detail?: string, next?: string} $fact
-     * @param list<string> $statuses
-     */
-    private static function workCard(int $itemId, array $fact, string $base, string $status, array $statuses, string $due = ''): string
-    {
-        $title = $fact['title'] !== '' ? $fact['title'] : ('Record ' . $itemId);
-        $href = Html::e($base . '&item=' . $itemId);
-        $titleEsc = Html::e($title);
-        $detail = trim((string) ($fact['detail'] ?? ''));
-        $next = trim((string) ($fact['next'] ?? ''));
-        if ($next === '') {
-            $next = trim((string) $fact['log']);
-        }
-        $owner = trim((string) $fact['owner']);
-        $detailHtml = $detail !== ''
-            ? '<p class="work-card__detail">' . Html::e($detail) . '</p>'
-            : '';
-        $nextHtml = $next !== ''
-            ? '<p class="work-card__log">' . Html::e($next) . '</p>'
-            : '<p class="work-card__log" hidden></p>';
-        $ownerHtml = '<p class="work-card__owner"' . ($owner === '' ? ' hidden' : '') . '>'
-            . ($owner !== '' ? Presence::mark($owner) : '')
-            . '<span class="work-card__owner-name">' . Html::e($owner) . '</span></p>';
-        $options = '<option value="">Move to</option>';
-        foreach ($statuses as $value) {
-            if ($value === $status) {
-                continue;
-            }
-            $options .= '<option value="' . Html::e($value) . '">' . Html::e($value) . '</option>';
-        }
-
-        $dueAttr = $due !== '' ? ' data-due="' . Html::e($due) . '"' : '';
-
-        return '<article class="work-card" draggable="true" data-item="' . $itemId . '" data-status="' . Html::e($status) . '"' . $dueAttr . '>'
-            . '<a class="work-card__title" draggable="false" href="' . $href . '">' . $titleEsc . '</a>'
-            . $detailHtml
-            . $nextHtml
-            . $ownerHtml
-            . '<label class="work-card__move">Move <select aria-label="Move ' . $titleEsc . '">' . $options . '</select></label>'
-            . '</article>';
+        return WorkBoard::workBoard($ids, $itemTypeId, $base, $stand);
     }
 
 
@@ -776,106 +478,21 @@ final class WorkScreen
 
         return $values;
     }
-
     public static function moveWorkCard(?int $itemTypeId): void
     {
-        $itemId = (int) (Request::postedValue('item_id') ?? 0);
-        $status = trim((string) (Request::postedValue('status') ?? ''));
-        $ids = self::applicationAccessibleItemIds($itemTypeId);
-        $field = self::workStatusField($itemTypeId);
-        if ($itemId <= 0 || !in_array($itemId, $ids, true) || $field === null || !in_array($status, $field['values'], true)) {
-            self::workJson(['ok' => false], 422);
-        }
-
-        $key = 'custom_field_' . (int) $field['id'];
-        $dueWrite = self::dueForMove($itemTypeId, $status);
-        if ($dueWrite['error'] !== '') {
-            self::workJson(['ok' => false, 'error' => $dueWrite['error']], 422);
-        }
-        Request::setPosted($key, $status);
-        $payload = [$key => $status];
-        if ($dueWrite['key'] !== '') {
-            Request::setPosted($dueWrite['key'], $dueWrite['value']);
-            $payload[$dueWrite['key']] = $dueWrite['value'];
-        }
-        \Adlexone\Application\Rules::run($itemId, 'update_item');
-        ItemFields::saveFromArray($itemId, $payload);
-
-        $values = self::workStatusValues($ids, (int) $field['id']);
-        $counts = [];
-        foreach ($field['values'] as $value) {
-            $counts[$value] = 0;
-        }
-        foreach ($ids as $id) {
-            $value = $values[$id] ?? '';
-            if ($value !== '' && array_key_exists($value, $counts)) {
-                $counts[$value]++;
-            }
-        }
-        $facts = self::workCardFacts([$itemId]);
-        $fact = $facts[$itemId] ?? ['title' => '', 'owner' => '', 'log' => '', 'detail' => '', 'next' => ''];
-        $line = trim((string) ($fact['next'] ?? ''));
-        if ($line === '') {
-            $line = (string) ($fact['log'] ?? '');
-        }
-        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-        $mine = 0;
-        if ($userId > 0) {
-            $mine = count(Database::select('items', ['item_id'], 'user_security = ? AND item_id IN (' . implode(',', $ids) . ')', [$userId]));
-        }
-
-        while (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-        self::workJson([
-            'ok' => true,
-            'item_id' => $itemId,
-            'status' => $status,
-            'owner' => $fact['owner'],
-            'log' => $line,
-            'counts' => $counts,
-            'records' => count($ids),
-            'mine' => $mine,
-        ]);
+        WorkBoard::moveWorkCard($itemTypeId);
     }
 
     public static function moveWorkCards(?int $itemTypeId): void
     {
-        $posted = RecordQuery::ints(Request::postedValue('item_ids') ?? []);
-        $accessible = self::applicationAccessibleItemIds($itemTypeId);
-        $ids = array_values(array_intersect($posted, $accessible));
-        $status = trim((string) (Request::postedValue('status') ?? ''));
-        $field = self::workStatusField($itemTypeId);
-        if ($ids === [] || $field === null || !in_array($status, $field['values'], true)) {
-            header('Location: ' . self::place());
-            exit;
-        }
-        $dueWrite = self::dueForMove($itemTypeId, $status);
-        if ($dueWrite['error'] !== '') {
-            \Adlexone\Http\View::flash($dueWrite['error'], 'danger');
-            header('Location: ' . self::place());
-            exit;
-        }
-        $key = 'custom_field_' . (int) $field['id'];
-        foreach ($ids as $itemId) {
-            Request::setPosted($key, $status);
-            $payload = [$key => $status];
-            if ($dueWrite['key'] !== '') {
-                Request::setPosted($dueWrite['key'], $dueWrite['value']);
-                $payload[$dueWrite['key']] = $dueWrite['value'];
-            }
-            \Adlexone\Application\Rules::run($itemId, 'update_item');
-            ItemFields::saveFromArray($itemId, $payload);
-        }
-
-        header('Location: ' . self::place());
-        exit;
+        WorkBoard::moveWorkCards($itemTypeId);
     }
+
 
     /**
      * @return array{label: string, waits: list<string>, field_id: int, example: string}
      */
-    private static function waitContext(?int $itemTypeId): array
+    public static function waitContext(?int $itemTypeId): array
     {
         $empty = ['label' => '', 'waits' => [], 'field_id' => 0, 'example' => ''];
         $typeId = (int) $itemTypeId;
@@ -897,35 +514,7 @@ final class WorkScreen
         ];
     }
 
-    /**
-     * @return array{key: string, value: string, error: string}
-     */
-    private static function dueForMove(?int $itemTypeId, string $status): array
-    {
-        $none = ['key' => '', 'value' => '', 'error' => ''];
-        $typeId = (int) $itemTypeId;
-        $slug = self::applicationSlug();
-        $waits = WorkflowFields::waitStatuses($slug, $typeId);
-        if (!in_array($status, $waits, true)) {
-            return $none;
-        }
-        $due = WorkflowFields::resolve($slug, $typeId, WorkflowFields::DUE);
-        if ($due === null) {
-            return $none;
-        }
-        $raw = trim((string) (Request::postedValue('due') ?? ''));
-        if (FieldValidation::parseDate($raw, false) === null) {
-            return ['key' => '', 'value' => '', 'error' => 'Enter ' . $due['label'] . '.'];
-        }
-
-        return [
-            'key' => 'custom_field_' . (int) $due['id'],
-            'value' => FieldValidation::formatDate($raw),
-            'error' => '',
-        ];
-    }
-
-    private static function applicationSlug(): string
+    public static function applicationSlug(): string
     {
         return Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
     }
