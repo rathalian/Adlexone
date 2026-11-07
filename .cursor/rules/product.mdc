@@ -1,0 +1,16 @@
+---
+description: Choose the person doing the work first, then the smallest change that matches this codebase
+alwaysApply: true
+---
+
+# Product
+
+The person doing the work comes first. A change earns its place when it shortens that work or removes a mistake that costs the organisation. A screen, field, or step that does not change a decision or a task stays out.
+
+When a clearer path for the person and a tidier structure disagree, take the clearer path, using the interaction the rest of the product already uses.
+
+Then the code. Copy the exemplar for that kind of code. Reuse a function or pattern that already exists. Extract a new shared piece when a second caller needs the same behaviour. Write the smallest change that does the job, short enough to read straight through.
+
+Security is part of that smallest change. Validate input, escape output, and keep authorisation on the server. Do not invent a second way to do something the application already does safely. Do not restyle the application into a different framework's habits.
+
+User-facing sentences follow `writing-style.mdc`. Forms follow `form-rendering.mdc`. A blueprint follows `application-blueprints.mdc`. The file to copy for each kind of code is in `exemplars.mdc`.
