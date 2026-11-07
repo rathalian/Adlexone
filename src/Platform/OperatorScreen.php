@@ -8,6 +8,7 @@ use Adlexone\Http\Request;
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
+use Adlexone\Theme\Theme;
 
 /**
  * Operator console. One login for the person who creates and retires customer stores.
@@ -22,7 +23,7 @@ final class OperatorScreen
 
     public static function manageUnavailable(): void
     {
-        self::theme();
+        Theme::defineInstallDefaults();
         self::privateResponse();
         Page::current()->useLayout('setup', [
             'title' => 'Customer sites',
@@ -39,7 +40,7 @@ final class OperatorScreen
 
     public static function handle(): void
     {
-        self::theme();
+        Theme::defineInstallDefaults();
         self::privateResponse();
         $paths = Runtime::paths();
         $db = $paths['platform_db'];
@@ -601,18 +602,5 @@ final class OperatorScreen
             return;
         }
         header('Cache-Control: no-store');
-    }
-
-    private static function theme(): void
-    {
-        if (!defined('SET_DEFAULT_THEME')) {
-            define('SET_DEFAULT_THEME', 'inlay-slate');
-        }
-        if (!defined('SET_DEFAULT_LANGUAGE')) {
-            define('SET_DEFAULT_LANGUAGE', 'English');
-        }
-        if (!defined('SET_THEME')) {
-            define('SET_THEME', 'inlay-slate');
-        }
     }
 }

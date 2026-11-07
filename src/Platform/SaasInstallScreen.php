@@ -8,6 +8,7 @@ use Adlexone\Http\Request;
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
+use Adlexone\Theme\Theme;
 
 /**
  * First visit that turns this copy into a host of customer sites.
@@ -157,7 +158,7 @@ final class SaasInstallScreen
 
     public static function handle(): void
     {
-        self::theme();
+        Theme::defineInstallDefaults();
         $paths = Runtime::paths();
         $blocked = self::blockReason($paths['install']);
         if ($blocked !== '') {
@@ -809,18 +810,5 @@ final class SaasInstallScreen
             'stepsHtml' => $steps,
             'headingAction' => $headingAction,
         ]);
-    }
-
-    private static function theme(): void
-    {
-        if (!defined('SET_DEFAULT_THEME')) {
-            define('SET_DEFAULT_THEME', 'inlay-slate');
-        }
-        if (!defined('SET_DEFAULT_LANGUAGE')) {
-            define('SET_DEFAULT_LANGUAGE', 'English');
-        }
-        if (!defined('SET_THEME')) {
-            define('SET_THEME', 'inlay-slate');
-        }
     }
 }

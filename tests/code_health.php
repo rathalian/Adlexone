@@ -353,5 +353,42 @@ $check(
     . ($newImages === [] ? '' : ': ' . implode(', ', $newImages))
 );
 
+$themeDefines = [];
+foreach ($phpFiles($productTrees) as $rel) {
+    if ($rel === 'src/Theme/Theme.php' || $rel === 'bootstrap/bootstrap.php') {
+        continue;
+    }
+    $text = (string) file_get_contents($root . '/' . $rel);
+    if (str_contains($text, "define('SET_DEFAULT_THEME'") || str_contains($text, 'define("SET_DEFAULT_THEME"')) {
+        $themeDefines[] = $rel;
+    }
+}
+$check(
+    $themeDefines === [],
+    'install theme defaults stay in Theme::defineInstallDefaults'
+    . ($themeDefines === [] ? '' : ': ' . implode(', ', $themeDefines))
+);
+$installCallers = [
+    'src/Platform/SetupScreen.php',
+    'src/Platform/SaasInstallScreen.php',
+    'src/Platform/OperatorScreen.php',
+];
+$missingCall = [];
+foreach ($installCallers as $rel) {
+    $text = (string) file_get_contents($root . '/' . $rel);
+    if (!str_contains($text, 'Theme::defineInstallDefaults()')) {
+        $missingCall[] = $rel;
+    }
+}
+$status = (string) file_get_contents($root . '/src/Platform/StatusScreen.php');
+if (!str_contains($status, 'Theme::defineInstallDefaults(false)')) {
+    $missingCall[] = 'src/Platform/StatusScreen.php';
+}
+$check(
+    $missingCall === [],
+    'the four install screens share Theme::defineInstallDefaults'
+    . ($missingCall === [] ? '' : ': ' . implode(', ', $missingCall))
+);
+
 echo $failed === 0 ? "all checks passed\n" : "{$failed} check(s) failed\n";
 exit($failed === 0 ? 0 : 1);

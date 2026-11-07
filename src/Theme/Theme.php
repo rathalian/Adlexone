@@ -65,6 +65,23 @@ final class Theme
         return 'inlay-stone';
     }
 
+    /**
+     * Defaults used before settings exist: the installer, the operator, and an unknown host.
+     * A status page skips the language constant.
+     */
+    public static function defineInstallDefaults(bool $withLanguage = true): void
+    {
+        if (!defined('SET_DEFAULT_THEME')) {
+            define('SET_DEFAULT_THEME', 'inlay-slate');
+        }
+        if ($withLanguage && !defined('SET_DEFAULT_LANGUAGE')) {
+            define('SET_DEFAULT_LANGUAGE', 'English');
+        }
+        if (!defined('SET_THEME')) {
+            define('SET_THEME', 'inlay-slate');
+        }
+    }
+
     public static function rootFs(): string
     {
         $base = defined('SET_INSTALL_PATH') ? (string) SET_INSTALL_PATH : '';
