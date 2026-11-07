@@ -4,8 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Adlexone</title>
-    <meta name="description" content="Adlexone keeps the applications, records, and rules for the work. You move the status, and the application writes the date, the log, the notice, and the email.">
-    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="description" content="An application is a line of work. Adlexone keeps the records. You move the status, and the application writes the date, the log, the notice, and the email. You run the software on your server.">
     <meta name="theme-color" content="#f7f8fa">
     <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/site.css">
@@ -21,7 +20,6 @@
                         <img src="assets/mark.svg" alt="" width="36" height="36">
                         <span class="brand__name">Adlexone</span>
                     </a>
-                    <p class="build-tag">Under construction</p>
                 </div>
                 <label class="menu-btn" for="menu">
                     <span class="menu-btn__open">Menu</span>
@@ -40,27 +38,120 @@
             <div class="walk">
                 <div class="hero">
                     <div class="hero__copy">
-                        <h1>Adlexone keeps the applications, records, and rules for the work.</h1>
-                        <p class="lede">You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
+                        <h1>An application is a line of work.</h1>
+                        <p class="lede">Adlexone keeps the records for that work. You move the status. The application writes the date, the log, the notice, and the email. You run the software on your server.</p>
                         <div class="actions">
-                            <input class="switch" type="radio" name="demo" id="demo-off" checked>
                             <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                            <label class="btn btn--line" for="demo-user">User demo</label>
-                            <label class="btn btn--line" for="demo-admin">Administrators demo</label>
+                            <a class="btn btn--line" href="#publishing-demo">Publishing</a>
+                            <a class="btn btn--line" href="#leave-demo">Leave requests</a>
+                            <a class="btn btn--line" href="#admin-demo">Administrators demo</a>
                             <a class="btn btn--line" href="work.html">See the work</a>
                         </div>
+                        <p class="stills">The pictures are stills from Health.</p>
                     </div>
+                    <figure class="picture picture--ui">
+                        <img src="assets/demo/publishing-1.png" width="1280" height="709" alt="Publishing at Health. Four manuscripts are listed. Damaged Good is Reading.">
+                        <figcaption>Publishing at Health. Damaged Good is being read.</figcaption>
+                    </figure>
                 </div>
                 <div class="demos">
-                    <input class="switch" type="radio" name="demo" id="demo-user">
-                    <input class="switch" type="radio" name="demo" id="demo-admin">
-                    <section class="tour tour--user" aria-labelledby="user-demo">
+                    <section class="tour tour--publishing" id="publishing-demo" aria-labelledby="publishing-demo-title">
                         <div class="tour__head">
                             <div>
-                                <h2 id="user-demo">Using Leave requests</h2>
+                                <h2 id="publishing-demo-title">Using Publishing</h2>
+                                <p>Damaged Good is being read. You approve the manuscript. The application writes the date, the log, the notice, and the email.</p>
+                            </div>
+                            <a class="tour__close" href="#content">Close</a>
+                        </div>
+                        <div class="stage">
+                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-1" checked>
+                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-2">
+                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-3">
+                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-4">
+                            <figure class="shot shot--1">
+                                <figcaption>
+                                    <p>Publishing is the list. Damaged Good is still being read.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="publishing-step-1">1 List</label>
+                                            <label for="publishing-step-2">2 Manuscript</label>
+                                            <label for="publishing-step-3">3 Approved</label>
+                                            <label for="publishing-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">1 of 4</span>
+                                        <label class="btn btn--line" for="publishing-step-2">Next</label>
+                                    </div>
+                                </figcaption>
+                                <label class="shot__frame" for="publishing-step-2">
+                                    <img src="assets/demo/publishing-1.png" width="1280" height="709" alt="Publishing at Health. Four manuscripts are listed. Damaged Good is Reading.">
+                                </label>
+                            </figure>
+                            <figure class="shot shot--2">
+                                <figcaption>
+                                    <p>Open the manuscript. Status is Reading, and the next step is to finish the reading.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="publishing-step-1">1 List</label>
+                                            <label for="publishing-step-2">2 Manuscript</label>
+                                            <label for="publishing-step-3">3 Approved</label>
+                                            <label for="publishing-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">2 of 4</span>
+                                        <label class="btn btn--line" for="publishing-step-1">Back</label>
+                                        <label class="btn btn--line" for="publishing-step-3">Next</label>
+                                    </div>
+                                </figcaption>
+                                <label class="shot__frame" for="publishing-step-3">
+                                    <img src="assets/demo/publishing-2.png" width="1265" height="1318" alt="Damaged Good. Status is Reading, and the next step is to finish the reading.">
+                                </label>
+                            </figure>
+                            <figure class="shot shot--3">
+                                <figcaption>
+                                    <p>Move Status to Approved and save. The application stamps Approved on, writes the log, and clears Next step.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="publishing-step-1">1 List</label>
+                                            <label for="publishing-step-2">2 Manuscript</label>
+                                            <label for="publishing-step-3">3 Approved</label>
+                                            <label for="publishing-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">3 of 4</span>
+                                        <label class="btn btn--line" for="publishing-step-2">Back</label>
+                                        <label class="btn btn--line" for="publishing-step-4">Next</label>
+                                    </div>
+                                </figcaption>
+                                <label class="shot__frame" for="publishing-step-4">
+                                    <img src="assets/demo/publishing-3.png" width="1280" height="1237" alt="Damaged Good after it is approved. Approved on is 7 November 2026, Next step is clear, and the log says Approved Damaged Good for publication.">
+                                </label>
+                            </figure>
+                            <figure class="shot shot--4">
+                                <figcaption>
+                                    <p>A notice is posted that Damaged Good has been approved for publication. The same words are the email.</p>
+                                    <div class="shot__nav">
+                                        <div class="jumps">
+                                            <label for="publishing-step-1">1 List</label>
+                                            <label for="publishing-step-2">2 Manuscript</label>
+                                            <label for="publishing-step-3">3 Approved</label>
+                                            <label for="publishing-step-4">4 Notice</label>
+                                        </div>
+                                        <span class="shot__count">4 of 4</span>
+                                        <label class="btn btn--line" for="publishing-step-3">Back</label>
+                                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
+                                    </div>
+                                </figcaption>
+                                <div class="shot__frame">
+                                    <img src="assets/demo/publishing-4.png" width="1280" height="691" alt="Announcements for Publishing. The latest notice says Damaged Good has been approved for publication.">
+                                </div>
+                            </figure>
+                        </div>
+                    </section>
+                    <section class="tour tour--user" id="leave-demo" aria-labelledby="leave-demo-title">
+                        <div class="tour__head">
+                            <div>
+                                <h2 id="leave-demo-title">Using Leave requests</h2>
                                 <p>Reid asks for Thursday 12 November. You approve the request. The application writes the date, the log, the notice, and the email.</p>
                             </div>
-                            <label class="tour__close" for="demo-off">Close</label>
+                            <a class="tour__close" href="#content">Close</a>
                         </div>
                         <div class="stage">
                             <input class="switch" type="radio" name="user-step" id="user-step-1" checked>
@@ -68,9 +159,6 @@
                             <input class="switch" type="radio" name="user-step" id="user-step-3">
                             <input class="switch" type="radio" name="user-step" id="user-step-4">
                             <figure class="shot shot--1">
-                                <label class="shot__frame" for="user-step-2">
-                                    <img src="assets/demo/user-1.png" width="1280" height="900" alt="Leave requests at Health. Four requests are listed. Reid, 12 November is Asked.">
-                                </label>
                                 <figcaption>
                                     <p>Leave requests is the list. Reid, 12 November is still to be decided.</p>
                                     <div class="shot__nav">
@@ -84,11 +172,11 @@
                                         <label class="btn btn--line" for="user-step-2">Next</label>
                                     </div>
                                 </figcaption>
+                                <label class="shot__frame" for="user-step-2">
+                                    <img src="assets/demo/user-1.png" width="1280" height="900" alt="Leave requests at Health. Four requests are listed. Reid, 12 November is Asked.">
+                                </label>
                             </figure>
                             <figure class="shot shot--2">
-                                <label class="shot__frame" for="user-step-3">
-                                    <img src="assets/demo/user-2.png" width="1280" height="1405" alt="The request Reid, 12 November. Status is Asked, and the next step is to decide it.">
-                                </label>
                                 <figcaption>
                                     <p>Open the request. Status is Asked, and the next step is to decide it.</p>
                                     <div class="shot__nav">
@@ -103,11 +191,11 @@
                                         <label class="btn btn--line" for="user-step-3">Next</label>
                                     </div>
                                 </figcaption>
+                                <label class="shot__frame" for="user-step-3">
+                                    <img src="assets/demo/user-2.png" width="1280" height="1405" alt="The request Reid, 12 November. Status is Asked, and the next step is to decide it.">
+                                </label>
                             </figure>
                             <figure class="shot shot--3">
-                                <label class="shot__frame" for="user-step-4">
-                                    <img src="assets/demo/user-3.png" width="1280" height="1296" alt="Reid, 12 November after it is approved. Approved on is filled, Next step is clear, and the log says Approved Reid, 12 November.">
-                                </label>
                                 <figcaption>
                                     <p>Move Status to Approved and save. The application stamps Approved on, writes the log, and clears Next step.</p>
                                     <div class="shot__nav">
@@ -122,11 +210,11 @@
                                         <label class="btn btn--line" for="user-step-4">Next</label>
                                     </div>
                                 </figcaption>
+                                <label class="shot__frame" for="user-step-4">
+                                    <img src="assets/demo/user-3.png" width="1280" height="1304" alt="Reid, 12 November after it is approved. Approved on is 7 November 2026, Next step is clear, and the log says Approved Reid, 12 November.">
+                                </label>
                             </figure>
                             <figure class="shot shot--4">
-                                <div class="shot__frame">
-                                    <img src="assets/demo/user-4.png" width="1280" height="678" alt="Announcements for Leave requests. The latest notice says Reid, 12 November has been approved.">
-                                </div>
                                 <figcaption>
                                     <p>A notice is posted that Reid, 12 November has been approved. The same words are the email.</p>
                                     <div class="shot__nav">
@@ -141,27 +229,27 @@
                                         <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
                                     </div>
                                 </figcaption>
+                                <div class="shot__frame">
+                                    <img src="assets/demo/user-4.png" width="1280" height="678" alt="Announcements for Leave requests. The latest notice says Reid, 12 November has been approved.">
+                                </div>
                             </figure>
                         </div>
                     </section>
-                    <section class="tour tour--admin" aria-labelledby="admin-demo">
+                    <section class="tour tour--admin" id="admin-demo" aria-labelledby="admin-demo-title">
                         <div class="tour__head">
                             <div>
-                                <h2 id="admin-demo">Setting up Leave requests</h2>
-                                <p>An administrator creates the application from the Leave requests blueprint. The fields and the rules are already there.</p>
+                                <h2 id="admin-demo-title">Setting up Publishing</h2>
+                                <p>An administrator creates the application from the Publishing blueprint. The fields and the rules are already there.</p>
                             </div>
-                            <label class="tour__close" for="demo-off">Close</label>
+                            <a class="tour__close" href="#content">Close</a>
                         </div>
                         <div class="stage">
                             <input class="switch" type="radio" name="admin-step" id="admin-step-1" checked>
                             <input class="switch" type="radio" name="admin-step" id="admin-step-2">
                             <input class="switch" type="radio" name="admin-step" id="admin-step-3">
                             <figure class="shot shot--1">
-                                <label class="shot__frame" for="admin-step-2">
-                                    <img src="assets/demo/admin-1.png" width="1280" height="980" alt="Create an application. The name is Leave requests, and the preview shows the fields and the approval rule.">
-                                </label>
                                 <figcaption>
-                                    <p>Create an application. The name is Leave requests, and the guide explains how a request moves.</p>
+                                    <p>Create an application. The name is Publishing, and the guide explains how a manuscript moves.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
                                             <label for="admin-step-1">1 Create</label>
@@ -172,13 +260,13 @@
                                         <label class="btn btn--line" for="admin-step-2">Next</label>
                                     </div>
                                 </figcaption>
+                                <label class="shot__frame" for="admin-step-2">
+                                    <img src="assets/demo/publishing-admin-1.png" width="1265" height="1040" alt="Create an application. The name is Publishing, and the preview shows the fields and the approval rule.">
+                                </label>
                             </figure>
                             <figure class="shot shot--2">
-                                <label class="shot__frame" for="admin-step-3">
-                                    <img src="assets/demo/admin-2.png" width="1280" height="932" alt="The Leave requests blueprint is selected. It sets the fields, and the rule that runs when a request is approved.">
-                                </label>
                                 <figcaption>
-                                    <p>Choose the Leave requests blueprint. It sets the fields, and the rule that runs when a request is approved.</p>
+                                    <p>Choose the Publishing blueprint. It sets the fields, and the rule that runs when a manuscript is approved.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
                                             <label for="admin-step-1">1 Create</label>
@@ -190,13 +278,13 @@
                                         <label class="btn btn--line" for="admin-step-3">Next</label>
                                     </div>
                                 </figcaption>
+                                <label class="shot__frame" for="admin-step-3">
+                                    <img src="assets/demo/publishing-admin-2.png" width="1280" height="870" alt="The Publishing blueprint is selected. It sets the fields, and the rule that runs when a manuscript is approved.">
+                                </label>
                             </figure>
                             <figure class="shot shot--3">
-                                <div class="shot__frame">
-                                    <img src="assets/demo/admin-3.png" width="1280" height="927" alt="The rules on Leave requests. Approve the request stamps the date, writes the log, posts a notice, sends an email, and clears Next step.">
-                                </div>
                                 <figcaption>
-                                    <p>Those rules are on the application. Approve the request stamps the date, writes the log, posts the notice, sends the email, and clears Next step.</p>
+                                    <p>Those rules are on the application. Approve the manuscript stamps the date, writes the log, posts the notice, sends the email, and clears Next step.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
                                             <label for="admin-step-1">1 Create</label>
@@ -208,6 +296,9 @@
                                         <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
                                     </div>
                                 </figcaption>
+                                <div class="shot__frame">
+                                    <img src="assets/demo/publishing-admin-3.png" width="1265" height="975" alt="The rules on Publishing. Approve the manuscript stamps the date, writes the log, posts a notice, sends an email, and clears Next step.">
+                                </div>
                             </figure>
                         </div>
                     </section>
@@ -246,7 +337,7 @@
                     <img src="assets/mark.svg" alt="" width="36" height="36">
                     <span class="brand__name">Adlexone</span>
                 </a>
-                <p>Adlexone keeps the applications, records, and rules for the work.</p>
+                <p>An application is a line of work. Adlexone keeps the records.</p>
             </div>
             <div>
                 <strong>Pages</strong>

@@ -165,18 +165,6 @@ a:hover {
     line-height: 1;
 }
 
-.build-tag {
-    margin: 0;
-    padding: 0.2rem 0.5rem;
-    border: 1px solid var(--punch);
-    border-radius: 4px;
-    color: var(--punch-ink);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
 .menu-btn {
     display: none;
     align-items: center;
@@ -350,6 +338,13 @@ dd {
     aspect-ratio: 4 / 3;
 }
 
+.picture--ui img {
+    aspect-ratio: auto;
+    object-fit: contain;
+    object-position: top center;
+    background: #f7f5f1;
+}
+
 .picture figcaption {
     padding: 0.75rem 1rem 0.9rem;
     color: var(--muted);
@@ -481,6 +476,12 @@ a.tile:hover {
     max-width: 44rem;
 }
 
+.stills {
+    margin: 0.95rem 0 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
 label.btn {
     cursor: pointer;
     font: inherit;
@@ -506,23 +507,19 @@ label.btn {
     scroll-margin-top: 5.75rem;
 }
 
-.walk:has(#demo-user:checked) label[for="demo-user"],
-.walk:has(#demo-admin:checked) label[for="demo-admin"] {
+.walk:has(#publishing-demo:target) a[href="#publishing-demo"],
+.walk:has(#leave-demo:target) a[href="#leave-demo"],
+.walk:has(#admin-demo:target) a[href="#admin-demo"] {
     background: var(--inlay);
     border-color: var(--inlay);
     color: #fff;
 }
 
-.walk:has(#demo-user:checked) label[for="demo-user"]:hover,
-.walk:has(#demo-admin:checked) label[for="demo-admin"]:hover {
+.walk:has(#publishing-demo:target) a[href="#publishing-demo"]:hover,
+.walk:has(#leave-demo:target) a[href="#leave-demo"]:hover,
+.walk:has(#admin-demo:target) a[href="#admin-demo"]:hover {
     background: var(--inlay-ink);
     color: #fff;
-}
-
-.walk:has(#demo-user:focus-visible) label[for="demo-user"],
-.walk:has(#demo-admin:focus-visible) label[for="demo-admin"] {
-    outline: 2px solid var(--punch);
-    outline-offset: 3px;
 }
 
 .tour {
@@ -534,8 +531,7 @@ label.btn {
     box-shadow: var(--shadow);
 }
 
-.walk:has(#demo-user:checked) .tour--user,
-.walk:has(#demo-admin:checked) .tour--admin {
+.tour:target {
     display: block;
 }
 
@@ -569,6 +565,10 @@ label.btn {
     margin: 0;
 }
 
+.tour--publishing:has(#publishing-step-1:checked) .shot--1,
+.tour--publishing:has(#publishing-step-2:checked) .shot--2,
+.tour--publishing:has(#publishing-step-3:checked) .shot--3,
+.tour--publishing:has(#publishing-step-4:checked) .shot--4,
 .tour--user:has(#user-step-1:checked) .shot--1,
 .tour--user:has(#user-step-2:checked) .shot--2,
 .tour--user:has(#user-step-3:checked) .shot--3,
@@ -581,9 +581,8 @@ label.btn {
 
 .shot__frame {
     display: block;
-    margin: 0.9rem 1.15rem 0;
+    margin: 0.85rem 1.15rem 1.15rem;
     overflow: auto;
-    max-height: min(72vh, 820px);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: #f7f5f1;
@@ -597,15 +596,8 @@ label.shot__frame {
     width: 100%;
 }
 
-@media (max-width: 719px) {
-    .shot__frame img {
-        width: 920px;
-        max-width: none;
-    }
-}
-
 .shot figcaption {
-    padding: 0.9rem 1.15rem 1.15rem;
+    padding: 0.95rem 1.15rem 0;
 }
 
 .shot figcaption > p {
@@ -646,6 +638,10 @@ label.shot__frame {
     color: var(--inlay);
 }
 
+.tour--publishing:has(#publishing-step-1:checked) .jumps label[for="publishing-step-1"],
+.tour--publishing:has(#publishing-step-2:checked) .jumps label[for="publishing-step-2"],
+.tour--publishing:has(#publishing-step-3:checked) .jumps label[for="publishing-step-3"],
+.tour--publishing:has(#publishing-step-4:checked) .jumps label[for="publishing-step-4"],
 .tour--user:has(#user-step-1:checked) .jumps label[for="user-step-1"],
 .tour--user:has(#user-step-2:checked) .jumps label[for="user-step-2"],
 .tour--user:has(#user-step-3:checked) .jumps label[for="user-step-3"],
@@ -686,6 +682,24 @@ label.shot__frame {
     font-size: 1rem;
     font-weight: 650;
     letter-spacing: 0;
+}
+
+.catalogue a.tour-link {
+    display: block;
+    margin: -0.95rem -1rem -1rem;
+    padding: 0.95rem 1rem 1rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.catalogue a.tour-link h3 {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+}
+
+.catalogue a.tour-link:hover h3 {
+    color: var(--punch);
 }
 
 .catalogue p,
@@ -729,6 +743,10 @@ label.shot__frame {
 .also {
     margin: 1rem 0 0;
     color: var(--muted);
+}
+
+.host-note {
+    margin: 2.2rem 0 0;
 }
 
 .colophon {
@@ -798,18 +816,13 @@ label.shot__frame {
     }
 
     .walk .hero {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0;
+        align-items: start;
         padding: 0 0 0.2rem;
     }
 
     .hero--stack {
         grid-template-columns: 1fr;
         gap: 2rem;
-    }
-
-    .hero--stack .picture {
-        order: -1;
     }
 
     .tiles--three {
