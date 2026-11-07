@@ -174,7 +174,7 @@ if (!isset ($_SESSION['access_user_id']) or $urlaction === 'logoff') {
     }
 
 
-    \Adlexone\support\MenuOptions::prepare();
+    \Adlexone\Data\MenuOptions::prepare();
 
     $requested = Router::requested();
     Page::current()->useLayout(Router::bare($requested) ? Page::RESPONSE : Page::SHELL);
