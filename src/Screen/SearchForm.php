@@ -21,30 +21,12 @@ use Adlexone\Html\Html;
 
 final class SearchForm
 {
-/**
-     * showQuickSearch()
+    /**
+     * The quick search page is the same finder as an application search.
      */
-    public static function showQuickSearch()
+    public static function showQuickSearch(): void
     {
-        $javascript = Form::fieldCheck(TXT_468, [''], ['search_value'], [''], [TXT_206], [true]);
-        $inApplication = Page::current()->inApplication();
-        $typeLabels = $inApplication ? ['Name', 'ID', 'Notes'] : [TXT_84, TXT_102, TXT_601];
-        $fields = [
-            TXT_682 => Form::select(
-                'search_type',
-                ['item_title', 'item_id', 'log_entries'],
-                $typeLabels,
-                'item_title'
-            ),
-            ($inApplication ? 'Name' : TXT_683) => Form::text('search_value', ''),
-            '' => Form::hidden('search', 'Search'),
-        ];
-        Page::current()->setBody(Form::form(
-            Wording::application('TXT_62', TXT_376),
-            SearchScreen::address('search', 'option=quick_search'),
-            $fields,
-            [Form::button('submit', 'search', TXT_3, $javascript)]
-        ));
+        ApplicationSearch::open();
     }
 
     public static function quickSearch()
@@ -78,147 +60,15 @@ final class SearchForm
         SearchResults::searchResults($sql);
     }
 
-/**
-     * Displays the advanced item search form.
+    /**
+     * The advanced search page is the same finder as an application search.
      *
-     * This function generates an advanced search form for items, allowing users to filter
-     * and sort items based on various criteria such as item types, system criteria, date ranges,
-     * custom fields, and more. The form is divided into sections for better organization and
-     * uses the `Form` builders for form elements.
-     *
-     * @param string|array $filter Optional filter criteria for item types.
-     * @return void
+     * @param string|array $filter Kept so older callers can still open the page.
      */
-    public static function showAdvancedItemSearch($filter = '')
+    public static function showAdvancedItemSearch($filter = ''): void
     {
-        $filter = self::constrainSearchTypeFilter($filter);
-        // Clear previous search SQL if not showing search results
-        unset($_SESSION['item_search_sql'], $_SESSION['item_search_params']);
-
-        // Define operator and logical values for dropdowns
-        $operatorValues = array('=', 'LIKE', '<>');
-        $operatorDisplayValues = array(TXT_81, TXT_112, TXT_318);
-        $andOrValues = array('AND', 'OR');
-        $andOrDisplayValues = array(TXT_109, TXT_110);
-        $eventId = (Request::hasQueryKey('event_id') && is_scalar(Request::queryValue('event_id'))) ? '&event_id=' . rawurlencode((string) Request::queryValue('event_id')) : '';
-
-        $fields = [];
-        $allowedTypes = self::applicationSearchTypeIds();
-        $inApplication = Page::current()->inApplication();
-        if (!$inApplication || count($allowedTypes) > 1) {
-            $fields[$inApplication ? 'Kind' : TXT_99] = self::showItemTypeMenu($filter);
-        }
-        $fields[Wording::get('LA_102', 'TXT_102')] = self::searchControlRow(
-            Form::select('id_operator', $operatorValues, $operatorDisplayValues, ''),
-            Form::text('item_id', ''),
-            Form::select('id_andor', $andOrValues, $andOrDisplayValues, '')
-        );
-        $fields[$inApplication ? 'Name' : Wording::get('LA_84', 'TXT_84')] = self::searchControlRow(
-            Form::select('item_title_operator', $operatorValues, $operatorDisplayValues, ''),
-            Form::text('item_title', ''),
-            Form::select('title_andor', $andOrValues, $andOrDisplayValues, '')
-        );
-
-        // Populate users dropdown
-        $sql = "select user_id, user_name FROM users ORDER BY user_name ASC";
-            $result = Database::rows($sql);
-        $listValues = ['' => TXT_105, 'session_user' => TXT_600];
-        foreach ($result as $row) {
-            $listValues[$row['user_id']] = $row['user_name'];
-        }
-
-        // Add user-related fields to system criteria
-        $fields[Wording::get('LA_551', 'TXT_551')] = self::searchControlRow(
-            Form::select('security_creators_operator', $operatorValues, $operatorDisplayValues, ''),
-            Form::select('creator_security', array_keys($listValues), array_values($listValues), ''),
-            Form::select('security_creators_andor', $andOrValues, $andOrDisplayValues, '')
-        );
-        $fields[Wording::get('LA_269', 'TXT_269')] = self::searchControlRow(
-            Form::select('security_users_operator', $operatorValues, $operatorDisplayValues, ''),
-            Form::select('user_security', array_keys($listValues), array_values($listValues), ''),
-            Form::select('security_users_andor', $andOrValues, $andOrDisplayValues, '')
-        );
-        $fields[TXT_79] = self::searchControlRow(
-            Form::select('security_groups_operator', array('=', '<>'), array(TXT_81, TXT_318), ''),
-            self::showSecurityGroups(),
-            Form::select('security_groups_andor', $andOrValues, $andOrDisplayValues, '')
-        );
-
-        $fields[TXT_406] = self::searchControlRow(
-            Form::select('hour_type', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
-            Form::select('hour_range_operator', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
-            Form::text('hour_range', '', '30'),
-            Form::select('hour_range_andor', $andOrValues, $andOrDisplayValues, '')
-        );
-        $fields[TXT_103 . ' 1'] = self::searchControlRow(
-            Form::select('date_type_1', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
-            Form::select('date_operator_1', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '>='),
-            Form::text('date_1', ''),
-            Form::select('date_andor_1', $andOrValues, $andOrDisplayValues, '')
-        );
-        $fields[TXT_103 . ' 2'] = self::searchControlRow(
-            Form::select('date_type_2', array('create_date', 'core_log_updated'), array(TXT_103, TXT_420), ''),
-            Form::select('date_operator_2', array('<=', '=', '>='), array(TXT_405, TXT_81, TXT_111), '<='),
-            Form::text('date_2', ''),
-            Form::select('date_andor_2', $andOrValues, $andOrDisplayValues, '')
-        );
-        $fields[TXT_407] = '<p class="field-note">dd-mm-yyyy hh:mm:ss</p>';
-
-        $postedItemTypeID = (Request::hasPostedKey('item_type_id')) ? Request::postedValue('item_type_id') : $filter;
-        $customFields = self::showCustomFields($postedItemTypeID);
-        if ($customFields !== '') {
-            $fields[TXT_106] = $customFields;
-        }
-
-        $fields[TXT_258] = '<div class="choice-list__sort">'
-            . '<label class="checkbox">' . Form::radio('sortOrder', 'ascending', 'ascending') . ' ' . Html::e(TXT_533) . '</label>'
-            . '<label class="checkbox">' . Form::radio('sortOrder', 'descending', '') . ' ' . Html::e(TXT_534) . '</label>'
-            . '</div>';
-
-        $displayChoices = [
-            [Wording::get('LA_102', 'TXT_102'), 'spec_item_id', 'disp_item_id', 'sort_item_id', true],
-            [Wording::get('LA_84', 'TXT_84'), 'spec_item_title', 'disp_item_title', 'sort_item_title', false],
-            [TXT_225, 'disp_create_date', '', 'sort_create_date', false],
-        ];
-        $choiceHtml = '<div class="choice-list">';
-        foreach ($displayChoices as [$label, $checkName, $hiddenName, $sortValue, $sortChecked]) {
-            $choiceHtml .= '<div class="choice-list__row">'
-                . Form::checkbox($checkName, 'true', 'true', (string)$label)
-                . ($hiddenName !== '' ? Form::hidden($hiddenName, $hiddenName) : '')
-                . '<span class="choice-list__sort">' . Form::radio('sort_field', $sortValue, $sortChecked ? $sortValue : '', 'aria-label="' . Html::e(TXT_258) . '"')
-                . Html::e(TXT_258) . '</span>'
-                . '</div>';
-        }
-        $choiceHtml .= '</div>';
-        $fields[TXT_527] = $choiceHtml;
-
-        $fields[Wording::get('LA_310', 'TXT_310')] = Form::text('search_name', '');
-        $fields[Wording::get('LA_312', 'TXT_312')] = Form::textarea('search_description', '', SET_FORM_FIELD_HEIGHT);
-        if (Access::canAdministerSite()) {
-            $fields[TXT_403] = Form::select('security', array('mine', 'all', 'system'), array(TXT_402, TXT_401, TXT_482), '1');
-        } else {
-            $fields[''] = Form::hidden('security', 'mine');
-        }
-
-        $searchScope = Request::query('application');
-        if ($searchScope === '' && Page::current()->inApplication()) {
-            $searchScope = Page::current()->applicationSlug();
-        }
-        $fields[TXT_350] = self::searchApplicationMenu($searchScope);
-
-        $javascript = Form::fieldCheck(TXT_468, [''], ['search_name'], [''], [TXT_367], [true]);
-
-        Page::current()->setBody(Form::form(
-            Wording::application('TXT_61', (string)Wording::get('LA_96', 'TXT_96')),
-            SearchScreen::address('search', 'option=show_search_results' . $eventId),
-            $fields,
-            [
-                Form::button('submit', 'search', TXT_3),
-                Form::button('reset', 'reset', TXT_75),
-                Form::button('submit', 'new_favourite', TXT_309, $javascript),
-            ],
-            ['name' => 'itemSearch', 'id' => 'itemSearch']
-        ));
+        unset($filter);
+        ApplicationSearch::open();
     }
 
     public static function showItemTypeMenu($filter = '')

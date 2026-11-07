@@ -53,9 +53,12 @@ final class ApplicationSearch
 
     public static function open(): void
     {
-        $slug = Page::current()->applicationSlug();
-        $types = ApplicationSettings::allowedItemTypeIds($slug);
+        $slug = Page::current()->inApplication() ? Page::current()->applicationSlug() : '';
+        $types = $slug !== '' ? ApplicationSettings::allowedItemTypeIds($slug) : self::siteTypes();
         $fields = self::fields($types);
+        if ($slug === '') {
+            $fields = self::uniqueFields($fields);
+        }
 
         if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST' && Request::hasPostedKey('search_name')) {
             self::save($slug, $types, $fields);
@@ -86,7 +89,7 @@ final class ApplicationSearch
     public static function savedHref(array $criteria): string
     {
         $state = $criteria['finder'] ?? null;
-        if (!is_array($state) || !Page::current()->inApplication()) {
+        if (!is_array($state)) {
             return '';
         }
 
@@ -119,6 +122,44 @@ final class ApplicationSearch
         }
 
         return $out;
+    }
+
+    /**
+     * Every enabled record type, for a search that is not inside one application.
+     *
+     * @return list<int>
+     */
+    private static function siteTypes(): array
+    {
+        $types = [];
+        foreach (Database::select('item_types', ['item_type_id'], "enabled = 'Yes'", [], 'item_type_name ASC') as $row) {
+            $types[] = (int) $row['item_type_id'];
+        }
+
+        return $types;
+    }
+
+    /**
+     * One entry per field when several record types share it.
+     *
+     * @param list<array{id: int, label: string, kind: string, values: list<string>, group: string}> $fields
+     * @return list<array{id: int, label: string, kind: string, values: list<string>, group: string}>
+     */
+    private static function uniqueFields(array $fields): array
+    {
+        $byId = [];
+        foreach ($fields as $field) {
+            $id = $field['id'];
+            if (!isset($byId[$id])) {
+                $byId[$id] = $field;
+                continue;
+            }
+            if ($byId[$id]['group'] !== $field['group']) {
+                $byId[$id]['group'] = 'Several record types';
+            }
+        }
+
+        return array_values($byId);
     }
 
     private static function kind(string $type): string
@@ -560,6 +601,12 @@ final class ApplicationSearch
      */
     private static function savedFor(string $slug): array
     {
+        if ($slug === '') {
+            return Database::rows(
+                "SELECT search_id, search_name, user FROM saved_searches WHERE application = '' AND (user = ? OR user = 'all') ORDER BY search_name ASC LIMIT 12",
+                [(string) ($_SESSION['access_user_id'] ?? '')]
+            );
+        }
         $app = ApplicationStore::findBySlug($slug);
         if ($app === null) {
             return [];
@@ -909,11 +956,11 @@ final class ApplicationSearch
         $name = trim((string) (Request::postedValue('search_name') ?? ''));
         $back = self::href($state);
 
-        $app = ApplicationStore::findBySlug($slug);
+        $app = $slug === '' ? null : ApplicationStore::findBySlug($slug);
         $userId = (string) ($_SESSION['access_user_id'] ?? '');
         if ($name === '') {
             View::flash('Name the search before you save it.', 'danger');
-        } elseif ($app === null || $userId === '') {
+        } elseif ($userId === '' || ($slug !== '' && $app === null)) {
             View::flash('This search could not be saved.', 'danger');
         } elseif (Database::rows('SELECT search_id FROM saved_searches WHERE search_name = ? AND user = ?', [$name, $userId]) !== []) {
             View::flash('You already have a saved search called "' . $name . '". Choose another name.', 'danger');
@@ -924,7 +971,7 @@ final class ApplicationSearch
                 'user' => $everyone ? 'all' : $userId,
                 'search_name' => mb_substr($name, 0, 80),
                 'search_description' => '',
-                'application' => ApplicationStore::scopeKey($app),
+                'application' => $app === null ? '' : ApplicationStore::scopeKey($app),
                 'criteria_json' => SavedSearch::encode(SavedSearch::withoutStoredSql($criteria)),
             ]);
             View::flash('Saved "' . mb_substr($name, 0, 80) . '".');

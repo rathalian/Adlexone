@@ -12,7 +12,6 @@ use Adlexone\Application\RecordQuery;
 use Adlexone\Application\Rules;
 use Adlexone\Application\ScreenCatalog;
 use Adlexone\Application\WorkflowFields;
-use Adlexone\Auth\Csrf;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Html\Blocks;
@@ -259,80 +258,38 @@ final class RecordScreens
      */
     public static function editor(string $column, array $columns, array $groups, string $action, string $submit, string $emptyTitle, string $emptyCopy): string
     {
-        $rows = 0;
+        $prepared = [];
+        $count = 0;
         foreach ($groups as $group) {
-            $rows += count($group['rows']);
-        }
-        if ($rows === 0) {
-            return self::emptyList($emptyTitle, $emptyCopy);
-        }
-        $heads = '';
-        foreach ($columns as $col) {
-            $heads .= '<th class="record-list__cell">' . Html::e($col['label']) . '</th>';
-        }
-        $body = '';
-        foreach ($groups as $group) {
-            $groupRows = $group['rows'];
+            $groupRows = [];
+            foreach ($group['rows'] ?? [] as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $count++;
+                $row['control'] = self::labelControl((string) ($row['control'] ?? ''), (string) ($row['name'] ?? ''));
+                $groupRows[] = $row;
+            }
             if ($groupRows === []) {
                 continue;
             }
-            $label = trim((string) $group['label']);
-            $span = 2 + count($columns);
-            $body .= '<tbody data-group>';
-            if ($label !== '') {
-                $body .= '<tr class="record-list__grouphead"><th colspan="' . $span . '" scope="rowgroup">'
-                    . Html::e($label) . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
-            }
-            foreach ($groupRows as $row) {
-                $body .= self::editorRow($row, $columns, $label);
-            }
-            $body .= '</tbody>';
+            $prepared[] = ['label' => (string) ($group['label'] ?? ''), 'rows' => $groupRows];
+        }
+        if ($count === 0) {
+            return self::emptyList($emptyTitle, $emptyCopy);
         }
 
-        return '<form method="post" action="' . Html::e($action) . '">'
-            . Csrf::field()
-            . '<div class="record-list" data-record-list>'
-            . '<div class="record-list__bar">'
-            . '<input class="input record-list__search" type="search" placeholder="Search" aria-label="Search" autocomplete="off" form="record-sheet-search">'
-            . '<span class="record-list__count" aria-live="polite">' . $rows . '</span>'
-            . '<button class="btn btn--primary btn--sm" type="submit">' . Html::e($submit) . '</button>'
-            . '</div>'
-            . '<div class="record-list__tablewrap"><table class="table table-hover"><thead><tr><th>'
-            . Html::e($column) . '</th>' . $heads . '<th class="record-list__cell">Update</th></tr></thead>'
-            . $body
-            . '</table></div>'
-            . '<p class="record-list__nomatch" hidden>No matches.</p>'
-            . '</div></form>';
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     * @param list<array{key: string, label: string}> $columns
-     */
-    private static function editorRow(array $row, array $columns, string $groupLabel): string
-    {
-        $name = (string) ($row['name'] ?? '');
-        $mark = trim((string) ($row['mark'] ?? ''));
-        $search = strtolower($name . ' ' . $groupLabel . ' ' . $mark . ' ' . (string) ($row['search'] ?? ''));
-        $nameHtml = '<span class="record-list__name">'
-            . ($mark !== '' ? Presence::mark($mark) : '')
-            . '<span class="record-list__title"><a class="record-link" href="' . Html::e((string) ($row['href'] ?? '')) . '">'
-            . Html::e($name) . '</a></span></span>';
-        $cells = is_array($row['cells'] ?? null) ? $row['cells'] : [];
-        $tones = is_array($row['tones'] ?? null) ? $row['tones'] : [];
-        $cellsHtml = '';
-        foreach ($columns as $column) {
-            $key = $column['key'];
-            $value = trim((string) ($cells[$key] ?? ''));
-            $search .= ' ' . strtolower($value);
-            $inner = $value === '' ? '—' : (isset($tones[$key]) || $key === 'stand' ? Presence::pill($value, (string) ($tones[$key] ?? '')) : Html::e($value));
-            $cellsHtml .= '<td class="record-list__cell">' . $inner . '</td>';
-        }
-
-        $control = self::labelControl((string) ($row['control'] ?? ''), $name);
-
-        return '<tr data-search="' . Html::e($search) . '"><td>' . $nameHtml . '</td>' . $cellsHtml
-            . '<td class="record-list__cell record-sheet__control">' . $control . '</td></tr>';
+        return Blocks::recordList([
+            'column' => $column,
+            'columns' => $columns,
+            'searchLabel' => 'Search',
+            'noMatch' => 'No matches.',
+            'empty' => $emptyTitle,
+            'groups' => $prepared,
+            'controlLabel' => 'Update',
+            'formAction' => $action,
+            'submitLabel' => $submit,
+        ]);
     }
 
     /**

@@ -163,7 +163,7 @@ final class SearchLibrary
             define('SEARCH_NAME', $row['search_name']);
 
             $finder = json_decode((string) ($row['criteria_json'] ?? ''), true);
-            if (is_array($finder) && Page::current()->inApplication()) {
+            if (is_array($finder)) {
                 $target = ApplicationSearch::savedHref($finder);
                 if ($target !== '') {
                     header('Location: ' . \Adlexone\Http\Router::absolute($target));

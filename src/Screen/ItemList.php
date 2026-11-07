@@ -34,148 +34,120 @@ use Adlexone\Html\Html;
 
 final class ItemList
 {
-/**
-     * Column and direction for a record list. The previous choice is a column name, not a statement.
-     */
-    private static function listOrder(string $fallback, bool $remember): string
-    {
-        unset($_SESSION['item_sql']);
-        $posted = Database::orderBy(is_scalar(Request::postedValue('currsort') ?? null) ? (string) Request::postedValue('currsort') : '');
-        $previous = Database::orderBy((string) ($_SESSION['item_sort'] ?? ''));
-        if ($posted !== '') {
-            $postedColumn = explode(' ', $posted)[0];
-            $previousColumn = $previous === '' ? '' : explode(' ', $previous)[0];
-            $order = ($postedColumn === $previousColumn && !str_contains($previous, 'DESC'))
-                ? $postedColumn . ' DESC'
-                : $postedColumn;
-        } elseif ($remember && $previous !== '' && Request::hasPostedKey('search_type')) {
-            $order = $previous;
-        } else {
-            $order = Database::orderBy($fallback);
-            if ($order === '') {
-                $order = 'item_id DESC';
-            }
-        }
-        if ($remember) {
-            $_SESSION['item_sort'] = $order;
-        }
-
-        return $order;
-    }
-
-/**
-     * Shows a list of items defined by item id, filtered by specific item where applicable
+    /**
+     * Shows a list of items defined by item id, filtered by a specific item where applicable.
      *
      * @param array<mixed>|int|string $itemIDArray Item ids, or one id
      * @param int|string $itemID Item id to show on its own, or an empty string for the whole list
-     * @param string $orderSQL Order by clause
+     * @param string $orderSQL Order by clause, used when the address has no sort
      */
     public static function showItems($itemIDArray, $itemID = '', $orderSQL = '')
     {
-        // Get data from database
-        global $html;
-        $columnArray = array('item_id', 'create_date', 'item_type_id', 'item_title');
+        unset($_SESSION['item_sql']);
         if ((string) $itemID !== '') {
             $ids = [(int) $itemID];
         } else {
             $ids = RecordListQuery::ids(is_array($itemIDArray) ? $itemIDArray : []);
         }
-        $countrecs = count((array)$itemIDArray);
-        $countBoolean = (($countrecs / (int) SET_ITEMS_PAGE) > 1);
 
-        $orderSQL = self::listOrder((string) $orderSQL, (string) $itemID === '');
+        $base = ItemScreen::recordUrl('option=my_items');
+        $sorts = ['name' => 'item_title', 'type' => 'item_type_id', 'opened' => 'create_date', 'id' => 'item_id'];
+        $requested = (string) (Request::queryValue('sort') ?? '');
+        $sort = isset($sorts[$requested]) ? $requested : '';
+        $direction = (string) (Request::queryValue('dir') ?? '') === 'asc' ? 'asc' : 'desc';
+        if ($sort === '') {
+            $fallback = RecordListQuery::order((string) $orderSQL);
+            $column = explode(' ', $fallback)[0];
+            $sort = array_search($column, $sorts, true);
+            $sort = is_string($sort) ? $sort : 'opened';
+            $direction = str_contains($fallback, 'DESC') ? 'desc' : 'asc';
+        }
+        $order = RecordListQuery::order($sorts[$sort] . ' ' . ($direction === 'asc' ? 'ASC' : 'DESC'));
         $pageSize = max(1, (int) SET_ITEMS_PAGE);
-        $page = RecordListQuery::page(Request::postedValue('pageset') ?? 1);
-        $result = RecordList::fetch($ids, $columnArray, $orderSQL, $pageSize, ($page - 1) * $pageSize);
+        $pages = max(1, (int) ceil(count($ids) / $pageSize));
+        $page = min($pages, RecordListQuery::page(Request::queryValue('page')));
+        $result = RecordList::fetch($ids, ['item_id', 'create_date', 'item_type_id', 'item_title'], $order, $pageSize, ($page - 1) * $pageSize);
 
-        $listHtml = '';
-        $sortLinks = '';
-        if ($countrecs > 1) {
-            $sortLinks = '<div>'
-                . Access::outputIfAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), Permission::RECORDS_EDIT)
-                . ' '
-                . Access::outputIfAllowed(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')), Permission::RECORDS_EDIT)
-                . ' '
-                . Access::outputIfAllowed(Form::sortButton('create_date', TXT_225), Permission::RECORDS_EDIT)
-                . ' '
-                . Access::outputIfAllowed(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')), Permission::RECORDS_EDIT)
-                . '</div>';
+        $rows = [];
+        foreach ($result as $row) {
+            $itemId = (int) $row['item_id'];
+            $rows[] = Blocks::itemRecord(
+                $row,
+                $base . '&item=' . $itemId . '&option=show_item',
+                Blocks::itemActions($itemId, ItemScreen::recordUrl())
+            );
         }
 
-        if (count($result) > 0) {
-            $itemTypeID = '';
-            $itemTypeName = '';
-            foreach ($result as $row) {
-                if ($row['item_title'] == '') {
-                    $title = TXT_357;
-                } else {
-                    $title = $row['item_title'];
-                }
-                $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-                $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-                if ($itemTypeID != $row['item_type_id']) {
-                    $itemTypeRow = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [(int) $row['item_type_id']]);
-                    $itemTypeName = (string) ($itemTypeRow['item_type_name'] ?? '');
-                    $itemTypeID = $row['item_type_id'];
-                }
-                $itemId = (int) $row['item_id'];
-                $action = Access::outputIfAllowed('<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>', Permission::RECORDS_EDIT);
-                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>', Permission::RECORDS_ASSIGN);
-                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>', Permission::RECORDS_EDIT);
-                $action .= Access::outputIfAllowed(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'), Permission::APP_ACCESS);
-                $action .= Access::outputIfAllowed(
-                    ' - ' . Blocks::link(
-                        ItemScreen::recordUrl('item=' . $itemId . '&option=delete_item'),
-                        TXT_315,
-                        '',
-                        'URL',
-                        '',
-                        '_parent',
-                        TXT_400
-                    ),
-                    Permission::RECORDS_CONTROL
-                );
-                $listHtml .= Form::fields([
-                    Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
-                    Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments)) . '" class="URL">' . Html::e((string) $title) . '</a>',
-                    TXT_225 => date(SET_DATE_FORMAT, $row['create_date']),
-                    Wording::get('LA_226', 'TXT_226') => (string)$itemTypeName,
-                    TXT_388 => $action,
-                ]);
-                $listHtml .= Blocks::separator();
-                unset($action);
+        $columns = Blocks::itemListColumns();
+        foreach ($columns as $index => $column) {
+            $key = $column['key'] === 'type' ? 'type' : 'opened';
+            $columns[$index]['sortHref'] = self::listHref($base, $key, $sort, $direction, 1);
+            $columns[$index]['ariaSort'] = $sort === $key ? ($direction === 'asc' ? 'ascending' : 'descending') : '';
+        }
+
+        $title = (string) Wording::get('LA_44', 'TXT_44');
+        $list = $rows === [] && $ids === []
+            ? Blocks::emptyState([
+                'illustration' => 'empty-work',
+                'title' => 'No records yet',
+                'copy' => 'Records you own or share are listed here.',
+            ])
+            : Blocks::recordList([
+                'column' => (string) Wording::get('LA_84', 'TXT_84'),
+                'columnSortHref' => self::listHref($base, 'name', $sort, $direction, 1),
+                'columnAriaSort' => $sort === 'name' ? ($direction === 'asc' ? 'ascending' : 'descending') : '',
+                'columns' => $columns,
+                'searchLabel' => defined('TXT_3') ? TXT_3 : 'Search',
+                'toolbar' => self::listPager($base, $sort, $direction, $page, $pages, count($ids)),
+                'empty' => defined('TXT_115') ? TXT_115 : 'No records',
+                'groups' => [['rows' => $rows]],
+            ]);
+
+        Page::current()->setBody(Blocks::vertical([[
+            'title' => $title,
+            'html' => $list,
+            'class' => 'card--work',
+        ]]));
+    }
+
+    private static function listHref(string $base, string $key, string $current, string $direction, int $page): string
+    {
+        $next = $current === $key && $direction === 'asc' ? 'desc' : 'asc';
+        if ($current !== $key) {
+            $next = $key === 'name' ? 'asc' : 'desc';
+        }
+        $href = $base . '&sort=' . rawurlencode($key) . '&dir=' . $next;
+        if ($page > 1) {
+            $href .= '&page=' . $page;
+        }
+
+        return $href;
+    }
+
+    private static function listPager(string $base, string $sort, string $direction, int $page, int $pages, int $total): string
+    {
+        if ($pages < 2 || $total === 0) {
+            return '';
+        }
+        $from = ($page - 1) * max(1, (int) SET_ITEMS_PAGE) + 1;
+        $to = min($total, $page * max(1, (int) SET_ITEMS_PAGE));
+        $href = static function (int $target) use ($base, $sort, $direction): string {
+            $link = $base . '&sort=' . rawurlencode($sort) . '&dir=' . rawurlencode($direction);
+            if ($target > 1) {
+                $link .= '&page=' . $target;
             }
-        } else {
-            $listHtml = Form::fields(['' => Html::e(TXT_115)]);
+
+            return $link;
+        };
+        $html = '<span class="record-list__meta">Showing ' . $from . '–' . $to . ' of ' . $total . '</span>';
+        if ($page > 1) {
+            $html .= '<a class="btn btn--sm" href="' . Html::e($href($page - 1)) . '">Previous</a>';
         }
-        $paginationHTML = '';
-        $hidden = '';
-        $pageset = '';
-        if ($countBoolean) {
-            $pageset = (Request::hasPostedKey('pageset')) ? Request::postedValue('pageset') : 1;
-            $pager = RecordList::pager($countrecs, (int) SET_ITEMS_PAGE, $pageset);
-            $paginationHTML = $pager['html'];
-            $pageset = $pager['page'];
-            if ($itemID == '') {
-                $paginationHTML .= '</ul></div>';
-                $hidden .= Form::hidden('pageset', (string)$pageset);
-            }
-        }
-        if ($itemID == '') {
-            $hidden .= Form::hidden('currsort', '');
-            $hidden .= Form::hidden('search', (string) $pageset);
-            $hidden .= Form::hidden('countrecs', (string)$countrecs);
-            $hidden .= Form::hidden('search_type', Request::query('option'));
+        if ($page < $pages) {
+            $html .= '<a class="btn btn--sm" href="' . Html::e($href($page + 1)) . '">Next</a>';
         }
 
-        $html = Form::form(
-            Wording::get('LA_44', 'TXT_44'),
-            ItemScreen::recordUrl('option=my_items'),
-            ['' => $sortLinks . $listHtml . $paginationHTML . $hidden],
-            [],
-            ['name' => 'repform', 'id' => 'repform']
-        );
-        Page::current()->setBody($html);
+        return '<span class="record-list__tools">' . $html . '</span>';
     }
 
 /**

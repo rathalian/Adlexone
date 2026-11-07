@@ -87,9 +87,12 @@ final class SecurityScreen
          */
         switch ($securityOption) {
             case 'manage_users' :
-            case 'manage_users_groups' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
                 self::showUsers();
+                break;
+            case 'manage_users_groups' :
+                Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
+                self::showSecurityOptions();
                 break;
             case 'manage_groups' :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SECURITY);
@@ -170,14 +173,45 @@ final class SecurityScreen
         }
     }
     /**
-     * Shows secured security options
+     * People and groups, listed the same way as Manage Fields.
      */
     public static function showSecurityOptions(): void
     {
-        $html = Access::outputIfAllowed(Blocks::link(self::url('option=manage_users_groups'), TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(self::url('option=new_user'), TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(self::url('option=new_group'), TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        Page::current()->setBody(Blocks::vertical([['title' => TXT_28, 'html' => $html]]));
+        $rows = [];
+        if (Access::can(Permission::ADMIN_SECURITY)) {
+            $rows[] = [
+                'name' => 'People',
+                'href' => self::url('option=manage_users'),
+                'cells' => ['about' => 'People who can sign in.'],
+                'actions' => [[
+                    'href' => self::url('option=new_user'),
+                    'label' => 'Add person',
+                ]],
+            ];
+            $rows[] = [
+                'name' => 'Groups',
+                'href' => self::url('option=manage_groups'),
+                'cells' => ['about' => 'Groups and their access.'],
+                'actions' => [[
+                    'href' => self::url('option=new_group'),
+                    'label' => 'Add group',
+                ]],
+            ];
+        }
+
+        Page::current()->setBody(Blocks::vertical([[
+            'title' => 'Security',
+            'html' => Blocks::recordList([
+                'column' => 'Page',
+                'columns' => [['key' => 'about', 'label' => 'What it is', 'wrap' => true]],
+                'searchLabel' => 'Search',
+                'empty' => 'Nothing is available for this account.',
+                'emptyIllustration' => 'empty-people',
+                'emptyTitle' => 'Nothing is available for this account',
+                'emptyCopy' => 'Ask an administrator to grant access.',
+                'groups' => [['rows' => $rows]],
+            ]),
+        ]]));
     }
 
     /**

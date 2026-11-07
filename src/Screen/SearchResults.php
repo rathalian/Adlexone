@@ -76,7 +76,7 @@ final class SearchResults
             : (string)Wording::application('TXT_1', (string)Wording::get('LA_44', 'TXT_44'));
 
         if (empty($ids)) {
-            $again = SearchScreen::address('search', Page::current()->inApplication() ? 'option=show_item_search' : 'option=show_quick_search');
+            $again = SearchScreen::address('search', 'option=show_item_search');
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => $heading,

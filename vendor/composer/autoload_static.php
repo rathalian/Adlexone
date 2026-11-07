@@ -91,6 +91,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Platform\\ErrorHandler' => __DIR__ . '/../..' . '/src/Platform/ErrorHandler.php',
         'Adlexone\\Platform\\HelpText' => __DIR__ . '/../..' . '/src/Platform/HelpText.php',
         'Adlexone\\Platform\\HostConsole' => __DIR__ . '/../..' . '/src/Platform/HostConsole.php',
+        'Adlexone\\Platform\\InstallChrome' => __DIR__ . '/../..' . '/src/Platform/InstallChrome.php',
         'Adlexone\\Platform\\InstallLayout' => __DIR__ . '/../..' . '/src/Platform/InstallLayout.php',
         'Adlexone\\Platform\\OperatorScreen' => __DIR__ . '/../..' . '/src/Platform/OperatorScreen.php',
         'Adlexone\\Platform\\PlatformDb' => __DIR__ . '/../..' . '/src/Platform/PlatformDb.php',

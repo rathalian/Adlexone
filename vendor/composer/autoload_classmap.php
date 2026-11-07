@@ -72,6 +72,7 @@ return array(
     'Adlexone\\Platform\\ErrorHandler' => $baseDir . '/src/Platform/ErrorHandler.php',
     'Adlexone\\Platform\\HelpText' => $baseDir . '/src/Platform/HelpText.php',
     'Adlexone\\Platform\\HostConsole' => $baseDir . '/src/Platform/HostConsole.php',
+    'Adlexone\\Platform\\InstallChrome' => $baseDir . '/src/Platform/InstallChrome.php',
     'Adlexone\\Platform\\InstallLayout' => $baseDir . '/src/Platform/InstallLayout.php',
     'Adlexone\\Platform\\OperatorScreen' => $baseDir . '/src/Platform/OperatorScreen.php',
     'Adlexone\\Platform\\PlatformDb' => $baseDir . '/src/Platform/PlatformDb.php',

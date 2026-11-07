@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Html;
 
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Csrf;
 
 use Adlexone\Http\Page;
 use Adlexone\Database\Database;
@@ -281,7 +282,23 @@ final class Blocks
             $groups[$groupIndex]['rows'] = $groupRows;
         }
 
+        $hasControl = false;
+        foreach ($rows as $row) {
+            if (trim((string) ($row['control'] ?? '')) !== '') {
+                $hasControl = true;
+                break;
+            }
+        }
+        $controlLabel = trim((string) ($list['controlLabel'] ?? ''));
+        if ($hasControl && $controlLabel === '') {
+            $controlLabel = 'Update';
+        }
+        $formAction = trim((string) ($list['formAction'] ?? ''));
+        $submitLabel = trim((string) ($list['submitLabel'] ?? ''));
         $toolbar = (string) ($list['toolbar'] ?? '');
+        if ($formAction !== '' && $submitLabel !== '') {
+            $toolbar = '<button class="btn btn--primary btn--sm" type="submit">' . Html::e($submitLabel) . '</button>' . $toolbar;
+        }
         if ($rows === []) {
             $bar = $primary . $toolbar;
             $emptyIllustration = trim((string) ($list['emptyIllustration'] ?? ''));
@@ -302,7 +319,7 @@ final class Blocks
         }
 
         $selectName = trim((string) ($list['selectName'] ?? ''));
-        $colCount = 1 + count($columns) + ($hasActions ? 1 : 0) + ($selectName !== '' ? 1 : 0);
+        $colCount = 1 + count($columns) + ($hasActions ? 1 : 0) + ($selectName !== '' ? 1 : 0) + ($hasControl ? 1 : 0);
         $body = '';
         foreach ($groups as $group) {
             $groupRows = $group['rows'] ?? [];
@@ -317,7 +334,7 @@ final class Blocks
                     . ' <span class="record-list__badge">' . count($groupRows) . '</span></th></tr>';
             }
             foreach ($groupRows as $row) {
-                $body .= self::recordListRow($row, $label, $hasActions, $asMenu, $columns, $selectName);
+                $body .= self::recordListRow($row, $label, $hasActions, $asMenu, $columns, $selectName, $hasControl);
             }
             $body .= '</tbody>';
         }
@@ -339,7 +356,11 @@ final class Blocks
         $manageHead = $hasActions
             ? '<th class="record-list__manage"><span class="record-list__sr">' . Html::e($manageLabel) . '</span></th>'
             : '';
+        $controlHead = $hasControl
+            ? '<th class="record-list__cell">' . Html::e($controlLabel) . '</th>'
+            : '';
         $searchId = $id . '-search';
+        $searchFormAttr = $formAction !== '' ? ' form="record-sheet-search"' : '';
 
         $selectHead = $selectName !== ''
             ? '<th class="record-list__select"><input type="checkbox" data-select-all aria-label="Select all records"></th>'
@@ -355,19 +376,24 @@ final class Blocks
             ? ' aria-sort="' . Html::e($nameAriaSort) . '"'
             : '';
 
-        return '<div class="record-list" id="' . Html::e($id) . '" data-record-list>'
+        $html = '<div class="record-list" id="' . Html::e($id) . '" data-record-list>'
             . '<div class="record-list__bar">'
-            . '<input id="' . Html::e($searchId) . '" class="input record-list__search" type="search" placeholder="' . Html::e($searchLabel) . '" aria-label="' . Html::e($searchLabel) . '" autocomplete="off">'
+            . '<input id="' . Html::e($searchId) . '" class="input record-list__search" type="search" placeholder="' . Html::e($searchLabel) . '" aria-label="' . Html::e($searchLabel) . '" autocomplete="off"' . $searchFormAttr . '>'
             . '<span class="record-list__count" aria-live="polite">' . count($rows) . '</span>'
             . $toolbar
             . $primary
             . '</div>'
             . '<div class="record-list__tablewrap"><table class="table table-hover">'
-            . '<thead><tr>' . $selectHead . '<th' . $nameSortAttr . '>' . $nameHead . '</th>' . $columnHeads . $manageHead . '</tr></thead>'
+            . '<thead><tr>' . $selectHead . '<th' . $nameSortAttr . '>' . $nameHead . '</th>' . $columnHeads . $controlHead . $manageHead . '</tr></thead>'
             . $body
             . '</table></div>'
             . '<p class="record-list__nomatch" hidden>' . Html::e($noMatch) . '</p>'
             . '</div>';
+        if ($formAction === '') {
+            return $html;
+        }
+
+        return '<form method="post" action="' . Html::e($formAction) . '">' . Csrf::field() . $html . '</form>';
     }
 
     /**
@@ -469,7 +495,8 @@ final class Blocks
         bool $hasActions,
         bool $asMenu,
         array $columns = [],
-        string $selectName = ''
+        string $selectName = '',
+        bool $hasControl = false
     ): string
     {
         $name = (string) ($row['name'] ?? '');
@@ -510,6 +537,11 @@ final class Blocks
             $cellsHtml .= '<td class="record-list__cell' . $wrap . '" data-label="' . Html::e((string) ($columnDef['label'] ?? '')) . '"' . $titleAttr . '>' . $inner . '</td>';
         }
 
+        $controlHtml = '';
+        if ($hasControl) {
+            $controlHtml = '<td class="record-list__cell record-sheet__control">' . (string) ($row['control'] ?? '') . '</td>';
+        }
+
         $actionsHtml = '';
         if ($hasActions) {
             $actions = is_array($row['actions'] ?? null) ? $row['actions'] : [];
@@ -528,7 +560,7 @@ final class Blocks
                 . '></td>';
         }
 
-        return '<tr data-search="' . Html::e($search) . '">' . $select . '<td class="record-list__primary">' . $nameHtml . '</td>' . $cellsHtml . $actionsHtml . '</tr>';
+        return '<tr data-search="' . Html::e($search) . '">' . $select . '<td class="record-list__primary">' . $nameHtml . '</td>' . $cellsHtml . $controlHtml . $actionsHtml . '</tr>';
     }
 
     /**
