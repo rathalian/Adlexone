@@ -196,7 +196,14 @@ final class SearchLibrary
                 $linkArray[] = Blocks::link(SearchScreen::address('records', 'item=' . (int) ($item['item_id'] ?? 0) . '&option=show_item'), '', 'URL');
                 $titleArray[] = (string) ($item['item_title'] ?? '');
             }
-            RssFeed::send(SET_DATE_FORMAT, $search['search_name'], $search['search_description'], 'www.oneorzero.com', $titleArray, $linkArray);
+            RssFeed::send(
+                SET_DATE_FORMAT,
+                $search['search_name'],
+                $search['search_description'],
+                \Adlexone\Http\PublicBaseUrl::resolve($_SERVER)['base'],
+                $titleArray,
+                $linkArray
+            );
         }
     }
 

@@ -16,10 +16,14 @@ use Adlexone\support\Database;
  */
 final class SchemaMigrator
 {
-    /** @phpstan-ignore classConstant.unused */
-    private const VERSION = 15;
+    private const VERSION = 16;
 
     private static bool $done = false;
+
+    public static function version(): int
+    {
+        return self::VERSION;
+    }
 
     public static function migrate(): void
     {
@@ -109,6 +113,11 @@ final class SchemaMigrator
         if ($current < 15) {
             self::applyV15();
             self::mark(15);
+            $current = 15;
+        }
+        if ($current < 16) {
+            self::applyV16();
+            self::mark(16);
         }
     }
 
@@ -1099,5 +1108,16 @@ final class SchemaMigrator
             Database::exec('ALTER TABLE custom_fields ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
         }
         \Adlexone\Application\ApplicationBuilder::noteWaits();
+    }
+
+    /**
+     * The old controller name is no longer stored. Earlier steps already removed
+     * the applications that used it.
+     */
+    private static function applyV16(): void
+    {
+        if (Database::tableExists('applications') && Database::columnExists('applications', 'legacy_controller')) {
+            Database::exec('ALTER TABLE applications DROP COLUMN legacy_controller');
+        }
     }
 }

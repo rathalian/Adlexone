@@ -285,8 +285,7 @@ final class RenderNavigation
             || str_contains($href, 'option=show_announcements')
             || str_contains($href, 'option=details&application_id=')
             || str_contains($href, 'option=navigation&application_id=')
-            || str_contains($href, '&option=settings')
-            || str_contains($href, 'option=knowledgebase_settings');
+            || str_contains($href, '&option=settings');
     }
 
     private static function linkIsCurrent(string $href): bool

@@ -117,11 +117,6 @@ final class AppFunctions
         $appsRel = defined('SITE_APPS_PATH') ? (string) SITE_APPS_PATH : 'site/apps/';
         $root = rtrim($base . $appsRel, '/\\');
         if (!is_dir($root)) {
-            // Legacy path used before site/apps/
-            $legacy = $base . 'application_functions';
-            $root = is_dir($legacy) ? $legacy : '';
-        }
-        if ($root === '') {
             return;
         }
 
