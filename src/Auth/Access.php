@@ -27,14 +27,7 @@ final class Access
 
     public static function ensureSchema(): void
     {
-        \Adlexone\Database\SchemaMigrator::migrate();
-        Database::exec(
-            'CREATE TABLE IF NOT EXISTS group_permissions (
-                group_id INTEGER NOT NULL,
-                permission TEXT NOT NULL,
-                PRIMARY KEY (group_id, permission)
-            )'
-        );
+        Database::ensure();
     }
 
     /**

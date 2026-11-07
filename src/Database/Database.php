@@ -16,6 +16,9 @@ namespace Adlexone\Database;
  */
 class Database
 {
+    /** The only schema. storage/database/shared_schema.sql creates a database at this version. */
+    public const SCHEMA_VERSION = 1;
+
     /** @var array<string, \PDO> */
     private static array $pdoPool = [];
 
@@ -682,6 +685,57 @@ class Database
     {
         if (defined('SET_SHOW_SQL') && SET_SHOW_SQL === 'Yes') {
             error_log('SQL: ' . preg_replace('/\s+/', ' ', trim($sql)));
+        }
+    }
+
+    /**
+     * Create the shared tables when this database does not have them yet.
+     * A file that already has users is left as it is.
+     */
+    public static function ensure(): void
+    {
+        if (self::tableExists('users')) {
+            return;
+        }
+        self::applySharedSchema(self::pdo());
+    }
+
+    public static function applySharedSchema(\PDO $pdo): void
+    {
+        $path = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'shared_schema.sql';
+        $sql = file_get_contents($path);
+        if (!is_string($sql) || $sql === '') {
+            throw new \RuntimeException('Cannot read the shared schema.');
+        }
+        $sql = preg_replace('/^--.*$/m', '', $sql) ?? $sql;
+        $parts = preg_split('/;\s*(?:\R|$)/', $sql) ?: [];
+        $statements = [];
+        foreach ($parts as $statement) {
+            $statement = trim($statement);
+            if ($statement === '') {
+                continue;
+            }
+            $upper = strtoupper($statement);
+            if ($upper === 'BEGIN TRANSACTION' || $upper === 'COMMIT' || str_starts_with($upper, 'BEGIN')) {
+                continue;
+            }
+            if (str_starts_with($upper, 'PRAGMA')) {
+                $pdo->exec($statement);
+                continue;
+            }
+            $statements[] = $statement;
+        }
+        $pdo->beginTransaction();
+        try {
+            foreach ($statements as $statement) {
+                $pdo->exec($statement);
+            }
+            $pdo->commit();
+        } catch (\Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
         }
     }
 }
