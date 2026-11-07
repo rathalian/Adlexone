@@ -338,13 +338,6 @@ final class Permission
         return array_values(array_unique($allGroups));
     }
 
-    /** @deprecated use grantAppToGroups */
-    public static function grantAppToAdmins(string $slug, string $name = ''): void
-    {
-        unset($name);
-        self::grantAppToGroups($slug);
-    }
-
     /**
      * Permissions granted to a legacy role number (base catalog only).
      *

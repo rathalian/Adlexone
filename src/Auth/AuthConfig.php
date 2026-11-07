@@ -28,21 +28,9 @@ final class AuthConfig
             && count(self::connections()) > 0;
     }
 
-    /** @deprecated Use oauthEnabled() */
-    public static function oidcEnabled(): bool
-    {
-        return self::oauthEnabled();
-    }
-
     public static function oauthAutoRedirect(): bool
     {
         return self::flagAny(['AUTH_OAUTH_AUTO_REDIRECT', 'AUTH_OIDC_AUTO_REDIRECT'], false);
-    }
-
-    /** @deprecated Use oauthAutoRedirect() */
-    public static function oidcAutoRedirect(): bool
-    {
-        return self::oauthAutoRedirect();
     }
 
     /**
@@ -82,12 +70,6 @@ final class AuthConfig
         return $connections;
     }
 
-    /** @deprecated Use connections() */
-    public static function providers(): array
-    {
-        return self::connections();
-    }
-
     public static function connection(string $id): ?OauthConnection
     {
         foreach (self::connections() as $connection) {
@@ -96,12 +78,6 @@ final class AuthConfig
             }
         }
         return null;
-    }
-
-    /** @deprecated Use connection() */
-    public static function provider(string $id): ?OauthConnection
-    {
-        return self::connection($id);
     }
 
     public static function callbackUrl(): string

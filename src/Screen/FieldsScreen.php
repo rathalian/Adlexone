@@ -303,15 +303,8 @@ final class FieldsScreen
     }
 
     /**
-     * showSearchOptions
-     *
-     * Render a small search form for custom fields or item types using the
-     * Form::form pattern. The page heading constant `HEADING` is
-     * deprecated — the form title is passed directly to `buildForm`.
-     *
-     * Note: `buildFormSectionHeading` is intentionally not used in this pattern.
-     *
-     * @return void
+     * Search form for custom fields and record types.
+     * The title is the first argument to Form::form. The page body is set with Page::setBody.
      */
     public static function showSearchOptions(): void
     {
@@ -330,13 +323,10 @@ final class FieldsScreen
         );
         $formFields[TXT_82] = Form::text('criteria', '');
 
-        // Create form buttons
         $buttons = [];
         $buttons[] = Form::button('submit', 'submit_button', TXT_74);
         $buttons[] = Form::button('reset', 'reset', TXT_75);
 
-        // Render the form using the modern helper.
-        // First parameter is the form title (replaces the deprecated HEADING constant).
         $html = Form::form(
             TXT_52,
             self::url('option=field_type_search'),
@@ -344,7 +334,6 @@ final class FieldsScreen
             $buttons
         );
 
-        // Set the body content and include the main page layout
         Page::current()->setBody($html);
     }
 

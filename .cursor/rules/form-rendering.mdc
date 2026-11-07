@@ -1,34 +1,28 @@
 ---
-description: Use RenderViews::buildForm for new or updated PHP forms. Exemplar is showSearchOptions() in administration_item_settings.php.
+description: Build forms with Form::form and put the HTML on the page with Page::setBody. Exemplar is FieldsScreen::showSearchOptions.
 globs: "**/*.php"
 alwaysApply: false
 ---
 
 # Form rendering
 
-Use `RenderViews::buildForm()` for new forms and when touching an existing form. Do not assemble forms with `buildStartForm()`, `buildFormFieldsGrid()`, or `buildEndFormWithButtons()` unless you are only patching a file that has not been migrated yet.
+Use `Form::form()` for a new form and when replacing an older one. The class is `Adlexone\Html\Form`. Pass the card title as the first argument. Do not define a `HEADING` constant, and do not call `buildForm`, `buildStartForm`, `buildFormFieldsGrid`, `buildEndFormWithButtons`, or `buildFormSectionHeading`. Those helpers are gone.
 
-`RenderViews` is a facade. Add form markup in `src/Html/Form.php`, cards and lists in `src/Html/Blocks.php`, and page rendering in `src/Http/View.php`. Do not add new behavior to `RenderViews`. List behavior belongs in `layouts/js/app.js` behind a data attribute. Class names stay aligned with `layouts/css/base.css`.
+Add form markup in `src/Html/Form.php`. Add cards and lists in `src/Html/Blocks.php`. Put the finished HTML on the page with `Page::current()->setBody()`. Page rendering stays in `src/Http/View.php`. List behaviour belongs in `layouts/js/app.js` behind a data attribute. Class names stay aligned with `layouts/css/base.css`.
 
 A new plain field type is `FieldControl::register($type, $render)`. Menus stay in the item screen. An application wording prefix is `Wording::register($controllerPrefix, $constantPrefix)`.
 
-Do not set the `HEADING` constant. Pass the card title as the first argument to `buildForm()`. Do not use `buildFormSectionHeading()`.
-
 ## Pattern
 
-1. Build `$fields` as `label => RenderViews::build*()` HTML.
-2. Build `$buttons` with `RenderViews::buildFormButton()`.
-3. Call `buildForm($title, $actionUrl, $fields, $buttons)`.
-4. `define('BODY_CONTENT', $html)` then `RenderViews::renderThemePage('main_page_content', SET_THEME)`.
+1. Build `$fields` as `label => Form::*()` HTML. A hidden field uses an empty label.
+2. Build `$buttons` with `Form::button()`.
+3. Call `Form::form($title, $actionUrl, $fields, $buttons)`.
+4. `Page::current()->setBody($html)`.
 
-`buildForm()` returns HTML. It does not set `BODY_CONTENT`.
+`Form::form()` returns HTML. It does not set the page body.
 
-Hidden fields use an empty label: `$fields[''] = RenderViews::buildHiddenInput(...)`.
-
-Field helpers: `buildTextInput`, `buildTextArea`, `buildSelectDropdown`, `buildPasswordInput`, `buildCheckBox`, `buildRadioButton`, `buildHiddenInput`, `buildFileInput`, `buildDateInputFields`.
+Field helpers: `text`, `textarea`, `select`, `password`, `checkbox`, `radio`, `hidden`, `file`, `date`, `time`, `datetime`, `email`, `number`, `url`.
 
 ## Exemplar
 
-`showSearchOptions()` in `app/Http/Controllers/administration_item_settings.php`.
-
-Same shape: `showUserGroupSearch()` in `administration_security.php`, `showactionPackages()` in `administration_actions.php`.
+`FieldsScreen::showSearchOptions()` in `src/Screen/FieldsScreen.php`.

@@ -53,6 +53,9 @@ final class Provisioner
             self::applySharedSchema($pdo, $install);
         }
         $version = (int) $pdo->query('SELECT COALESCE(MAX(version), 0) FROM schema_migrations')->fetchColumn();
+        // Stay at 9, not SchemaMigrator::VERSION. Steps 10–15 are not safe to skip
+        // on an older file: applyV10 retypes named text fields, and applyV13
+        // rewrites showcase guides. A fresh file still takes this path once.
         if ($version < 9) {
             $pdo->prepare('INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (9, ?)')->execute([time()]);
         }
