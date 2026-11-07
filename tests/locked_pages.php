@@ -72,9 +72,9 @@ foreach ($searchOptions as $option) {
 
 $english = $read('translations/English.lang.php');
 $check(str_contains($english, 'TXT_44 = "My Items"'), 'the records heading is still My Items');
-$check(str_contains($read('src/Screen/ItemScreen.php'), 'TXT_44'), 'the record list still uses the My Items label');
+$check(str_contains($read('src/Screen/ItemList.php'), 'TXT_44'), 'the record list still uses the My Items label');
 $check(str_contains($read('src/Screen/SearchScreen.php'), "'label' => 'Search'"), 'search still names itself Search');
-$check(str_contains($read('src/Screen/SearchScreen.php'), 'Search again'), 'search results still offer Search again');
+$check(str_contains($read('src/Screen/SearchResults.php'), 'Search again'), 'search results still offer Search again');
 $check(str_contains($read('src/Html/AppHero.php'), 'How to use'), 'an application still offers How to use');
 $check(str_contains($read('src/Html/AppHero.php'), 'New record'), 'an application still offers New record');
 $check(str_contains($read('src/Screen/FieldsScreen.php'), 'Form::form('), 'fields still builds its form with Form::form');

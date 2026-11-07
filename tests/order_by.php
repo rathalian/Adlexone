@@ -28,7 +28,9 @@ check(Database::orderBy('item_id DESC, (SELECT 1)') === '', 'a second expression
 check(Database::orderBy('(SELECT CASE WHEN 1=1 THEN 1 END)') === '', 'a function is dropped');
 check(Database::orderBy('item_id DESC --') === '', 'a comment is dropped');
 
-$search = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchScreen.php');
+$search = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchScreen.php')
+    . (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchForm.php')
+    . (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchLibrary.php');
 check(!str_contains($search, 'sql_query'), 'the search form has no raw SQL field');
 check(!str_contains($search, "Form::textarea('saved_search_sql'"), 'editing a saved search does not take a SQL statement');
 

@@ -32,11 +32,12 @@ check(RecordListQuery::page('3') === 3, 'a page number is kept');
 check(RecordListQuery::page('0') === 1, 'page zero becomes the first page');
 check(RecordListQuery::page(['2']) === 1, 'a page that is not a single value becomes the first page');
 
-$item = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/ItemScreen.php');
-$search = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchScreen.php');
+$item = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/ItemList.php');
+$search = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchResults.php');
 check(!str_contains($item, "item_id = '\$a'"), 'the item list does not splice ids into the query text');
 check(!str_contains($search, 'ORDER BY $orderSQL'), 'the search list does not splice the sort into the query text');
-check(!str_contains($search, 'custom_field_id = "'), 'a custom field id is not spliced into the query text');
+$form = $search . (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchForm.php');
+check(!str_contains($form, 'custom_field_id = "'), 'a custom field id is not spliced into the query text');
 check(str_contains($item, 'RecordListQuery::page'), 'the item list reads the page as a number');
 check(str_contains($search, 'RecordListQuery::order'), 'the search list checks the sort');
 check(str_contains($item, 'RecordList::fetch'), 'the record page reads rows through the shared list');
