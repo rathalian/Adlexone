@@ -1,0 +1,21 @@
+---
+description: Copy the exemplar for the kind of code being written
+alwaysApply: true
+---
+
+# Exemplars
+
+Before writing, open the exemplar for that kind of code and match its shape. A new behaviour is a method on the class that already owns the work. If no class owns it, add a `final` class beside the exemplar. Do not add a loose function, and do not add a method to an older support class.
+
+- Class with behaviour: `src/Auth/Csrf.php`. `declare(strict_types=1)`, a namespace, a one-sentence docblock, `final class`, private constants, short public static methods, early return.
+- Small value: `src/Data/BoundQuery.php`. A constructor and `public readonly` properties. SQL and its placeholders travel together.
+- Exception: `src/Auth/AuthException.php`. `final class` extending `\RuntimeException`, empty unless it needs fields.
+- Method: `Html::e()` in `src/Html/Html.php` and `Csrf::token()` in `src/Auth/Csrf.php`. Typed parameters and a typed return. A docblock only for an array shape the signature cannot say, as `Form::form()` in `src/Html/Form.php` does. No comment that restates the code.
+- Screen: `HomeScreen::open()` in `src/Screen/HomeScreen.php`. A `final` class in `src/Screen/`, `public static function open(): void`, then `Page::current()->setBody($html)`. Do not copy the "formerly loaded from legacy" docblock.
+- Partial: `layouts/partials/launchpad_intro.php`. `@var` lines for what the partial receives, `Html::e()` on output, class names from `layouts/css/base.css`.
+- JavaScript: `layouts/js/app.js`. One IIFE per behaviour. Read a `data-*` attribute or an existing class. No new library.
+- CSS: `layouts/css/base.css`. Shared structure and tokens on `:root`. A skin changes tokens in `site/themes/{name}/theme.css`.
+
+Forms follow `FieldsScreen::showSearchOptions()` in `src/Screen/FieldsScreen.php`. See `form-rendering.mdc`. A blueprint matches Publishing in `src/Application/ApplicationBuilder.php`. See `application-blueprints.mdc`. User-facing sentences follow `writing-style.mdc`.
+
+Do not copy these older files. They are missing `declare(strict_types=1)`, they are not `final`, or they carry the old licence header: `src/support/SharedMethods.php`, `src/support/Database.php`, `src/support/Actions.php`, `src/support/Communications.php`, `src/support/AttachmentUpload.php`, `src/support/RssFeed.php`.
