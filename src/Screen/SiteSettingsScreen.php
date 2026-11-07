@@ -30,7 +30,7 @@ final class SiteSettingsScreen
     {
         View::respond(
             implode(' ', $problems),
-            Blocks::link(Router::manageUrl('settings', 'option=' . $option), TXT_55, 'URL')
+            Blocks::link(Router::manageUrl('settings', 'option=' . $option), 'Settings', 'URL')
         );
     }
 
@@ -383,7 +383,7 @@ final class SiteSettingsScreen
                 break;
             default :
                 Access::require(\Adlexone\Auth\Permission::ADMIN_SYSTEM);
-                View::respond('Invalid Option', Blocks::link(Router::manageUrl('settings', 'option=adlexone_settings'), TXT_55, 'URL'));
+                View::respond('That settings page is not here.', Blocks::link(Router::manageUrl('settings', 'option=adlexone_settings'), 'Settings', 'URL'));
                 break;
         }
     }
@@ -424,7 +424,7 @@ final class SiteSettingsScreen
             'Site',
             Router::manageUrl('settings', 'option=update_adlexone_settings'),
             $fields,
-            [Form::button('submit', 'submit_button', TXT_56)]
+            [Form::button('submit', 'submit_button', 'Save')]
         ));
     }
 
@@ -433,19 +433,19 @@ final class SiteSettingsScreen
         $fields = [
             'Search fields to include' => Form::select('SET_CUSTOM_FIELDS_IN_SEARCH', [2, 5, 10, 15], [2, 5, 10, 15], SET_CUSTOM_FIELDS_IN_SEARCH),
             'Note height' => Form::text('SET_FORM_FIELD_HEIGHT', SET_FORM_FIELD_HEIGHT),
-            'Show the log on a record' => Form::select('SET_LOG_ENTRY', ['yes', 'no'], [TXT_93, TXT_94], SET_LOG_ENTRY),
-            'Show files on a record' => Form::select('SET_ATTACHMENTS', ['yes', 'no'], [TXT_93, TXT_94], SET_ATTACHMENTS),
-            'Allow a file when creating' => Form::select('ADD_ATTACHMENTS', ['yes', 'no'], [TXT_93, TXT_94], ADD_ATTACHMENTS),
+            'Show the log on a record' => Form::select('SET_LOG_ENTRY', ['yes', 'no'], ['Yes', 'No'], SET_LOG_ENTRY),
+            'Show files on a record' => Form::select('SET_ATTACHMENTS', ['yes', 'no'], ['Yes', 'No'], SET_ATTACHMENTS),
+            'Allow a file when creating' => Form::select('ADD_ATTACHMENTS', ['yes', 'no'], ['Yes', 'No'], ADD_ATTACHMENTS),
             'Largest file (MB)' => Form::text('SET_MAX_ATTACHMENT', SET_MAX_ATTACHMENT),
-            'Debugging' => Form::select('SET_DEBUG_MODE', ['Yes', 'No'], [TXT_93, TXT_94], SET_DEBUG_MODE),
-            'Show SQL queries' => Form::select('SET_SHOW_SQL', ['Yes', 'No'], [TXT_93, TXT_94], SET_SHOW_SQL),
-            'PHP error reporting' => Form::select('SET_ERROR_REPORTING_LEVEL', ['6135', '6143'], [TXT_504, TXT_207], SET_ERROR_REPORTING_LEVEL),
+            'Debugging' => Form::select('SET_DEBUG_MODE', ['Yes', 'No'], ['Yes', 'No'], SET_DEBUG_MODE),
+            'Show SQL queries' => Form::select('SET_SHOW_SQL', ['Yes', 'No'], ['Yes', 'No'], SET_SHOW_SQL),
+            'PHP error reporting' => Form::select('SET_ERROR_REPORTING_LEVEL', ['6135', '6143'], ['Errors only', 'All messages'], SET_ERROR_REPORTING_LEVEL),
         ];
         Page::current()->setBody(Form::form(
             'Advanced',
             Router::manageUrl('settings', 'option=update_advanced_settings'),
             $fields,
-            [Form::button('submit', 'submit_button', TXT_56)]
+            [Form::button('submit', 'submit_button', 'Save')]
         ));
     }
 
@@ -555,9 +555,9 @@ final class SiteSettingsScreen
         $autoProvision = in_array($autoProvision, ['1', 'true', 'yes', 'on'], true) ? 'Yes' : 'No';
 
         $fields = [
-            'Username and password sign-in' => Form::select('AUTH_LOCAL_ENABLED', ['Yes', 'No'], [TXT_93, TXT_94], $on('AUTH_LOCAL_ENABLED', 'Yes')),
-            'Identity provider sign-in' => Form::select('AUTH_OAUTH_ENABLED', ['Yes', 'No'], [TXT_93, TXT_94], $on('AUTH_OAUTH_ENABLED')),
-            'Go straight to the identity provider' => Form::select('AUTH_OAUTH_AUTO_REDIRECT', ['Yes', 'No'], [TXT_93, TXT_94], $on('AUTH_OAUTH_AUTO_REDIRECT')),
+            'Username and password sign-in' => Form::select('AUTH_LOCAL_ENABLED', ['Yes', 'No'], ['Yes', 'No'], $on('AUTH_LOCAL_ENABLED', 'Yes')),
+            'Identity provider sign-in' => Form::select('AUTH_OAUTH_ENABLED', ['Yes', 'No'], ['Yes', 'No'], $on('AUTH_OAUTH_ENABLED')),
+            'Go straight to the identity provider' => Form::select('AUTH_OAUTH_AUTO_REDIRECT', ['Yes', 'No'], ['Yes', 'No'], $on('AUTH_OAUTH_AUTO_REDIRECT')),
             'Button label' => Form::text('connection_label', $esc((string) ($connection['label'] ?? 'Sign in with OAuth')))
                 . Form::hidden('connection_id', $esc((string) ($connection['id'] ?? 'organisation'))),
             'Issuer URL' => Form::text('connection_issuer', $esc((string) ($connection['issuer'] ?? ''))),
@@ -565,7 +565,7 @@ final class SiteSettingsScreen
             'Client secret' => Form::password('connection_client_secret', '')
                 . '<p class="form-help">Leave this blank to keep the current client secret. It is stored in the settings folder, mode 600, outside the web root.</p>',
             'Scopes' => Form::text('connection_scopes', $esc((string) ($connection['scopes'] ?? 'openid profile email'))),
-            'Create an account on first sign-in' => Form::select('connection_auto_provision', ['Yes', 'No'], [TXT_93, TXT_94], $autoProvision),
+            'Create an account on first sign-in' => Form::select('connection_auto_provision', ['Yes', 'No'], ['Yes', 'No'], $autoProvision),
             'Redirect URI' => Form::text('redirect_uri', $esc(\Adlexone\Auth\AuthConfig::callbackUrl()), '', true),
         ];
 
@@ -573,7 +573,7 @@ final class SiteSettingsScreen
             'Sign-in',
             Router::manageUrl('settings', 'option=update_sign_in_settings'),
             $fields,
-            [Form::button('submit', 'submit_button', TXT_56)]
+            [Form::button('submit', 'submit_button', 'Save')]
         ));
     }
 
@@ -603,7 +603,7 @@ final class SiteSettingsScreen
             'Theme',
             Router::manageUrl('settings', 'option=update_theme_settings'),
             $fields,
-            [Form::button('submit', 'submit_button', TXT_56)]
+            [Form::button('submit', 'submit_button', 'Save')]
         ));
     }
 
@@ -613,17 +613,17 @@ final class SiteSettingsScreen
             return defined($name) ? (string) constant($name) : '';
         };
         $fields = [
-            TXT_645 => Form::text('SET_SMTP_HOST', $smtp('SET_SMTP_HOST')),
-            TXT_646 => Form::text('SET_SMTP_PORT', $smtp('SET_SMTP_PORT')),
-            TXT_649 => Form::text('SET_SMTP_USER', $smtp('SET_SMTP_USER')),
-            TXT_650 => Form::password('SET_SMTP_PASSWORD', '')
-                . '<p class="form-help">Leave this blank to keep the current SMTP password. It is written to the settings folder beside the SQLite file, not into the page.</p>',
+            'Mail server' => Form::text('SET_SMTP_HOST', $smtp('SET_SMTP_HOST')),
+            'Port' => Form::text('SET_SMTP_PORT', $smtp('SET_SMTP_PORT')),
+            'Username' => Form::text('SET_SMTP_USER', $smtp('SET_SMTP_USER')),
+            'Password' => Form::password('SET_SMTP_PASSWORD', '')
+                . '<p class="form-help">Leave this blank to keep the current password. It is written to the settings folder beside the SQLite file, not into the page.</p>',
         ];
         Page::current()->setBody(Form::form(
-            TXT_565,
+            'Email',
             Router::manageUrl('settings', 'option=update_email_settings'),
             $fields,
-            [Form::button('submit', 'submit_button', TXT_56)]
+            [Form::button('submit', 'submit_button', 'Save')]
         ));
     }
 }

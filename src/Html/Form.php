@@ -346,14 +346,17 @@ final class Form
         ]);
     }
 
-    public static function textarea(string $name, mixed $value, string $rows = '3', bool $readOnly = false): string
+    /**
+     * @param array<string, mixed> $extra
+     */
+    public static function textarea(string $name, mixed $value, string $rows = '3', bool $readOnly = false, array $extra = []): string
     {
-        return Html::tag('textarea', [
+        return Html::tag('textarea', array_merge([
             'name' => $name,
             'rows' => $rows,
             'class' => 'input',
             'readonly' => $readOnly ? 'readonly' : null,
-        ], Html::e($value));
+        ], $extra), Html::e($value));
     }
 
     public static function hidden(string $name, mixed $value): string

@@ -265,15 +265,18 @@ final class BuilderScreen
             . '<h2 class="builder__heading">Application</h2>'
             . '<div class="builder__identity">'
             . '<div class="field"><label class="label" for="builder-name">Name</label>'
-            . '<input class="text builder__name" id="builder-name" name="name" value="' . $h($nameRaw) . '" required autocomplete="off" placeholder="Complaints"></div>'
+            . Form::input('text', 'name', $nameRaw, ['id' => 'builder-name', 'class' => 'input builder__name', 'required' => true, 'autocomplete' => 'off', 'placeholder' => 'Complaints'])
+            . '</div>'
             . '<div class="field"><label class="label" for="builder-slug">Link</label>'
             . '<div class="builder__link"><span class="builder__link-prefix">?application=</span>'
-            . '<input class="text" id="builder-slug" name="slug" value="' . $h($slugRaw) . '" autocomplete="off" placeholder="complaints" spellcheck="false"></div>'
+            . Form::input('text', 'slug', $slugRaw, ['id' => 'builder-slug', 'autocomplete' => 'off', 'placeholder' => 'complaints', 'spellcheck' => 'false'])
+            . '</div>'
             . '<p class="form-help">This follows the name until you change it.</p></div>'
             . '<div class="field field--wide"><label class="label" for="builder-hint">Description</label>'
-            . '<input class="text" id="builder-hint" name="hint" value="' . $h($hintRaw) . '" autocomplete="off" placeholder="What this application is for"></div>'
+            . Form::input('text', 'hint', $hintRaw, ['id' => 'builder-hint', 'autocomplete' => 'off', 'placeholder' => 'What this application is for'])
+            . '</div>'
             . '<div class="field field--wide"><label class="label" for="builder-guide">How to use</label>'
-            . '<textarea class="text textarea" id="builder-guide" name="guide" rows="8">' . $h($guideRaw) . '</textarea>'
+            . Form::textarea('guide', $guideRaw, '8', false, ['id' => 'builder-guide'])
             . '<p class="form-help">Shown when someone opens this application and chooses How to use. Leave this blank to hide the button.</p></div>'
             . '<div class="field field--wide"><span class="label" id="builder-icon-label">Icon</span>' . $iconsHtml . '</div>'
             . '</div></section>'
@@ -290,7 +293,7 @@ final class BuilderScreen
             . '<section class="builder__section">'
             . '<h2 class="builder__heading">Record</h2>'
             . '<div class="field"><label class="label" for="builder-type">Record type name</label>'
-            . '<input class="text" id="builder-type" name="record_type_name" value="' . $h($recordRaw) . '" autocomplete="off" placeholder="' . $h((string) ($blueprints[$blueprint]['record'] ?? 'Job')) . '">'
+            . Form::input('text', 'record_type_name', $recordRaw, ['id' => 'builder-type', 'autocomplete' => 'off', 'placeholder' => (string) ($blueprints[$blueprint]['record'] ?? 'Job')])
             . '<p class="form-help">Leave this blank to use the blueprint name.</p></div>'
             . '</section>'
             . '<section class="builder__section">'
@@ -325,9 +328,11 @@ final class BuilderScreen
             . Csrf::field()
             . '<div class="builder__identity">'
             . '<div class="field"><label class="label" for="package">Package file</label>'
-            . '<input class="text" type="file" id="package" name="package" accept="application/json,.json" required></div>'
+            . Form::input('file', 'package', '', ['id' => 'package', 'accept' => 'application/json,.json', 'required' => true])
+            . '</div>'
             . '<div class="field"><label class="label" for="import-slug">Address override</label>'
-            . '<input class="text" id="import-slug" name="slug" autocomplete="off" spellcheck="false" placeholder="Optional"></div>'
+            . Form::input('text', 'slug', '', ['id' => 'import-slug', 'autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => 'Optional'])
+            . '</div>'
             . '</div><div class="form-actions">'
             . Form::button('submit', 'submit_button', 'Import')
             . '</div></form></details></div>';

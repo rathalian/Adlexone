@@ -154,32 +154,33 @@ final class FieldsScreen
         } else {
             $fieldValues = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
             if ($fieldValues === null) {
-                View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
+                View::respond('That field is not here.', Blocks::link(self::url('option=manage_fields'), 'Fields'));
                 return;
             }
             $formAction = self::url('option=update_custom_field');
             $title = 'Edit field';
         }
 
-        $fields[TXT_86] = Form::text('custom_field_name', @$fieldValues['custom_field_name']);
-        $fields[TXT_210] = Form::text('default_value', @$fieldValues['default_value']);
+        $fields['Name'] = Form::text('custom_field_name', @$fieldValues['custom_field_name']);
+        $fields['Default'] = Form::text('default_value', @$fieldValues['default_value']);
         $fieldTypes = FieldTypes::choices();
         $fieldNames = array_map(static fn (string $type): string => FieldTypes::label($type), $fieldTypes);
-        $fields[TXT_65] = Form::select('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
-        $fields[TXT_477] = Form::text('data', @$fieldValues['data']);
-        $fields[TXT_505] = Form::select('required', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['required']);
+        $fields['Type'] = Form::select('field_type', $fieldTypes, $fieldNames, FieldTypes::normalise(@$fieldValues['field_type']));
+        $fields['Link template'] = Form::text('data', @$fieldValues['data'])
+            . '<p class="form-help">For a link field, the value replaces &lt;?php echo INSERT; ?&gt; in this address.</p>';
+        $fields['Required'] = Form::select('required', ['Yes', 'No'], ['Yes', 'No'], @$fieldValues['required']);
         $storedType = FieldTypes::normalise((string) (@$fieldValues['field_type'] ?? ''));
         $validationSelected = FieldTypes::impliedValidation($storedType);
         if ($validationSelected === '') {
             $validationSelected = FieldTypes::normaliseKind((string) (@$fieldValues['validation_type'] ?? ''));
         }
-        $validationTypes = array('', 'numeric', 'string', 'alphanumeric', 'date', 'time', 'datetime', 'ip', 'email', 'url');
-        $validationNames = array(TXT_525, TXT_507, TXT_508, TXT_509, TXT_510, TXT_511, TXT_512, TXT_513, TXT_514, 'Web address');
-        $fields[TXT_506] = Form::select('validation_type', $validationTypes, $validationNames, $validationSelected)
+        $validationTypes = ['', 'numeric', 'string', 'alphanumeric', 'date', 'time', 'datetime', 'ip', 'email', 'url'];
+        $validationNames = ['None', 'Number', 'Text', 'Letters and numbers', 'Date', 'Time', 'Date and time', 'IP address', 'Email', 'Web address'];
+        $fields['Check'] = Form::select('validation_type', $validationTypes, $validationNames, $validationSelected)
             . '<p class="field-note">Date, time, email, number, and link fields check the value themselves. Use this for a text field that still needs a format.</p>';
-        $fields[TXT_90] = Form::select('enabled', array('Yes', 'No'), array(TXT_93, TXT_94), @$fieldValues['enabled']);
+        $fields['Enabled'] = Form::select('enabled', ['Yes', 'No'], ['Yes', 'No'], @$fieldValues['enabled']);
         $fields[''] = Form::hidden('custom_field_id', $customFieldID);
-        $javascript = Form::fieldCheck(TXT_468, [''], ['custom_field_name'], [''], [TXT_217], [true]);
+        $javascript = Form::fieldCheck('Check the form', [''], ['custom_field_name'], [''], ['Enter a field name.'], [true]);
         Page::current()->suggestTitle($title);
         Page::current()->addCrumb($title);
 
@@ -188,8 +189,8 @@ final class FieldsScreen
             $formAction,
             $fields,
             [
-                Form::button('submit', 'submit_button', TXT_74, $javascript),
-                Form::button('reset', 'reset', TXT_75),
+                Form::button('submit', 'submit_button', 'Save', $javascript),
+                Form::button('reset', 'reset', 'Reset'),
             ]
         ));
     }
@@ -203,20 +204,20 @@ final class FieldsScreen
     {
         $fieldId = (int)$customFieldID;
         $fields = [];
-        $fields[TXT_288] = '<div class="menu-editor-wrap"><p class="field-note">' . Html::e(TXT_695) . '</p>'
+        $fields['Values'] = '<div class="menu-editor-wrap"><p class="field-note">One menu holds every level. Add a value, then add the next value under it.</p>'
             . MenuOptions::editorRows($fieldId) . '</div>';
-        $fields[TXT_292] = Form::text('menu_value', '');
-        $fields[TXT_693] = MenuOptions::parentSelect('parent_menu_value_id', $fieldId, 0);
+        $fields['New value'] = Form::text('menu_value', '');
+        $fields['Under'] = MenuOptions::parentSelect('parent_menu_value_id', $fieldId, 0);
         $fields[''] = Form::hidden('custom_field_id', $customFieldID);
 
         $buttons = [
-            Form::button('submit', 'add_new', TXT_545),
-            Form::button('submit', 'update_existing', TXT_542),
-            Form::button('reset', 'reset', TXT_75),
+            Form::button('submit', 'add_new', 'Add value'),
+            Form::button('submit', 'update_existing', 'Save values'),
+            Form::button('reset', 'reset', 'Reset'),
         ];
 
         Page::current()->setBody(Form::form(
-            TXT_287,
+            'Menu values',
             self::url('option=add_update_menu_value'),
             $fields,
             $buttons
@@ -230,9 +231,10 @@ final class FieldsScreen
             $value = trim((string)(Request::postedValue('menu_value') ?? ''));
             $parentId = (int)(Request::postedValue('parent_menu_value_id') ?? 0);
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
-                $html = TXT_294;
-                $html .= '<br><br><a href ="' . self::url('option=modify_menu_values&custom_field_id=') . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
-                Page::current()->setBody($html);
+                View::respond(
+                    'That value is already in this menu.',
+                    Blocks::link(self::url('option=modify_menu_values&custom_field_id=' . $fieldId), 'Menu values')
+                );
                 return;
             }
             if ($value !== '') {
@@ -267,18 +269,18 @@ final class FieldsScreen
     public static function addCustomField()
     {
         $columns = self::postedFieldColumns();
-        $back = Blocks::link(self::url('option=new_custom_field'), TXT_362);
+        $back = Blocks::link(self::url('option=new_custom_field'), 'Add a field');
         if ($columns['custom_field_name'] === '') {
             View::respond('Enter a field name.', $back);
             return;
         }
         if (Database::exists('custom_fields', 'LOWER(custom_field_name) = LOWER(?)', [$columns['custom_field_name']])) {
-            View::respond($columns['custom_field_name'] . ' ' . TXT_163, $back);
+            View::respond($columns['custom_field_name'] . ' already exists.', $back);
             return;
         }
         $id = Database::insert('custom_fields', $columns);
         Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
-        View::respond($columns['custom_field_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_fields'), TXT_362));
+        View::respond($columns['custom_field_name'] . ' was added.', Blocks::link(self::url('option=manage_fields'), 'Fields'));
     }
 
     /**
@@ -310,26 +312,26 @@ final class FieldsScreen
     public static function showSearchOptions(): void
     {
         $formFields = [];
-        $formFields[TXT_682] = Form::select(
+        $formFields['Look in'] = Form::select(
             'type',
             ['custom_field_name', 'item_type_name'],
-            [TXT_86, TXT_87],
+            ['Field name', 'Record type name'],
             ''
         );
-        $formFields[TXT_678] = Form::select(
+        $formFields['Match'] = Form::select(
             'operator',
             ['LIKE', '='],
-            [TXT_80, TXT_81],
+            ['contains', 'is'],
             ''
         );
-        $formFields[TXT_82] = Form::text('criteria', '');
+        $formFields['Words'] = Form::text('criteria', '');
 
         $buttons = [];
-        $buttons[] = Form::button('submit', 'submit_button', TXT_74);
-        $buttons[] = Form::button('reset', 'reset', TXT_75);
+        $buttons[] = Form::button('submit', 'submit_button', 'Search');
+        $buttons[] = Form::button('reset', 'reset', 'Reset');
 
         $html = Form::form(
-            TXT_52,
+            'Find a field or a record type',
             self::url('option=field_type_search'),
             $formFields,
             $buttons
@@ -386,7 +388,7 @@ final class FieldsScreen
 
         Page::current()->suggestTitle($appName !== '' ? 'Fields · ' . $appName : 'Fields');
         Page::current()->setBody(Blocks::vertical([
-            ['title' => TXT_53, 'html' => self::fieldRecordList($listGroups, $unused, $appName !== '')],
+            ['title' => 'Fields', 'html' => self::fieldRecordList($listGroups, $unused, $appName !== '')],
         ]));
     }
 
@@ -410,14 +412,14 @@ final class FieldsScreen
                 ['key' => 'types', 'label' => 'Record types'],
                 ['key' => 'enabled', 'label' => 'Enabled'],
             ],
-            'searchLabel' => TXT_3,
+            'searchLabel' => 'Search',
             'primary' => ['href' => self::url('option=new_custom_field'), 'label' => 'Add field'],
             'toolbar' => $toggle,
             'empty' => $unused ? 'Every field is used by an application.' : 'No fields for this view.',
             'emptyIllustration' => 'empty-fields',
             'emptyTitle' => $unused ? 'Every field is in use' : 'No fields yet',
             'emptyCopy' => $unused ? 'Unused fields are listed when you ask for them.' : 'Add a field, then use it on a record type.',
-            'noMatch' => TXT_689,
+            'noMatch' => 'No matches.',
             'groups' => $groups === [] ? [['rows' => []]] : $groups,
         ]);
     }
@@ -436,14 +438,14 @@ final class FieldsScreen
             : 'custom_field_' . $row['custom_field_id'];
         $actions = [[
             'href' => self::url('option=modify_custom_field&custom_field_id=') . $id,
-            'label' => TXT_626,
+            'label' => 'Edit',
             'tone' => 'quiet',
         ]];
         if ((FieldTypes::normalise((string)$row['field_type']) === FieldTypes::MENU || $row['field_type'] == 'workerFieldMenu')
             && !MenuOptions::isLegacyChild((int)$row['custom_field_id'])) {
             $actions[] = [
                 'href' => self::url('option=modify_menu_values&custom_field_id=') . $id,
-                'label' => TXT_287,
+                'label' => 'Menu values',
                 'tone' => 'quiet',
             ];
         }
@@ -452,9 +454,9 @@ final class FieldsScreen
         if (!$sharedInUse) {
             $actions[] = [
                 'href' => self::url('option=delete_custom_field&custom_field_id=') . $id,
-                'label' => TXT_47,
+                'label' => 'Delete',
                 'tone' => 'danger',
-                'confirm' => $name . "\n" . TXT_400,
+                'confirm' => $name . "\nThis cannot be undone.",
             ];
         }
 
@@ -505,7 +507,7 @@ final class FieldsScreen
         $html = self::fieldRecordList([['rows' => $rows]], false, true);
 
         $bodyBlock = [
-            'title' => TXT_113,
+            'title' => 'Search results',
             'html' => $html,
         ];
         $contentBody = Blocks::vertical([$bodyBlock]);
@@ -522,9 +524,9 @@ final class FieldsScreen
     public static function updateCustomField($customFieldID)
     {
         $customFieldID = (int) $customFieldID;
-        $back = Blocks::link(self::url('option=manage_fields'), TXT_362);
+        $back = Blocks::link(self::url('option=manage_fields'), 'Fields');
         if (!Database::exists('custom_fields', 'custom_field_id = ?', [$customFieldID])) {
-            View::respond(TXT_115, $back);
+            View::respond('That field is not here.', $back);
             return;
         }
         $columns = self::postedFieldColumns();
@@ -533,11 +535,11 @@ final class FieldsScreen
             return;
         }
         if (Database::exists('custom_fields', 'LOWER(custom_field_name) = LOWER(?) AND custom_field_id <> ?', [$columns['custom_field_name'], $customFieldID])) {
-            View::respond($columns['custom_field_name'] . ' ' . TXT_163, $back);
+            View::respond($columns['custom_field_name'] . ' already exists.', $back);
             return;
         }
         Database::update('custom_fields', $columns, 'custom_field_id = ?', [$customFieldID]);
-        View::respond($columns['custom_field_name'] . ' ' . TXT_164, $back);
+        View::respond($columns['custom_field_name'] . ' was updated.', $back);
     }
 
     /**
@@ -547,13 +549,13 @@ final class FieldsScreen
     {
         $customFieldID = (string)(Request::queryValue('custom_field_id') ?? '');
         if ($customFieldID === '' || !ctype_digit($customFieldID)) {
-            View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
+            View::respond('That field is not here.', Blocks::link(self::url('option=manage_fields'), 'Fields'));
             return;
         }
 
         $row = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
         if (!$row) {
-            View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
+            View::respond('That field is not here.', Blocks::link(self::url('option=manage_fields'), 'Fields'));
             return;
         }
 
@@ -561,7 +563,7 @@ final class FieldsScreen
         $type = (string)$row['field_type'];
         $params = [(int) $customFieldID];
         if ((int) ($row['shared'] ?? 0) === 1 && Database::exists('item_type_custom_fields', 'custom_field_id = ?', $params)) {
-            View::respond($name . ' is used by the applications. It stays while a record type uses it.', Blocks::link(self::url('option=manage_fields'), TXT_362));
+            View::respond($name . ' is used by a record type, so it stays.', Blocks::link(self::url('option=manage_fields'), 'Fields'));
             return;
         }
         Database::delete('custom_field_menu_values', 'custom_field_id = ?', $params);
@@ -569,7 +571,7 @@ final class FieldsScreen
         Database::delete('custom_fields', 'custom_field_id = ?', $params);
         \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
-        View::respond($name . ' ' . TXT_47, Blocks::link(self::url('option=manage_fields'), TXT_362));
+        View::respond($name . ' was deleted.', Blocks::link(self::url('option=manage_fields'), 'Fields'));
     }
 
     /**

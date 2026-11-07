@@ -778,12 +778,15 @@ button.URL{
     flex:0 0 auto; padding:0 0 0 12px;
     color:var(--placeholder); font-weight:600; white-space:nowrap;
 }
-.builder__link .text{
+.builder__link .text,
+.builder__link .input{
     border:0; border-radius:0; box-shadow:none; background:transparent;
     min-height:0; height:40px; padding:0 12px 0 4px;
 }
 .builder__link .text:hover,
-.builder__link .text:focus{ border:0; box-shadow:none; background:transparent; }
+.builder__link .text:focus,
+.builder__link .input:hover,
+.builder__link .input:focus{ border:0; box-shadow:none; background:transparent; }
 .builder__blueprints{
     display:grid;
     grid-template-columns:1fr 1fr;

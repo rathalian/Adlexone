@@ -120,24 +120,24 @@ final class ItemTypesScreen
             $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'enabled'];
             $fieldValues = Database::first('item_types', $columnArray, 'item_type_id = ?', [(int) $itemTypeID]);
             if ($fieldValues === null) {
-                View::respond(TXT_115, Blocks::link(self::url('option=manage_item_types'), TXT_362));
+                View::respond('That record type is not here.', Blocks::link(self::url('option=manage_item_types'), 'Record types'));
                 return;
             }
         }
 
         $fields = [];
-        $fields[TXT_87] = Form::text('item_type_name', $fieldValues['item_type_name'] ?? '');
+        $fields['Name'] = Form::text('item_type_name', $fieldValues['item_type_name'] ?? '');
 
         // User assignment select
         $columnArray = ['user_id', 'user_name'];
         $result = Database::select('users', $columnArray);
         $userIDArray = [''];
-        $userArray = [TXT_267];
+        $userArray = ['Whoever creates the record'];
         foreach ($result as $row) {
             $userIDArray[] = $row['user_id'];
             $userArray[] = $row['user_name'];
         }
-        $fields[TXT_269] = Form::select('user_security', $userIDArray, $userArray, $fieldValues['user_security'] ?? '');
+        $fields['Default owner'] = Form::select('user_security', $userIDArray, $userArray, $fieldValues['user_security'] ?? '');
 
         $columnArray = ['group_id', 'group_name'];
         $condition = "ORDER BY group_name ASC";
@@ -157,8 +157,8 @@ final class ItemTypesScreen
         }
         $groupMembershipHtml .= '</div>';
 
-        $fields[TXT_90] = Form::select('enabled', ['Yes', 'No'], [TXT_93, TXT_94], $fieldValues['enabled'] ?? '');
-        $fields[TXT_71] = $groupMembershipHtml;
+        $fields['Enabled'] = Form::select('enabled', ['Yes', 'No'], ['Yes', 'No'], $fieldValues['enabled'] ?? '');
+        $fields['Groups'] = $groupMembershipHtml;
 
         // Custom fields selection (preserve ordering for existing item types)
         if ($isNew) {
@@ -202,8 +202,8 @@ final class ItemTypesScreen
                 . '<span>' . Html::e((string)$row['custom_field_name']) . '</span> '
                 . '<span class="field-picker-type">' . Html::e($typeLabel) . '</span></label>'
                 . '<span class="field-picker-moves">'
-                . '<button type="button" class="btn field-picker-move" data-move="up">' . Html::e(TXT_686) . '</button>'
-                . '<button type="button" class="btn field-picker-move" data-move="down">' . Html::e(TXT_687) . '</button>'
+                . '<button type="button" class="btn field-picker-move" data-move="up">Move up</button>'
+                . '<button type="button" class="btn field-picker-move" data-move="down">Move down</button>'
                 . '</span>'
                 . '<input type="hidden" name="custom_field_sort_' . $fieldId . '" value="' . ($isSelected ? $order : 0) . '">'
                 . '</li>';
@@ -228,15 +228,15 @@ final class ItemTypesScreen
             . '<ul class="field-picker-list">' . $locked . '</ul>'
             . '<p class="form-help">Title, Owner, and Opened by stay on every record.</p></div>'
             . '<div class="field-picker">'
-            . '<div><div class="label">' . Html::e(TXT_684) . '</div><ul id="availableFields" class="field-picker-list">' . $availableItems . '</ul></div>'
-            . '<div><div class="label">' . Html::e(TXT_685) . '</div><ul id="selectedFields" class="field-picker-list">' . $selectedHtml . '</ul></div>'
+            . '<div><div class="label">Available</div><ul id="availableFields" class="field-picker-list">' . $availableItems . '</ul></div>'
+            . '<div><div class="label">On this record type</div><ul id="selectedFields" class="field-picker-list">' . $selectedHtml . '</ul></div>'
             . '</div>';
         Page::current()->addScript('field-picker');
 
-        $fields[TXT_222] = $pickerHtml;
+        $fields['Fields'] = $pickerHtml;
         $fields[''] = Form::hidden('item_type_id', $itemTypeID);
 
-        $javascript = Form::fieldCheck(TXT_468, [''], ['item_type_name'], [''], [TXT_223], [true]);
+        $javascript = Form::fieldCheck('Check the form', [''], ['item_type_name'], [''], ['Enter a record type name.'], [true]);
         $heading = $isNew ? 'Add type' : 'Edit type';
         Page::current()->suggestTitle($heading);
         Page::current()->addCrumb($heading);
@@ -246,8 +246,8 @@ final class ItemTypesScreen
             $action,
             $fields,
             [
-                Form::button('submit', 'submit_button', TXT_74, $javascript),
-                Form::button('reset', 'reset', TXT_75),
+                Form::button('submit', 'submit_button', 'Save', $javascript),
+                Form::button('reset', 'reset', 'Reset'),
             ]
         ));
     }
@@ -260,13 +260,13 @@ final class ItemTypesScreen
     public static function addItemType()
     {
         $columns = self::postedTypeColumns();
-        $back = Blocks::link(self::url('option=new_item_type'), TXT_363);
+        $back = Blocks::link(self::url('option=new_item_type'), 'Add a record type');
         if ($columns['item_type_name'] === '') {
             View::respond('Enter a record type name.', $back);
             return;
         }
         if (Database::exists('item_types', 'LOWER(item_type_name) = LOWER(?)', [$columns['item_type_name']])) {
-            View::respond($columns['item_type_name'] . ' ' . TXT_163, $back);
+            View::respond($columns['item_type_name'] . ' already exists.', $back);
             return;
         }
         $selectedFields = self::selectedCustomFieldsFromPost();
@@ -280,7 +280,7 @@ final class ItemTypesScreen
             ]);
         }
         \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
-        View::respond($columns['item_type_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_item_types'), TXT_362));
+        View::respond($columns['item_type_name'] . ' was added.', Blocks::link(self::url('option=manage_item_types'), 'Record types'));
     }
 
     /**
@@ -338,7 +338,7 @@ final class ItemTypesScreen
         }
         Page::current()->suggestTitle($appName !== '' ? 'Record types · ' . $appName : 'Record types');
         Page::current()->setBody(Blocks::vertical([
-            ['title' => TXT_50, 'html' => self::typeRecordList($listGroups, $unused, $appName !== '')],
+            ['title' => 'Record types', 'html' => self::typeRecordList($listGroups, $unused, $appName !== '')],
         ]));
     }
 
@@ -360,14 +360,14 @@ final class ItemTypesScreen
             'columns' => [
                 ['key' => 'enabled', 'label' => 'Enabled'],
             ],
-            'searchLabel' => TXT_3,
+            'searchLabel' => 'Search',
             'primary' => ['href' => self::url('option=new_item_type'), 'label' => 'Add type'],
             'toolbar' => $toggle,
             'empty' => $unused ? 'Every record type is used by an application.' : 'No record types for this view.',
             'emptyIllustration' => 'empty-types',
             'emptyTitle' => $unused ? 'Every type is in use' : 'No record types yet',
             'emptyCopy' => $unused ? '' : 'A record type sets the fields a record uses.',
-            'noMatch' => TXT_689,
+            'noMatch' => 'No matches.',
             'groups' => $groups === [] ? [['rows' => []]] : $groups,
         ]);
     }
@@ -390,14 +390,14 @@ final class ItemTypesScreen
             'actions' => [
                 [
                     'href' => self::url('option=modify_item_type&item_type_id=') . $id,
-                    'label' => TXT_626,
+                    'label' => 'Edit',
                     'tone' => 'quiet',
                 ],
                 [
                     'href' => self::url('option=delete_item_type&item_type_id=') . $id,
-                    'label' => TXT_47,
+                    'label' => 'Delete',
                     'tone' => 'danger',
-                    'confirm' => $name . "\n" . TXT_400,
+                    'confirm' => $name . "\nThis cannot be undone.",
                 ],
             ],
         ];
@@ -413,9 +413,9 @@ final class ItemTypesScreen
     public static function updateItemType($itemTypeID)
     {
         $itemTypeID = (int) $itemTypeID;
-        $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
+        $back = Blocks::link(self::url('option=manage_item_types'), 'Record types');
         if (!Database::exists('item_types', 'item_type_id = ?', [$itemTypeID])) {
-            View::respond(TXT_115, $back);
+            View::respond('That record type is not here.', $back);
             return;
         }
         $columns = self::postedTypeColumns();
@@ -424,7 +424,7 @@ final class ItemTypesScreen
             return;
         }
         if (Database::exists('item_types', 'LOWER(item_type_name) = LOWER(?) AND item_type_id <> ?', [$columns['item_type_name'], $itemTypeID])) {
-            View::respond($columns['item_type_name'] . ' ' . TXT_163, $back);
+            View::respond($columns['item_type_name'] . ' already exists.', $back);
             return;
         }
         $selectedFields = self::selectedCustomFieldsFromPost();
@@ -439,7 +439,7 @@ final class ItemTypesScreen
         }
         Database::update('item_types', $columns, 'item_type_id = ?', [$itemTypeID]);
         \Adlexone\Data\GroupMembership::setItemTypeGroups($itemTypeID, $ids);
-        View::respond($columns['item_type_name'] . ' ' . TXT_164, $back);
+        View::respond($columns['item_type_name'] . ' was updated.', $back);
     }
 
     /**
@@ -480,28 +480,28 @@ final class ItemTypesScreen
     public static function deleteItemType(): void
     {
         $itemTypeID = (string)(Request::queryValue('item_type_id') ?? '');
-        $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
+        $back = Blocks::link(self::url('option=manage_item_types'), 'Record types');
         if ($itemTypeID === '' || !ctype_digit($itemTypeID)) {
-            View::respond(TXT_115, $back);
+            View::respond('That record type is not here.', $back);
             return;
         }
 
-            $row = Database::first('item_types', '*', 'item_type_id = ?', [$itemTypeID]);
+        $row = Database::first('item_types', '*', 'item_type_id = ?', [$itemTypeID]);
         if (!$row) {
-            View::respond(TXT_115, $back);
+            View::respond('That record type is not here.', $back);
             return;
         }
 
         $name = (string)$row['item_type_name'];
         if (Database::exists('items', 'item_type_id = ?', [$itemTypeID])) {
-            View::respond($name . ' ' . TXT_691, $back);
+            View::respond($name . ' is used by records, so it stays.', $back);
             return;
         }
 
         Database::delete('item_type_custom_fields', 'item_type_id = ?', [(int) $itemTypeID]);
         Database::delete('item_type_groups', 'item_type_id = ?', [(int) $itemTypeID]);
         Database::delete('item_types', 'item_type_id = ?', [(int) $itemTypeID]);
-        View::respond($name . ' ' . TXT_47, $back);
+        View::respond($name . ' was deleted.', $back);
     }
 
     private static function url(string $query = ''): string

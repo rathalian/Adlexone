@@ -59,7 +59,7 @@ final class RenderNavigation
     {
         $canSite = Access::can(Permission::ADMIN_SETTINGS);
         $html = $includeLanding
-            ? Access::outputIfAllowed(Blocks::link(Router::manageUrl('settings', 'option=adlexone_settings'), TXT_42,'ic-sliders'), Permission::ADMIN_SETTINGS)
+            ? Access::outputIfAllowed(Blocks::link(Router::manageUrl('settings', 'option=adlexone_settings'), 'Site','ic-sliders'), Permission::ADMIN_SETTINGS)
             : '';
 
         $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=theme_settings'), 'Theme', 'ic-palette'), Permission::ADMIN_SETTINGS);
@@ -68,9 +68,9 @@ final class RenderNavigation
             $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=sign_in_settings'), 'Sign-in', 'ic-lock'), Permission::ADMIN_SYSTEM);
         }
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=email_settings'), TXT_565,'ic-mail'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=email_settings'), 'Email','ic-mail'), Permission::ADMIN_SYSTEM);
 
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=advanced_settings'), TXT_130, 'ic-settings2'), Permission::ADMIN_SYSTEM);
+        $html .= Access::outputIfAllowed('<br>' . Blocks::link(Router::manageUrl('settings', 'option=advanced_settings'), 'Advanced', 'ic-settings2'), Permission::ADMIN_SYSTEM);
 
         return $html;
     }
