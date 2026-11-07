@@ -391,7 +391,9 @@ final class ItemSheet
             }
         }
         if ($audiences !== []) {
-            foreach (Database::select('groups', ['group_id', 'group_name'], 'group_id IN (' . implode(',', array_map('intval', array_keys($audiences))) . ')') as $row) {
+            $audienceIds = array_map('intval', array_keys($audiences));
+            $marks = implode(',', array_fill(0, count($audienceIds), '?'));
+            foreach (Database::select('groups', ['group_id', 'group_name'], 'group_id IN (' . $marks . ')', $audienceIds) as $row) {
                 $audiences[(int) $row['group_id']] = (string) $row['group_name'];
             }
         }
@@ -557,11 +559,40 @@ final class ItemSheet
             return '';
         }
         $names = [];
-        foreach (Database::select('groups', ['group_name'], 'group_id IN (' . implode(',', $ids) . ')', [], 'group_name ASC') as $row) {
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        foreach (Database::select('groups', ['group_name'], 'group_id IN (' . $marks . ')', $ids, 'group_name ASC') as $row) {
             $names[] = (string) $row['group_name'];
         }
 
         return implode(', ', $names);
+    }
+
+    private static function personName(int $userId): string
+    {
+        if ($userId <= 0) {
+            return '';
+        }
+        $row = Database::first('users', ['user_name'], 'user_id = ?', [$userId]);
+
+        return trim((string) ($row['user_name'] ?? ''));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function fieldRow(int $fieldId): ?array
+    {
+        if ($fieldId <= 0) {
+            return null;
+        }
+
+        return Database::first('custom_fields', '*', 'custom_field_id = ?', [$fieldId]);
+    }
+
+    private static function lockedValue(string $name, string $value, string $text): string
+    {
+        return Form::hidden($name, $value)
+            . '<div class="readonly-value">' . Html::e($text) . '</div>';
     }
 
 /**
@@ -628,9 +659,7 @@ final class ItemSheet
         // Show values from database only if they have not been set via a form refresh (we use user_security as it is always set)
         if (!isset($values['user_security'])) {
             // Setup item type information for display and later use when the item is first created
-            $columnArray = array('*');
-            $condition = 'WHERE item_type_id = ' . (int) $itemTypeID;
-            $itemTypeFields = Database::first('item_types', $columnArray, $condition);
+            $itemTypeFields = Database::first('item_types', '*', 'item_type_id = ?', [(int) $itemTypeID]);
             if (!is_array($itemTypeFields)) {
                 $itemTypeFields = [];
             }
@@ -643,9 +672,7 @@ final class ItemSheet
         }
 
         // Get item type name
-        $columnArray = array('item_type_name');
-        $condition = 'WHERE item_type_id = ' . (int) $itemTypeID;
-        $row = Database::first('item_types', $columnArray, $condition);
+        $row = Database::first('item_types', ['item_type_name'], 'item_type_id = ?', [(int) $itemTypeID]);
         if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
             $picker = ItemScreen::recordUrl('option=show_item_types');
             Page::current()->setBody(Blocks::vertical([
@@ -676,11 +703,9 @@ final class ItemSheet
                 $fields['Owner'] = self::ownerSelect((int) ($itemTypeFields['user_security'] ?? 0), '', true);
             } else {
                 // Security is setup by default from the item
-                $columnArray = array('user_id', 'user_name');
-                $condition = "WHERE lastactive <> 'inactive' ORDER BY user_name ASC";
                 $userIDArray = [];
                 $userArray = [];
-                foreach (Database::select('users', $columnArray, $condition) as $row) {
+                foreach (Database::select('users', ['user_id', 'user_name'], "lastactive <> 'inactive'", [], 'user_name ASC') as $row) {
                     $userIDArray[] = $row['user_id'];
                     $userArray[] = $row['user_name'];
                 }// while
@@ -697,20 +722,25 @@ final class ItemSheet
             $peopleHidden = Form::hidden('creator_security', (string) $_SESSION['access_user_id'])
                 . Form::hidden('user_security', $ownerId);
         } else {
-            $columnArray = array('user_name');
-            $condition = "WHERE user_id ='" . $_SESSION['access_user_id'] . "'";
-            $row = Database::first('users', $columnArray, $condition);
-            $fields[Wording::get('LA_551', 'TXT_551')] = Form::hidden('creator_security', $_SESSION['access_user_id']) . $row['user_name'];
+            $creatorId = (string) ($_SESSION['access_user_id'] ?? '');
+            $fields[Wording::get('LA_551', 'TXT_551')] = self::lockedValue(
+                'creator_security',
+                $creatorId,
+                self::personName((int) $creatorId)
+            );
             if ($itemTypeFields['user_security'] == '') {
-                $columnArray = array('user_name');
-                $condition = "WHERE user_id ='" . $_SESSION['access_user_id'] . "'";
-                $row = Database::first('users', $columnArray, $condition);
-                $fields[Wording::get('LA_269', 'TXT_269')] = Form::hidden('user_security', $_SESSION['access_user_id']) . $row['user_name'];
+                $fields[Wording::get('LA_269', 'TXT_269')] = self::lockedValue(
+                    'user_security',
+                    $creatorId,
+                    self::personName((int) $creatorId)
+                );
             } else {
-                $columnArray = array('user_name');
-                $condition = "WHERE user_id ='" . $itemTypeFields['user_security'] . "'";
-                $row = Database::first('users', $columnArray, $condition);
-                $fields[Wording::get('LA_269', 'TXT_269')] = Form::hidden('user_security', $itemTypeFields['user_security']) . $row['user_name'];
+                $ownerId = (string) $itemTypeFields['user_security'];
+                $fields[Wording::get('LA_269', 'TXT_269')] = self::lockedValue(
+                    'user_security',
+                    $ownerId,
+                    self::personName((int) $ownerId)
+                );
             }
         }
         // Groups the record belongs to. The item type's groups start checked.
@@ -721,14 +751,19 @@ final class ItemSheet
             $fields[TXT_270] = self::itemGroupPicker($selectedGroups);
         }
         $fields[$inApplication ? 'Name' : Wording::get('LA_84', 'TXT_84')] = Form::text('item_title', $itemTypeFields['item_title'] ?? '');    // Setup custom field display
-        $columnArray = array('custom_field_id');
-        $condition = 'WHERE item_type_id = ' . (int) $itemTypeID . ' ORDER BY custom_field_order ASC';
-        $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
+        $customFieldResult = Database::select(
+            'item_type_custom_fields',
+            ['custom_field_id'],
+            'item_type_id = ?',
+            [(int) $itemTypeID],
+            'custom_field_order ASC'
+        );
         $fieldCheck = new FieldCheck();
         foreach ($customFieldResult as $customFields) {
-            $columnArray = array('*');
-            $condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-            $row = Database::first('custom_fields', $columnArray, $condition);
+            $row = self::fieldRow((int) $customFields['custom_field_id']);
+            if ($row === null) {
+                continue;
+            }
             $row['field_type'] = FieldTypes::normalise($row['field_type']);
             if ($row['enabled'] != 'Yes') {
                 continue;
@@ -788,18 +823,22 @@ final class ItemSheet
                     $fields[$row['custom_field_name']] = Form::checkbox('custom_field_' . $row['custom_field_id'], $row['custom_field_id'], '');
                     break;
                 case 'workerFieldMenu' :
-                    $columnArray = array('default_value');
-                    $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                    $defaultValueArray = Database::first('custom_fields', $columnArray, $condition);
-                    // Get any menus values
-                    $columnArray = array('menu_value');
-                    $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                    $result = Database::select('custom_field_menu_values', $columnArray, $condition);
+                    $result = Database::select(
+                        'custom_field_menu_values',
+                        ['menu_value'],
+                        'custom_field_id = ?',
+                        [(int) $row['custom_field_id']]
+                    );
                     $menuArray = [];
                     foreach ($result as $menuRow) {
                         $menuArray[] = $menuRow['menu_value'];
                     }
-                    $fields[$row['custom_field_name']] = Form::select('worker_field_menu_' . $row['custom_field_id'], $menuArray, $menuArray, $defaultValueArray['default_value']);
+                    $fields[$row['custom_field_name']] = Form::select(
+                        'worker_field_menu_' . $row['custom_field_id'],
+                        $menuArray,
+                        $menuArray,
+                        $row['default_value']
+                    );
                     break;
                 default :
                     $control = FieldControl::render(
@@ -870,10 +909,7 @@ final class ItemSheet
      */
     public static function showItem($itemID, $values = '', $addLogEntry = 'no', $attachments = 'no')
     {
-        //Check to see if the item exists
-        $sql = 'SELECT item_id FROM items WHERE item_id = ' . (int) $itemID;
-            $result = Database::rows($sql);
-        if (count($result) == 0) {
+        if (Database::first('items', ['item_id'], 'item_id = ?', [(int) $itemID]) === null) {
            View::respond(TXT_616);
         } else {
             $i = ItemScreen::userCanAccessItem((int) $itemID) ? 1 : 0;
@@ -888,9 +924,12 @@ final class ItemSheet
                     }
                 }
                 // Get item type name
-                $columnArray = array('item_type_name');
-                $condition = 'WHERE item_type_id = ' . (int) $itemFields['item_type_id'];
-                $row = Database::first('item_types', $columnArray, $condition);
+                $row = Database::first(
+                    'item_types',
+                    ['item_type_name'],
+                    'item_type_id = ?',
+                    [(int) $itemFields['item_type_id']]
+                );
                 $itemTypeName = $row['item_type_name'];
                 $inApplication = Page::current()->inApplication();
                 $itemField = [];
@@ -901,11 +940,9 @@ final class ItemSheet
                 } elseif (Access::canAssignRecords()) {//Managers, admins and oneorzero admins and global admins
                     // Build table array
                     // Security is setup by default from the item
-                    $columnArray = array('user_id', 'user_name');
-                    $condition = "ORDER BY user_name ASC";
                     $userIDArray = [];
                     $userArray = [];
-                    foreach (Database::select('users', $columnArray, $condition) as $row) {
+                    foreach (Database::select('users', ['user_id', 'user_name'], '', [], 'user_name ASC') as $row) {
                         $userIDArray[] = $row['user_id'];
                         $userArray[] = $row['user_name'];
                     }// while
@@ -915,14 +952,10 @@ final class ItemSheet
                     $filteredUserArray = $owners['names'];
                     $itemField[Wording::get('LA_269', 'TXT_269')] = Form::select('user_security', $filterdUserIDArray, $filteredUserArray, $itemFields['user_security']);
                 } else {
-                    $columnArray = array('user_name');
-                    $condition = 'WHERE user_id = ' . (int) $itemFields['creator_security'];
-                    $row = Database::first('users', $columnArray, $condition);
-                    $itemField[TXT_551] = Form::hidden('creator_security', $itemFields['creator_security']) . $row['user_name'];
-                    $columnArray = array('user_name');
-                    $condition = 'WHERE user_id = ' . (int) $itemFields['user_security'];
-                    $row = Database::first('users', $columnArray, $condition);
-                    $itemField[TXT_269] = Form::hidden('user_security', $itemFields['user_security']) . $row['user_name'];
+                    $creatorValue = (string) ($itemFields['creator_security'] ?? '');
+                    $ownerValue = (string) ($itemFields['user_security'] ?? '');
+                    $itemField[TXT_551] = self::lockedValue('creator_security', $creatorValue, self::personName((int) $creatorValue));
+                    $itemField[TXT_269] = self::lockedValue('user_security', $ownerValue, self::personName((int) $ownerValue));
                 }
                 $itemGroupIds = GroupMembership::itemGroupIds((int) $itemID);
                 $canRevise = ItemScreen::canReviseItem((int) $itemID);
@@ -932,10 +965,12 @@ final class ItemSheet
                     $groupArray = array_values(array_filter(array_map('intval', $itemGroupIds)));
                     $groupMembership = '';
                     if ($groupArray !== []) {
+                        $marks = implode(',', array_fill(0, count($groupArray), '?'));
                         $result = Database::select(
                             'groups',
                             ['group_id', 'group_name'],
-                            'group_id IN (' . implode(',', $groupArray) . ')'
+                            'group_id IN (' . $marks . ')',
+                            $groupArray
                         );
                         $names = [];
                         foreach ($result as $row) {
@@ -954,19 +989,25 @@ final class ItemSheet
                 }
                 $titleLabel = $inApplication ? 'Name' : Wording::get('LA_84', 'TXT_84');
                 if (!$canRevise) {
-                    $itemField[$titleLabel] = Form::hidden('item_title', $itemFields['item_title']) . $itemFields['item_title'];
+                    $title = (string) ($itemFields['item_title'] ?? '');
+                    $itemField[$titleLabel] = self::lockedValue('item_title', $title, $title);
                 } else {
                     $itemField[$titleLabel] = Form::text('item_title', $itemFields['item_title']);
                 }
                 // Setup custom field display
-                $columnArray = array('custom_field_id');
-                $condition = 'WHERE item_type_id = ' . (int) $itemFields['item_type_id'] . ' ORDER BY custom_field_order ASC';
-                $customFieldResult = Database::select('item_type_custom_fields', $columnArray, $condition);
+                $customFieldResult = Database::select(
+                    'item_type_custom_fields',
+                    ['custom_field_id'],
+                    'item_type_id = ?',
+                    [(int) $itemFields['item_type_id']],
+                    'custom_field_order ASC'
+                );
                 $fieldCheck = new FieldCheck();
                 foreach ($customFieldResult as $customFields) {
-                    $columnArray = array('*');
-                    $condition = "WHERE custom_field_id = '" . $customFields['custom_field_id'] . "'";
-                    $row = Database::first('custom_fields', $columnArray, $condition);
+                    $row = self::fieldRow((int) $customFields['custom_field_id']);
+                    if ($row === null) {
+                        continue;
+                    }
                     $row['field_type'] = FieldTypes::normalise($row['field_type']);
                     if ($row['enabled'] != 'Yes') {
                         continue;
@@ -1068,18 +1109,22 @@ final class ItemSheet
                             $itemField[$row['custom_field_name']] = Form::text('custom_field_' . $row['custom_field_id'], $value) . $url;
                             break;
                         case 'workerFieldMenu' :
-                            $columnArray = array('default_value');
-                            $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                            $defaultValueArray = Database::first('custom_fields', $columnArray, $condition);
-                            // Get any menus values
-                            $columnArray = array('menu_value');
-                            $condition = "WHERE custom_field_id = '" . $row['custom_field_id'] . "'";
-                            $result = Database::select('custom_field_menu_values', $columnArray, $condition);
+                            $result = Database::select(
+                                'custom_field_menu_values',
+                                ['menu_value'],
+                                'custom_field_id = ?',
+                                [(int) $row['custom_field_id']]
+                            );
                             $menuArray = [];
                             foreach ($result as $menuRow) {
                                 $menuArray[] = $menuRow['menu_value'];
                             }
-                            $itemField[$row['custom_field_name']] = Form::select('worker_field_menu_' . $row['custom_field_id'], $menuArray, $menuArray, $defaultValueArray['default_value']);
+                            $itemField[$row['custom_field_name']] = Form::select(
+                                'worker_field_menu_' . $row['custom_field_id'],
+                                $menuArray,
+                                $menuArray,
+                                $row['default_value']
+                            );
                             break;
                         default :
                             $control = FieldControl::render(
