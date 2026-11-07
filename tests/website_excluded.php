@@ -114,8 +114,8 @@ if (str_contains($home, 'hero-desk.jpg') || str_contains($home, 'How a record lo
     fwrite(STDERR, "The home page hero is a screenshot. The desk photograph and the second specimen are gone.\n");
     exit(1);
 }
-if (str_contains($home, 'Under construction') || str_contains($home, 'noindex')) {
-    fwrite(STDERR, "The home page is the public sales page.\n");
+if (str_contains($home, 'Under construction')) {
+    fwrite(STDERR, "The home page is the sales page, held back from search while it is being tested.\n");
     exit(1);
 }
 
@@ -135,21 +135,21 @@ foreach ($pages as $page) {
         fwrite(STDERR, "website/{$page} must stay self-contained. No scripts and no remote addresses.\n");
         exit(1);
     }
-    if (str_contains($html, 'noindex') || str_contains($html, 'Under construction')) {
-        fwrite(STDERR, "website/{$page} is a public page of the sales site.\n");
+    if (!str_contains($html, '<meta name="robots" content="noindex, nofollow, noarchive">') || str_contains($html, 'Under construction')) {
+        fwrite(STDERR, "website/{$page} is a testing page and must tell search engines not to index it.\n");
         exit(1);
     }
 }
 
 $robots = (string) file_get_contents($root . '/website/robots.txt');
-if (!preg_match('/User-agent:\\s*\\*/i', $robots) || !preg_match('/Allow:\\s*\\//', $robots) || preg_match('/Disallow:\\s*\\//', $robots)) {
-    fwrite(STDERR, "website/robots.txt must allow crawlers to read the sales site.\n");
+if (!preg_match('/User-agent:\\s*\\*/i', $robots) || !preg_match('/Disallow:\\s*\\//', $robots)) {
+    fwrite(STDERR, "website/robots.txt must tell crawlers not to read the testing site.\n");
     exit(1);
 }
 
 $siteHtaccess = (string) file_get_contents($root . '/website/.htaccess');
-if (str_contains($siteHtaccess, 'X-Robots-Tag') || str_contains($siteHtaccess, 'noindex')) {
-    fwrite(STDERR, "website/.htaccess must not send a noindex header.\n");
+if (!str_contains($siteHtaccess, 'X-Robots-Tag') || !str_contains($siteHtaccess, 'noindex')) {
+    fwrite(STDERR, "website/.htaccess must send a noindex header while the site is for testing.\n");
     exit(1);
 }
 

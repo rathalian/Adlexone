@@ -1,2 +1,4 @@
 User-agent: *
-Allow: /
+Disallow: /
+
+# This site is for testing. Search engines should not index it.

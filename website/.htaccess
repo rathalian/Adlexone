@@ -1,1 +1,5 @@
-# Public sales site.
+# Public sales site. This copy is for testing, so crawlers must not index it.
+<IfModule mod_headers.c>
+    Header set X-Robots-Tag "noindex, nofollow, noarchive"
+</IfModule>
+
