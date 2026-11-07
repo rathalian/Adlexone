@@ -55,11 +55,10 @@ foreach (glob($root . '/src/*', GLOB_ONLYDIR) ?: [] as $dir) {
 }
 sort($srcDirs, SORT_STRING);
 $missing = array_values(array_diff($srcDirs, $analysed));
-$unexpected = array_values(array_diff($missing, ['src/Text', 'src/Theme']));
 $check(
-    $unexpected === [],
-    'PHPStan covers every src directory except Text and Theme'
-    . ($unexpected === [] ? '' : ': ' . implode(', ', $unexpected))
+    $missing === [],
+    'PHPStan analyses every src directory'
+    . ($missing === [] ? '' : ': ' . implode(', ', $missing))
 );
 $check(in_array('src/Screen', $analysed, true), 'PHPStan still analyses screens');
 
