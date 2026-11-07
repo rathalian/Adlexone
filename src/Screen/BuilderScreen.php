@@ -16,7 +16,6 @@ use Adlexone\Http\Router;
 use Adlexone\Database\Database;
 use Adlexone\Http\RenderNavigation;
 use Adlexone\Http\Page;
-use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
 
@@ -67,7 +66,6 @@ final class BuilderScreen
         if ((Request::postedValue('icon') ?? '') === '') {
             $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-grid');
         }
-        $icon = Capabilities::renamedIcons()[$icon] ?? $icon;
         if (!in_array($icon, Capabilities::icons(), true)) {
             $icon = 'ic-grid';
         }

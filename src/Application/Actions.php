@@ -36,7 +36,7 @@ class Actions
 	 * Run the rules for a record event.
 	 *
 	 * @param mixed $itemID Item ID
-	 * @param mixed $requestingAction create_item, update_item, update_item_log_entry, or item_attachment
+	 * @param mixed $requestingAction create_item, update_record, update_item_log_entry, or item_attachment
 	 * @param bool $showResponse Kept for existing callers. Rules record their own result.
 	 */
 	public static function executeAction($itemID, $requestingAction, $showResponse = true)

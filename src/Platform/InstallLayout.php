@@ -134,14 +134,6 @@ final class InstallLayout
                 'shape' => 'children',
             ];
         }
-        $data = self::envString('INLAY_DATA');
-        if ($data !== '') {
-            return [
-                'locked' => true,
-                'path' => rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $data), DIRECTORY_SEPARATOR),
-                'shape' => 'legacy',
-            ];
-        }
 
         return ['locked' => false, 'path' => '', 'shape' => 'children'];
     }

@@ -5,32 +5,16 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Role;
-use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
-use Adlexone\Application\RecordQuery;
-use Adlexone\Application\Rules;
-use Adlexone\Application\WorkflowFields;
-use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
-use Adlexone\Application\Actions;
-use Adlexone\Data\AttachmentUpload;
-use Adlexone\Html\FieldControl;
-use Adlexone\Data\FieldCheck;
-use Adlexone\Data\FieldTypes;
-use Adlexone\Data\FieldValidation;
-use Adlexone\Data\MenuOptions;
 use Adlexone\Data\GroupMembership;
-use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Http\Router;
-use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
-use Adlexone\Text\Wording;
-use Adlexone\Html\Html;
 
 final class ItemScreen
 {
@@ -57,22 +41,22 @@ final class ItemScreen
          * Option is captured from the value selected via a hyperlink
          */
         switch ($option) {
-            case 'my_items' :
+            case 'mine' :
                 Access::require(Permission::APP_ACCESS);
                 ItemList::showMyItems($_SESSION['access_user_id'], Request::query('item_id'));
                 break;
-            case 'show_item_types' :
+            case 'choose_type' :
                 Access::requireEditRecords();
                 ItemList::showItemTypes(Request::query('default_item_type'));
                 break;
-            case 'new_item' :
+            case 'new_record' :
                 Access::requireEditRecords();
                 $itemTypeId = Request::posted('item_type_id');
                 if ($itemTypeId === '') {
                     $itemTypeId = Request::query('item_type_id');
                 }
                 if ($itemTypeId === '') {
-                    $target = self::recordUrl('option=show_item_types');
+                    $target = self::recordUrl('option=choose_type');
                     $defaultType = trim((string) (Request::queryValue('default_item_type') ?? ''));
                     if ($defaultType === '' && Page::current()->inApplication()) {
                         $defaultType = ApplicationSettings::defaultItemTypeId(Page::current()->applicationSlug());
@@ -85,68 +69,68 @@ final class ItemScreen
                 }
                 ItemSheet::showItemAdd($itemTypeId, Request::postedAll());
                 break;
-            case 'add_item' :
+            case 'add_record' :
                 Access::requireEditRecords();
-                ItemSheet::addItem();
+                ItemWrite::addItem();
                 break;
-            case 'show_item' :
+            case 'view' :
                 Access::require(Permission::APP_ACCESS);
                 ItemSheet::showItem(Request::queryValue('item_id') ?? '', Request::postedAll(), Request::queryValue('log_entry') ?? 'no', Request::queryValue('attachments') ?? 'no');
                 break;
-            case 'log_entry' :
+            case 'note' :
                 Access::requireEditRecords();
                 self::returnToItem(Request::queryValue('item_id'), '', 'notes');
                 ItemLog::showLogEntry(Request::queryValue('item_id'));
                 break;
-            case 'add_log_entry' :
+            case 'add_note' :
                 Access::requireEditRecords();
                 ItemLog::addLogEntry(Request::postedValue('item_id'));
                 break;
-            case 'delete_log' :
+            case 'delete_note' :
                 Access::requireControlRecords();
                 ItemLog::deleteLog(Request::queryValue('item_id'), Request::queryValue('log_item_sequence'));
                 break;
-            case 'update_item' :
+            case 'update_record' :
                 Access::requireEditRecords();
-                ItemSheet::updateItem(Request::postedValue('item_id'));
+                ItemWrite::updateItem(Request::postedValue('item_id'));
                 break;
             case 'update_owner' :
                 Access::requireAssignRecords();
                 ItemAccess::updateOwner();
                 break;
-            case 'change_security' :
+            case 'access' :
                 Access::requireAssignRecords();
                 self::returnToItem(Request::queryValue('item_id'), '', 'access');
                 ItemAccess::showSecurityAssignment(Request::queryValue('item_id'));
                 break;
-            case 'update_security' :
+            case 'update_access' :
                 Access::requireAssignRecords();
                 ItemAccess::updateSecurityAssignment(Request::queryValue('item_id'));
                 break;
-            case 'show_attachments' :
+            case 'files' :
                 Access::require(Permission::APP_ACCESS);
                 self::returnToItem(Request::queryValue('item_id'), '', 'files');
                 ItemFiles::showAttachments(Request::queryValue('item_id'));
                 break;
-            case 'add_attachment' :
+            case 'add_file' :
                 Access::requireEditRecords();
                 ItemFiles::addAttachment(Request::queryValue('item_id'));
                 break;
-            case 'download_attachment' :
+            case 'download_file' :
                 Access::require(Permission::APP_ACCESS);
                 ItemFiles::downloadAttachment(Request::queryValue('id'));
                 break;
-            case 'delete_attachment' :
+            case 'delete_file' :
                 Access::requireControlRecords();
                 ItemFiles::deleteAttachment(Request::queryValue('id'), Request::queryValue('item_id'));
                 break;
-            case 'delete_item' :
+            case 'delete_record' :
                 Access::requireControlRecords();
-                ItemSheet::deleteItem(Request::queryValue('item_id'));
+                ItemWrite::deleteItem(Request::queryValue('item_id'));
                 break;
-            case 'transform_item' :
+            case 'transform' :
                 Access::requireControlRecords();
-                ItemSheet::transformItem(Request::postedValue('item_id'), Request::postedValue('transform_type'), Request::postedValue('item_type_id'));
+                ItemWrite::transformItem(Request::postedValue('item_id'), Request::postedValue('transform_type'), Request::postedValue('item_type_id'));
                 break;
             default :
                 Access::require(Permission::APP_ACCESS);
@@ -159,20 +143,20 @@ final class ItemScreen
      * the owner and the groups, control deletes it.
      */
     private const ITEM_OPTION_POWER = [
-        'show_item' => 'view',
-        'show_attachments' => 'view',
-        'download_attachment' => 'view',
-        'log_entry' => 'edit',
-        'add_log_entry' => 'edit',
-        'add_attachment' => 'edit',
-        'update_item' => 'edit',
+        'view' => 'view',
+        'files' => 'view',
+        'download_file' => 'view',
+        'note' => 'edit',
+        'add_note' => 'edit',
+        'add_file' => 'edit',
+        'update_record' => 'edit',
         'update_owner' => 'assign',
-        'change_security' => 'assign',
-        'update_security' => 'assign',
-        'delete_attachment' => 'control',
-        'delete_log' => 'control',
-        'delete_item' => 'control',
-        'transform_item' => 'control',
+        'access' => 'assign',
+        'update_access' => 'assign',
+        'delete_file' => 'control',
+        'delete_note' => 'control',
+        'delete_record' => 'control',
+        'transform' => 'control',
     ];
 
     /**
@@ -182,13 +166,13 @@ final class ItemScreen
     private static function authoriseItemOption(string $option): bool
     {
         $needed = self::ITEM_OPTION_POWER[$option] ?? null;
-        if ($needed === null || $option === 'show_item') {
+        if ($needed === null || $option === 'view') {
             return true;
         }
-        if ($option === 'download_attachment' || $option === 'delete_attachment') {
+        if ($option === 'download_file' || $option === 'delete_file') {
             $attachment = Database::first('item_attachments', ['item_id'], 'id = ?', [(int) (Request::queryValue('id') ?? 0)]);
             $itemId = $attachment === null ? 0 : (int) $attachment['item_id'];
-        } elseif (in_array($option, ['add_log_entry', 'update_item', 'update_owner', 'transform_item'], true)) {
+        } elseif (in_array($option, ['add_note', 'update_record', 'update_owner', 'transform'], true)) {
             $itemId = (int) (Request::postedValue('item_id') ?? 0);
         } else {
             $itemId = (int) (Request::queryValue('item_id') ?? 0);

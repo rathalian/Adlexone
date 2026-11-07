@@ -77,34 +77,6 @@ final class Role
         ];
     }
 
-    /**
-     * Permissions a stored 0–5 number used to imply. Only the upgrade reads this.
-     *
-     * @return list<string>
-     */
-    public static function grantsForNumber(int $number): array
-    {
-        $grants = self::systemGrants();
-        return match (true) {
-            $number <= 0 => [
-                Permission::ADMIN_SYSTEM,
-                Permission::ADMIN_SETTINGS,
-                Permission::ADMIN_SECURITY,
-                Permission::ADMIN_ACTIONS,
-                Permission::ADMIN_ITEMS,
-                Permission::RECORDS_CONTROL,
-                Permission::RECORDS_ASSIGN,
-                Permission::RECORDS_EDIT,
-                Permission::APP_ACCESS,
-            ],
-            $number === 1 => $grants[self::SITE_ADMINISTRATOR],
-            $number === 2 => $grants[self::ADMINISTRATOR],
-            $number === 3 => $grants[self::MANAGER],
-            $number === 4 => $grants[self::USER],
-            default => $grants[self::VIEWER],
-        };
-    }
-
     public static function seedSystem(): void
     {
         if (self::$seeding) {
@@ -137,55 +109,6 @@ final class Role
                     'permission' => $permission,
                 ]);
             }
-        }
-    }
-
-    /**
-     * Copy each group's current grants onto a role, then mark one break-glass account.
-     * The old number columns are still present when this runs.
-     */
-    public static function migrateLegacyGroups(): void
-    {
-        self::seedSystem();
-        if (!Database::tableExists('groups')) {
-            self::markBreakGlass();
-            return;
-        }
-        $hasRole = Database::columnExists('groups', 'role');
-        $hasName = Database::columnExists('groups', 'group_name');
-        $columns = ['group_id'];
-        if ($hasRole) {
-            $columns[] = 'role';
-        }
-        if ($hasName) {
-            $columns[] = 'group_name';
-        }
-        foreach (Database::select('groups', $columns) as $group) {
-            $groupId = (int) $group['group_id'];
-            $number = $hasRole ? (int) ($group['role'] ?? 5) : 5;
-            $name = $hasName ? (string) ($group['group_name'] ?? '') : '';
-            $stored = self::storedGroupPermissions($groupId);
-            $implied = self::grantsForNumber($number);
-            if (strtolower($name) === 'administrator' || $groupId === 3) {
-                $implied = Permission::all();
-            }
-            $impliedRecords = array_values(array_filter(
-                $implied,
-                static fn (string $permission): bool => str_starts_with($permission, 'records.')
-            ));
-            $perms = ($stored === [] || self::sameList($stored, $impliedRecords)) ? $implied : $stored;
-            self::assign($groupId, $perms, $name);
-        }
-        self::markBreakGlass();
-    }
-
-    public static function dropLegacyColumns(): void
-    {
-        if (Database::tableExists('users') && Database::columnExists('users', 'role')) {
-            Database::exec('ALTER TABLE users DROP COLUMN role');
-        }
-        if (Database::tableExists('groups') && Database::columnExists('groups', 'role')) {
-            Database::exec('ALTER TABLE groups DROP COLUMN role');
         }
     }
 
@@ -536,113 +459,6 @@ final class Role
                 PRIMARY KEY (role_id, permission)
             )'
         );
-        if (Database::tableExists('groups') && !Database::columnExists('groups', 'role_id')) {
-            Database::exec('ALTER TABLE groups ADD COLUMN role_id INTEGER NOT NULL DEFAULT 5');
-        }
-        if (Database::tableExists('users') && !Database::columnExists('users', 'break_glass')) {
-            Database::exec('ALTER TABLE users ADD COLUMN break_glass INTEGER NOT NULL DEFAULT 0');
-        }
-    }
-
-    private static function markBreakGlass(): void
-    {
-        if (!Database::tableExists('users') || !Database::columnExists('users', 'break_glass')) {
-            return;
-        }
-        $keep = 0;
-        if (Database::columnExists('users', 'role')) {
-            $zeros = Database::select('users', ['user_id'], 'role = 0', [], 'user_id ASC');
-            if ($zeros !== []) {
-                $keep = (int) $zeros[0]['user_id'];
-                foreach (array_slice($zeros, 1) as $extra) {
-                    self::giveSiteAdministrator((int) $extra['user_id']);
-                }
-            }
-        }
-        if ($keep === 0) {
-            $keep = self::firstAdministratorId();
-        }
-        if ($keep === 0) {
-            return;
-        }
-        Database::exec('UPDATE users SET break_glass = 0');
-        Database::update('users', ['break_glass' => 1], 'user_id = ?', [$keep]);
-        Database::exec(
-            'CREATE UNIQUE INDEX IF NOT EXISTS users_one_break_glass ON users (break_glass) WHERE break_glass = 1'
-        );
-    }
-
-    private static function firstAdministratorId(): int
-    {
-        if (!Database::tableExists('users')) {
-            return 0;
-        }
-        if (Database::tableExists('user_groups') && Database::columnExists('groups', 'role_id') && Database::tableExists('role_permissions')) {
-            $rows = Database::rows(
-                'SELECT u.user_id FROM users u
-                 INNER JOIN user_groups ug ON ug.user_id = u.user_id
-                 INNER JOIN groups g ON g.group_id = ug.group_id
-                 INNER JOIN role_permissions rp ON rp.role_id = g.role_id
-                 WHERE rp.permission = ? ORDER BY u.user_id ASC LIMIT 1',
-                [Permission::ADMIN_SYSTEM]
-            );
-            if ($rows !== []) {
-                return (int) $rows[0]['user_id'];
-            }
-        }
-        $first = Database::first('users', ['user_id'], 'ORDER BY user_id ASC');
-
-        return $first === null ? 0 : (int) $first['user_id'];
-    }
-
-    private static function giveSiteAdministrator(int $userId): void
-    {
-        if ($userId <= 0 || !Database::tableExists('user_groups')) {
-            return;
-        }
-        $roleId = self::id(self::SITE_ADMINISTRATOR);
-        if ($roleId <= 0) {
-            return;
-        }
-        $group = Database::first('groups', ['group_id'], 'role_id = ?', [$roleId]);
-        if ($group === null) {
-            if (!Database::columnExists('groups', 'group_name')) {
-                return;
-            }
-            $row = [
-                'group_name' => 'Site administrators',
-                'role_id' => $roleId,
-            ];
-            if (Database::columnExists('groups', 'description')) {
-                $row['description'] = 'Site administrator';
-            }
-            if (Database::columnExists('groups', 'role')) {
-                $row['role'] = 1;
-            }
-            $groupId = Database::insert('groups', $row);
-        } else {
-            $groupId = (int) $group['group_id'];
-        }
-        Database::insertIgnore('user_groups', [
-            'user_id' => $userId,
-            'group_id' => $groupId,
-        ]);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function storedGroupPermissions(int $groupId): array
-    {
-        if (!Database::tableExists('group_permissions')) {
-            return [];
-        }
-        $list = [];
-        foreach (Database::select('group_permissions', ['permission'], 'group_id = ?', [$groupId], 'permission') as $row) {
-            $list[] = (string) $row['permission'];
-        }
-
-        return $list;
     }
 
     /**
@@ -682,20 +498,6 @@ final class Role
         };
 
         return $strip($left) === $strip($right);
-    }
-
-    /**
-     * @param list<string> $left
-     * @param list<string> $right
-     */
-    private static function sameList(array $left, array $right): bool
-    {
-        $left = array_values(array_unique($left));
-        $right = array_values(array_unique($right));
-        sort($left);
-        sort($right);
-
-        return $left === $right;
     }
 
     private static function point(int $groupId, int $roleId): void

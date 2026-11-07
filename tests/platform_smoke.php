@@ -7,7 +7,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 
-use Adlexone\Database\SchemaMigrator;
+use Adlexone\Database\Database;
 use Adlexone\Platform\PlatformDb;
 use Adlexone\Platform\Provisioner;
 use Adlexone\Platform\Runtime;
@@ -57,7 +57,7 @@ foreach ([$config, dirname($sqlite), $attachments] as $dir) {
 
 $pdo = new PDO('sqlite:' . $sqlite);
 $version = (int) $pdo->query('SELECT MAX(version) FROM schema_migrations')->fetchColumn();
-if ($version !== SchemaMigrator::version()) {
+if ($version !== Database::SCHEMA_VERSION) {
     $fail('schema version is ' . $version);
 }
 $kept = $tmp . '/kept/adlexone.sqlite';
@@ -157,7 +157,7 @@ if ($traversed) {
 }
 
 $setupMode = trim((string) shell_exec(
-    'INLAY_DATA=' . escapeshellarg($tmp . '/brand-new')
+    'INLAY_STORAGE=' . escapeshellarg($tmp . '/brand-new')
     . ' php ' . escapeshellarg(__DIR__ . '/platform_mode.php')
     . ' ' . escapeshellarg($root)
 ));

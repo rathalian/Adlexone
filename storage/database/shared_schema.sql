@@ -1,7 +1,7 @@
--- Shared platform schema for Adlexone / Inlay (SQLite) — final shape.
+-- Shared platform schema for Adlexone (SQLite).
 -- Application packs must NOT add tables. They may store an application slug
 -- on shared rows (e.g. saved_searches.application).
--- Live upgrades: Adlexone\Database\SchemaMigrator
+-- A new database is created from this file. There is no upgrade of an older file.
 
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS applications (
   name TEXT NOT NULL,
   hint TEXT NOT NULL DEFAULT '',
   guide TEXT NOT NULL DEFAULT '',
-  icon TEXT NOT NULL DEFAULT 'ic-launch',
+  icon TEXT NOT NULL DEFAULT 'ic-grid',
   permission TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
@@ -342,5 +342,7 @@ CREATE TABLE IF NOT EXISTS application_rule_runs (
 
 CREATE INDEX IF NOT EXISTS idx_application_rule_runs_rule ON application_rule_runs (rule_id, id);
 CREATE INDEX IF NOT EXISTS idx_application_rule_runs_item ON application_rule_runs (item_id, id);
+
+INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (1, 0);
 
 COMMIT;

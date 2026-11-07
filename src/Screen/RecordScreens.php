@@ -6,29 +6,17 @@ namespace Adlexone\Screen;
 use Adlexone\Http\Request;
 
 use Adlexone\Application\ApplicationSettings;
-use Adlexone\Application\ApplicationStore;
-use Adlexone\Application\Capabilities;
 use Adlexone\Application\RecordQuery;
-use Adlexone\Application\Rules;
 use Adlexone\Application\ScreenCatalog;
 use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
-use Adlexone\Data\GroupMembership;
-use Adlexone\Data\ItemFields;
 use Adlexone\Html\Blocks;
-use Adlexone\Html\Charts;
-use Adlexone\Html\Timeline;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
 use Adlexone\Html\Presence;
 use Adlexone\Http\Page;
 use Adlexone\Http\Router;
 use Adlexone\Http\View;
-use Adlexone\Application\Actions;
-use Adlexone\Database\Database;
-use Adlexone\Data\FieldTypes;
-use Adlexone\Data\FieldValidation;
-use Adlexone\Data\MenuOptions;
 
 /**
  * Counts, owners, next steps, diary, parties, activity, files, ageing, register, and intake.

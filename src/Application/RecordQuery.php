@@ -266,7 +266,7 @@ final class RecordQuery
         $key = 'custom_field_' . $fieldId;
         $previous = $_POST[$key] ?? null;
         $_POST[$key] = $value;
-        Rules::run($itemId, 'update_item');
+        Rules::run($itemId, 'update_record');
         ItemFields::saveFromArray($itemId, [$key => $value]);
         if ($previous === null) {
             unset($_POST[$key]);
@@ -282,7 +282,7 @@ final class RecordQuery
         }
         $previous = $_POST['user_security'] ?? null;
         $_POST['user_security'] = (string) $userId;
-        Rules::run($itemId, 'update_item');
+        Rules::run($itemId, 'update_record');
         Database::update('items', ['user_security' => $userId], 'item_id = ?', [$itemId]);
         if ($previous === null) {
             unset($_POST['user_security']);
@@ -399,7 +399,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @param list<string> $names
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
@@ -424,7 +424,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
     private static function firstOf(array $fields, string $type): ?array
@@ -439,7 +439,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
     private static function dueDate(array $fields): ?array
@@ -465,7 +465,7 @@ final class RecordQuery
     }
 
     /**
-     * @param list<array{id: int, plain: string, type: string}> $fields
+     * @param list<array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}> $fields
      * @return array{id: int, name: string, plain: string, label: string, type: string, values: list<string>}|null
      */
     private static function party(array $fields): ?array

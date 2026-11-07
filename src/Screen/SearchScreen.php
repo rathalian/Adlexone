@@ -4,20 +4,11 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
-use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
-use Adlexone\Database\Database;
-use Adlexone\Http\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Http\Router;
-use Adlexone\Html\Blocks;
-use Adlexone\Html\Form;
-use Adlexone\Http\View;
-use Adlexone\Text\Wording;
-use Adlexone\Html\Html;
 
 final class SearchScreen
 {
@@ -38,14 +29,14 @@ final class SearchScreen
          */
         $option = Request::query('option');
         switch ($option) {
-            case 'show_item_search' :
-            case 'show_search_results' :
+            case 'find' :
+            case 'results' :
                 if (Page::current()->inApplication()) {
                     Access::require(Permission::APP_ACCESS);
                     ApplicationSearch::open();
                     break;
                 }
-                if ($option === 'show_search_results') {
+                if ($option === 'results') {
                     Access::require(Permission::APP_ACCESS);
                     SearchResults::searchResults();
                     break;
@@ -55,7 +46,7 @@ final class SearchScreen
                 $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
                 SearchForm::showAdvancedItemSearch($filter);
                 break;
-            case 'show_saved_searches' :
+            case 'saved' :
                 Access::require(Permission::APP_ACCESS);
                 $application = Request::query('application');
                 if ($application === '' && Page::current()->inApplication()) {
@@ -63,27 +54,27 @@ final class SearchScreen
                 }
                 SearchLibrary::showSavedSearches($_SESSION['access_user_id'], $application);
                 break;
-            case 'saved_search' :
+            case 'open_saved' :
                 Access::require(Permission::APP_ACCESS);
                 SearchLibrary::savedSearch(Request::queryValue('id'), $_SESSION['access_user_id'], Request::query('global'));
                 break;
-            case 'delete_saved_search' :
+            case 'delete_saved' :
                 Access::require(Permission::APP_ACCESS);
                 SearchLibrary::deleteSavedSearch(Request::queryValue('id'), $_SESSION['access_user_id'], Request::query('scope'));
                 break;
-            case 'quick_search' :
+            case 'run_quick' :
                 Access::require(Permission::APP_ACCESS);
                 SearchForm::quickSearch();
                 break;
-            case 'show_quick_search' :
+            case 'quick' :
                 Access::require(Permission::APP_ACCESS);
                 SearchForm::showQuickSearch();
                 break;
-            case 'edit_saved_search' :
+            case 'edit_saved' :
                 Access::require(Permission::ADMIN_SYSTEM);
                 SearchLibrary::editSavedSearch(Request::queryValue('id'));
                 break;
-            case 'update_saved_search' :
+            case 'update_saved' :
                 Access::require(Permission::ADMIN_SYSTEM);
                 SearchLibrary::updateSavedSearch(Request::queryValue('id'));
                 break;

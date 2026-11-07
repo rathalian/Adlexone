@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
-use Adlexone\Database\SchemaMigrator;
+use Adlexone\Database\Database;
 
 /**
  * Creates a customer folder: SQLite file, config JSON, attachments directory, and optional admin.
@@ -52,9 +52,7 @@ final class Provisioner
         $pdo->exec('PRAGMA busy_timeout = 5000');
         $exists = $pdo->query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users'")->fetchColumn();
         if ($exists === false) {
-            self::applySharedSchema($pdo, $install);
-            $pdo->prepare('INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)')
-                ->execute([SchemaMigrator::version(), time()]);
+            Database::applySharedSchema($pdo);
         }
         if ($admin !== null) {
             $count = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
@@ -197,25 +195,6 @@ final class Provisioner
             throw new \RuntimeException('Cannot write ' . $path);
         }
         @chmod($path, 0600);
-    }
-
-    private static function applySharedSchema(\PDO $pdo, string $install): void
-    {
-        $file = rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'shared_schema.sql';
-        $sql = (string) file_get_contents($file);
-        $sql = preg_replace('/^--.*$/m', '', $sql) ?? $sql;
-        $parts = preg_split('/;\s*(?:\R|$)/', $sql) ?: [];
-        foreach ($parts as $statement) {
-            $statement = trim($statement);
-            if ($statement === '') {
-                continue;
-            }
-            $upper = strtoupper($statement);
-            if ($upper === 'BEGIN TRANSACTION' || $upper === 'COMMIT' || str_starts_with($upper, 'BEGIN')) {
-                continue;
-            }
-            $pdo->exec($statement);
-        }
     }
 
     /**

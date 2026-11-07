@@ -44,9 +44,9 @@ $check(!str_contains($auth, 'function oidcEnabled'), 'AuthConfig no longer defin
 $check(!str_contains($auth, 'function oidcAutoRedirect'), 'AuthConfig no longer defines oidcAutoRedirect');
 $check(!str_contains($auth, 'function providers'), 'AuthConfig no longer defines providers');
 $check(!str_contains($auth, 'function provider'), 'AuthConfig no longer defines provider');
-$check(str_contains($auth, 'AUTH_OIDC_ENABLED'), 'an existing AUTH_OIDC_ENABLED setting still signs in');
-$check(str_contains($auth, 'AUTH_OIDC_AUTO_REDIRECT'), 'an existing AUTH_OIDC_AUTO_REDIRECT setting still signs in');
-$check(str_contains($auth, 'AUTH_OIDC_PROVIDERS_JSON'), 'an existing AUTH_OIDC_PROVIDERS_JSON setting still signs in');
+$check(!str_contains($auth, 'AUTH_OIDC_ENABLED'), 'AuthConfig no longer reads AUTH_OIDC_ENABLED');
+$check(!str_contains($auth, 'AUTH_OIDC_AUTO_REDIRECT'), 'AuthConfig no longer reads AUTH_OIDC_AUTO_REDIRECT');
+$check(!str_contains($auth, 'AUTH_OIDC_PROVIDERS_JSON'), 'AuthConfig no longer reads AUTH_OIDC_PROVIDERS_JSON');
 $check(!str_contains($permission, 'grantAppToAdmins'), 'Permission no longer defines grantAppToAdmins');
 
 foreach ([

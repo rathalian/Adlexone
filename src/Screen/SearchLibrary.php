@@ -5,19 +5,13 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
-use Adlexone\Database\RecordListQuery;
-use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
 use Adlexone\Database\Database;
 use Adlexone\Http\RssFeed;
 use Adlexone\Http\Page;
-use Adlexone\Http\Request;
-use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Text\Wording;
-use Adlexone\Html\Html;
 
 final class SearchLibrary
 {
@@ -47,7 +41,7 @@ final class SearchLibrary
                 $canDeleteGlobal = ($row['user'] == 'all' || $row['user'] == 'system') && Access::canAdministerSite();
                 $canDeleteOwn = (string)$row['user'] === (string)$_SESSION['access_user_id'];
                 if ($canDeleteGlobal || $canDeleteOwn) {
-                    $deleteHref = $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=delete_saved_search';
+                    $deleteHref = $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=delete_saved';
                     if ($canDeleteGlobal) {
                         $deleteHref .= '&scope=global';
                     }
@@ -60,7 +54,7 @@ final class SearchLibrary
                 }
                 if (Access::can(Permission::ADMIN_SYSTEM)) {
                     $actions[] = [
-                        'href' => $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=edit_saved_search',
+                        'href' => $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=edit_saved',
                         'label' => TXT_626,
                     ];
                 }
@@ -77,12 +71,12 @@ final class SearchLibrary
         $toolbar = '';
         $emptyAction = '';
         if (Page::current()->inApplication()) {
-            $searchButton = Blocks::link($base . '&option=show_item_search', 'Search', '', 'btn btn--primary');
+            $searchButton = Blocks::link($base . '&option=find', 'Search', '', 'btn btn--primary');
             if ($rows === []) {
                 $emptyAction = $searchButton;
             } else {
                 $toolbar = '<div class="record-list__tools">'
-                    . Blocks::link($base . '&option=show_item_search', 'Search', '', 'btn btn--primary btn--sm')
+                    . Blocks::link($base . '&option=find', 'Search', '', 'btn btn--primary btn--sm')
                     . '</div>';
             }
         }
@@ -154,7 +148,7 @@ final class SearchLibrary
         }
         $row = $result[0] ?? null;
         if ($row === null) {
-            View::respond(TXT_115, Blocks::link(SearchScreen::address('search', 'option=show_saved_searches'), TXT_313));
+            View::respond(TXT_115, Blocks::link(SearchScreen::address('search', 'option=saved'), TXT_313));
             return;
         }
 
@@ -193,7 +187,7 @@ final class SearchLibrary
             foreach ($itemArray as $id) {
                 $result = Database::rows('SELECT item_id, item_title FROM items WHERE item_id = ?', [(int) ($id['item_id'] ?? $id)]);
                 $item = $result[0] ?? null;
-                $linkArray[] = Blocks::link(SearchScreen::address('records', 'item=' . (int) ($item['item_id'] ?? 0) . '&option=show_item'), '', 'URL');
+                $linkArray[] = Blocks::link(SearchScreen::address('records', 'item=' . (int) ($item['item_id'] ?? 0) . '&option=view'), '', 'URL');
                 $titleArray[] = (string) ($item['item_title'] ?? '');
             }
             RssFeed::send(
@@ -231,7 +225,7 @@ final class SearchLibrary
             return;
         }
 
-        $action = SearchScreen::address('search', 'search=' . $id . '&option=update_saved_search');
+        $action = SearchScreen::address('search', 'search=' . $id . '&option=update_saved');
         $fields = [
             TXT_627 => Form::text('search_name', $row['search_name']),
         ];

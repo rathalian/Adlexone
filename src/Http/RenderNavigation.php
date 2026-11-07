@@ -6,8 +6,6 @@ namespace Adlexone\Http;
 use Adlexone\Auth\Permission;
 use Adlexone\Http\Page;
 use DOMDocument;
-use DOMElement;
-use RuntimeException;
 use function libxml_clear_errors;
 use function libxml_use_internal_errors;
 use Adlexone\Auth\Access;
@@ -280,8 +278,8 @@ final class RenderNavigation
 
     private static function sectionNavGroup(string $href): bool
     {
-        return str_contains($href, 'option=show_item_types')
-            || str_contains($href, 'option=show_saved_searches')
+        return str_contains($href, 'option=choose_type')
+            || str_contains($href, 'option=saved')
             || str_contains($href, 'option=show_announcements')
             || str_contains($href, 'option=details&application_id=')
             || str_contains($href, 'option=navigation&application_id=')

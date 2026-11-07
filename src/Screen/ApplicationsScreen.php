@@ -512,7 +512,7 @@ final class ApplicationsScreen
                 $config[$key] = $previous[$key];
             }
         }
-        if ($catalog[$capability]['config'] === 'saved_search') {
+        if ($catalog[$capability]['config'] === 'open_saved') {
             $searchId = trim((string) (Request::postedValue('search_id') ?? ''));
             if ($searchId === '') {
                 View::respond('Choose a saved search. Create one from a Search link first if the list is empty.', Blocks::link($back, 'Navigation', 'URL'));
@@ -626,7 +626,6 @@ final class ApplicationsScreen
 
     public static function iconSelect(string $name, string $selected, bool $allowEmpty = false): string
     {
-        $selected = Capabilities::renamedIcons()[$selected] ?? $selected;
         if ($selected === '' && !$allowEmpty) {
             $selected = 'ic-grid';
         }

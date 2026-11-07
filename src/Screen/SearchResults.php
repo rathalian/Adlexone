@@ -5,16 +5,10 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Database\RecordListQuery;
-use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
 use Adlexone\Database\Database;
-use Adlexone\Http\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
-use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
-use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Text\Wording;
 use Adlexone\Html\Html;
@@ -76,7 +70,7 @@ final class SearchResults
             : (string)Wording::application('TXT_1', (string)Wording::get('LA_44', 'TXT_44'));
 
         if (empty($ids)) {
-            $again = SearchScreen::address('search', Page::current()->inApplication() ? 'option=show_item_search' : 'option=show_quick_search');
+            $again = SearchScreen::address('search', Page::current()->inApplication() ? 'option=find' : 'option=quick');
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => $heading,
@@ -130,7 +124,7 @@ final class SearchResults
     public static function searchResults($sql = '', array $params = [])
     {
 
-        // Handling accessing the page from option=show_search_results with no POSTed data
+        // Handling accessing the page from option=results with no POSTed data
         if (Request::blankPosted('search') and Request::blankPosted('new_favourite') and Request::posted('item_type_id') == '' and Request::blankPosted('search_type')) {
             View::respond(TXT_548);
             return;

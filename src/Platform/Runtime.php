@@ -12,7 +12,7 @@ use Adlexone\Http\PublicBaseUrl;
  *
  * One install keeps its SQLite file, settings, and uploads in a storage directory
  * chosen at setup (INLAY_STORAGE), or in the original folders beside the code.
- * INLAY_DATA still selects the older layout. A SaaS host sets a stores directory
+ * A SaaS host sets a stores directory
  * and an operator host. Each customer then has their own folder.
  */
 final class Runtime

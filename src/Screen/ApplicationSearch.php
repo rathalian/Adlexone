@@ -344,7 +344,7 @@ final class ApplicationSearch
      */
     private static function href(array $state, bool $run = true, int $page = 1): string
     {
-        $query = ['option' => 'show_item_search'];
+        $query = ['option' => 'find'];
         foreach (['q', 'sk', 'so', 'sg', 'sc', 'su', 'ss', 'sd'] as $key) {
             if (isset($state[$key]) && $state[$key] !== '') {
                 $query[$key] = $state[$key];
@@ -373,7 +373,7 @@ final class ApplicationSearch
         $hidden = '';
         $base = self::baseUrl();
         parse_str((string) parse_url($base, PHP_URL_QUERY), $fixed);
-        $fixed['option'] = 'show_item_search';
+        $fixed['option'] = 'find';
         foreach (['ss', 'sd'] as $key) {
             if (isset($state[$key])) {
                 $fixed[$key] = $state[$key];
@@ -593,7 +593,7 @@ final class ApplicationSearch
                 'illustration' => 'empty-search',
                 'title' => 'No records match',
                 'copy' => 'Remove a filter or use fewer words. Only records you can open are searched.',
-                'action' => '<a class="btn btn--primary" href="' . Html::e(self::baseUrl() . '&option=show_item_search') . '">Clear the search</a>',
+                'action' => '<a class="btn btn--primary" href="' . Html::e(self::baseUrl() . '&option=find') . '">Clear the search</a>',
             ]);
 
             return '<section class="finder__results">' . $head . $body . '</section>';
@@ -677,7 +677,7 @@ final class ApplicationSearch
                 . '<span class="finder__sr">Remove</span></a>';
         }
         if (count($chips) > 1) {
-            $html .= '<a class="finder__clear" href="' . Html::e(self::baseUrl() . '&option=show_item_search') . '">Clear all</a>';
+            $html .= '<a class="finder__clear" href="' . Html::e(self::baseUrl() . '&option=find') . '">Clear all</a>';
         }
 
         return $html;

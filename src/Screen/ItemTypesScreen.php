@@ -86,10 +86,6 @@ final class ItemTypesScreen
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::updateItemType((string) (Request::postedValue('item_type_id') ?? ''));
                 break;
-            case 'manage_item_types':
-                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::showItemTypes();
-                break;
             case 'delete_item_type':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::deleteItemType();
@@ -120,7 +116,7 @@ final class ItemTypesScreen
             $columnArray = ['item_type_id', 'item_type_name', 'user_security', 'enabled'];
             $fieldValues = Database::first('item_types', $columnArray, 'item_type_id = ?', [(int) $itemTypeID]);
             if ($fieldValues === null) {
-                View::respond(TXT_115, Blocks::link(self::url('option=manage_item_types'), TXT_362));
+                View::respond(TXT_115, Blocks::link(self::url(), TXT_362));
                 return;
             }
         }
@@ -280,7 +276,7 @@ final class ItemTypesScreen
             ]);
         }
         \Adlexone\Data\GroupMembership::setItemTypeGroups($typeId, $ids);
-        View::respond($columns['item_type_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_item_types'), TXT_362));
+        View::respond($columns['item_type_name'] . ' ' . TXT_162, Blocks::link(self::url(), TXT_362));
     }
 
     /**
@@ -413,7 +409,7 @@ final class ItemTypesScreen
     public static function updateItemType($itemTypeID)
     {
         $itemTypeID = (int) $itemTypeID;
-        $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
+        $back = Blocks::link(self::url(), TXT_362);
         if (!Database::exists('item_types', 'item_type_id = ?', [$itemTypeID])) {
             View::respond(TXT_115, $back);
             return;
@@ -480,7 +476,7 @@ final class ItemTypesScreen
     public static function deleteItemType(): void
     {
         $itemTypeID = (string)(Request::queryValue('item_type_id') ?? '');
-        $back = Blocks::link(self::url('option=manage_item_types'), TXT_362);
+        $back = Blocks::link(self::url(), TXT_362);
         if ($itemTypeID === '' || !ctype_digit($itemTypeID)) {
             View::respond(TXT_115, $back);
             return;

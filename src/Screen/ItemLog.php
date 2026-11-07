@@ -3,28 +3,10 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
-use Adlexone\Auth\Access;
-use Adlexone\Database\RecordListQuery;
-use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
-use Adlexone\Application\RecordQuery;
-use Adlexone\Application\Rules;
-use Adlexone\Application\WorkflowFields;
-use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
 use Adlexone\Application\Actions;
-use Adlexone\Data\AttachmentUpload;
-use Adlexone\Html\FieldControl;
-use Adlexone\Data\FieldCheck;
-use Adlexone\Data\FieldTypes;
-use Adlexone\Data\FieldValidation;
-use Adlexone\Data\MenuOptions;
-use Adlexone\Data\GroupMembership;
-use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
-use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -42,7 +24,7 @@ final class ItemLog
     {
         $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-        $backHref = ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $showLog . $attachments);
+        $backHref = ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $showLog . $attachments);
         $logField[Wording::get('LA_244', 'TXT_244')] = Form::textarea('log_entry', '', SET_FORM_FIELD_HEIGHT);
         $groupIds = ['0'];
         $groupLabels = ['Everyone'];
@@ -67,7 +49,7 @@ final class ItemLog
         $logField[' '] = $hidden;
         Page::current()->setBody(Form::form(
             Wording::get('LA_243', 'TXT_243'),
-            ItemScreen::recordUrl('option=add_log_entry'),
+            ItemScreen::recordUrl('option=add_note'),
             $logField,
             [
                 Form::button('submit', 'submit_button', TXT_74),
@@ -126,7 +108,7 @@ final class ItemLog
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            View::respond(TXT_248, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
+            View::respond(TXT_248, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $logEntry . $attachments), TXT_262, 'URL'));
             return;
         }
     }

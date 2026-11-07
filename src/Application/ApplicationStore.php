@@ -12,8 +12,6 @@ use Adlexone\Database\Database;
  */
 final class ApplicationStore
 {
-    private const SERVICE_CENTRE_SLUG = 'service-centre';
-
     private static bool $ready = false;
 
     public static function ensureReady(): void
@@ -25,57 +23,12 @@ final class ApplicationStore
         self::$ready = true;
         self::seedIfEmpty();
         self::applyStartingApplications();
-        self::retireServiceCentreLegacy();
-        self::renameServiceCentreWork();
-        self::renameBusinessNav();
         self::addSearchTab();
-        self::renameServiceCentreAnnouncements();
-        self::renameContactCentreCapabilities();
-        self::migrateBuiltInScreenIds();
-        self::refreshIcons();
     }
 
     public static function ensureSchema(): void
     {
-        Database::exec(
-            'CREATE TABLE IF NOT EXISTS applications (
-                application_id INTEGER PRIMARY KEY,
-                slug TEXT NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                hint TEXT NOT NULL DEFAULT "",
-                guide TEXT NOT NULL DEFAULT "",
-                icon TEXT NOT NULL DEFAULT "ic-launch",
-                permission TEXT NOT NULL,
-                enabled INTEGER NOT NULL DEFAULT 1,
-                sort_order INTEGER NOT NULL DEFAULT 0,
-                entry_mode TEXT NOT NULL DEFAULT "shell",
-                settings_json TEXT NOT NULL DEFAULT "{}"
-            )'
-        );
-        if (self::tableExists('applications') && !Database::columnExists('applications', 'settings_json')) {
-            Database::exec('ALTER TABLE applications ADD COLUMN settings_json TEXT NOT NULL DEFAULT "{}"');
-        }
-        if (self::tableExists('applications') && !Database::columnExists('applications', 'guide')) {
-            Database::exec('ALTER TABLE applications ADD COLUMN guide TEXT NOT NULL DEFAULT ""');
-        }
-        Database::exec(
-            'CREATE TABLE IF NOT EXISTS site_setup (
-                choice TEXT NOT NULL PRIMARY KEY,
-                applied_at INTEGER NOT NULL
-            )'
-        );
-        Database::exec(
-            'CREATE TABLE IF NOT EXISTS application_nav (
-                nav_id INTEGER PRIMARY KEY,
-                application_id INTEGER NOT NULL,
-                label TEXT NOT NULL,
-                capability TEXT NOT NULL,
-                permission TEXT NOT NULL DEFAULT "",
-                icon TEXT NOT NULL DEFAULT "",
-                config_json TEXT NOT NULL DEFAULT "{}",
-                sort_order INTEGER NOT NULL DEFAULT 0
-            )'
-        );
+        Database::ensure();
     }
 
     /**
@@ -474,62 +427,7 @@ final class ApplicationStore
     }
 
     /**
-     * Drop the old Service Centre controller name. Saved searches and home
-     * pages follow the application slug.
-     */
-    private static function retireServiceCentreLegacy(): void
-    {
-        if (Database::columnExists('applications', 'legacy_key')) {
-            Database::update('applications', [
-                'legacy_key' => '',
-                'permission' => Permission::APP_ACCESS,
-            ], 'slug = ? AND legacy_key = ?', [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']);
-        }
-        if (self::tableExists('saved_searches')) {
-            Database::update(
-                'saved_searches',
-                ['application' => self::SERVICE_CENTRE_SLUG],
-                'application = ?',
-                ['app_servicecentre_main']
-            );
-        }
-        if (self::tableExists('users')) {
-            Database::run(
-                "UPDATE users SET home_controller = ? WHERE home_controller IN ('app_servicecentre_main', 'app_oneorzerohelpdesk_main')",
-                ['application:' . self::SERVICE_CENTRE_SLUG]
-            );
-        }
-    }
-
-    /**
-     * The Service Centre list is work, and creating an item is New.
-     */
-    private static function renameServiceCentreWork(): void
-    {
-        if (!self::tableExists('application_nav')) {
-            return;
-        }
-        Database::update('application_nav', ['capability' => 'servicecentre.work'], "capability = 'servicecentre.tickets'");
-        Database::run(
-            "UPDATE application_nav SET label = 'Work' WHERE capability = 'servicecentre.work' AND label IN ('Tickets', 'Ticket')"
-        );
-        Database::run(
-            "UPDATE application_nav SET label = 'New'
-             WHERE capability = 'items.create'
-               AND application_id = (SELECT application_id FROM applications WHERE slug = ?)
-               AND label IN ('New ticket', 'New Ticket')",
-            [self::SERVICE_CENTRE_SLUG]
-        );
-        Database::update(
-            'applications',
-            ['hint' => 'Work and announcements'],
-            'slug = ? AND hint = ?',
-            [self::SERVICE_CENTRE_SLUG, 'Tickets and announcements']
-        );
-    }
-
-    /**
-     * Every application that lets people create records also gets a Search tab, once,
+     * An application that lets people create records also gets a Search tab, once,
      * placed after New. The marker keeps a removed tab from coming back.
      */
     private static function addSearchTab(): void
@@ -568,135 +466,6 @@ final class ApplicationStore
             }
             $settings['search_tab_added'] = '1';
             Database::update('applications', ['settings_json' => json_encode($settings, JSON_UNESCAPED_SLASHES)], 'application_id = ?', [$applicationId]);
-        }
-    }
-
-    /**
-     * Work uses a list icon, and the saved-search tab is named Saved.
-     */
-    private static function renameBusinessNav(): void
-    {
-        if (!self::tableExists('application_nav')) {
-            return;
-        }
-        Database::run(
-            "UPDATE application_nav SET icon = 'ic-subjects'
-             WHERE capability IN ('items.work', 'servicecentre.work', 'contact_centre.work')
-               AND icon = 'ic-search'"
-        );
-        Database::run(
-            "UPDATE application_nav SET label = 'Saved'
-             WHERE capability = 'search.saved_list' AND label = 'Searches'"
-        );
-    }
-
-    /**
-     * Announcements live in the Contact Centre function pack.
-     */
-    private static function renameServiceCentreAnnouncements(): void
-    {
-        if (!self::tableExists('application_nav')) {
-            return;
-        }
-        Database::update(
-            'application_nav',
-            ['capability' => 'servicecentre.announcements'],
-            "capability = 'announcements'"
-        );
-    }
-
-    /**
-     * Function packs use contact_centre.* ids under site/apps/.
-     */
-    private static function renameContactCentreCapabilities(): void
-    {
-        if (!self::tableExists('application_nav')) {
-            return;
-        }
-        $map = [
-            'servicecentre.work' => 'contact_centre.work',
-            'servicecentre.tickets' => 'contact_centre.work',
-            'servicecentre.announcements' => 'contact_centre.announcements',
-            'announcements' => 'contact_centre.announcements',
-            'servicecentre.settings' => 'contact_centre.settings',
-        ];
-        foreach ($map as $from => $to) {
-            Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
-        }
-    }
-
-    /**
-     * Older pack screen ids → the current built-in screen ids.
-     */
-    private static function migrateBuiltInScreenIds(): void
-    {
-        if (!self::tableExists('application_nav')) {
-            return;
-        }
-        foreach (ScreenCatalog::ALIASES as $from => $to) {
-            Database::update('application_nav', ['capability' => $to], 'capability = ?', [$from]);
-        }
-    }
-
-    /**
-     * Applications and screen links stored an older icon id. A link that kept the
-     * old default for its screen goes back to the screen's own icon. Anything else
-     * moves to the nearest current icon.
-     */
-    private static function refreshIcons(): void
-    {
-        $renamed = Capabilities::renamedIcons();
-        if (self::tableExists('application_nav')) {
-            $defaults = [
-                'items.work' => ['ic-subjects', 'ic-search'],
-                'items.create' => ['ic-itemtype-add'],
-                'search.quick' => ['ic-quick-search'],
-                'search.advanced' => ['ic-search'],
-                'search.saved' => ['ic-search'],
-                'search.saved_list' => ['ic-search', 'ic-my-ticket-searches'],
-                'announcements.board' => ['ic-announcements'],
-                'app.settings' => ['ic-settings'],
-                'items.counts' => ['ic-search'],
-                'items.owners' => ['ic-my-ticket-searches'],
-                'items.steps' => ['ic-create-ticket'],
-                'items.diary' => ['ic-time'],
-                'items.parties' => ['ic-knowledgebase'],
-                'items.activity' => ['ic-announcements'],
-                'items.files' => ['ic-new-article'],
-                'items.age' => ['ic-time'],
-                'items.register' => ['ic-item-mgmt'],
-                'items.intake' => ['ic-itemtype-add'],
-            ];
-            foreach ($defaults as $capability => $old) {
-                $marks = implode(',', array_fill(0, count($old), '?'));
-                Database::run(
-                    "UPDATE application_nav SET icon = '' WHERE capability = ? AND icon IN ($marks)",
-                    array_merge([$capability], $old)
-                );
-            }
-            foreach ($renamed as $old => $new) {
-                Database::run('UPDATE application_nav SET icon = ? WHERE icon = ?', [$new, $old]);
-            }
-        }
-        if (self::tableExists('applications')) {
-            $showcase = [
-                'matters' => ['ic-knowledgebase', 'ic-briefcase'],
-                'conveyancing' => ['ic-item-mgmt', 'ic-home'],
-                'claims' => ['ic-servicecentre', 'ic-shield'],
-                'repairs' => ['ic-time', 'ic-wrench'],
-                'complaints' => ['ic-create-ticket', 'ic-complaint'],
-                'committee' => ['ic-subjects', 'ic-landmark'],
-                'audit' => ['ic-search', 'ic-audit'],
-                'incidents' => ['ic-announcements', 'ic-alert'],
-                'candidates' => ['ic-my-ticket-searches', 'ic-user'],
-                'contracts' => ['ic-new-article', 'ic-contract'],
-            ];
-            foreach ($showcase as $slug => [$old, $new]) {
-                Database::run('UPDATE applications SET icon = ? WHERE slug = ? AND icon = ?', [$new, $slug, $old]);
-            }
-            foreach ($renamed as $old => $new) {
-                Database::run('UPDATE applications SET icon = ? WHERE icon = ?', [$new, $old]);
-            }
         }
     }
 

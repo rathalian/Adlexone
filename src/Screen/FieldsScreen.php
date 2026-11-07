@@ -114,17 +114,6 @@ final class FieldsScreen
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::deleteCustomField();
                 break;
-            case 'manage_fields':
-            case 'manage_fields_types':
-            case 'new_multilevel_menu_relationship':
-            case 'add_multilevel_menu':
-            case 'update_multilevel_menu':
-            case 'show_multilevel_menu':
-            case 'show_multilevel_menu_items':
-            case 'update_multilevel_menu_items':
-                Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
-                self::showFields();
-                break;
             case 'field_type_search':
                 Access::require(\Adlexone\Auth\Permission::ADMIN_ITEMS);
                 self::showFieldTypeResults();
@@ -154,7 +143,7 @@ final class FieldsScreen
         } else {
             $fieldValues = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
             if ($fieldValues === null) {
-                View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
+                View::respond(TXT_115, Blocks::link(self::url(), TXT_362));
                 return;
             }
             $formAction = self::url('option=update_custom_field');
@@ -231,7 +220,7 @@ final class FieldsScreen
             $parentId = (int)(Request::postedValue('parent_menu_value_id') ?? 0);
             if ($value !== '' && MenuOptions::valueExists($fieldId, $value, $parentId)) {
                 $html = TXT_294;
-                $html .= '<br><br><a href ="' . self::url('option=modify_menu_values&custom_field_id=') . $customFieldID . '" class="URL">' . TXT_31 . '</a>  ';
+                $html .= '<br><br>' . Blocks::link(self::url('option=modify_menu_values&custom_field_id=' . $customFieldID), TXT_31, '', 'URL');
                 Page::current()->setBody($html);
                 return;
             }
@@ -278,7 +267,7 @@ final class FieldsScreen
         }
         $id = Database::insert('custom_fields', $columns);
         Database::update('custom_fields', ['field_reference' => $id], 'custom_field_id = ?', [$id]);
-        View::respond($columns['custom_field_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_fields'), TXT_362));
+        View::respond($columns['custom_field_name'] . ' ' . TXT_162, Blocks::link(self::url(), TXT_362));
     }
 
     /**
@@ -522,7 +511,7 @@ final class FieldsScreen
     public static function updateCustomField($customFieldID)
     {
         $customFieldID = (int) $customFieldID;
-        $back = Blocks::link(self::url('option=manage_fields'), TXT_362);
+        $back = Blocks::link(self::url(), TXT_362);
         if (!Database::exists('custom_fields', 'custom_field_id = ?', [$customFieldID])) {
             View::respond(TXT_115, $back);
             return;
@@ -547,13 +536,13 @@ final class FieldsScreen
     {
         $customFieldID = (string)(Request::queryValue('custom_field_id') ?? '');
         if ($customFieldID === '' || !ctype_digit($customFieldID)) {
-            View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
+            View::respond(TXT_115, Blocks::link(self::url(), TXT_362));
             return;
         }
 
         $row = Database::first('custom_fields', '*', 'custom_field_id = ?', [(int) $customFieldID]);
         if (!$row) {
-            View::respond(TXT_115, Blocks::link(self::url('option=manage_fields'), TXT_362));
+            View::respond(TXT_115, Blocks::link(self::url(), TXT_362));
             return;
         }
 
@@ -561,7 +550,7 @@ final class FieldsScreen
         $type = (string)$row['field_type'];
         $params = [(int) $customFieldID];
         if ((int) ($row['shared'] ?? 0) === 1 && Database::exists('item_type_custom_fields', 'custom_field_id = ?', $params)) {
-            View::respond($name . ' is used by the applications. It stays while a record type uses it.', Blocks::link(self::url('option=manage_fields'), TXT_362));
+            View::respond($name . ' is used by the applications. It stays while a record type uses it.', Blocks::link(self::url(), TXT_362));
             return;
         }
         Database::delete('custom_field_menu_values', 'custom_field_id = ?', $params);
@@ -569,7 +558,7 @@ final class FieldsScreen
         Database::delete('custom_fields', 'custom_field_id = ?', $params);
         \Adlexone\Data\ItemFields::deleteField((int) $customFieldID);
 
-        View::respond($name . ' ' . TXT_47, Blocks::link(self::url('option=manage_fields'), TXT_362));
+        View::respond($name . ' ' . TXT_47, Blocks::link(self::url(), TXT_362));
     }
 
     /**

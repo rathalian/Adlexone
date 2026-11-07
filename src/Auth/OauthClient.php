@@ -45,10 +45,10 @@ final class OauthClient
      */
     public static function handleCallback(string $code, string $state): array
     {
-        $savedState = (string) ($_SESSION['oauth_state'] ?? $_SESSION['oidc_state'] ?? '');
-        $savedNonce = (string) ($_SESSION['oauth_nonce'] ?? $_SESSION['oidc_nonce'] ?? '');
-        $savedVerifier = (string) ($_SESSION['oauth_verifier'] ?? $_SESSION['oidc_verifier'] ?? '');
-        $savedConnection = (string) ($_SESSION['oauth_connection'] ?? $_SESSION['oidc_provider'] ?? '');
+        $savedState = (string) ($_SESSION['oauth_state'] ?? '');
+        $savedNonce = (string) ($_SESSION['oauth_nonce'] ?? '');
+        $savedVerifier = (string) ($_SESSION['oauth_verifier'] ?? '');
+        $savedConnection = (string) ($_SESSION['oauth_connection'] ?? '');
 
         if (
             $savedState === ''
@@ -78,11 +78,7 @@ final class OauthClient
             $_SESSION['oauth_state'],
             $_SESSION['oauth_nonce'],
             $_SESSION['oauth_verifier'],
-            $_SESSION['oauth_connection'],
-            $_SESSION['oidc_state'],
-            $_SESSION['oidc_nonce'],
-            $_SESSION['oidc_verifier'],
-            $_SESSION['oidc_provider']
+            $_SESSION['oauth_connection']
         );
 
         return $claims;

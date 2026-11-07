@@ -36,7 +36,7 @@ check(SetupToken::check($token, $path) === false, 'a removed token cannot be reu
 foreach ([
     'delete' => true,
     'move' => true,
-    'delete_item' => true,
+    'delete_record' => true,
     'move_nav' => true,
     'toggle_rule' => true,
     'duplicate_rule' => true,
@@ -45,7 +45,7 @@ foreach ([
     'create' => true,
     'import' => true,
     'update_owner' => true,
-    'show_item' => false,
+    'view' => false,
     'edit' => false,
     'export' => false,
 ] as $option => $writes) {

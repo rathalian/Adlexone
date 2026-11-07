@@ -66,7 +66,6 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Database\\DB_Result' => __DIR__ . '/../..' . '/src/Database/Database.php',
         'Adlexone\\Database\\Database' => __DIR__ . '/../..' . '/src/Database/Database.php',
         'Adlexone\\Database\\RecordListQuery' => __DIR__ . '/../..' . '/src/Database/RecordListQuery.php',
-        'Adlexone\\Database\\SchemaMigrator' => __DIR__ . '/../..' . '/src/Database/SchemaMigrator.php',
         'Adlexone\\Html\\Accent' => __DIR__ . '/../..' . '/src/Html/Accent.php',
         'Adlexone\\Html\\AppHero' => __DIR__ . '/../..' . '/src/Html/AppHero.php',
         'Adlexone\\Html\\Blocks' => __DIR__ . '/../..' . '/src/Html/Blocks.php',

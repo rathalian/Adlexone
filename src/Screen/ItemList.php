@@ -7,22 +7,9 @@ use Adlexone\Auth\Access;
 use Adlexone\Auth\Role;
 use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
-use Adlexone\Application\RecordQuery;
-use Adlexone\Application\Rules;
-use Adlexone\Application\WorkflowFields;
-use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
-use Adlexone\Application\Actions;
-use Adlexone\Data\AttachmentUpload;
-use Adlexone\Html\FieldControl;
-use Adlexone\Data\FieldCheck;
-use Adlexone\Data\FieldTypes;
-use Adlexone\Data\FieldValidation;
-use Adlexone\Data\MenuOptions;
 use Adlexone\Data\GroupMembership;
-use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Http\Router;
@@ -119,25 +106,27 @@ final class ItemList
                     $itemTypeID = $row['item_type_id'];
                 }
                 $itemId = (int) $row['item_id'];
-                $action = Access::outputIfAllowed('<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>', Permission::RECORDS_EDIT);
-                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>', Permission::RECORDS_ASSIGN);
-                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>', Permission::RECORDS_EDIT);
-                $action .= Access::outputIfAllowed(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'), Permission::APP_ACCESS);
-                $action .= Access::outputIfAllowed(
-                    ' - ' . Blocks::link(
-                        ItemScreen::recordUrl('item=' . $itemId . '&option=delete_item'),
-                        TXT_315,
-                        '',
-                        'URL',
-                        '',
-                        '_parent',
-                        TXT_400
+                $action = implode(' ', array_filter([
+                    Access::outputIfAllowed(Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=files'), TXT_389, 'ic-files', ''), Permission::RECORDS_EDIT),
+                    Access::outputIfAllowed(Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=access'), TXT_28, 'ic-lock', ''), Permission::RECORDS_ASSIGN),
+                    Access::outputIfAllowed(Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=note'), TXT_246, 'ic-note', ''), Permission::RECORDS_EDIT),
+                    Access::outputIfAllowed(Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'ic-external', '', '', '_blank'), Permission::APP_ACCESS),
+                    Access::outputIfAllowed(
+                        Blocks::link(
+                            ItemScreen::recordUrl('item=' . $itemId . '&option=delete_record'),
+                            TXT_315,
+                            'ic-x',
+                            '',
+                            '',
+                            '_parent',
+                            TXT_400
+                        ),
+                        Permission::RECORDS_CONTROL
                     ),
-                    Permission::RECORDS_CONTROL
-                );
+                ]));
                 $listHtml .= Form::fields([
                     Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
-                    Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments)) . '" class="URL">' . Html::e((string) $title) . '</a>',
+                    Wording::get('LA_84', 'TXT_84') => Blocks::link(ItemScreen::recordUrl('item=' . $itemId . '&option=view' . $logEntry . $attachments), (string) $title, '', ''),
                     TXT_225 => date(SET_DATE_FORMAT, $row['create_date']),
                     Wording::get('LA_226', 'TXT_226') => (string)$itemTypeName,
                     TXT_388 => $action,
@@ -170,7 +159,7 @@ final class ItemList
 
         $html = Form::form(
             Wording::get('LA_44', 'TXT_44'),
-            ItemScreen::recordUrl('option=my_items'),
+            ItemScreen::recordUrl('option=mine'),
             ['' => $sortLinks . $listHtml . $paginationHTML . $hidden],
             [],
             ['name' => 'repform', 'id' => 'repform']
@@ -259,7 +248,7 @@ final class ItemList
             $fields[$inApplication ? 'What is this' : Wording::get('LA_66', 'TXT_66')] = Form::select('item_type_id', $valueArray, $displayArray, $defaultItemType);
             Page::current()->setBody(Form::form(
                 $inApplication ? 'New' : Wording::get('LA_46', 'TXT_46'),
-                ItemScreen::recordUrl('option=new_item'),
+                ItemScreen::recordUrl('option=new_record'),
                 $fields,
                 [Form::button('submit', 'submit_button', $inApplication ? 'Continue' : TXT_69)]
             ));

@@ -47,7 +47,7 @@ use Adlexone\Platform\SharedMethods;
 
 /**
  * Paths, then settings. The database is opened only for an installed site.
- * Setup and the operator screen run before SchemaMigrator so a missing
+ * Setup and the operator screen run before the schema is applied, so a missing
  * SQLite file is not created as an empty database on a GET.
  */
 $baseDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR;
@@ -103,7 +103,7 @@ if (Runtime::mode() === Runtime::SUSPENDED || Runtime::mode() === Runtime::UNKNO
 }
 
 // Shared platform schema (app packs must not own tables).
-\Adlexone\Database\SchemaMigrator::migrate();
+\Adlexone\Database\Database::ensure();
 
 /** Start output buffering to prevent headers already sent errors
  */

@@ -42,19 +42,24 @@ namespace Adlexone\Platform {
          * @param string $jsonPath Full path to JSON settings file
          * @throws \Exception if the file cannot be read or parsed
          */
-        public static function loadJsonSettingsToConstants($jsonPath): void
+        public static function loadJsonSettingsToConstants(string $jsonPath): void
         {
             if (!file_exists($jsonPath)) {
                 throw new \Exception("Settings file not found: $jsonPath");
             }
-            $settings = json_decode(file_get_contents($jsonPath), true);
+            $raw = file_get_contents($jsonPath);
+            if ($raw === false) {
+                throw new \Exception("Settings file not found: $jsonPath");
+            }
+            $settings = json_decode($raw, true);
             if (!is_array($settings)) {
                 throw new \Exception("Invalid settings format in: $jsonPath");
             }
             foreach ($settings as $key => $value) {
-                if (!defined($key)) {
-                    define($key, $value);
+                if (!is_string($key) || defined($key)) {
+                    continue;
                 }
+                define($key, $value);
             }
         }
 
@@ -114,14 +119,14 @@ namespace Adlexone\Platform {
          * @param array $associativeArray Associative array to write
          * @return boolean True on success, false on failure
          */
-        public static function writeFileFromArray($path, $fileHeader, $associativeArray): bool
+        public static function writeFileFromArray(string $path, string $fileHeader, array $associativeArray): bool
         {
             $content = $fileHeader . "\n;\n";
 
             foreach ($associativeArray as $key => $item) {
                 $content .= is_array($item)
                     ? "\n[{$key}]\n" . self::formatArrayContent($item)
-                    : self::formatContent($key, $item);
+                    : self::formatContent((string) $key, $item);
             }
 
             if (!($handle = fopen($path, 'w'))) {
@@ -148,7 +153,7 @@ namespace Adlexone\Platform {
         {
             $content = '';
             foreach ($array as $key => $value) {
-                $content .= self::formatContent($key, $value);
+                $content .= self::formatContent((string) $key, $value);
             }
             return $content;
         }
@@ -156,12 +161,15 @@ namespace Adlexone\Platform {
         /**Format content for ini file
          *
          * @param string $key Key
-         * @param string $value Value
+         * @param mixed $value Value
          * @return string Formatted content
          */
-        private static function formatContent($key, $value): string
+        private static function formatContent(string $key, mixed $value): string
         {
-            $value = html_entity_decode($value, ENT_COMPAT, 'UTF-8');
+            if (!is_string($value) && !is_int($value) && !is_float($value)) {
+                $value = '';
+            }
+            $value = html_entity_decode((string) $value, ENT_COMPAT, 'UTF-8');
             return is_numeric($value)
                 ? "{$key} = {$value}\n"
                 : "{$key} = \"{$value}\"\n";
@@ -174,88 +182,31 @@ namespace Adlexone\Platform {
          * @param string $iniFileName Full path to ini file
          * @return array|null Array of constants or null on failure
          */
-        public static function loadConstantFromIni($iniFileName): ?array
+        public static function loadConstantFromIni(string $iniFileName): ?array
         {
             $constants = parse_ini_file($iniFileName);
-            if (!$constants) {
+            if (!is_array($constants) || $constants === []) {
                 trigger_error("Unable to load constants file: $iniFileName", E_USER_WARNING);
                 return null;
             }
 
             foreach ($constants as $key => $value) {
-                if (!define($key, $value)) {
+                if (!is_string($key) || !define($key, $value)) {
                     trigger_error("Failed to define constant: $key", E_USER_WARNING);
                 }
             }
             return $constants;
         }
 
-//        /**
-//         * Creates a distinct ID
-//         *
-//         * @return integer 14 digit distict id
-//         */
-////        public static function DistinctID(): int|string
-//        {
-//            // Combine current epoch time and 2 random numbers to create a
-//            // 12 digit distinct id
-//            return (time() . rand(10, 20) . rand(30, 40));
-//        }
-
-/**
-          * Check if an email address is valid
-          *
-          * @param mixed $address Email Address
-          * @return bool
-          */
-         public static function validEmailAddress($address): bool
-         {
-             return (bool)preg_match(
-                 '/^[-!#$%&\'*+\\.\/0-9=?A-Z^_`a-z{|}~]+@[-!#$%&\'*+\\/0-9=?A-Z^_`a-z{|}~]+\.[-!#$%&\'*+\\.\/0-9=?A-Z^_`a-z{|}~]+$/',
-                 $address
-             );
-         }
-//        /**
-//         * Unset session array
-//         *
-//         * @param array $sessionArray SESSION array
-//         */
-//        public static function unsetSession($sessionArray): void
-//        {
-//            foreach($sessionArray as $a) {
-//                $_SESSION[$a] = '';
-//                unset($_SESSION[$a]);
-//            }
-//        }
-//        /**
-//         * Converts minutes to hours and minutes
-//         *
-//         * @param $minutes Minutes
-//         */
-//        public static function minutesToHours($minutes): string
-//        {
-//            if ($minutes < 0){
-//                $min = Abs($minutes);
-//            }else{
-//                $min = $minutes;
-//            }
-//            $iHours = floor($min / 60);
-//            $minutes = ($min - ($iHours * 60)) / 100;
-//            $tHours = $iHours + $minutes;
-//            if ($minutes < 0){
-//                $tHours = $tHours * (-1);
-//            }
-//            $aHours = explode(".", $tHours);
-//            $iHours = $aHours[0];
-//            if (empty($aHours[1])){
-//                $aHours[1] = "00";
-//            }
-//            $minutes = $aHours[1];
-//            if (strlen($minutes) < 2){
-//                $minutes = $minutes ."0";
-//            }
-//            $tHours = round($iHours,-2) .":". $minutes;
-//            return $tHours;
-//        }
+        /**
+         * Check if an email address is valid.
+         */
+        public static function validEmailAddress(string $address): bool
+        {
+            return preg_match(
+                '/^[-!#$%&\'*+\\.\/0-9=?A-Z^_`a-z{|}~]+@[-!#$%&\'*+\\/0-9=?A-Z^_`a-z{|}~]+\.[-!#$%&\'*+\\.\/0-9=?A-Z^_`a-z{|}~]+$/',
+                $address
+            ) === 1;
+        }
     }
 }

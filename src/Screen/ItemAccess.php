@@ -3,32 +3,15 @@ declare(strict_types=1);
 
 namespace Adlexone\Screen;
 
-use Adlexone\Auth\Access;
-use Adlexone\Database\RecordListQuery;
-use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
 use Adlexone\Application\RecordQuery;
 use Adlexone\Application\Rules;
-use Adlexone\Application\WorkflowFields;
-use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
 use Adlexone\Application\Actions;
-use Adlexone\Data\AttachmentUpload;
-use Adlexone\Html\FieldControl;
-use Adlexone\Data\FieldCheck;
-use Adlexone\Data\FieldTypes;
-use Adlexone\Data\FieldValidation;
-use Adlexone\Data\MenuOptions;
-use Adlexone\Data\GroupMembership;
-use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
-use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
-use Adlexone\Text\Wording;
 use Adlexone\Html\Html;
 
 final class ItemAccess
@@ -59,7 +42,7 @@ final class ItemAccess
     public static function showSecurityAssignment(string $itemID): void
     {
         // Build form action
-        $action = ItemScreen::recordUrl('item=' . $itemID . '&option=update_security');
+        $action = ItemScreen::recordUrl('item=' . $itemID . '&option=update_access');
 
         $groupArray = array_map('strval', \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID));
 
@@ -106,7 +89,7 @@ final class ItemAccess
         Request::setPosted('groups', $ids);
 
         // Execute any configured actions for this update
-        Actions::executeAction($itemID, 'update_item', false);
+        Actions::executeAction($itemID, 'update_record', false);
 
         try {
             \Adlexone\Data\GroupMembership::setItemGroups((int) $itemID, $ids);
@@ -119,7 +102,7 @@ final class ItemAccess
         // Build return URL and render success response via the modern helper
         $logEntry   = (SET_LOG_ENTRY === 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS === 'yes') ? '&attachments=yes' : '';
-        $url = ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments);
+        $url = ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $logEntry . $attachments);
 
         View::respond(TXT_320, Blocks::link($url, TXT_353, 'URL'));
     }

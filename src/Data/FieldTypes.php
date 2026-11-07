@@ -6,9 +6,7 @@ namespace Adlexone\Data;
 /**
  * Custom field types as stored in custom_fields.field_type.
  *
- * The database stores stable type keys (e.g. 'menu'), not form-builder method names, so that renaming a
- * rendering helper never invalidates stored data. Builder-style names written by earlier builds are
- * accepted as aliases and normalised on read.
+ * The database stores stable type keys (e.g. 'menu'), not form-builder method names.
  */
 final class FieldTypes
 {
@@ -22,22 +20,9 @@ final class FieldTypes
     public const EMAIL = 'email';
     public const NUMBER = 'number';
 
-    private const ALIASES = [
-        'buildTextInput'      => self::TEXT_BOX,
-        'buildTextArea'       => self::TEXT_AREA,
-        'buildSelectDropdown' => self::MENU,
-        'buildCheckBox'       => self::CHECK_BOX,
-        'subMenu'             => self::MENU,
-        'subMenuChild'        => self::MENU,
-        'multiLevelMenu'      => self::MENU,
-        'dateTime'            => self::DATETIME,
-        'numeric'             => self::NUMBER,
-    ];
-
     public static function normalise(?string $fieldType): string
     {
-        $fieldType = (string) $fieldType;
-        return self::ALIASES[$fieldType] ?? $fieldType;
+        return trim((string) $fieldType);
     }
 
     /** Name shown on a field list. Stored keys stay as they are. */
@@ -138,25 +123,16 @@ final class FieldTypes
     }
 
     /**
-     * A bound field_type predicate for this type and its legacy aliases.
-     *
-     * $includeSelf adds the type itself. Pass false when the statement is only
-     * rewriting older names, so rows already stored as the current type stay as they are.
+     * A bound field_type predicate for this type.
      *
      * @return array{0: string, 1: list<string>}
      */
-    public static function sqlInList(string $fieldType, bool $includeSelf = true): array
+    public static function sqlInList(string $fieldType): array
     {
-        $names = array_keys(self::ALIASES, $fieldType, true);
-        if ($includeSelf) {
-            array_unshift($names, $fieldType);
-        }
-        $names = array_values(array_unique($names));
-        if ($names === []) {
+        if ($fieldType === '') {
             return ['1 = 0', []];
         }
-        $placeholders = implode(', ', array_fill(0, count($names), '?'));
 
-        return ['field_type IN (' . $placeholders . ')', $names];
+        return ['field_type = ?', [$fieldType]];
     }
 }

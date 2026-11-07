@@ -4,16 +4,10 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
-use Adlexone\Database\RecordListQuery;
-use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Database\Database;
-use Adlexone\Http\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
-use Adlexone\Http\Router;
-use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Text\Wording;
@@ -41,7 +35,7 @@ final class SearchForm
         ];
         Page::current()->setBody(Form::form(
             Wording::application('TXT_62', TXT_376),
-            SearchScreen::address('search', 'option=quick_search'),
+            SearchScreen::address('search', 'option=run_quick'),
             $fields,
             [Form::button('submit', 'search', TXT_3, $javascript)]
         ));
@@ -74,7 +68,7 @@ final class SearchForm
                 View::respond(TXT_548);
                 return;
         }
-        Request::setPosted('search', Request::postedValue('search') ?? 'quick_search');
+        Request::setPosted('search', Request::postedValue('search') ?? 'run_quick');
         SearchResults::searchResults($sql);
     }
 
@@ -210,7 +204,7 @@ final class SearchForm
 
         Page::current()->setBody(Form::form(
             Wording::application('TXT_61', (string)Wording::get('LA_96', 'TXT_96')),
-            SearchScreen::address('search', 'option=show_search_results' . $eventId),
+            SearchScreen::address('search', 'option=results' . $eventId),
             $fields,
             [
                 Form::button('submit', 'search', TXT_3),

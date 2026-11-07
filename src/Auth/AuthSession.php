@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Adlexone\Auth;
 
-use Adlexone\Database\Database;
-
 /**
  * Establishes the session contract the rest of Adlexone already expects.
  * Authorization is permission-based; access_role_id is derived for legacy checks.
@@ -51,10 +49,6 @@ final class AuthSession
             $_SESSION['oauth_nonce'],
             $_SESSION['oauth_verifier'],
             $_SESSION['oauth_connection'],
-            $_SESSION['oidc_state'],
-            $_SESSION['oidc_nonce'],
-            $_SESSION['oidc_verifier'],
-            $_SESSION['oidc_provider'],
             $_SESSION['auth_error']
         );
     }

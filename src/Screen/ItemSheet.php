@@ -5,17 +5,10 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Role;
-use Adlexone\Database\RecordListQuery;
-use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
-use Adlexone\Application\RecordQuery;
 use Adlexone\Application\Rules;
 use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
-use Adlexone\Application\Actions;
-use Adlexone\Data\AttachmentUpload;
 use Adlexone\Html\FieldControl;
 use Adlexone\Data\FieldCheck;
 use Adlexone\Data\FieldTypes;
@@ -24,8 +17,6 @@ use Adlexone\Data\MenuOptions;
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Http\Page;
-use Adlexone\Http\Request;
-use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Http\View;
@@ -146,7 +137,7 @@ final class ItemSheet
         $embedAccess = !$existing && $canEdit;
         if ($existing && $canEdit) {
             $accessDialog = self::recordDialog('access', 'Access', $accessBody, [
-                'action' => ItemScreen::recordUrl('option=update_item'),
+                'action' => ItemScreen::recordUrl('option=update_record'),
                 'submit' => 'Save access',
                 'hidden' => Form::hidden('item_id', (string) $itemId)
                     . Form::hidden('item_type_id', (string) $itemTypeId)
@@ -178,7 +169,7 @@ final class ItemSheet
             $sizeNote = 'Maximum size is ' . (int) SET_MAX_ATTACHMENT . ' MB.';
             if ($existing) {
                 $filesDialog = self::recordDialog('files', 'Files', self::filesBody($list, true), [
-                    'action' => ItemScreen::recordUrl('item=' . $itemId . '&option=add_attachment'),
+                    'action' => ItemScreen::recordUrl('item=' . $itemId . '&option=add_file'),
                     'enctype' => 'multipart/form-data',
                     'submit' => 'Add file',
                 ], $sizeNote);
@@ -235,7 +226,7 @@ final class ItemSheet
                 $embedNotes = !$existing && $canEdit;
                 if ($existing && $canEdit) {
                     $notesDialog = self::recordDialog('notes', 'Notes', self::notesBody($entries, '', true), [
-                        'action' => ItemScreen::recordUrl('option=add_log_entry'),
+                        'action' => ItemScreen::recordUrl('option=add_note'),
                         'submit' => 'Add note',
                         'hidden' => Form::hidden('item_id', (string) $itemId),
                     ]);
@@ -480,7 +471,7 @@ final class ItemSheet
             $groupLabels[] = $name;
         }
 
-        return '<form class="composer" method="post" action="' . Html::e(ItemScreen::recordUrl('option=add_log_entry')) . '">'
+        return '<form class="composer" method="post" action="' . Html::e(ItemScreen::recordUrl('option=add_note')) . '">'
             . \Adlexone\Auth\Csrf::field()
             . Form::hidden('item_id', (string) $itemId) . Form::hidden('from_timeline', '1')
             . '<label class="sr-only" for="composer-note">Add a note to the timeline</label>'
@@ -647,7 +638,7 @@ final class ItemSheet
         $condition = 'WHERE item_type_id = ' . (int) $itemTypeID;
         $row = Database::first('item_types', $columnArray, $condition);
         if (!is_array($row) || ($row['item_type_name'] ?? '') === '' || ($itemTypeFields['item_type_id'] ?? '') === '') {
-            $picker = ItemScreen::recordUrl('option=show_item_types');
+            $picker = ItemScreen::recordUrl('option=choose_type');
             Page::current()->setBody(Blocks::vertical([
                 [
                     'title' => TXT_68,
@@ -859,7 +850,7 @@ final class ItemSheet
         $createHeading = $inApplication
             ? 'New ' . $itemTypeName
             : Wording::get('LA_46', 'TXT_67') . ' — ' . $itemTypeName;
-        $bodyContent = Form::form($createHeading,ItemScreen::recordUrl('option=add_item'),$fields,$buttons,$formOptions);
+        $bodyContent = Form::form($createHeading,ItemScreen::recordUrl('option=add_record'),$fields,$buttons,$formOptions);
         Page::current()->setBody($bodyContent);
     }
 
@@ -944,7 +935,7 @@ final class ItemSheet
                         $groupMembership = implode(', ', $names);
                     }
                     $changeSecurityURL = Blocks::link(
-                        ItemScreen::recordUrl('item=' . (int) $itemID . '&option=change_security'),
+                        ItemScreen::recordUrl('item=' . (int) $itemID . '&option=access'),
                         TXT_268,
                         '',
                         'btn btn--sm'
@@ -1056,14 +1047,14 @@ final class ItemSheet
                             $url = '';
                             if ($value != '') {
                                 $http = (!stristr($value, 'http') and !stristr($value, 'https')) ? 'http://' : '';
-                                $url = ' ' . Blocks::link($http . $value, TXT_480, 'URL', SET_IMAGE_PATH . 'hyperlink.png', '', '_blank');
+                                $url = ' ' . Blocks::link($http . $value, TXT_480, 'ic-external', '', '', '_blank');
                             }
                             $itemField[$row['custom_field_name']] = Form::url('custom_field_' . $row['custom_field_id'], $value) . $url;
                             break;
                         case 'dynamicURL' :
                             $url = '';
                             if ($value != '') {
-                                $url = ' ' . Blocks::link(str_replace('<?php echo INSERT; ?>', $value, $row['data']), TXT_480, 'URL', SET_IMAGE_PATH . 'hyperlink.png', '', '_blank');
+                                $url = ' ' . Blocks::link(str_replace('<?php echo INSERT; ?>', $value, $row['data']), TXT_480, 'ic-external', '', '', '_blank');
                             }
                             $itemField[$row['custom_field_name']] = Form::text('custom_field_' . $row['custom_field_id'], $value) . $url;
                             break;
@@ -1172,7 +1163,7 @@ final class ItemSheet
                 } else {
                     Page::current()->setCrumbs(\Adlexone\Html\Breadcrumb::trail([['label' => $formTitle]]));
                 }
-                $html .= Form::form($formTitle, ItemScreen::recordUrl('option=update_item'), $itemField, $buttons, $formOptions);
+                $html .= Form::form($formTitle, ItemScreen::recordUrl('option=update_record'), $itemField, $buttons, $formOptions);
 
                 //Show transform option
                 if (!$inApplication && Access::canControlRecords()) {
@@ -1197,7 +1188,7 @@ final class ItemSheet
 
                     $transinputArray[TXT_445] = $transformationTypeMenu;
                     $transinputArray[TXT_447] = $itemTypeMenu . $hiddenItemID;
-                    $html .= Form::form(TXT_446,ItemScreen::recordUrl('option=transform_item'),$transinputArray,$transformButton);
+                    $html .= Form::form(TXT_446,ItemScreen::recordUrl('option=transform'),$transinputArray,$transformButton);
                 }
 
                 if ($itemID != '' && defined('APP_COUNT_ITEM_TYPE') && $itemFields['item_type_id'] == APP_COUNT_ITEM_TYPE) {
@@ -1231,25 +1222,6 @@ final class ItemSheet
         }
 
         return Role::levelAtLeast($level, 'assign');
-    }
-    public static function addItem()
-    {
-        ItemWrite::addItem();
-    }
-
-    public static function transformItem($itemID, $transformType, $targetItemTypeID)
-    {
-        ItemWrite::transformItem($itemID, $transformType, $targetItemTypeID);
-    }
-
-    public static function updateItem($itemID)
-    {
-        ItemWrite::updateItem($itemID);
-    }
-
-    public static function deleteItem($itemID)
-    {
-        ItemWrite::deleteItem($itemID);
     }
 
 }

@@ -47,7 +47,6 @@ return array(
     'Adlexone\\Database\\DB_Result' => $baseDir . '/src/Database/Database.php',
     'Adlexone\\Database\\Database' => $baseDir . '/src/Database/Database.php',
     'Adlexone\\Database\\RecordListQuery' => $baseDir . '/src/Database/RecordListQuery.php',
-    'Adlexone\\Database\\SchemaMigrator' => $baseDir . '/src/Database/SchemaMigrator.php',
     'Adlexone\\Html\\Accent' => $baseDir . '/src/Html/Accent.php',
     'Adlexone\\Html\\AppHero' => $baseDir . '/src/Html/AppHero.php',
     'Adlexone\\Html\\Blocks' => $baseDir . '/src/Html/Blocks.php',

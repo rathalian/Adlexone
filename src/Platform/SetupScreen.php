@@ -8,6 +8,7 @@ use Adlexone\Http\Request;
 use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
 use Adlexone\Http\Page;
+use Adlexone\Theme\Theme;
 
 /**
  * First visit for a site that has no users yet.
@@ -29,7 +30,7 @@ final class SetupScreen
 
     public static function handle(): void
     {
-        self::theme();
+        Theme::defineInstallDefaults();
         $paths = Runtime::paths();
         $hosted = ($paths['stores'] ?? '') !== '';
         $error = '';
@@ -1092,18 +1093,5 @@ final class SetupScreen
     private static function saveState(array $state): void
     {
         $_SESSION[self::SESSION_KEY] = $state;
-    }
-
-    private static function theme(): void
-    {
-        if (!defined('SET_DEFAULT_THEME')) {
-            define('SET_DEFAULT_THEME', 'inlay-slate');
-        }
-        if (!defined('SET_DEFAULT_LANGUAGE')) {
-            define('SET_DEFAULT_LANGUAGE', 'English');
-        }
-        if (!defined('SET_THEME')) {
-            define('SET_THEME', 'inlay-slate');
-        }
     }
 }

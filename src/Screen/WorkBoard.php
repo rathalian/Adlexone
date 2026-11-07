@@ -5,19 +5,13 @@ namespace Adlexone\Screen;
 
 use Adlexone\Http\Request;
 
-use Adlexone\Application\ApplicationStore;
 use Adlexone\Application\RecordQuery;
-use Adlexone\Application\ScreenCatalog;
 use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
-use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
 use Adlexone\Database\Database;
-use Adlexone\Data\FieldTypes;
 use Adlexone\Data\FieldValidation;
 use Adlexone\Http\Page;
-use Adlexone\Http\Router;
-use Adlexone\Html\Blocks;
 use Adlexone\Html\Html;
 use Adlexone\Html\Presence;
 
@@ -181,7 +175,7 @@ final class WorkBoard
             Request::setPosted($dueWrite['key'], $dueWrite['value']);
             $payload[$dueWrite['key']] = $dueWrite['value'];
         }
-        \Adlexone\Application\Rules::run($itemId, 'update_item');
+        \Adlexone\Application\Rules::run($itemId, 'update_record');
         ItemFields::saveFromArray($itemId, $payload);
 
         $values = WorkScreen::workStatusValues($ids, (int) $field['id']);
@@ -248,7 +242,7 @@ final class WorkBoard
                 Request::setPosted($dueWrite['key'], $dueWrite['value']);
                 $payload[$dueWrite['key']] = $dueWrite['value'];
             }
-            \Adlexone\Application\Rules::run($itemId, 'update_item');
+            \Adlexone\Application\Rules::run($itemId, 'update_record');
             ItemFields::saveFromArray($itemId, $payload);
         }
 

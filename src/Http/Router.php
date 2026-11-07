@@ -35,58 +35,53 @@ final class Router
 
     /** @var list<string> */
     private const ITEM_OPTIONS = [
-        'my_items',
-        'show_item_types',
-        'new_item',
-        'add_item',
-        'show_item',
-        'log_entry',
-        'add_log_entry',
-        'delete_log',
-        'update_item',
+        'mine',
+        'choose_type',
+        'new_record',
+        'add_record',
+        'view',
+        'note',
+        'add_note',
+        'delete_note',
+        'update_record',
         'update_owner',
-        'change_security',
-        'update_security',
-        'show_attachments',
-        'add_attachment',
-        'download_attachment',
-        'delete_attachment',
-        'delete_item',
-        'transform_item',
+        'access',
+        'update_access',
+        'files',
+        'add_file',
+        'download_file',
+        'delete_file',
+        'delete_record',
+        'transform',
     ];
 
     /** @var list<string> */
     private const SEARCH_OPTIONS = [
-        'show_item_search',
-        'show_search_results',
-        'show_saved_searches',
-        'saved_search',
-        'delete_saved_search',
-        'quick_search',
-        'show_quick_search',
-        'edit_saved_search',
-        'update_saved_search',
+        'find',
+        'results',
+        'saved',
+        'open_saved',
+        'delete_saved',
+        'run_quick',
+        'quick',
+        'edit_saved',
+        'update_saved',
     ];
 
-    /**
-     * Public name => canonical screen key.
-     *
-     * @var array<string, string>
-     */
-    private const ALIASES = [
-        'print' => 'full_page_view',
-        'records' => 'records',
-        'search' => 'search',
-        'activity' => 'home_activity',
-        'assigned' => 'home_assigned',
-        'applications' => 'manage_applications',
-        'builder' => 'manage_builder',
-        'fields' => 'manage_fields',
-        'record-types' => 'manage_item_types',
-        'items' => 'manage_items',
-        'rules' => 'manage_actions',
-        'security' => 'manage_security',
-        'settings' => 'manage_settings',
+    /** @var list<string> */
+    private const MANAGE = [
+        'print',
+        'records',
+        'search',
+        'activity',
+        'assigned',
+        'applications',
+        'builder',
+        'fields',
+        'record-types',
+        'rules',
+        'security',
+        'settings',
     ];
 
     public static function requested(): string
@@ -105,12 +100,12 @@ final class Router
 
     public static function matches(string $name): bool
     {
-        return self::canonical(self::requested()) === self::canonical($name);
+        return self::requested() === self::queryName($name);
     }
 
     public static function bare(string $name): bool
     {
-        return self::canonical($name) === 'full_page_view';
+        return self::queryName($name) === 'print';
     }
 
     /**
@@ -122,14 +117,14 @@ final class Router
         $item = Request::query('item');
         if ($item !== '') {
             Request::fill('item_id', $item);
-            Request::fill('option', 'show_item');
+            Request::fill('option', 'view');
 
             return self::ITEMS;
         }
         $search = Request::query('search');
         if ($search !== '') {
             Request::fill('id', $search);
-            Request::fill('option', 'saved_search');
+            Request::fill('option', 'open_saved');
 
             return self::SEARCH;
         }
@@ -213,7 +208,7 @@ final class Router
             return self::page();
         }
         $name = self::queryName($stored);
-        if ($name !== '' && isset(self::ALIASES[$name])) {
+        if ($name !== '' && self::isPublicManage($name)) {
             return self::manageUrl($name);
         }
 
@@ -223,27 +218,7 @@ final class Router
     public static function open(string $name): void
     {
         Request::prepare();
-        $canonical = self::canonical(self::queryName($name));
-        if ($canonical === 'manage_items') {
-            $option = Request::query('option');
-            $typeOptions = [
-                'new_item_type',
-                'add_item_type',
-                'modify_item_type',
-                'update_item_type',
-                'manage_item_types',
-                'delete_item_type',
-            ];
-            if (in_array($option, $typeOptions, true)) {
-                Request::set('manage', 'record-types');
-                self::open('manage_item_types');
-                return;
-            }
-            Request::set('manage', 'fields');
-            Request::fill('option', 'manage_fields');
-            self::open('manage_fields');
-            return;
-        }
+        $canonical = self::queryName($name);
         $handler = self::handler($canonical);
         if ($handler === null) {
             View::respond('This page is not here.');
@@ -275,7 +250,7 @@ final class Router
         }
 
         return in_array($option, [
-            'add', 'update', 'delete', 'move', 'create', 'import',
+            'add', 'update', 'delete', 'move', 'create', 'import', 'transform',
             'toggle_rule', 'duplicate_rule', 'try_rule', 'run_rule',
         ], true);
     }
@@ -293,15 +268,15 @@ final class Router
             HomeDashboard::ACTIVITY => [HomeScreen::class, 'activity'],
             HomeDashboard::ASSIGNED => [HomeScreen::class, 'assigned'],
             'palette' => [PaletteScreen::class, 'open'],
-            'full_page_view' => [PrintScreen::class, 'open'],
+            'print' => [PrintScreen::class, 'open'],
             'application' => [ApplicationScreen::class, 'open'],
-            'manage_applications' => [ApplicationsScreen::class, 'open'],
-            'manage_builder' => [BuilderScreen::class, 'open'],
-            'manage_fields' => [FieldsScreen::class, 'open'],
-            'manage_item_types' => [ItemTypesScreen::class, 'open'],
-            'manage_actions' => [RulesScreen::class, 'open'],
-            'manage_security' => [SecurityScreen::class, 'open'],
-            'manage_settings' => [SiteSettingsScreen::class, 'open'],
+            'applications' => [ApplicationsScreen::class, 'open'],
+            'builder' => [BuilderScreen::class, 'open'],
+            'fields' => [FieldsScreen::class, 'open'],
+            'record-types' => [ItemTypesScreen::class, 'open'],
+            'rules' => [RulesScreen::class, 'open'],
+            'security' => [SecurityScreen::class, 'open'],
+            'settings' => [SiteSettingsScreen::class, 'open'],
             self::ITEMS => [ItemScreen::class, 'open'],
             self::SEARCH => [SearchScreen::class, 'open'],
             default => null,
@@ -316,19 +291,14 @@ final class Router
         if (Request::has('search')) {
             Request::fill('id', Request::query('search'));
         }
-        if ($canonical === 'full_page_view' && Request::has('item_id')) {
-            Request::fill('option', 'print_item');
+        if ($canonical === 'print' && Request::has('item_id')) {
+            Request::fill('option', 'print');
         }
     }
 
     private static function isPublicManage(string $name): bool
     {
-        return $name === 'palette' || isset(self::ALIASES[$name]);
-    }
-
-    private static function canonical(string $name): string
-    {
-        return self::ALIASES[$name] ?? $name;
+        return $name === 'palette' || in_array($name, self::MANAGE, true);
     }
 
     private static function queryName(string $name): string
