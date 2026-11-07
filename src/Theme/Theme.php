@@ -22,15 +22,9 @@ final class Theme
         'inlay-emerald' => 'Emerald',
     ];
 
-    /** Former slug kept so saved user/settings values still resolve. */
-    private const ALIASES = [
-        'new' => 'inlay-stone',
-    ];
-
     public static function canonicalize(string $theme): string
     {
-        $theme = trim($theme);
-        return self::ALIASES[$theme] ?? $theme;
+        return trim($theme);
     }
 
     /**

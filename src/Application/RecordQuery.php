@@ -266,7 +266,7 @@ final class RecordQuery
         $key = 'custom_field_' . $fieldId;
         $previous = $_POST[$key] ?? null;
         $_POST[$key] = $value;
-        Rules::run($itemId, 'update_item');
+        Rules::run($itemId, 'update_record');
         ItemFields::saveFromArray($itemId, [$key => $value]);
         if ($previous === null) {
             unset($_POST[$key]);
@@ -282,7 +282,7 @@ final class RecordQuery
         }
         $previous = $_POST['user_security'] ?? null;
         $_POST['user_security'] = (string) $userId;
-        Rules::run($itemId, 'update_item');
+        Rules::run($itemId, 'update_record');
         Database::update('items', ['user_security' => $userId], 'item_id = ?', [$itemId]);
         if ($previous === null) {
             unset($_POST['user_security']);

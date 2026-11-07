@@ -18,8 +18,8 @@ final class AuthRouter
             match ($action) {
                 'logoff' => self::logoff(),
                 'local' => self::local(),
-                'oauth_start', 'oidc_start' => self::oauthStart(),
-                'oauth_callback', 'oidc_callback' => self::oauthCallback(),
+                'oauth_start' => self::oauthStart(),
+                'oauth_callback' => self::oauthCallback(),
                 default => self::options(),
             };
         } catch (AuthException $e) {
@@ -124,7 +124,7 @@ final class AuthRouter
             throw new AuthException('OAuth sign-in did not complete. Please try again.');
         }
 
-        $connectionId = (string) ($_SESSION['oauth_connection'] ?? $_SESSION['oidc_provider'] ?? '');
+        $connectionId = (string) ($_SESSION['oauth_connection'] ?? '');
         $connection = AuthConfig::connection($connectionId);
         if ($connection === null) {
             throw new AuthException('That OAuth connection is not configured.');

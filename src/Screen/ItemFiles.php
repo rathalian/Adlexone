@@ -36,7 +36,7 @@ final class ItemFiles
         foreach ($rows as $row) {
             $stored = (string) ($row['file_name'] ?? '');
             $label = self::attachmentDisplayName($stored);
-            $href = ItemScreen::recordUrl('option=download_attachment&id=' . (int) ($row['id'] ?? 0));
+            $href = ItemScreen::recordUrl('option=download_file&id=' . (int) ($row['id'] ?? 0));
             $bytes = (int) ($row['file_size'] ?? 0);
             $size = $bytes < 1000 ? $bytes . ' bytes' : (string) round($bytes / 1000) . ' KB';
             $meta = trim((string) ($row['file_type'] ?? ''))
@@ -45,7 +45,7 @@ final class ItemFiles
             $html .= '<li class="file-lines__item"><a class="record-link" href="' . Html::e($href) . '">' . Html::e($label) . '</a>'
                 . '<span class="file-lines__meta">' . Html::e($meta) . '</span>';
             if ($canDelete) {
-                $delete = ItemScreen::recordUrl('item=' . rawurlencode($itemID) . '&option=delete_attachment&id=' . (int) ($row['id'] ?? 0));
+                $delete = ItemScreen::recordUrl('item=' . rawurlencode($itemID) . '&option=delete_file&id=' . (int) ($row['id'] ?? 0));
                 $html .= '<a class="btn btn--sm btn--danger" href="' . Html::e($delete) . '"' . Form::confirmData((string) TXT_400) . '>Remove</a>';
             }
             $html .= '</li>';
@@ -101,7 +101,7 @@ final class ItemFiles
             $actions = [];
             if ($canDelete) {
                 $actions[] = [
-                    'href' => ItemScreen::recordUrl('item=' . $itemID . '&option=delete_attachment&id=' . $row['id']),
+                    'href' => ItemScreen::recordUrl('item=' . $itemID . '&option=delete_file&id=' . $row['id']),
                     'label' => TXT_47,
                     'tone' => 'danger',
                     'confirm' => TXT_400,
@@ -109,7 +109,7 @@ final class ItemFiles
             }
             $rows[] = [
                 'name' => self::attachmentDisplayName((string) $row['file_name']),
-                'href' => ItemScreen::recordUrl('option=download_attachment&id=' . $row['id']),
+                'href' => ItemScreen::recordUrl('option=download_file&id=' . $row['id']),
                 'cells' => [
                     'type' => (string)$row['file_type'],
                     'size' => (string)round(((int)$row['file_size']) / 1000),
@@ -137,14 +137,14 @@ final class ItemFiles
 
         $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-        $backHref = ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $showLog . $attachments);
+        $backHref = ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $showLog . $attachments);
         $fields = [
             '' => $list,
             TXT_393 => Form::file('attachment', (string) ((int) SET_MAX_ATTACHMENT * 1000000)),
         ];
         Page::current()->setBody(Form::form(
             TXT_389,
-            ItemScreen::recordUrl('item=' . $itemID . '&option=add_attachment'),
+            ItemScreen::recordUrl('item=' . $itemID . '&option=add_file'),
             $fields,
             [
                 Form::button('submit', 'submit_button', TXT_74),

@@ -24,7 +24,7 @@ final class ItemLog
     {
         $showLog = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
-        $backHref = ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $showLog . $attachments);
+        $backHref = ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $showLog . $attachments);
         $logField[Wording::get('LA_244', 'TXT_244')] = Form::textarea('log_entry', '', SET_FORM_FIELD_HEIGHT);
         $groupIds = ['0'];
         $groupLabels = ['Everyone'];
@@ -49,7 +49,7 @@ final class ItemLog
         $logField[' '] = $hidden;
         Page::current()->setBody(Form::form(
             Wording::get('LA_243', 'TXT_243'),
-            ItemScreen::recordUrl('option=add_log_entry'),
+            ItemScreen::recordUrl('option=add_note'),
             $logField,
             [
                 Form::button('submit', 'submit_button', TXT_74),
@@ -108,7 +108,7 @@ final class ItemLog
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            View::respond(TXT_248, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
+            View::respond(TXT_248, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $logEntry . $attachments), TXT_262, 'URL'));
             return;
         }
     }

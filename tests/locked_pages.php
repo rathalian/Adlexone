@@ -49,12 +49,12 @@ $check(Router::applicationUrl('publishing') === '?application=publishing', 'Publ
 
 $load(['manage' => 'records', 'item' => '12']);
 $check(Router::engine() === Router::ITEMS, 'opening a record stays on the item screen');
-$check(Request::query('option') === 'show_item', 'opening a record still uses show_item');
+$check(Request::query('option') === 'view', 'opening a record still uses view');
 
 $itemOptions = [
-    'my_items', 'show_item_types', 'new_item', 'add_item', 'show_item', 'log_entry', 'add_log_entry',
-    'delete_log', 'update_item', 'update_owner', 'change_security', 'update_security', 'show_attachments',
-    'add_attachment', 'download_attachment', 'delete_attachment', 'delete_item', 'transform_item',
+    'mine', 'choose_type', 'new_record', 'add_record', 'view', 'note', 'add_note',
+    'delete_note', 'update_record', 'update_owner', 'access', 'update_access', 'files',
+    'add_file', 'download_file', 'delete_file', 'delete_record', 'transform',
 ];
 foreach ($itemOptions as $option) {
     $load(['manage' => 'records', 'option' => $option]);
@@ -62,8 +62,8 @@ foreach ($itemOptions as $option) {
 }
 
 $searchOptions = [
-    'show_item_search', 'show_search_results', 'show_saved_searches', 'saved_search', 'delete_saved_search',
-    'quick_search', 'show_quick_search', 'edit_saved_search', 'update_saved_search',
+    'find', 'results', 'saved', 'open_saved', 'delete_saved',
+    'run_quick', 'quick', 'edit_saved', 'update_saved',
 ];
 foreach ($searchOptions as $option) {
     $load(['manage' => 'search', 'option' => $option]);

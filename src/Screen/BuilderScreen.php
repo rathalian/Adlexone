@@ -66,7 +66,6 @@ final class BuilderScreen
         if ((Request::postedValue('icon') ?? '') === '') {
             $icon = (string) ($blueprints[$blueprint]['icon'] ?? 'ic-grid');
         }
-        $icon = Capabilities::renamedIcons()[$icon] ?? $icon;
         if (!in_array($icon, Capabilities::icons(), true)) {
             $icon = 'ic-grid';
         }

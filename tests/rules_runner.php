@@ -245,7 +245,7 @@ $groupRule = Rules::add(1, [
 
 $_SESSION['access_user_id'] = 1;
 $_POST = [];
-Rules::run(1, 'update_item');
+Rules::run(1, 'update_record');
 
 $status = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [1, 7]);
 check((string) ($status['value'] ?? '') === 'Closed', 'cascade set the field to Closed');
@@ -303,7 +303,7 @@ $stampRule = Rules::add(1, [
         ['outcome' => Rules::OUTCOME_ANNOUNCE, 'subject' => 'Opened: ITEM_TITLE', 'body' => 'ITEM_TITLE has been opened.'],
     ],
 ]);
-Rules::run(2, 'update_item');
+Rules::run(2, 'update_record');
 $stamped = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [2, 8]);
 check((string) ($stamped['value'] ?? '') === Rules::today(), 'stamp writes today\'s date');
 $notice = Database::first('announcements', ['subject', 'message', 'application'], 'application = ?', ['complaints']);
@@ -337,7 +337,7 @@ $ownerMail = Rules::add(1, [
 ]);
 $_SESSION['access_user_id'] = 1;
 $_POST = [];
-Rules::run(3, 'update_item');
+Rules::run(3, 'update_record');
 $ownerRun = Database::first('application_rule_runs', ['detail'], 'rule_id = ?', [$ownerMail]);
 $ownerDetail = (string) ($ownerRun['detail'] ?? '');
 check(str_contains($ownerDetail, 'ada@example.com'), 'the owner is emailed when they made the change');
@@ -376,7 +376,7 @@ $_POST = [
     'custom_field_9' => 'Decide the request.',
     'custom_field_10' => '',
 ];
-Rules::run(4, 'update_item');
+Rules::run(4, 'update_record');
 \Adlexone\Data\ItemFields::saveFromArray(4, $_POST);
 $next = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [4, 9]);
 $stampedOn = Database::first('item_field_values', ['value'], 'item_id = ? AND custom_field_id = ?', [4, 10]);

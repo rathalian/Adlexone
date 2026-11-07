@@ -27,7 +27,7 @@ $load = static function (array $query): void {
 $load([
     'controller' => 'item_management_manage',
     'subcontroller' => 'item_management_manage',
-    'option' => 'my_items',
+    'option' => 'mine',
 ]);
 $check(Request::query('manage') === '', 'a controller address is not copied onto manage');
 $check(Router::requested() === 'home', 'a controller address opens home');
@@ -38,43 +38,41 @@ $check(Router::requested() === 'home', 'a controller alias does not open that ma
 $load(['screen' => 'palette']);
 $check(Router::requested() === 'home', 'screen is not an address');
 
-$load(['engine' => 'items', 'option' => 'my_items']);
+$load(['engine' => 'items', 'option' => 'mine']);
 $check(Request::query('manage') === '', 'engine is not an address');
 $check(Router::requested() === 'home', 'engine does not choose the page');
 
-$load(['subcontroller' => 'search_management_manage', 'option' => 'show_quick_search']);
+$load(['subcontroller' => 'search_management_manage', 'option' => 'quick']);
 $check(Router::requested() === 'home', 'subcontroller does not choose the page');
 
-$load(['manage' => 'records', 'option' => 'my_items']);
+$load(['manage' => 'records', 'option' => 'mine']);
 $check(Router::requested() === 'records', 'manage=records asks for records');
 $check(Router::matches(Router::ITEMS), 'manage=records opens the item screen');
-$check(Router::engine() === Router::ITEMS, 'my_items selects the item screen');
+$check(Router::engine() === Router::ITEMS, 'mine selects the item screen');
 
 $load(['manage' => 'records', 'item' => '44']);
 $check(Router::engine() === Router::ITEMS, 'item selects the item screen');
 $check(Request::query('item_id') === '44', 'item is copied to the internal item id');
-$check(Request::query('option') === 'show_item', 'item opens the record');
+$check(Request::query('option') === 'view', 'item opens the record');
 
 $load(['manage' => 'records', 'item_id' => '44']);
 $check(Router::engine() === null, 'item_id alone does not select the record');
 
 $load(['manage' => 'items']);
-$check(Router::requested() === 'items', 'manage=items keeps the fields name');
-$check(Router::matches('manage_items'), 'manage=items opens Fields');
-$check(!Router::matches(Router::ITEMS), 'manage=items does not open the record list');
+$check(Router::requested() === 'home', 'manage=items opens home');
 
 $load(['manage' => 'print', 'item' => '44']);
-$check(Router::matches('full_page_view'), 'manage=print opens the print screen');
+$check(Router::matches('print'), 'manage=print opens the print screen');
 
 $load(['manage' => 'activity']);
-$check(Router::matches('home_activity'), 'manage=activity opens recent activity');
+$check(Router::matches('activity'), 'manage=activity opens recent activity');
 
 $load(['manage' => 'assigned', 'focus' => 'overdue']);
-$check(Router::matches('home_assigned'), 'manage=assigned opens assigned work');
+$check(Router::matches('assigned'), 'manage=assigned opens assigned work');
 $check(Request::query('focus') === 'overdue', 'a screen filter stays on the query');
 
 $load(['manage' => 'record-types']);
-$check(Router::matches('manage_item_types'), 'manage=record-types opens record types');
+$check(Router::matches('record-types'), 'manage=record-types opens record types');
 $load(['manage' => 'item-types']);
 $check(Router::requested() === 'home', 'manage=item-types does not open record types');
 
@@ -89,7 +87,7 @@ foreach ([
     'home_assigned' => 'assigned work',
     'manage_fields' => 'Fields',
     'manage_security' => 'People',
-    'manage_items' => 'Fields',
+    'items' => 'records',
 ] as $internal => $screen) {
     $load(['manage' => $internal]);
     $check(Router::requested() === 'home', 'manage=' . $internal . ' does not open ' . $screen);
@@ -101,12 +99,12 @@ $check(Router::manageUrl('activity', 'scope=mine') === '?manage=activity&scope=m
 $check(Router::manageUrl('assigned', 'focus=overdue') === '?manage=assigned&focus=overdue', 'assigned keeps focus after the place');
 $check(Router::manageUrl('palette') === '?manage=palette', 'palette is a manage address');
 $check(Router::manageUrl('print', 'item=44') === '?manage=print&item=44', 'print is its own place');
-$check(Router::manageUrl('search', 'option=show_quick_search') === '?manage=search&option=show_quick_search', 'a search action stays on manage=search');
+$check(Router::manageUrl('search', 'option=quick') === '?manage=search&option=quick', 'a search action stays on manage=search');
 
 $load([
     'application' => 'publishing',
     'nav' => '1',
-    'option' => 'show_item',
+    'option' => 'view',
     'item' => '44',
 ]);
 $check(Request::query('manage') === '', 'an application address is not copied onto manage');

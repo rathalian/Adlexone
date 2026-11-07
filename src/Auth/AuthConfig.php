@@ -24,13 +24,13 @@ final class AuthConfig
 
     public static function oauthEnabled(): bool
     {
-        return self::flagAny(['AUTH_OAUTH_ENABLED', 'AUTH_OIDC_ENABLED'], false)
+        return self::flagAny(['AUTH_OAUTH_ENABLED'], false)
             && count(self::connections()) > 0;
     }
 
     public static function oauthAutoRedirect(): bool
     {
-        return self::flagAny(['AUTH_OAUTH_AUTO_REDIRECT', 'AUTH_OIDC_AUTO_REDIRECT'], false);
+        return self::flagAny(['AUTH_OAUTH_AUTO_REDIRECT'], false);
     }
 
     /**
@@ -38,7 +38,7 @@ final class AuthConfig
      */
     public static function connections(): array
     {
-        $raw = self::stringAny(['AUTH_OAUTH_CONNECTIONS_JSON', 'AUTH_OIDC_PROVIDERS_JSON'], '[]');
+        $raw = self::stringAny(['AUTH_OAUTH_CONNECTIONS_JSON'], '[]');
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
             return [];

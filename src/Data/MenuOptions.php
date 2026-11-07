@@ -14,8 +14,7 @@ use Adlexone\Html\Measure;
  * One menu model for custom fields.
  *
  * Options are a tree (parent_menu_value_id = 0 is the top level). A flat menu is a tree
- * with no children. Nested choices are further levels of the same menu. Older submenu,
- * submenu-child, and multi-level menu records are folded into this tree on first use.
+ * with no children. Nested choices are further levels of the same menu.
  */
 final class MenuOptions
 {
@@ -42,11 +41,6 @@ final class MenuOptions
         if (!self::tableExists('custom_fields') || !self::tableExists('custom_field_menu_values')) {
             return;
         }
-        self::ensureParentColumn();
-        self::importCommaChildren();
-        self::importMultiLevelMenus();
-        [$clause, $params] = FieldTypes::sqlInList(FieldTypes::MENU, false);
-        Database::run("UPDATE custom_fields SET field_type = 'menu' WHERE {$clause}", $params);
         self::loadLinks();
     }
 
@@ -347,192 +341,6 @@ final class MenuOptions
         $list = implode(', ', array_map(static fn(int $id): string => (string)$id, $ids));
         Database::run("DELETE FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId . " AND menu_value_id IN (" . $list . ")");
         unset(self::$nodeCache[$fieldId]);
-    }
-
-    private static function ensureParentColumn(): void
-    {
-        if (Database::columnExists('custom_field_menu_values', 'parent_menu_value_id')) {
-            return;
-        }
-        Database::exec('ALTER TABLE custom_field_menu_values ADD parent_menu_value_id INTEGER NOT NULL DEFAULT 0');
-    }
-
-    private static function importCommaChildren(): void
-    {
-        // SchemaMigrator drops this legacy column after import; skip when gone.
-        if (!Database::columnExists('custom_field_menu_values', 'sub_menu_values')) {
-            return;
-        }
-        $rows = Database::rows(
-            "SELECT menu_value_id, custom_field_id, sub_menu_values FROM custom_field_menu_values WHERE sub_menu_values IS NOT NULL AND sub_menu_values <> ''"
-        );
-        foreach ($rows as $row) {
-            $parentId = (int)$row['menu_value_id'];
-            $fieldId = (int)$row['custom_field_id'];
-            $existingChild = Database::row(
-                "SELECT menu_value_id FROM custom_field_menu_values WHERE parent_menu_value_id = " . $parentId . " LIMIT 1"
-            );
-            if ($existingChild === null) {
-                foreach (explode(',', (string)$row['sub_menu_values']) as $label) {
-                    $label = trim($label);
-                    if ($label === '') {
-                        continue;
-                    }
-                    self::findOrCreate($fieldId, $parentId, $label);
-                }
-            }
-            Database::update(
-                'custom_field_menu_values',
-                ['sub_menu_values' => ''],
-                'WHERE menu_value_id = ?',
-                [(int) $parentId]
-            );
-        }
-    }
-
-    private static function importMultiLevelMenus(): void
-    {
-        // SchemaMigrator drops these legacy columns after import; skip when gone.
-        if (!Database::columnExists('custom_fields', 'menu_relationship')
-            || !Database::columnExists('custom_fields', 'menu_value_links')
-        ) {
-            return;
-        }
-        $menus = Database::rows(
-            "SELECT custom_field_id, menu_relationship, menu_value_links FROM custom_fields WHERE field_type = 'multiLevelMenu'"
-        );
-        foreach ($menus as $menu) {
-            $fieldId = (int)$menu['custom_field_id'];
-            self::ensureItemColumn($fieldId);
-            $order = self::relationshipOrder((string)($menu['menu_relationship'] ?? ''));
-            $links = @unserialize((string)($menu['menu_value_links'] ?? ''));
-            if ($order === [] || !is_array($links)) {
-                continue;
-            }
-            foreach ($links as $combination) {
-                if (!is_array($combination)) {
-                    continue;
-                }
-                $parentId = 0;
-                foreach ($order as $sourceFieldId) {
-                    $valueId = (int)($combination[$sourceFieldId] ?? $combination[(string)$sourceFieldId] ?? 0);
-                    if ($valueId <= 0) {
-                        continue;
-                    }
-                    $source = Database::row(
-                        "SELECT menu_value FROM custom_field_menu_values WHERE menu_value_id = " . $valueId
-                    );
-                    $label = is_array($source) ? trim((string)($source['menu_value'] ?? '')) : '';
-                    if ($label === '') {
-                        continue;
-                    }
-                    $parentId = self::findOrCreate($fieldId, $parentId, $label);
-                }
-            }
-            self::backfillMultiLevel($fieldId, $order);
-        }
-    }
-
-    /**
-     * Copy the deepest selected level from the old linked fields onto this menu's column.
-     *
-     * @param array<int, int> $order
-     */
-    private static function backfillMultiLevel(int $fieldId, array $order): void
-    {
-        $target = 'custom_field_' . $fieldId;
-        if (!self::columnExists('items', $target)) {
-            return;
-        }
-        $sources = [];
-        foreach ($order as $sourceId) {
-            $column = 'custom_field_' . $sourceId;
-            if (self::columnExists('items', $column)) {
-                $sources[] = $sourceId;
-            }
-        }
-        if ($sources === []) {
-            return;
-        }
-        $select = 'item_id, ' . $target . ', ' . implode(', ', array_map(static fn(int $id): string => 'custom_field_' . $id, $sources));
-        foreach (Database::rows('SELECT ' . $select . ' FROM items') as $item) {
-            if (trim((string)($item[$target] ?? '')) !== '') {
-                continue;
-            }
-            $parentId = 0;
-            $leaf = '';
-            foreach ($sources as $sourceId) {
-                $label = trim((string)($item['custom_field_' . $sourceId] ?? ''));
-                if ($label === '') {
-                    break;
-                }
-                $node = self::findChild(self::byParent($fieldId), $parentId, $label);
-                if ($node === null) {
-                    break;
-                }
-                $leaf = $label;
-                $parentId = (int)$node['menu_value_id'];
-            }
-            if ($leaf === '') {
-                continue;
-            }
-            Database::update(
-                'items',
-                [$target => $leaf],
-                "WHERE item_id = '" . (int)$item['item_id'] . "'"
-            );
-        }
-    }
-
-    /**
-     * @return array<int, int> field ids in level order
-     */
-    private static function relationshipOrder(string $relationship): array
-    {
-        $order = [];
-        foreach (array_filter(explode('}-{', $relationship)) as $part) {
-            $bits = explode(',', $part);
-            $id = (int)($bits[0] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-            $order[$id] = (int)($bits[1] ?? 0);
-        }
-        asort($order);
-        return array_map('intval', array_keys($order));
-    }
-
-    private static function findOrCreate(int $fieldId, int $parentId, string $label): int
-    {
-        $existing = Database::row(
-            'SELECT menu_value_id FROM custom_field_menu_values WHERE custom_field_id = ? AND parent_menu_value_id = ? AND menu_value = ?',
-            [$fieldId, $parentId, $label]
-        );
-        if ($existing !== null) {
-            return (int)$existing['menu_value_id'];
-        }
-        $id = (int) Database::insert('custom_field_menu_values', [
-            'custom_field_id' => $fieldId,
-            'menu_value' => $label,
-            'parent_menu_value_id' => $parentId,
-        ]);
-        unset(self::$nodeCache[$fieldId]);
-        return $id;
-    }
-
-    /** @phpstan-ignore void.pure */
-    private static function ensureItemColumn(int $fieldId): void
-    {
-        // Values are stored in item_field_values; items has a fixed core schema.
-        unset($fieldId);
-    }
-
-    private static function columnExists(string $table, string $column): bool
-    {
-        if (!self::tableExists($table)) {
-            return false;
-        }
-        return Database::columnExists($table, $column);
     }
 
     private static function loadLinks(): void

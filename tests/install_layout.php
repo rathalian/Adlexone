@@ -177,19 +177,10 @@ $check($recorded['config'] === rtrim((string) $saved['INLAY_STORAGE'], '/') . '/
 $check($recorded['sqlite'] === rtrim((string) $saved['INLAY_STORAGE'], '/') . '/database/adlexone.sqlite', 'a recorded storage directory holds the database');
 $check($recorded['attachments'] === rtrim((string) $saved['INLAY_STORAGE'], '/') . '/attachments/', 'a recorded storage directory holds uploads');
 
-$dataRoot = $tmp . '/inlay-data';
-$fromEnv = $run($fresh, ['INLAY_DATA' => $dataRoot]);
-$check($fromEnv['mode'] === Runtime::SETUP, 'INLAY_DATA with no database opens setup');
-$check($fromEnv['config'] === $dataRoot . '/config/', 'INLAY_DATA keeps settings directly inside that directory');
-$check($fromEnv['sqlite'] === $dataRoot . '/storage/database/adlexone.sqlite', 'INLAY_DATA keeps the older database path');
-
 $storageEnv = $tmp . '/env-storage';
 $fromStorage = $run($install, ['INLAY_STORAGE' => $storageEnv]);
 $check($fromStorage['sqlite'] === $storageEnv . '/database/adlexone.sqlite', 'INLAY_STORAGE in the environment wins over the recorded path');
 $check($fromStorage['config'] === $storageEnv . '/config/', 'INLAY_STORAGE in the environment uses the storage directory for settings');
-
-$both = $run($fresh, ['INLAY_STORAGE' => $storageEnv, 'INLAY_DATA' => $dataRoot]);
-$check($both['sqlite'] === $storageEnv . '/database/adlexone.sqlite', 'INLAY_STORAGE wins when both environment values are set');
 
 $web = $tmp . '/web';
 $hidden = $web . '/data';

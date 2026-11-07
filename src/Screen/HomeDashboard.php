@@ -29,9 +29,9 @@ final class HomeDashboard
     private const WEEKS = 8;
 
     /** Screen key for the recent activity list. */
-    public const ACTIVITY = 'home_activity';
+    public const ACTIVITY = 'activity';
     /** Screen key for the assigned list. */
-    public const ASSIGNED = 'home_assigned';
+    public const ASSIGNED = 'assigned';
     private const ASSIGNED_LIMIT = 500;
     private const QUIET_DAYS = 14;
 

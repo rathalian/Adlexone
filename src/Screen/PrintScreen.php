@@ -30,7 +30,7 @@ final class PrintScreen
          * Option is captured from the value selected via a hyperlink
          */
         switch (Request::query('option')) {
-        	case 'print_item' :
+        	case 'print' :
         		self::printItem(Request::queryValue('item_id'));
         		break;
         	default :

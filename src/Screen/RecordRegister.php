@@ -178,7 +178,7 @@ final class RecordRegister
                 $when = (int) ($file['create_date'] ?? 0);
                 $rows[] = [
                     'name' => $label,
-                    'href' => RecordScreens::base() . '&option=download_attachment&id=' . (int) $file['id'],
+                    'href' => RecordScreens::base() . '&option=download_file&id=' . (int) $file['id'],
                     'meta' => RecordScreens::title($item),
                     'mark' => $who,
                     'cells' => [

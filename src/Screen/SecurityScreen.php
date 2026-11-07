@@ -174,9 +174,11 @@ final class SecurityScreen
      */
     public static function showSecurityOptions(): void
     {
-        $html = Access::outputIfAllowed(Blocks::link(self::url('option=manage_users_groups'), TXT_73, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(self::url('option=new_user'), TXT_33, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
-        $html .= Access::outputIfAllowed('<br>' . Blocks::link(self::url('option=new_group'), TXT_34, 'URL'), \Adlexone\Auth\Permission::ADMIN_SECURITY);
+        $html = implode(' ', array_filter([
+            Access::outputIfAllowed(Blocks::link(self::url('option=manage_users_groups'), TXT_73, 'ic-users', ''), \Adlexone\Auth\Permission::ADMIN_SECURITY),
+            Access::outputIfAllowed(Blocks::link(self::url('option=new_user'), TXT_33, 'ic-user-plus', ''), \Adlexone\Auth\Permission::ADMIN_SECURITY),
+            Access::outputIfAllowed(Blocks::link(self::url('option=new_group'), TXT_34, 'ic-users-round', ''), \Adlexone\Auth\Permission::ADMIN_SECURITY),
+        ]));
         Page::current()->setBody(Blocks::vertical([['title' => TXT_28, 'html' => $html]]));
     }
 

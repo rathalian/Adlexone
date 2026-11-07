@@ -166,7 +166,7 @@ The host page and the site page read the measurement stored in `platform.sqlite`
 
 The operator database is the only database these pages open.
 
-“Measure usage” on the host page walks the sites one at a time. For each site it reads the disk figures, then opens that site’s SQLite file read-only at `sqlite:file:{path}?mode=ro` with `PRAGMA query_only = ON` and a busy timeout of five seconds. It does not run `SchemaMigrator`, and it does not create a missing file. A missing `adlexone.sqlite` leaves the counts unset. A count whose table is missing stays unset as well, and the page names the site. If the file is locked or cannot be opened, the disk figures still update and the previous counts are kept. The connection is closed before the next site is opened.
+“Measure usage” on the host page walks the sites one at a time. For each site it reads the disk figures, then opens that site’s SQLite file read-only at `sqlite:file:{path}?mode=ro` with `PRAGMA query_only = ON` and a busy timeout of five seconds. It does not create tables, and it does not create a missing file. A missing `adlexone.sqlite` leaves the counts unset. A count whose table is missing stays unset as well, and the page names the site. If the file is locked or cannot be opened, the disk figures still update and the previous counts are kept. The connection is closed before the next site is opened.
 
 “Measure this site” on the site page does that for one slug.
 

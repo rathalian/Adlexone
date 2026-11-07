@@ -44,7 +44,7 @@ final class Capabilities
             ScreenCatalog::CREATE => $frame('New', 'ic-plus', 'item_type'),
             ScreenCatalog::SEARCH_QUICK => $frame('Quick search', 'ic-zoom', 'none'),
             ScreenCatalog::SEARCH_ADVANCED => $frame('Search', 'ic-search', 'item_type'),
-            ScreenCatalog::SEARCH_SAVED => $frame('Saved search', 'ic-saved', 'saved_search'),
+            ScreenCatalog::SEARCH_SAVED => $frame('Saved search', 'ic-saved', 'open_saved'),
             ScreenCatalog::SEARCH_LIST => $frame('Saved', 'ic-saved', 'none'),
             ScreenCatalog::ANNOUNCEMENTS => $frame('Announcements', 'ic-announce', 'none'),
             ScreenCatalog::SETTINGS => $frame('Settings', 'ic-sliders', 'none'),
@@ -147,33 +147,6 @@ final class Capabilities
     }
 
     /**
-     * Older icon ids still stored on applications and links. Each one draws the
-     * nearest current icon, so a stored value keeps working.
-     *
-     * @return array<string, string> older id => current id
-     */
-    public static function renamedIcons(): array
-    {
-        return [
-            'ic-launch' => 'ic-grid',
-            'ic-servicecentre' => 'ic-headset',
-            'ic-knowledgebase' => 'ic-book',
-            'ic-time' => 'ic-clock',
-            'ic-announcements' => 'ic-announce',
-            'ic-create-ticket' => 'ic-plus',
-            'ic-itemtype-add' => 'ic-plus',
-            'ic-quick-search' => 'ic-zoom',
-            'ic-my-ticket-searches' => 'ic-owners',
-            'ic-new-article' => 'ic-files',
-            'ic-article-search' => 'ic-search',
-            'ic-settings' => 'ic-sliders',
-            'ic-item-mgmt' => 'ic-register',
-            'ic-subjects' => 'ic-work',
-            'ic-manage-fields' => 'ic-register',
-        ];
-    }
-
-    /**
      * @return list<string>
      */
     public static function icons(): array
@@ -183,20 +156,16 @@ final class Capabilities
 
     public static function iconLabel(string $icon): string
     {
-        $icon = self::renamedIcons()[$icon] ?? $icon;
-
         return self::iconChoices()[$icon] ?? $icon;
     }
 
     public static function icon(string $capability, string $chosen = ''): string
     {
-        $chosen = self::renamedIcons()[$chosen] ?? $chosen;
         if ($chosen !== '' && in_array($chosen, self::icons(), true)) {
             return $chosen;
         }
         $capability = ScreenCatalog::resolve($capability);
         $icon = self::catalog()[$capability]['icon'] ?? 'ic-grid';
-        $icon = self::renamedIcons()[$icon] ?? $icon;
 
         return in_array($icon, self::icons(), true) ? $icon : 'ic-grid';
     }
@@ -218,7 +187,7 @@ final class Capabilities
         ApplicationAccess::requireUse();
         self::applyDefaults($capability, $config, ApplicationStore::scopeKey($app));
 
-        if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'saved_search') {
+        if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'open_saved') {
             View::respond('Choose a saved search for this link under Configure, Applications.');
             return;
         }
@@ -308,11 +277,11 @@ final class Capabilities
             } else {
                 Request::set('option', match ($capability) {
                     ScreenCatalog::WORK => 'show_work',
-                    ScreenCatalog::CREATE => 'show_item_types',
-                    ScreenCatalog::SEARCH_QUICK => 'show_quick_search',
-                    ScreenCatalog::SEARCH_ADVANCED => 'show_item_search',
-                    ScreenCatalog::SEARCH_SAVED => 'saved_search',
-                    ScreenCatalog::SEARCH_LIST => 'show_saved_searches',
+                    ScreenCatalog::CREATE => 'choose_type',
+                    ScreenCatalog::SEARCH_QUICK => 'quick',
+                    ScreenCatalog::SEARCH_ADVANCED => 'find',
+                    ScreenCatalog::SEARCH_SAVED => 'open_saved',
+                    ScreenCatalog::SEARCH_LIST => 'saved',
                     ScreenCatalog::ANNOUNCEMENTS => 'show_announcements',
                     ScreenCatalog::SETTINGS => 'settings',
                     default => '',
@@ -332,14 +301,14 @@ final class Capabilities
             // Single configured type: skip the picker and open Create directly.
             if (
                 $itemType !== ''
-                && Request::query('option') === 'show_item_types'
+                && Request::query('option') === 'choose_type'
                 && !Request::has('item_type_id')
             ) {
-                Request::set('option', 'new_item');
+                Request::set('option', 'new_record');
                 Request::set('item_type_id', $itemType);
             }
         }
-        if ($capability === ScreenCatalog::SEARCH_ADVANCED && !Request::has('item_types') && Request::query('option') === 'show_item_search') {
+        if ($capability === ScreenCatalog::SEARCH_ADVANCED && !Request::has('item_types') && Request::query('option') === 'find') {
             if ($itemType !== '') {
                 Request::set('item_types', $itemType);
             } elseif ($scope !== '') {
@@ -356,7 +325,7 @@ final class Capabilities
         ) {
             Request::set('item_types', $itemType);
         }
-        if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'saved_search') {
+        if ($capability === ScreenCatalog::SEARCH_SAVED && !Request::has('id') && Request::query('option') === 'open_saved') {
             Request::set('id', trim((string) ($config['search_id'] ?? '')));
         }
         if (str_starts_with($capability, 'search.') && !Request::has('application')) {

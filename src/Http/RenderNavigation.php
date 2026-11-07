@@ -278,8 +278,8 @@ final class RenderNavigation
 
     private static function sectionNavGroup(string $href): bool
     {
-        return str_contains($href, 'option=show_item_types')
-            || str_contains($href, 'option=show_saved_searches')
+        return str_contains($href, 'option=choose_type')
+            || str_contains($href, 'option=saved')
             || str_contains($href, 'option=show_announcements')
             || str_contains($href, 'option=details&application_id=')
             || str_contains($href, 'option=navigation&application_id=')

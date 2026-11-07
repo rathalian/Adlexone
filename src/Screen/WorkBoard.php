@@ -175,7 +175,7 @@ final class WorkBoard
             Request::setPosted($dueWrite['key'], $dueWrite['value']);
             $payload[$dueWrite['key']] = $dueWrite['value'];
         }
-        \Adlexone\Application\Rules::run($itemId, 'update_item');
+        \Adlexone\Application\Rules::run($itemId, 'update_record');
         ItemFields::saveFromArray($itemId, $payload);
 
         $values = WorkScreen::workStatusValues($ids, (int) $field['id']);
@@ -242,7 +242,7 @@ final class WorkBoard
                 Request::setPosted($dueWrite['key'], $dueWrite['value']);
                 $payload[$dueWrite['key']] = $dueWrite['value'];
             }
-            \Adlexone\Application\Rules::run($itemId, 'update_item');
+            \Adlexone\Application\Rules::run($itemId, 'update_record');
             ItemFields::saveFromArray($itemId, $payload);
         }
 

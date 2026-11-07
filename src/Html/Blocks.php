@@ -135,17 +135,17 @@ final class Blocks
         $record = $base . '&item=' . $itemId;
         if (Access::canEditRecords()) {
             $actions[] = [
-                'href' => $inApplication ? $record . '&sheet=notes' : $record . '&option=log_entry',
+                'href' => $inApplication ? $record . '&sheet=notes' : $record . '&option=note',
                 'label' => $inApplication ? 'Notes' : TXT_246,
             ];
             $actions[] = [
-                'href' => $inApplication ? $record . '&sheet=files' : $record . '&option=show_attachments',
+                'href' => $inApplication ? $record . '&sheet=files' : $record . '&option=files',
                 'label' => $inApplication ? 'Files' : TXT_389,
             ];
         }
         if (Access::canAssignRecords()) {
             $actions[] = [
-                'href' => $inApplication ? $record . '&sheet=access' : $record . '&option=change_security',
+                'href' => $inApplication ? $record . '&sheet=access' : $record . '&option=access',
                 'label' => $inApplication ? 'Who can see this' : TXT_28,
             ];
         }
@@ -156,7 +156,7 @@ final class Blocks
         ];
         if (Access::canControlRecords()) {
             $actions[] = [
-                'href' => $base . '&item=' . $itemId . '&option=delete_item',
+                'href' => $base . '&item=' . $itemId . '&option=delete_record',
                 'label' => TXT_315,
                 'tone' => 'danger',
                 'confirm' => TXT_400,

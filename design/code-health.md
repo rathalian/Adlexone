@@ -31,19 +31,19 @@ Public `manage` names in `Router::ALIASES`:
 | `builder` | `BuilderScreen` |
 | `fields` | `FieldsScreen` |
 | `record-types` | `ItemTypesScreen` |
-| `items` | redirected, see below |
+| `items` | opens home |
 | `rules` | `RulesScreen` |
 | `security` | `SecurityScreen` |
 | `settings` | `SiteSettingsScreen` |
 | `palette` | `PaletteScreen` (allowed beside the alias map) |
 
-`manage=items` is not a screen. `Router::open()` sends type options to `record-types` and everything else to `fields`. Record options stay on the old names (`show_item`, `add_item`, `my_items`, and the rest of `ITEM_OPTIONS`). Search options stay on `SEARCH_OPTIONS`.
+`manage=items` is not a screen. `Router::requested()` opens home for a manage name that is not public. Record options are `view`, `add_record`, `mine`, `note`, and the rest of `ITEM_OPTIONS`. Search options are `find`, `results`, `saved`, `open_saved`, and the rest of `SEARCH_OPTIONS`.
 
-An application link is `?application=`. `Capabilities::open()` resolves `ScreenCatalog::ALIASES`, then opens work, announcements, settings, a `RecordScreens` view, a `site/apps` pack, or the shared record and search engines.
+An application link is `?application=`. `ScreenCatalog::resolve()` returns the capability it is given. `Capabilities::open()` then opens work, announcements, settings, a `RecordScreens` view, a `site/apps` pack, or the shared record and search engines.
 
-`AuthRouter` handles signed-out `action` values: `logoff`, `local`, `oauth_start` / `oidc_start`, `oauth_callback` / `oidc_callback`.
+`AuthRouter` handles signed-out `action` values: `logoff`, `local`, `oauth_start`, and `oauth_callback`.
 
-`SchemaMigrator` is version 22. Steps that add or drop columns have to stay for databases that are still behind. Steps that rewrite old rows (group lists, Service Centre, saved-search SQL, showcase applications, home-controller names, role numbers, note audiences) are repair, not the shape of a new database. Do not squash either kind while an existing file might still be on an earlier version.
+A new database is created from `storage/database/shared_schema.sql`. `Database::ensure()` does that when the file has no `users` table, then records `schema_migrations` version `Database::SCHEMA_VERSION`. A file that already has `users` is left as it is. There is no upgrade of an older file.
 
 `site/apps/` contains the README only. `AppFunctions::discover()` still loads a pack when a directory of PHP files appears. `site/themes/` has eight skins (`inlay-stone`, `inlay-ink`, `inlay-blue`, `inlay-indigo`, `inlay-slate`, `inlay-violet`, `inlay-rose`, `inlay-emerald`). Those are choices, listed in `Theme::KNOWN_LABELS`.
 
@@ -57,10 +57,10 @@ An application link is `?application=`. `Capabilities::open()` resolves `ScreenC
 - `SharedMethods.php` is analysed with the rest of `src/`. PHPStan excludes no files. The settings loader refuses a file it cannot read, and the ini writer accepts only text and numbers.
 - `RecordQuery::dueDate()`, `firstOf()`, `prefer()`, and `party()` take the full field shape. The ten baseline entries for those returns are gone.
 - `SetupScreen`, `SaasInstallScreen`, and `OperatorScreen` call `Theme::defineInstallDefaults()`. `StatusScreen` calls it with `false`, so it still does not set `SET_DEFAULT_LANGUAGE`.
-
-## Still safe, once a live database is searched
-
-**Layout images. Tag: deprecate.** `layouts/images/` has 60 files. Product PHP, CSS, JS, JSON, SVG, and HTML name `hyperlink.png` only (`ItemSheet`, via `SET_IMAGE_PATH`). The sign-in icon is `Theme::faviconHref()`, an SVG. The other 59 names are listed in the check, which fails if a new unreferenced file appears. A stored record body could still point at an old path. This environment has no customer database, so the files stay.
+- Public addresses are the screen keys. `manage=items` opens home. Record and search options use the current names. `ScreenCatalog` no longer maps old capability ids. `ApplicationStore` no longer rewrites stored labels on boot. A new application that has a create link and no search tab still gains one.
+- `SchemaMigrator` is deleted. A new database comes from `shared_schema.sql`. `Role` no longer copies a 0–5 group number onto a role.
+- `INLAY_DATA`, field-type aliases, the theme alias `new`, `Capabilities::renamedIcons()`, and the `oidc_*` action and setting names are gone. An unpacked package still keeps `config/` and `storage/` beside the code.
+- `layouts/images/` is empty. A web address on a record uses the `ic-external` sprite. The check fails if an unreferenced image appears.
 
 Public methods that are only reached through `self::` from `open()` are not dead. A name search misses them. This scan did not treat that list as unused.
 
@@ -80,21 +80,15 @@ The removed form helpers (`buildForm`, `buildStartForm`, `buildFormFieldsGrid`, 
 
 ## Needs a product call
 
-These still have a stored value, a bookmark, or two jobs that are not the same job.
+These still have two jobs that are not the same job.
 
-1. **Item and record vocabulary. Tag: deprecate, later.** The public engine is `?manage=records`. Options are still `show_item` and `add_item`. `manage=items` still redirects to fields or record types. Renaming an option breaks a bookmark and any saved link. Do not rename in a cleanup pass.
-2. **`ScreenCatalog::ALIASES`. Tag: deprecate, later.** `contact_centre.*`, `servicecentre.*`, and `announcements` still map to current ids because navigation rows can store the old id. `ApplicationStore` still rewrites some of those labels. Drop the map only after a migration has rewritten every stored capability.
-3. **Icons and themes. Tag: deprecate, later.** `Capabilities::renamedIcons()` draws an old stored icon id as a current sprite. `Theme::ALIASES` maps `new` to `inlay-stone` for a saved setting. `FieldTypes::ALIASES` accepts builder method names (`buildTextInput` and the rest) because `custom_fields.field_type` can still hold them.
-4. **OAuth and OIDC names. Tag: standardise, later.** `AuthRouter` accepts `oidc_start` and `oidc_callback` beside the OAuth actions. `tests/retired_names.php` already removed `oidcEnabled()` and kept `AUTH_OIDC_*` because an existing settings file still signs in with those constants. Do not collapse the constants in this scan.
-5. **`INLAY_DATA`. Tag: deprecate, later.** `InstallLayout` still honours the older storage layout. `INLAY_STORAGE` wins when both are set. Sites that were installed the old way still boot through `INLAY_DATA`.
-6. **`site/apps` packs. Tag: deprecate, later.** The directory is empty and the built-in catalogue is the path the README prefers. `AppFunctions` is the extension point for a screen that cannot be expressed as navigation config. Removing it is a product decision, not a dead-code deletion.
-7. **Record screens. Tag: consolidate, later.** `RecordScreens::open()` dispatches ten capabilities to `RecordCensus` (331 lines), `RecordPeople` (213), `RecordPlan` (241), and `RecordRegister` (523). They do not share one row shape. Keep the four classes.
-8. **Search. Tag: consolidate, later.** `SearchScreen` opens the manage search (`SearchForm` 533 lines, `SearchResults` 326). `ApplicationSearch` (936 lines) is the in-application finder. Both read records through `RecordListQuery`. They are different pages.
-9. **Application shape. Tag: simplify, later.** `BlueprintCatalog` is 1,044 lines of static blueprint data. `ApplicationBuilder` is 1,069 lines and installs that data. `ApplicationPackage` (529) imports and exports. `ApplicationStore` (832) reads and writes the application rows. `Rules` (955) stores a rule and `RuleRunner` (916) runs it. The overlap is real and the boundaries are already named. Move code only when one of those classes is being changed for a feature.
-10. **`SchemaMigrator` repair steps. Tag: simplify, later.** Version 22 has to keep running on an old file. Squashing v1–v22 into `shared_schema.sql` would break an upgrade. A fresh install can already build from the migrator. Leave the steps in order.
-11. **SaaS proposal. Tag: product gap.** `design/saas-installer/proposal.md` still describes cost, aggregated usage, and editing a site after it is created. `HostConsole`, `SiteUsage`, `OperatorScreen`, and `SaasInstallScreen` are the built part. That gap is scope, not unused code.
-12. **Eight themes.** Customer-facing skins. Not duplicates to merge.
+1. **`site/apps` packs. Tag: deprecate, later.** The directory is empty and the built-in catalogue is the path the README prefers. `AppFunctions` is the extension point for a screen that cannot be expressed as navigation config. Removing it is a product decision, not a dead-code deletion.
+2. **Record screens. Tag: consolidate, later.** `RecordScreens::open()` dispatches ten capabilities to `RecordCensus`, `RecordPeople`, `RecordPlan`, and `RecordRegister`. They do not share one row shape. Keep the four classes.
+3. **Search. Tag: consolidate, later.** `SearchScreen` opens the manage search. `ApplicationSearch` is the in-application finder. Both read records through `RecordListQuery`. They are different pages.
+4. **Application shape. Tag: simplify, later.** `BlueprintCatalog` holds the static blueprint data. `ApplicationBuilder` installs that data. `ApplicationPackage` imports and exports. `ApplicationStore` reads and writes the application rows. `Rules` stores a rule and `RuleRunner` runs it. The overlap is real and the boundaries are already named. Move code only when one of those classes is being changed for a feature.
+5. **SaaS proposal. Tag: product gap.** `design/saas-installer/proposal.md` still describes cost, aggregated usage, and editing a site after it is created. `HostConsole`, `SiteUsage`, `OperatorScreen`, and `SaasInstallScreen` are the built part. That gap is scope, not unused code.
+6. **Eight themes.** Customer-facing skins. Not duplicates to merge.
 
 ## Still open
 
-Delete the 59 unreferenced files in `layouts/images/` after a search of a live database for those filenames. The other safe items are done. The product-call list above is unchanged.
+The safe items in this pass are done. What remains is the product-call list above, the integer `IN (...)` lists, and the `$_POST` writers in `RuleRunner` and `RecordQuery`.

@@ -168,7 +168,7 @@ final class ItemWrite
             if (ItemScreen::returnToItem($itemId, ($createdTitle !== '' ? $createdTitle : 'The record') . ' created.')) {
                 return;
             }
-            header('Location: ' . ItemScreen::recordUrl('item=' . rawurlencode((string) $itemId) . '&option=show_item'));
+            header('Location: ' . ItemScreen::recordUrl('item=' . rawurlencode((string) $itemId) . '&option=view'));
             exit;
         }
     }
@@ -192,7 +192,7 @@ final class ItemWrite
                 Database::update('items', $columnArray, $condition);
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-                View::respond(TXT_450, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
+                View::respond(TXT_450, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $logEntry . $attachments), TXT_262, 'URL'));
                 return;
 
             case 'copy' :
@@ -245,7 +245,7 @@ final class ItemWrite
                 }
                 $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
                 $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-                View::respond(TXT_392, Blocks::link(ItemScreen::recordUrl('item=' . $newItemColumnArray['item_id'] . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
+                View::respond(TXT_392, Blocks::link(ItemScreen::recordUrl('item=' . $newItemColumnArray['item_id'] . '&option=view' . $logEntry . $attachments), TXT_262, 'URL'));
                 return;
         }
 
@@ -290,12 +290,12 @@ final class ItemWrite
             if (Request::hasPostedKey('groups_only')) {
                 Request::forgetPosted('groups_only');
                 $onlyGroups = Request::postedValue('groups');
-                Actions::executeAction($itemID, 'update_item', false);
+                Actions::executeAction($itemID, 'update_record', false);
                 if (is_array($onlyGroups)) {
                     \Adlexone\Data\GroupMembership::setItemGroups((int) $itemID, array_map('intval', $onlyGroups));
                 }
                 if (!ItemScreen::returnToItem($itemID, 'Access saved.', 'access')) {
-                    View::respond(TXT_320, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=show_item'), TXT_353, 'URL'));
+                    View::respond(TXT_320, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=view'), TXT_353, 'URL'));
                 }
                 return;
             }
@@ -304,7 +304,7 @@ final class ItemWrite
                 ItemLog::addLogEntry($itemID, false, false);
             }
             // Execute actions
-            Actions::executeAction($itemID, 'update_item', false);
+            Actions::executeAction($itemID, 'update_record', false);
             Request::forgetPosted('log_entry', 'role_id');
             // Remove worker fields
             foreach (Request::postedAll() as $key => $value) {
@@ -333,7 +333,7 @@ final class ItemWrite
             }
             $attachments = (SET_ATTACHMENTS == 'yes') ? '&attachments=yes' : '';
             $logEntry = (SET_LOG_ENTRY == 'yes') ? '&log_entry=yes' : '';
-            View::respond($message, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments), TXT_262, 'URL'));
+            View::respond($message, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $logEntry . $attachments), TXT_262, 'URL'));
             return;
         }
     }

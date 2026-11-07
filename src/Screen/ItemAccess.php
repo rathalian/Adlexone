@@ -42,7 +42,7 @@ final class ItemAccess
     public static function showSecurityAssignment(string $itemID): void
     {
         // Build form action
-        $action = ItemScreen::recordUrl('item=' . $itemID . '&option=update_security');
+        $action = ItemScreen::recordUrl('item=' . $itemID . '&option=update_access');
 
         $groupArray = array_map('strval', \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID));
 
@@ -89,7 +89,7 @@ final class ItemAccess
         Request::setPosted('groups', $ids);
 
         // Execute any configured actions for this update
-        Actions::executeAction($itemID, 'update_item', false);
+        Actions::executeAction($itemID, 'update_record', false);
 
         try {
             \Adlexone\Data\GroupMembership::setItemGroups((int) $itemID, $ids);
@@ -102,7 +102,7 @@ final class ItemAccess
         // Build return URL and render success response via the modern helper
         $logEntry   = (SET_LOG_ENTRY === 'yes') ? '&log_entry=yes' : '';
         $attachments = (SET_ATTACHMENTS === 'yes') ? '&attachments=yes' : '';
-        $url = ItemScreen::recordUrl('item=' . $itemID . '&option=show_item' . $logEntry . $attachments);
+        $url = ItemScreen::recordUrl('item=' . $itemID . '&option=view' . $logEntry . $attachments);
 
         View::respond(TXT_320, Blocks::link($url, TXT_353, 'URL'));
     }

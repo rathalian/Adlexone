@@ -81,7 +81,7 @@ final class WorkScreen
         $view = $canBoard && self::workView() === 'board' ? 'board' : 'list';
         $createHref = self::createHref();
         if ($createHref === '') {
-            $createHref = $base . '&option=show_item_types';
+            $createHref = $base . '&option=choose_type';
         }
         $new = '<a class="btn btn--primary" href="' . Html::e($createHref) . '">New</a>';
         $switch = $canBoard ? WorkList::workViewSwitch($base, $view) : '';

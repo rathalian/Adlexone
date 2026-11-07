@@ -34,25 +34,9 @@ final class ScreenCatalog
     public const REGISTER = 'items.register';
     public const INTAKE = 'items.intake';
 
-    /**
-     * Older pack ids → current screen ids.
-     *
-     * @var array<string, string>
-     */
-    public const ALIASES = [
-        'contact_centre.work' => self::WORK,
-        'servicecentre.work' => self::WORK,
-        'servicecentre.tickets' => self::WORK,
-        'contact_centre.announcements' => self::ANNOUNCEMENTS,
-        'servicecentre.announcements' => self::ANNOUNCEMENTS,
-        'announcements' => self::ANNOUNCEMENTS,
-        'contact_centre.settings' => self::SETTINGS,
-        'servicecentre.settings' => self::SETTINGS,
-    ];
-
     public static function resolve(string $capability): string
     {
-        return self::ALIASES[$capability] ?? $capability;
+        return $capability;
     }
 
     /**

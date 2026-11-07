@@ -53,7 +53,7 @@ final class Rules
     /** @var array<string, string> */
     public const REQUESTS = [
         'create_item' => self::EVENT_CREATE,
-        'update_item' => self::EVENT_UPDATE,
+        'update_record' => self::EVENT_UPDATE,
         'update_item_log_entry' => self::EVENT_LOG,
         'item_attachment' => self::EVENT_ATTACHMENT,
     ];
