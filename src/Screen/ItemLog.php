@@ -103,7 +103,9 @@ final class ItemLog
         }
         $columnArray['log_text'] = $logText;
         $columnArray['security_id'] = $_SESSION['access_user_id'];
-        $columnArray['role_id'] = 5;
+        if (\Adlexone\Database\Database::columnExists('core_log', 'audience')) {
+            $columnArray['audience'] = '';
+        }
         if (\Adlexone\Database\Database::columnExists('core_log', 'group_id')) {
             $columnArray['group_id'] = (int) (Request::postedValue('group_id') ?? 0);
         }
@@ -144,7 +146,7 @@ final class ItemLog
         $result = Database::select('core_log', ['*'], 'WHERE item_id = :item_id ORDER BY log_item_sequence DESC', ['item_id' => $itemID]);
 
         foreach ($result as $row) {
-            if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($row['group_id'] ?? 0), (int) ($row['role_id'] ?? 5))) {
+            if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($row['group_id'] ?? 0), (string) ($row['audience'] ?? ''))) {
                 continue;
             }
             $userName = '';

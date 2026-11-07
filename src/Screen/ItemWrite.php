@@ -70,7 +70,7 @@ final class ItemWrite
         $me = (int) ($_SESSION['access_user_id'] ?? 0);
         $owner = trim((string) ($post['user_security'] ?? ''));
         $canAssign = Access::canAssignRecords()
-            || ItemSheet::typeRole((int) ($post['item_type_id'] ?? 0)) < 4;
+            || ItemSheet::canReviseType((int) ($post['item_type_id'] ?? 0));
         if ($canAssign && $owner === '0') {
             $chosen = 0;
         } elseif ($canAssign && self::personExists($owner)) {
@@ -97,11 +97,11 @@ final class ItemWrite
     private static function itemUpdateColumns(int $itemId, array $post): array
     {
         $columns = [];
-        $role = ItemScreen::itemRole($itemId);
-        if ($role < 4 && array_key_exists('item_title', $post)) {
+        $canRevise = ItemScreen::canReviseItem($itemId);
+        if ($canRevise && array_key_exists('item_title', $post)) {
             $columns['item_title'] = trim((string) $post['item_title']);
         }
-        if ($role < 4 && !Page::current()->inApplication()) {
+        if ($canRevise && !Page::current()->inApplication()) {
             foreach (['creator_security', 'user_security'] as $key) {
                 if (isset($post[$key]) && self::personExists($post[$key])) {
                     $columns[$key] = (int) $post[$key];
@@ -149,7 +149,6 @@ final class ItemWrite
             $array['core_log_updated'] = time();
             $groupIds = GroupMembership::idsFromPost(Request::postedAll());
             $logText = trim((string) (Request::postedValue('log_entry') ?? ''));
-            $roleId = Request::postedValue('role_id') ?? 5;
             Request::forgetPosted('submit_button', 'reset', 'MAX_FILE_SIZE', 'attachment', 'item_id', '_csrf', 'log_entry', 'role_id');
             Request::forgetPosted('groups_posted');
             foreach (array_keys(Request::postedAll()) as $postKey) {
@@ -177,7 +176,6 @@ final class ItemWrite
             }
             if ($logText !== '' && SET_LOG_ENTRY === 'yes') {
                 Request::setPosted('log_entry', $logText);
-                Request::setPosted('role_id', $roleId);
                 ItemLog::addLogEntry($itemId, false, false);
             }
             Actions::executeAction($itemId, 'create_item', false);
@@ -295,21 +293,21 @@ final class ItemWrite
             MenuOptions::collapseRequest($posted);
             Request::fillPosted($posted);
             if (Request::hasPostedKey('groups_posted')) {
+                $postedGroups = \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll());
                 Request::forgetPosted('groups_posted');
-                Request::setPosted('group_security', \Adlexone\Data\GroupMembership::toDelimited(
-                    \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll())
-                ));
                 foreach (array_keys(Request::postedAll()) as $postKey) {
                     if (preg_match('/^group_\d+$/', (string) $postKey) === 1) {
                         Request::forgetPosted($postKey);
                     }
                 }
+                Request::setPosted('groups', $postedGroups);
             }
             if (Request::hasPostedKey('groups_only')) {
                 Request::forgetPosted('groups_only');
+                $onlyGroups = Request::postedValue('groups');
                 Actions::executeAction($itemID, 'update_item', false);
-                if (Request::hasPostedKey('group_security')) {
-                    ItemSheet::syncItemGroupsFromSecurity((int) $itemID, (string) Request::postedValue('group_security'));
+                if (is_array($onlyGroups)) {
+                    \Adlexone\Data\GroupMembership::setItemGroups((int) $itemID, array_map('intval', $onlyGroups));
                 }
                 if (!ItemScreen::returnToItem($itemID, 'Access saved.', 'access')) {
                     View::respond(TXT_320, Blocks::link(ItemScreen::recordUrl('item=' . $itemID . '&option=show_item'), TXT_353, 'URL'));
@@ -337,8 +335,8 @@ final class ItemWrite
                 Database::update('items', $itemColumns, 'item_id = ?', [(int) $itemID]);
             }
             ItemFields::saveFromArray((int) $itemID, $fieldPayload);
-            if (isset($fieldPayload['group_security'])) {
-                ItemSheet::syncItemGroupsFromSecurity((int) $itemID, (string) $fieldPayload['group_security']);
+            if (isset($fieldPayload['groups']) && is_array($fieldPayload['groups'])) {
+                GroupMembership::setItemGroups((int) $itemID, array_map('intval', $fieldPayload['groups']));
             }
             if (ADD_ATTACHMENTS == 'yes' && ($_FILES['attachment']['name'] ?? '') !== '') {
                 ItemFiles::addAttachment($itemID, false, true);

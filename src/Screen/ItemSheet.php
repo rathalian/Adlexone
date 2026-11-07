@@ -115,10 +115,10 @@ final class ItemSheet
      * @param list<int> $selectedGroups
      * @return array{lead: string, inside: string, after: string, multipart: bool}
      */
-    private static function recordTools(int $itemId, int $itemTypeId, int $itemRole, array $selectedGroups, string $draftNote = ''): array
+    private static function recordTools(int $itemId, int $itemTypeId, bool $canRevise, array $selectedGroups, string $draftNote = ''): array
     {
         $existing = $itemId > 0;
-        $canEdit = $itemRole < 4;
+        $canEdit = $canRevise;
         $buttons = '';
         $inside = '';
         $after = '';
@@ -327,7 +327,7 @@ final class ItemSheet
         if ($canWrite) {
             $area = Form::textarea('log_entry', $draft, '4');
             $area = preg_replace('/<textarea\b/', '<textarea id="sheet-note"', $area, 1) ?? $area;
-            $html .= '<label class="label" for="sheet-note">Add a note</label>' . $area . Form::hidden('role_id', '5');
+            $html .= '<label class="label" for="sheet-note">Add a note</label>' . $area;
         }
 
         return $html;
@@ -377,7 +377,7 @@ final class ItemSheet
 
         $events = [];
         $lines = Database::rows(
-            'SELECT log_text, CAST(create_date AS INTEGER) AS at, security_id, role_id'
+            'SELECT log_text, CAST(create_date AS INTEGER) AS at, security_id, audience'
             . (Database::columnExists('core_log', 'group_id') ? ', group_id' : '')
             . ' FROM core_log WHERE item_id = ? ORDER BY CAST(create_date AS INTEGER) DESC LIMIT 30',
             [$itemId]
@@ -396,7 +396,7 @@ final class ItemSheet
             }
         }
         foreach ($lines as $line) {
-            if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($line['group_id'] ?? 0), (int) ($line['role_id'] ?? 5))) {
+            if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($line['group_id'] ?? 0), (string) ($line['audience'] ?? ''))) {
                 continue;
             }
             $text = trim((string) ($line['log_text'] ?? ''));
@@ -482,7 +482,7 @@ final class ItemSheet
 
         return '<form class="composer" method="post" action="' . Html::e(ItemScreen::recordUrl('option=add_log_entry')) . '">'
             . \Adlexone\Auth\Csrf::field()
-            . Form::hidden('item_id', (string) $itemId) . Form::hidden('role_id', '5') . Form::hidden('from_timeline', '1')
+            . Form::hidden('item_id', (string) $itemId) . Form::hidden('from_timeline', '1')
             . '<label class="sr-only" for="composer-note">Add a note to the timeline</label>'
             . '<textarea class="textarea composer__input" id="composer-note" name="log_entry" rows="2" placeholder="Add a note"></textarea>'
             . '<div class="composer__bar">'
@@ -594,13 +594,6 @@ final class ItemSheet
         return $list;
     }
 
-/**
-     * Sync item_groups from a legacy group_security string (or POST value).
-     */
-    public static function syncItemGroupsFromSecurity(int $itemId, ?string $encoded): void
-    {
-        GroupMembership::setItemGroups($itemId, GroupMembership::parseDelimited($encoded));
-    }
 
 /**
      * Displays the "Add Item" form for a given item type and populates values.
@@ -668,9 +661,9 @@ final class ItemSheet
         }
         $itemTypeName = $row['item_type_name'];
         $inApplication = Page::current()->inApplication();
-        $itemRole = self::typeRole((int) ($itemTypeFields['item_type_id'] ?? 0));
+        $canRevise = self::canReviseType((int) ($itemTypeFields['item_type_id'] ?? 0));
         $peopleHidden = '';
-        if ($itemRole < 4) {//Admins and manager can set
+        if ($canRevise) {
             // If the item type does not specify a default user use the logged in user
             if (!isset($values['user_security'])) {
                 if ((string) ($itemTypeFields['user_security'] ?? '') === '') {
@@ -827,7 +820,7 @@ final class ItemSheet
         if ($inApplication) {
             $redisplay = isset($values['user_security']);
             $draftNote = $redisplay ? (string) ($values['log_entry'] ?? '') : '';
-            $tools = self::recordTools(0, (int) $itemTypeID, (int) $itemRole, $selectedGroups, $draftNote);
+            $tools = self::recordTools(0, (int) $itemTypeID, $canRevise, $selectedGroups, $draftNote);
             if ($tools['multipart']) {
                 $formOptions['enctype'] = 'multipart/form-data';
             }
@@ -932,9 +925,9 @@ final class ItemSheet
                     $itemField[TXT_269] = Form::hidden('user_security', $itemFields['user_security']) . $row['user_name'];
                 }
                 $itemGroupIds = GroupMembership::itemGroupIds((int) $itemID);
-                $itemRole = ItemScreen::itemRole((int) $itemID);
+                $canRevise = ItemScreen::canReviseItem((int) $itemID);
                 $html = '';
-                if (!$inApplication && $itemRole < 4) {
+                if (!$inApplication && $canRevise) {
                     // Create group membership list
                     $groupArray = array_values(array_filter(array_map('intval', $itemGroupIds)));
                     $groupMembership = '';
@@ -957,16 +950,10 @@ final class ItemSheet
                         'btn btn--sm'
                     );
                     $itemField[TXT_270] = '<div class="criteria-row"><div class="readonly-value">' . Html::e($groupMembership) . '</div>'
-                        . $changeSecurityURL . '</div>'
-                        . Form::hidden(
-                            'group_security',
-                            \Adlexone\Data\GroupMembership::toDelimited(
-                                \Adlexone\Data\GroupMembership::itemGroupIds((int) $itemID)
-                            )
-                        );
+                        . $changeSecurityURL . '</div>';
                 }
                 $titleLabel = $inApplication ? 'Name' : Wording::get('LA_84', 'TXT_84');
-                if ($itemRole >= 4) {//Users and viewers can read only
+                if (!$canRevise) {
                     $itemField[$titleLabel] = Form::hidden('item_title', $itemFields['item_title']) . $itemFields['item_title'];
                 } else {
                     $itemField[$titleLabel] = Form::text('item_title', $itemFields['item_title']);
@@ -987,7 +974,7 @@ final class ItemSheet
                     if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and !Access::canAssignRecords()) {
                         continue;
                     }
-                    if ($itemRole < 4 && MenuOptions::coveredByParentOnItemType((int)$row['custom_field_id'], (int)($itemFields['item_type_id'] ?? 0))) {
+                    if ($canRevise && MenuOptions::coveredByParentOnItemType((int)$row['custom_field_id'], (int)($itemFields['item_type_id'] ?? 0))) {
                         continue;
                     }
                     if (stristr($row['field_type'], 'worker')) {
@@ -1010,7 +997,7 @@ final class ItemSheet
                     $fieldCheck->add($row, $prepend . $row['custom_field_id']);
 
                     $hiddenValue = '';
-                    if (($itemRole >= 4) and ($row['field_type'] != 'fieldSeparator')) {//Users and viewers can read only so we override the field type
+                    if (!$canRevise && ($row['field_type'] != 'fieldSeparator')) {
                         $hiddenValue = $value;
                         if ($row['field_type'] != FieldTypes::TEXT_AREA) {
                             $value = FieldValidation::display($row, $value);
@@ -1120,7 +1107,7 @@ final class ItemSheet
                     $tools = self::recordTools(
                         (int) $itemID,
                         (int) ($itemFields['item_type_id'] ?? 0),
-                        (int) $itemRole,
+                        $canRevise,
                         $selectedGroups
                     );
                     $formOptions['lead'] = $tools['lead'];
@@ -1219,7 +1206,7 @@ final class ItemSheet
 
                 if ($inApplication) {
                     $html = '<div class="workspace"><div class="workspace__main">' . $html . '</div>'
-                        . self::recordSide((int) $itemID, $itemFields, array_map('intval', $itemGroupIds), $itemRole < 4) . '</div>';
+                        . self::recordSide((int) $itemID, $itemFields, array_map('intval', $itemGroupIds), $canRevise) . '</div>';
                 }
                 Page::current()->setBody($html);
             } else {
@@ -1230,20 +1217,20 @@ final class ItemSheet
     }
 
     /**
-     * The signed-in person's power on a record type. 2 controls, 3 assigns, 4 edits, 5 views.
+     * True when the signed-in person can set the owner and groups on a new record of this type.
      */
-    public static function typeRole(int $typeId): int
+    public static function canReviseType(int $typeId): bool
     {
         if (Access::canControlRecords()) {
-            return 2;
+            return true;
         }
-        $itemRole = 5;
+        $level = 'view';
         $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
         foreach (array_intersect($userGroupIds, GroupMembership::itemTypeGroupIds($typeId)) as $groupId) {
-            $itemRole = min($itemRole, Role::recordRankForGroup((int) $groupId));
+            $level = Role::strongerLevel($level, Role::recordLevelForGroup((int) $groupId));
         }
 
-        return $itemRole;
+        return Role::levelAtLeast($level, 'assign');
     }
     public static function addItem()
     {

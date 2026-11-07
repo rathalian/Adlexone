@@ -227,7 +227,7 @@ final class ItemList
                         foreach ($userGroupIds as $group) {
                             if (in_array((int) $group, $typeGroupIds, true)) {
                                 $typeFound = true;
-                                if (!Access::canControlRecords() && Role::recordRankForGroup((int) $group) === 5) {
+                                if (!Access::canControlRecords() && Role::recordLevelForGroup((int) $group) === 'view') {
                                     $viewerGroupFound = true;
                                 }
                             }

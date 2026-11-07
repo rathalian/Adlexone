@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS core_log (
   log_item_sequence INTEGER NOT NULL,
   log_text TEXT,
   security_id INTEGER,
-  role_id INTEGER,
+  audience TEXT NOT NULL DEFAULT '',
   group_id INTEGER NOT NULL DEFAULT 0
 );
 
@@ -301,13 +301,13 @@ CREATE TABLE IF NOT EXISTS application_rules (
   address TEXT NOT NULL DEFAULT '',
   subject TEXT NOT NULL DEFAULT '',
   body TEXT NOT NULL DEFAULT '',
-  role_id INTEGER NOT NULL DEFAULT 5,
+  audience TEXT NOT NULL DEFAULT '',
   action_field TEXT NOT NULL DEFAULT '',
   action_value TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
   match_from TEXT NOT NULL DEFAULT '',
   skip_actor INTEGER NOT NULL DEFAULT 1,
-  min_log_role INTEGER NOT NULL DEFAULT 0
+  min_audience TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_application_rules_type ON application_rules (item_type_id, event);
@@ -322,7 +322,7 @@ CREATE TABLE IF NOT EXISTS application_rule_steps (
   address TEXT NOT NULL DEFAULT '',
   subject TEXT NOT NULL DEFAULT '',
   body TEXT NOT NULL DEFAULT '',
-  role_id INTEGER NOT NULL DEFAULT 5,
+  audience TEXT NOT NULL DEFAULT '',
   action_field TEXT NOT NULL DEFAULT '',
   action_value TEXT NOT NULL DEFAULT '',
   user_id INTEGER NOT NULL DEFAULT 0,

@@ -65,21 +65,9 @@ final class SiteSettingsScreen
                 $problem = 'Choose how many search fields to include from the list.';
                 return null;
             case 'SET_OWNER_MENU':
-                $roles = [
-                    '0' => '0',
-                    '1' => 'site-administrator',
-                    '2' => 'administrator',
-                    '3' => 'manager',
-                    '4' => 'user',
-                    '5' => 'viewer',
-                    'site-administrator' => 'site-administrator',
-                    'administrator' => 'administrator',
-                    'manager' => 'manager',
-                    'user' => 'user',
-                    'viewer' => 'viewer',
-                ];
-                if (isset($roles[$value])) {
-                    return $roles[$value];
+                $roles = ['0', '1', '2', '3', '4', '5', 'break-glass', 'site-administrator', 'administrator', 'manager', 'user', 'viewer'];
+                if (in_array($value, $roles, true)) {
+                    return \Adlexone\Auth\Role::ownerSlug($value);
                 }
                 $problem = 'Choose the weakest role that can be an owner.';
                 return null;

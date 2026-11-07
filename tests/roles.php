@@ -15,10 +15,14 @@ define('DSN', 'sqlite:' . $tmp);
 
 use Adlexone\Auth\Permission;
 use Adlexone\Auth\Role;
+use Adlexone\Data\GroupMembership;
 use Adlexone\Database\Database;
 use Adlexone\Database\SchemaMigrator;
 
 $failed = 0;
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 function check(bool $ok, string $message): void
 {
     global $failed;
@@ -58,6 +62,21 @@ Database::exec('CREATE TABLE user_groups (user_id INTEGER NOT NULL, group_id INT
 Database::exec("INSERT INTO users (user_id, user_name, role) VALUES (1, 'alex', 0), (2, 'blair', 0), (3, 'casey', 4)");
 Database::exec("INSERT INTO groups (group_id, group_name, description, role) VALUES (1, 'Managers', '', 3), (2, 'Viewers', '', 5)");
 Database::exec("INSERT INTO group_permissions (group_id, permission) VALUES (1, 'records.edit'), (1, 'admin.items')");
+Database::exec(
+    'CREATE TABLE core_log (
+        id INTEGER PRIMARY KEY,
+        item_id INTEGER NOT NULL,
+        role_id INTEGER,
+        group_id INTEGER NOT NULL DEFAULT 0,
+        log_text TEXT
+    )'
+);
+Database::exec("INSERT INTO core_log (id, item_id, role_id, group_id, log_text) VALUES
+    (1, 1, 5, 0, 'everyone'),
+    (2, 1, 4, 0, 'users'),
+    (3, 1, 1, 0, 'admins'),
+    (4, 1, 0, 0, 'open'),
+    (5, 1, 5, 2, 'group')");
 
 SchemaMigrator::migrate();
 
@@ -95,6 +114,26 @@ $viewers = Database::row(
 );
 check(($viewers['slug'] ?? '') === Role::VIEWER, 'an untouched viewer group keeps the viewer role');
 check((int) Database::row('SELECT MAX(version) AS v FROM schema_migrations')['v'] === SchemaMigrator::version(), 'the upgrade reaches the current version');
+
+$logColumns = array_column(Database::rows('PRAGMA table_info(core_log)'), 'name');
+check(!in_array('role_id', $logColumns, true), 'a note no longer stores a role number');
+check(in_array('audience', $logColumns, true), 'a note stores an audience');
+$notes = [];
+foreach (Database::rows('SELECT id, audience, group_id FROM core_log ORDER BY id') as $note) {
+    $notes[(int) $note['id']] = $note;
+}
+check(($notes[1]['audience'] ?? null) === '', 'a public note is for everyone');
+check(($notes[2]['audience'] ?? null) === Role::USER, 'a user note keeps the user audience');
+check(($notes[3]['audience'] ?? null) === Role::SITE_ADMINISTRATOR, 'a site administrator note keeps that audience');
+check(($notes[4]['audience'] ?? null) === '', 'an unrestricted old note is for everyone');
+check((int) ($notes[5]['group_id'] ?? 0) === 2, 'a group note keeps its group');
+
+$_SESSION['access_user_id'] = 3;
+check(GroupMembership::canSeeLogLine(0, '') === true, 'a viewer can read a note for everyone');
+check(GroupMembership::canSeeLogLine(0, Role::USER) === false, 'a viewer cannot read a user note');
+check(GroupMembership::canSeeLogLine(2, '') === false, 'a viewer outside a group cannot read that group note');
+$_SESSION['access_user_id'] = 1;
+check(GroupMembership::canSeeLogLine(0, Role::USER) === true, 'the break-glass account can read a user note');
 
 @unlink($tmp);
 echo $failed === 0 ? "all checks passed\n" : "{$failed} check(s) failed\n";

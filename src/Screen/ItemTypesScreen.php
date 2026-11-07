@@ -461,16 +461,6 @@ final class ItemTypesScreen
     }
 
     /**
-     * Group ids posted as group_{id}.
-     */
-    public static function groupSecurityFromPost(): string
-    {
-        return \Adlexone\Data\GroupMembership::toDelimited(
-            \Adlexone\Data\GroupMembership::idsFromPost(Request::postedAll())
-        );
-    }
-
-    /**
      * Drop checkbox, sort and group inputs so they are not written onto item_types.
      */
     public static function stripItemTypeFormFields(): void

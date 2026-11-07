@@ -3,15 +3,15 @@ declare(strict_types=1);
 
 namespace Adlexone\Data;
 
-use Adlexone\Auth\Access;
+use Adlexone\Auth\Role;
 
 use Adlexone\Database\Database;
 
 /**
  * Shared group membership for users, items, and item types.
  *
- * Canonical storage is junction tables. Delimiter strings (`}-{id}-{`) remain
- * only as a transitional encode/decode format for legacy forms and columns.
+ * Canonical storage is the junction tables. The delimiter string remains only
+ * so an upgrade can read a column that has not been converted yet.
  */
 final class GroupMembership
 {
@@ -31,24 +31,6 @@ final class GroupMembership
             }
         }
         return array_values(array_unique($ids));
-    }
-
-    /**
-     * @param list<int|string> $ids
-     */
-    public static function toDelimited(array $ids): string
-    {
-        $clean = [];
-        foreach ($ids as $id) {
-            $id = (int) $id;
-            if ($id > 0) {
-                $clean[$id] = $id;
-            }
-        }
-        if ($clean === []) {
-            return '}-{';
-        }
-        return '}-{' . implode('}-{', array_values($clean)) . '}-{';
     }
 
     /**
@@ -73,19 +55,46 @@ final class GroupMembership
     }
 
     /**
-     * A note with a group is for that group. A note with no group stays on the
-     * older role check: a lower role number is a narrower audience.
+     * A note with a group is for that group. A note with no group is for everyone,
+     * unless it still names the weakest role that may read it.
      */
-    public static function canSeeLogLine(int $groupId, int $roleId): bool
+    public static function canSeeLogLine(int $groupId, string $audience = ''): bool
     {
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
         if ($groupId > 0) {
-            $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-
             return in_array($groupId, self::userGroupIds($userId), true);
         }
-        $session = Access::logAudience();
+        if ($audience === '') {
+            return true;
+        }
 
-        return $roleId <= 0 || $session <= $roleId;
+        return in_array($audience, Role::visibleAudiences($userId), true);
+    }
+
+    /**
+     * SQL that keeps notes the signed-in person may read.
+     *
+     * @return array{sql: string, params: list<int|string>}
+     */
+    public static function visibleNoteFilter(string $alias = ''): array
+    {
+        $prefix = $alias === '' ? '' : $alias . '.';
+        $userId = (int) ($_SESSION['access_user_id'] ?? 0);
+        $audiences = Role::visibleAudiences($userId);
+        $groups = self::userGroupIds($userId);
+        $marks = implode(',', array_fill(0, count($audiences), '?'));
+        $sql = '(' . $prefix . 'group_id = 0 AND ' . $prefix . 'audience IN (' . $marks . ')';
+        $params = $audiences;
+        if ($groups !== []) {
+            $groupMarks = implode(',', array_fill(0, count($groups), '?'));
+            $sql .= ' OR ' . $prefix . 'group_id IN (' . $groupMarks . ')';
+            foreach ($groups as $groupId) {
+                $params[] = $groupId;
+            }
+        }
+        $sql .= ')';
+
+        return ['sql' => $sql, 'params' => $params];
     }
 
     /**

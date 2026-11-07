@@ -15,6 +15,7 @@ use Adlexone\Html\Presence;
 use Adlexone\Html\Timeline;
 use Adlexone\Http\Router;
 use Adlexone\Database\Database;
+use Adlexone\Data\GroupMembership;
 use Adlexone\Data\FieldValidation;
 use Adlexone\Theme\Theme;
 
@@ -282,14 +283,14 @@ final class HomeDashboard
             $byType[(int) $row['item_type_id']][(int) $row['item_id']] = $row;
         }
 
-        $role = Access::logAudience();
+        $notes = GroupMembership::visibleNoteFilter();
         $others = [];
         if ($rows !== []) {
             $ids = implode(',', array_map(static fn (array $row): int => (int) $row['item_id'], $rows));
             $found = Database::rows(
                 'SELECT item_id, security_id, MAX(CAST(create_date AS INTEGER)) AS at FROM core_log WHERE item_id IN (' . $ids . ') '
-                . 'AND role_id >= ? AND security_id IS NOT NULL AND security_id <> ? AND CAST(create_date AS INTEGER) >= ? GROUP BY item_id',
-                [$role, $userId, $now - 7 * 86400]
+                . 'AND ' . $notes['sql'] . ' AND security_id IS NOT NULL AND security_id <> ? AND CAST(create_date AS INTEGER) >= ? GROUP BY item_id',
+                array_merge($notes['params'], [$userId, $now - 7 * 86400])
             );
             $names = RecordQuery::userNames(array_map(static fn (array $row): int => (int) $row['security_id'], $found));
             foreach ($found as $row) {
@@ -767,7 +768,7 @@ final class HomeDashboard
         }
         $list = implode(',', array_map('intval', $typeIds));
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-        $role = Access::logAudience();
+        $notes = GroupMembership::visibleNoteFilter('l');
         $visible = '';
         $visibleLog = '';
         if (!Access::canControlRecords()) {
@@ -778,7 +779,7 @@ final class HomeDashboard
             $visible = ' AND item_id IN (' . implode(',', array_map('intval', $ids)) . ')';
             $visibleLog = ' AND i.item_id IN (' . implode(',', array_map('intval', $ids)) . ')';
         }
-        $logParams = [$role];
+        $logParams = $notes['params'];
         $itemParams = [];
         $ownLog = '';
         $ownItem = '';
@@ -792,7 +793,7 @@ final class HomeDashboard
         $events = [];
         $lines = Database::rows(
             'SELECT l.item_id, l.log_text, CAST(l.create_date AS INTEGER) AS at, l.security_id, i.item_type_id FROM core_log l '
-            . 'JOIN items i ON i.item_id = l.item_id WHERE i.item_type_id IN (' . $list . ')' . $visibleLog . ' AND l.role_id >= ?' . $ownLog . ' '
+            . 'JOIN items i ON i.item_id = l.item_id WHERE i.item_type_id IN (' . $list . ')' . $visibleLog . ' AND ' . $notes['sql'] . $ownLog . ' '
             . 'ORDER BY CAST(l.create_date AS INTEGER) DESC LIMIT 12',
             $logParams
         );

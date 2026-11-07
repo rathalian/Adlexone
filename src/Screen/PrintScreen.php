@@ -129,7 +129,7 @@ final class PrintScreen
     		// Get item log information from database
     		$columnArray = array ('*');
     		foreach (Database::select('core_log', $columnArray, 'item_id = ?', [$itemID], 'log_item_sequence DESC') as $row) {
-    			if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($row['group_id'] ?? 0), (int) ($row['role_id'] ?? 5))) {
+    			if (!\Adlexone\Data\GroupMembership::canSeeLogLine((int) ($row['group_id'] ?? 0), (string) ($row['audience'] ?? ''))) {
     				continue;
     			}
     			$rowUser = ['user_name' => '', 'first_name' => '', 'last_name' => ''];

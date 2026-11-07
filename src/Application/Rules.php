@@ -127,19 +127,60 @@ final class Rules
     }
 
     /**
-     * Minimum log-line role. Higher numbers are a wider audience.
+     * How public a note must be before a log rule matches.
+     * An empty value matches every note.
      *
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    public static function logRoles(): array
+    public static function logAudiences(): array
     {
         return [
-            0 => 'Any log line',
-            2 => 'Role number 2 or more public',
-            3 => 'Role number 3 or more public',
-            4 => 'Role number 4 or more public',
-            5 => 'Visible to everyone',
+            '' => 'Any note',
+            'administrator' => 'Administrator or wider',
+            'manager' => 'Manager or wider',
+            'user' => 'User or wider',
+            'everyone' => 'Visible to everyone',
         ];
+    }
+
+    /**
+     * A stored note audience. A number is the role that number used to name.
+     * 0 and 5 are notes for everyone.
+     */
+    public static function noteAudience(mixed $value): string
+    {
+        if (is_int($value) || (is_string($value) && ctype_digit(trim($value)))) {
+            return match ((int) $value) {
+                1 => 'site-administrator',
+                2 => 'administrator',
+                3 => 'manager',
+                4 => 'user',
+                default => '',
+            };
+        }
+        $text = trim((string) $value);
+
+        return in_array($text, ['site-administrator', 'administrator', 'manager', 'user'], true) ? $text : '';
+    }
+
+    /**
+     * The narrowest note a log rule still matches. "everyone" matches only notes for everyone.
+     */
+    public static function minimumAudience(mixed $value): string
+    {
+        if (is_int($value) || (is_string($value) && ctype_digit(trim($value)))) {
+            return match ((int) $value) {
+                1 => 'site-administrator',
+                2 => 'administrator',
+                3 => 'manager',
+                4 => 'user',
+                5 => 'everyone',
+                default => '',
+            };
+        }
+        $text = trim((string) $value);
+
+        return array_key_exists($text, self::logAudiences()) ? $text : '';
     }
 
     /**
@@ -321,9 +362,9 @@ final class Rules
             $op = strtolower($operators[$operator] ?? $operator);
             $condition = trim($field . ' ' . $op . ' ' . self::displayValue($rule, (string) ($rule['match_value'] ?? ''), $fieldLabels));
         }
-        if ((string) ($rule['event'] ?? '') === self::EVENT_LOG && (int) ($rule['min_log_role'] ?? 0) > 0) {
-            $roles = self::logRoles();
-            $condition .= ' (' . ($roles[(int) $rule['min_log_role']] ?? 'log role') . ')';
+        $minimum = self::minimumAudience($rule['min_audience'] ?? ($rule['min_log_role'] ?? ''));
+        if ((string) ($rule['event'] ?? '') === self::EVENT_LOG && $minimum !== '') {
+            $condition .= ' (' . (self::logAudiences()[$minimum] ?? 'a narrower note') . ')';
         }
         $thens = [];
         foreach (self::stepsOf($rule) as $step) {
@@ -563,11 +604,11 @@ final class Rules
             'address' => (string) $first['address'],
             'subject' => (string) $first['subject'],
             'body' => (string) $first['body'],
-            'role_id' => (int) $first['role_id'],
+            'audience' => (string) $first['audience'],
             'action_field' => (string) $first['action_field'],
             'action_value' => (string) $first['action_value'],
             'skip_actor' => self::skipFlag($input),
-            'min_log_role' => $event === self::EVENT_LOG ? (int) ($input['min_log_role'] ?? 0) : 0,
+            'min_audience' => $event === self::EVENT_LOG ? self::minimumAudience($input['min_audience'] ?? ($input['min_log_role'] ?? '')) : '',
             'sort_order' => (int) ($input['sort_order'] ?? 0),
             'steps' => $steps,
         ];
@@ -587,7 +628,7 @@ final class Rules
                 'address' => $input['address'] ?? '',
                 'subject' => $input['subject'] ?? '',
                 'body' => $input['body'] ?? '',
-                'role_id' => $input['role_id'] ?? 5,
+                'audience' => $input['audience'] ?? self::noteAudience($input['role_id'] ?? ''),
                 'action_field' => $input['action_field'] ?? '',
                 'action_value' => $input['action_value'] ?? ($input['owner_id'] ?? ''),
                 'user_id' => $input['user_id'] ?? 0,
@@ -641,7 +682,7 @@ final class Rules
         $actionValue = '';
         $userId = 0;
         $groupId = 0;
-        $roleId = (int) ($step['role_id'] ?? 5);
+        $audience = self::noteAudience($step['audience'] ?? ($step['role_id'] ?? ''));
         if ($outcome === self::OUTCOME_EMAIL) {
             $address = trim((string) ($step['address'] ?? ''));
             $subject = trim((string) ($step['subject'] ?? ''));
@@ -651,7 +692,7 @@ final class Rules
         } elseif ($outcome === self::OUTCOME_LOG) {
             $body = trim((string) ($step['body'] ?? ''));
             $groupId = (int) ($step['group_id'] ?? 0);
-            $roleId = 5;
+            $audience = '';
             $recipient = self::TO_OWNER;
         } elseif ($outcome === self::OUTCOME_SET_FIELD) {
             $actionField = trim((string) ($step['action_field'] ?? ''));
@@ -674,7 +715,7 @@ final class Rules
             'address' => $address,
             'subject' => $subject,
             'body' => $body,
-            'role_id' => $roleId > 0 ? $roleId : 5,
+            'audience' => $audience,
             'action_field' => $actionField,
             'action_value' => $actionValue,
             'user_id' => $userId,
@@ -749,7 +790,7 @@ final class Rules
             'address' => (string) ($rule['address'] ?? ''),
             'subject' => (string) ($rule['subject'] ?? ''),
             'body' => (string) ($rule['body'] ?? ''),
-            'role_id' => (int) ($rule['role_id'] ?? 5),
+            'audience' => self::noteAudience($rule['audience'] ?? ($rule['role_id'] ?? '')),
             'action_field' => (string) ($rule['action_field'] ?? ''),
             'action_value' => (string) ($rule['action_value'] ?? ''),
             'user_id' => 0,

@@ -103,7 +103,7 @@ final class ItemAccess
         // Collect selected group values, trim and ignore empty entries
         $selected = array_values(array_filter(Request::postedAll(), fn($v) => trim((string)$v) !== ''));
         $ids = array_map(static fn($v) => (int) $v, $selected);
-        Request::setPosted('group_security', \Adlexone\Data\GroupMembership::toDelimited($ids));
+        Request::setPosted('groups', $ids);
 
         // Execute any configured actions for this update
         Actions::executeAction($itemID, 'update_item', false);

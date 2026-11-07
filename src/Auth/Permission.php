@@ -36,7 +36,7 @@ final class Permission
     }
 
     /**
-     * @return array<string, array{label: string, legacy_max_role: int}>
+     * @return array<string, array{label: string}>
      */
     public static function catalog(): array
     {
@@ -44,46 +44,37 @@ final class Permission
     }
 
     /**
-     * @return array<string, array{label: string, legacy_max_role: int}>
+     * @return array<string, array{label: string}>
      */
     public static function baseCatalog(): array
     {
         return [
             self::ADMIN_SYSTEM => [
                 'label' => 'Sign-in, email, and advanced settings',
-                'legacy_max_role' => 0,
             ],
             self::ADMIN_SETTINGS => [
                 'label' => 'Applications and site settings',
-                'legacy_max_role' => 1,
             ],
             self::ADMIN_SECURITY => [
                 'label' => 'People and groups',
-                'legacy_max_role' => 1,
             ],
             self::ADMIN_ACTIONS => [
                 'label' => 'Rules',
-                'legacy_max_role' => 1,
             ],
             self::ADMIN_ITEMS => [
                 'label' => 'Fields and record types',
-                'legacy_max_role' => 1,
             ],
             self::RECORDS_CONTROL => [
                 'label' => 'Delete records and see every record',
-                'legacy_max_role' => 2,
             ],
             self::RECORDS_ASSIGN => [
                 'label' => 'Assign an owner',
-                'legacy_max_role' => 3,
             ],
             self::RECORDS_EDIT => [
                 'label' => 'Edit records',
-                'legacy_max_role' => 4,
             ],
             self::APP_ACCESS => [
                 'label' => 'Sign in and use applications',
-                'legacy_max_role' => 5,
             ],
         ];
     }
@@ -128,20 +119,17 @@ final class Permission
     }
 
     /**
-     * @return array<string, array{label: string, legacy_max_role: int}>
+     * @return array<string, array{label: string}>
      */
     private static function applicationCatalog(): array
     {
         $out = [];
         foreach (self::applicationRows() as $app) {
-            // legacy_max_role 4 bridges shared item engines still gated by role numbers.
             $out[self::appUse($app['slug'])] = [
                 'label' => 'Open: ' . $app['name'],
-                'legacy_max_role' => 4,
             ];
             $out[self::appSettings($app['slug'])] = [
                 'label' => 'Settings: ' . $app['name'],
-                'legacy_max_role' => 1,
             ];
         }
 
@@ -365,22 +353,6 @@ final class Permission
             return self::grantAppToGroups($slug);
         }
         return array_values(array_unique($allGroups));
-    }
-
-    /**
-     * Permissions granted to a legacy role number (base catalog only).
-     *
-     * @return list<string>
-     */
-    public static function forLegacyRole(int $role): array
-    {
-        $granted = [];
-        foreach (self::baseCatalog() as $key => $meta) {
-            if ($role <= (int) $meta['legacy_max_role']) {
-                $granted[] = $key;
-            }
-        }
-        return $granted;
     }
 
     /** @return list<string> */

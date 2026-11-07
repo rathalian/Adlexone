@@ -54,7 +54,7 @@ final class RecordRegister
         $lines = [];
         $names = [];
         if ($loaded['ids'] !== []) {
-            $sql = 'SELECT item_id, log_text, create_date, security_id, role_id'
+            $sql = 'SELECT item_id, log_text, create_date, security_id, audience'
                 . (Database::columnExists('core_log', 'group_id') ? ', group_id' : '')
                 . ' FROM core_log WHERE item_id IN ('
                 . RecordQuery::intList($loaded['ids']) . ') AND CAST(create_date AS INTEGER) >= ?';
@@ -66,7 +66,7 @@ final class RecordRegister
             $sql .= ' ORDER BY CAST(create_date AS INTEGER) DESC LIMIT 200';
             $lines = array_values(array_filter(
                 Database::rows($sql, $params),
-                static fn (array $line): bool => \Adlexone\Data\GroupMembership::canSeeLogLine((int) ($line['group_id'] ?? 0), (int) ($line['role_id'] ?? 5))
+                static fn (array $line): bool => \Adlexone\Data\GroupMembership::canSeeLogLine((int) ($line['group_id'] ?? 0), (string) ($line['audience'] ?? ''))
             ));
             $names = RecordQuery::userNames(array_map(static fn (array $row): int => (int) ($row['security_id'] ?? 0), $lines));
             foreach ($lines as $line) {

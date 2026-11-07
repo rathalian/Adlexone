@@ -154,24 +154,25 @@ final class ItemScreen
         }
     }
     /**
-     * Item options that name an existing item, with the weakest role number
-     * (largest value) that may use them.
+     * Item options that name an existing item, and the record power they need.
+     * view opens it, edit changes it and adds a note or file, assign changes
+     * the owner and the groups, control deletes it.
      */
-    private const ITEM_OPTION_ROLES = [
-        'show_item' => 5,
-        'show_attachments' => 5,
-        'download_attachment' => 5,
-        'log_entry' => 4,
-        'add_log_entry' => 4,
-        'add_attachment' => 4,
-        'update_item' => 4,
-        'update_owner' => 3,
-        'change_security' => 3,
-        'update_security' => 3,
-        'delete_attachment' => 2,
-        'delete_log' => 2,
-        'delete_item' => 2,
-        'transform_item' => 2,
+    private const ITEM_OPTION_POWER = [
+        'show_item' => 'view',
+        'show_attachments' => 'view',
+        'download_attachment' => 'view',
+        'log_entry' => 'edit',
+        'add_log_entry' => 'edit',
+        'add_attachment' => 'edit',
+        'update_item' => 'edit',
+        'update_owner' => 'assign',
+        'change_security' => 'assign',
+        'update_security' => 'assign',
+        'delete_attachment' => 'control',
+        'delete_log' => 'control',
+        'delete_item' => 'control',
+        'transform_item' => 'control',
     ];
 
     /**
@@ -180,7 +181,7 @@ final class ItemScreen
      */
     private static function authoriseItemOption(string $option): bool
     {
-        $needed = self::ITEM_OPTION_ROLES[$option] ?? null;
+        $needed = self::ITEM_OPTION_POWER[$option] ?? null;
         if ($needed === null || $option === 'show_item') {
             return true;
         }
@@ -196,30 +197,42 @@ final class ItemScreen
             View::respond(TXT_616);
             return false;
         }
-        if (!self::userCanAccessItem($itemId) || self::itemRole($itemId) > $needed) {
+        if (!self::userCanAccessItem($itemId) || !Role::levelAtLeast(self::itemLevel($itemId), $needed)) {
             Access::deny();
         }
         return true;
     }
 
+    public static function canReviseItem(int $itemId): bool
+    {
+        return Role::levelAtLeast(self::itemLevel($itemId), 'assign');
+    }
+
+    public static function canEditItem(int $itemId): bool
+    {
+        return Role::levelAtLeast(self::itemLevel($itemId), 'edit');
+    }
+
     /**
      * The signed-in person's power on one record.
-     * 2 deletes every record, 3 assigns, 4 edits, 5 views. The owner can assign.
+     * Someone who can delete records holds control on every record.
+     * The owner can assign. A shared group contributes its own record permission.
      */
-    public static function itemRole(int $itemId): int
+    private static function itemLevel(int $itemId): string
     {
         if (Access::canControlRecords()) {
-            return 2;
+            return 'control';
         }
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-        $role = 5;
+        $level = 'view';
         foreach (array_intersect(GroupMembership::userGroupIds($userId), GroupMembership::itemGroupIds($itemId)) as $groupId) {
-            $role = min($role, Role::recordRankForGroup((int) $groupId));
+            $level = Role::strongerLevel($level, Role::recordLevelForGroup((int) $groupId));
         }
         if (Database::exists('items', 'item_id = ? AND user_security = ?', [$itemId, $userId])) {
-            $role = min($role, 3);
+            $level = Role::strongerLevel($level, 'assign');
         }
-        return $role;
+
+        return $level;
     }
 
     /**

@@ -121,7 +121,7 @@ final class RuleRunner
 
 
     /**
-     * Pure condition check. Group tests can pass group_security on either side.
+     * Pure condition check. Group tests can pass a list of group ids on either side.
      *
      * @param array<string, mixed> $rule
      * @param array<string, mixed> $current
@@ -133,8 +133,8 @@ final class RuleRunner
             if (trim((string) ($current['log_entry'] ?? '')) === '') {
                 return false;
             }
-            $min = (int) ($rule['min_log_role'] ?? 0);
-            if ($min > 0 && (int) ($current['role_id'] ?? 0) < $min) {
+            $minimum = Rules::minimumAudience($rule['min_audience'] ?? ($rule['min_log_role'] ?? ''));
+            if ($minimum !== '' && !self::noteIsPublicEnough($current, $minimum)) {
                 return false;
             }
         }
@@ -161,6 +161,31 @@ final class RuleRunner
             Rules::OP_FROM_TO => self::equalsValue($key, $then, $from) && self::equalsValue($key, $now, $want) && !$now['same']($then),
             default => false,
         };
+    }
+
+    /**
+     * A note for a group, or a note for everyone, passes every minimum.
+     * A note that names a role passes when that role is at least as public as the minimum.
+     *
+     * @param array<string, mixed> $current
+     */
+    private static function noteIsPublicEnough(array $current, string $minimum): bool
+    {
+        $audience = Rules::noteAudience($current['audience'] ?? ($current['role_id'] ?? ''));
+        if ((int) ($current['group_id'] ?? 0) > 0 || $audience === '') {
+            return true;
+        }
+        if ($minimum === 'everyone') {
+            return false;
+        }
+        $order = [
+            'site-administrator' => 1,
+            'administrator' => 2,
+            'manager' => 3,
+            'user' => 4,
+        ];
+
+        return ($order[$audience] ?? 5) >= ($order[$minimum] ?? 0);
     }
 
 
@@ -458,9 +483,6 @@ final class RuleRunner
      */
     private static function groupIdsFrom(array $row, int $itemId): array
     {
-        if (array_key_exists('group_security', $row)) {
-            return GroupMembership::parseDelimited((string) $row['group_security']);
-        }
         if (isset($row['groups']) && is_array($row['groups'])) {
             return array_values(array_unique(array_filter(array_map('intval', $row['groups']))));
         }
@@ -832,7 +854,7 @@ final class RuleRunner
             'log_item_sequence' => $sequence,
             'log_text' => $text,
             'security_id' => (int) ($_SESSION['access_user_id'] ?? 0),
-            'role_id' => (int) ($step['role_id'] ?? 5),
+            'audience' => (string) ($step['audience'] ?? ''),
         ];
         if (Database::columnExists('core_log', 'group_id')) {
             $entry['group_id'] = (int) ($step['group_id'] ?? 0);

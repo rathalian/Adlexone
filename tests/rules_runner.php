@@ -15,7 +15,6 @@ if (is_file($tmp)) {
 define('DSN', 'sqlite:' . $tmp);
 
 use Adlexone\Application\Rules;
-use Adlexone\Data\GroupMembership;
 use Adlexone\Database\Database;
 
 $failed = 0;
@@ -66,8 +65,8 @@ $groups = [
     'field_key' => 'groups',
     'operator' => Rules::OP_CHANGED,
 ];
-$before = ['group_security' => GroupMembership::toDelimited([1])];
-$after = ['group_security' => GroupMembership::toDelimited([1, 2])];
+$before = ['groups' => [1]];
+$after = ['groups' => [1, 2]];
 check(Rules::matchesState($groups, $after, $before), 'group membership changed');
 check(!Rules::matchesState($groups, $before, $before), 'same groups do not match');
 
@@ -119,7 +118,7 @@ Database::exec('CREATE TABLE core_log (
     log_item_sequence INTEGER,
     log_text TEXT,
     security_id INTEGER,
-    role_id INTEGER
+    audience TEXT NOT NULL DEFAULT ""
 )');
 Database::exec('CREATE TABLE application_rules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -137,11 +136,11 @@ Database::exec('CREATE TABLE application_rules (
     address TEXT NOT NULL DEFAULT "",
     subject TEXT NOT NULL DEFAULT "",
     body TEXT NOT NULL DEFAULT "",
-    role_id INTEGER NOT NULL DEFAULT 5,
+    audience TEXT NOT NULL DEFAULT "",
     action_field TEXT NOT NULL DEFAULT "",
     action_value TEXT NOT NULL DEFAULT "",
     skip_actor INTEGER NOT NULL DEFAULT 1,
-    min_log_role INTEGER NOT NULL DEFAULT 0,
+    min_audience TEXT NOT NULL DEFAULT "",
     sort_order INTEGER NOT NULL DEFAULT 0
 )');
 Database::exec('CREATE TABLE application_rule_steps (
@@ -153,7 +152,7 @@ Database::exec('CREATE TABLE application_rule_steps (
     address TEXT NOT NULL DEFAULT "",
     subject TEXT NOT NULL DEFAULT "",
     body TEXT NOT NULL DEFAULT "",
-    role_id INTEGER NOT NULL DEFAULT 5,
+    audience TEXT NOT NULL DEFAULT "",
     action_field TEXT NOT NULL DEFAULT "",
     action_value TEXT NOT NULL DEFAULT "",
     user_id INTEGER NOT NULL DEFAULT 0,

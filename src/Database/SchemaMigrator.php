@@ -15,7 +15,7 @@ use Adlexone\Data\SavedSearch;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 21;
+    private const VERSION = 22;
 
     private static bool $done = false;
 
@@ -142,6 +142,11 @@ final class SchemaMigrator
         if ($current < 21) {
             self::applyV21();
             self::mark(21);
+            $current = 21;
+        }
+        if ($current < 22) {
+            self::applyV22();
+            self::mark(22);
         }
     }
 
@@ -1155,7 +1160,7 @@ final class SchemaMigrator
         }
         foreach (Database::select('groups', ['group_id', 'role']) as $group) {
             $role = (int) ($group['role'] ?? 5);
-            foreach (\Adlexone\Auth\Permission::forLegacyRole($role) as $permission) {
+            foreach (\Adlexone\Auth\Role::grantsForNumber($role) as $permission) {
                 if (!str_starts_with($permission, 'records.')) {
                     continue;
                 }
@@ -1220,5 +1225,107 @@ final class SchemaMigrator
     private static function applyV21(): void
     {
         \Adlexone\Auth\Role::dropLegacyColumns();
+    }
+
+    /**
+     * A note is for a group or for everyone. An older note that named a role
+     * keeps that role as its audience. Rules and the owner setting use the same names.
+     */
+    private static function applyV22(): void
+    {
+        self::migrateNoteAudiences();
+        self::migrateRuleAudiences('application_rules');
+        self::migrateRuleAudiences('application_rule_steps');
+        self::migrateMinimumAudience();
+        self::migrateOwnerSetting();
+    }
+
+    private static function migrateNoteAudiences(): void
+    {
+        if (!Database::tableExists('core_log')) {
+            return;
+        }
+        if (!Database::columnExists('core_log', 'audience')) {
+            Database::exec("ALTER TABLE core_log ADD COLUMN audience TEXT NOT NULL DEFAULT ''");
+        }
+        if (!Database::columnExists('core_log', 'role_id')) {
+            return;
+        }
+        Database::exec(
+            "UPDATE core_log SET audience = CASE role_id
+                WHEN 1 THEN 'site-administrator'
+                WHEN 2 THEN 'administrator'
+                WHEN 3 THEN 'manager'
+                WHEN 4 THEN 'user'
+                ELSE ''
+            END"
+        );
+        Database::exec('ALTER TABLE core_log DROP COLUMN role_id');
+    }
+
+    private static function migrateRuleAudiences(string $table): void
+    {
+        if (!Database::tableExists($table) || !Database::columnExists($table, 'role_id')) {
+            return;
+        }
+        if (!Database::columnExists($table, 'audience')) {
+            Database::exec("ALTER TABLE {$table} ADD COLUMN audience TEXT NOT NULL DEFAULT ''");
+        }
+        Database::exec(
+            "UPDATE {$table} SET audience = CASE role_id
+                WHEN 1 THEN 'site-administrator'
+                WHEN 2 THEN 'administrator'
+                WHEN 3 THEN 'manager'
+                WHEN 4 THEN 'user'
+                ELSE ''
+            END"
+        );
+        Database::exec("ALTER TABLE {$table} DROP COLUMN role_id");
+    }
+
+    private static function migrateMinimumAudience(): void
+    {
+        if (!Database::tableExists('application_rules') || !Database::columnExists('application_rules', 'min_log_role')) {
+            return;
+        }
+        if (!Database::columnExists('application_rules', 'min_audience')) {
+            Database::exec("ALTER TABLE application_rules ADD COLUMN min_audience TEXT NOT NULL DEFAULT ''");
+        }
+        Database::exec(
+            "UPDATE application_rules SET min_audience = CASE min_log_role
+                WHEN 1 THEN 'site-administrator'
+                WHEN 2 THEN 'administrator'
+                WHEN 3 THEN 'manager'
+                WHEN 4 THEN 'user'
+                WHEN 5 THEN 'everyone'
+                ELSE ''
+            END"
+        );
+        Database::exec('ALTER TABLE application_rules DROP COLUMN min_log_role');
+    }
+
+    private static function migrateOwnerSetting(): void
+    {
+        if (!defined('SET_CONFIGURATION_PATH')) {
+            return;
+        }
+        $path = rtrim((string) SET_CONFIGURATION_PATH, '/\\') . DIRECTORY_SEPARATOR . 'adlexone_settings.json';
+        if (!is_file($path)) {
+            return;
+        }
+        $settings = json_decode((string) file_get_contents($path), true);
+        if (!is_array($settings) || !array_key_exists('SET_OWNER_MENU', $settings)) {
+            return;
+        }
+        $raw = trim((string) $settings['SET_OWNER_MENU']);
+        $slug = \Adlexone\Auth\Role::ownerSlug($raw);
+        if ($slug === $raw) {
+            return;
+        }
+        $settings['SET_OWNER_MENU'] = $slug;
+        $json = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json !== false) {
+            file_put_contents($path, $json . "\n");
+        }
     }
 }

@@ -154,14 +154,6 @@ final class Access
         exit;
     }
 
-    /**
-     * Rank compared with a stored log audience. A lower number sees more lines.
-     */
-    public static function logAudience(): int
-    {
-        return Role::audience(self::currentPermissions());
-    }
-
     public static function canEditRecords(): bool
     {
         return self::can(Permission::RECORDS_EDIT);

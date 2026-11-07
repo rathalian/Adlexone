@@ -23,8 +23,7 @@ final class Role
     public const VIEWER = 'viewer';
 
     /**
-     * The five roles that replace the old 1–5 ladder.
-     * Sort matches the old number: a lower sort is a stronger role.
+     * The five roles a group can hold. A lower sort is listed first.
      *
      * @return array<string, array{name: string, sort: int}>
      */
@@ -37,6 +36,73 @@ final class Role
             self::USER => ['name' => 'User', 'sort' => 4],
             self::VIEWER => ['name' => 'Viewer', 'sort' => 5],
         ];
+    }
+
+    /**
+     * Permissions each system role grants. Listed by name, not by a number.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function systemGrants(): array
+    {
+        return [
+            self::SITE_ADMINISTRATOR => [
+                Permission::ADMIN_SETTINGS,
+                Permission::ADMIN_SECURITY,
+                Permission::ADMIN_ACTIONS,
+                Permission::ADMIN_ITEMS,
+                Permission::RECORDS_CONTROL,
+                Permission::RECORDS_ASSIGN,
+                Permission::RECORDS_EDIT,
+                Permission::APP_ACCESS,
+            ],
+            self::ADMINISTRATOR => [
+                Permission::RECORDS_CONTROL,
+                Permission::RECORDS_ASSIGN,
+                Permission::RECORDS_EDIT,
+                Permission::APP_ACCESS,
+            ],
+            self::MANAGER => [
+                Permission::RECORDS_ASSIGN,
+                Permission::RECORDS_EDIT,
+                Permission::APP_ACCESS,
+            ],
+            self::USER => [
+                Permission::RECORDS_EDIT,
+                Permission::APP_ACCESS,
+            ],
+            self::VIEWER => [
+                Permission::APP_ACCESS,
+            ],
+        ];
+    }
+
+    /**
+     * Permissions a stored 0–5 number used to imply. Only the upgrade reads this.
+     *
+     * @return list<string>
+     */
+    public static function grantsForNumber(int $number): array
+    {
+        $grants = self::systemGrants();
+        return match (true) {
+            $number <= 0 => [
+                Permission::ADMIN_SYSTEM,
+                Permission::ADMIN_SETTINGS,
+                Permission::ADMIN_SECURITY,
+                Permission::ADMIN_ACTIONS,
+                Permission::ADMIN_ITEMS,
+                Permission::RECORDS_CONTROL,
+                Permission::RECORDS_ASSIGN,
+                Permission::RECORDS_EDIT,
+                Permission::APP_ACCESS,
+            ],
+            $number === 1 => $grants[self::SITE_ADMINISTRATOR],
+            $number === 2 => $grants[self::ADMINISTRATOR],
+            $number === 3 => $grants[self::MANAGER],
+            $number === 4 => $grants[self::USER],
+            default => $grants[self::VIEWER],
+        };
     }
 
     public static function seedSystem(): void
@@ -65,7 +131,7 @@ final class Role
                 'sort_order' => $sort,
             ]);
             $roleId = self::id($slug);
-            foreach (Permission::forLegacyRole($sort) as $permission) {
+            foreach (self::systemGrants()[$slug] as $permission) {
                 Database::insertIgnore('role_permissions', [
                     'role_id' => $roleId,
                     'permission' => $permission,
@@ -99,7 +165,7 @@ final class Role
             $number = $hasRole ? (int) ($group['role'] ?? 5) : 5;
             $name = $hasName ? (string) ($group['group_name'] ?? '') : '';
             $stored = self::storedGroupPermissions($groupId);
-            $implied = Permission::forLegacyRole($number);
+            $implied = self::grantsForNumber($number);
             if (strtolower($name) === 'administrator' || $groupId === 3) {
                 $implied = Permission::all();
             }
@@ -185,7 +251,7 @@ final class Role
         }
         $slug = self::customSlug($groupId);
         $name = trim($groupName) === '' ? 'Custom' : 'Custom — ' . trim($groupName);
-        $sort = self::audience($wanted);
+        $sort = 6;
         $existing = Database::first('roles', ['role_id'], 'slug = ?', [$slug]);
         if ($existing === null) {
             $roleId = Database::insert('roles', [
@@ -241,52 +307,84 @@ final class Role
     }
 
     /**
-     * Record power of a permission set. Administrator permissions do not
-     * widen this. 2 deletes, 3 assigns, 4 edits, 5 views.
+     * Record power of a permission set. Administrator permissions do not widen this.
+     * control deletes, assign changes the owner, edit changes the record, view reads it.
      *
      * @param list<string> $permissions
      */
-    public static function recordRank(array $permissions): int
+    public static function recordLevel(array $permissions): string
     {
         $held = array_fill_keys($permissions, true);
         if (isset($held[Permission::RECORDS_CONTROL])) {
-            return 2;
+            return 'control';
         }
         if (isset($held[Permission::RECORDS_ASSIGN])) {
-            return 3;
+            return 'assign';
         }
         if (isset($held[Permission::RECORDS_EDIT])) {
-            return 4;
+            return 'edit';
         }
 
-        return 5;
+        return 'view';
     }
 
-    public static function recordRankForGroup(int $groupId): int
+    public static function recordLevelForGroup(int $groupId): string
     {
-        return self::recordRank(self::permissionsForGroup($groupId));
+        return self::recordLevel(self::permissionsForGroup($groupId));
+    }
+
+    public static function strongerLevel(string $left, string $right): string
+    {
+        return self::levelRank($left) <= self::levelRank($right) ? $left : $right;
+    }
+
+    public static function levelAtLeast(string $have, string $need): bool
+    {
+        return self::levelRank($have) <= self::levelRank($need);
+    }
+
+    private static function levelRank(string $level): int
+    {
+        return match ($level) {
+            'control' => 0,
+            'assign' => 1,
+            'edit' => 2,
+            default => 3,
+        };
     }
 
     /**
-     * Strongest legacy audience in a permission set. A lower number sees more old log lines.
+     * Strongest named standing in a permission set. Used for the owner list
+     * and for notes that still name a minimum role.
      *
      * @param list<string> $permissions
      */
-    public static function audience(array $permissions): int
+    public static function holderRank(array $permissions): string
     {
-        if ($permissions === []) {
-            return 5;
-        }
         $held = array_fill_keys($permissions, true);
-        $best = 5;
-        foreach (Permission::baseCatalog() as $key => $meta) {
-            if (!isset($held[$key])) {
-                continue;
+        if (isset($held[Permission::ADMIN_SYSTEM])) {
+            return 'break-glass';
+        }
+        $ladder = [
+            self::SITE_ADMINISTRATOR => [
+                Permission::ADMIN_SETTINGS,
+                Permission::ADMIN_SECURITY,
+                Permission::ADMIN_ACTIONS,
+                Permission::ADMIN_ITEMS,
+            ],
+            self::ADMINISTRATOR => [Permission::RECORDS_CONTROL],
+            self::MANAGER => [Permission::RECORDS_ASSIGN],
+            self::USER => [Permission::RECORDS_EDIT],
+        ];
+        foreach ($ladder as $slug => $keys) {
+            foreach ($keys as $key) {
+                if (isset($held[$key])) {
+                    return $slug;
+                }
             }
-            $best = min($best, (int) $meta['legacy_max_role']);
         }
 
-        return $best;
+        return self::VIEWER;
     }
 
     public static function isBreakGlass(int $userId): bool
@@ -301,26 +399,77 @@ final class Role
 
     /**
      * The weakest role that may be chosen as an owner.
-     * The stored setting may still be the old number. Viewer includes every active person.
+     * A stored number is read as the role it used to mean. Viewer includes every active person.
      */
-    public static function ownerCeiling(): int
+    public static function ownerLimit(): string
     {
-        $raw = defined('SET_OWNER_MENU') ? trim((string) SET_OWNER_MENU) : 'viewer';
+        $raw = defined('SET_OWNER_MENU') ? trim((string) SET_OWNER_MENU) : self::VIEWER;
+
+        return self::ownerSlug($raw);
+    }
+
+    public static function ownerSlug(string $raw): string
+    {
+        $raw = trim($raw);
         $map = [
-            '0' => 0,
-            '1' => 1,
-            '2' => 2,
-            '3' => 3,
-            '4' => 4,
-            '5' => 5,
+            '0' => 'break-glass',
+            '1' => self::SITE_ADMINISTRATOR,
+            '2' => self::ADMINISTRATOR,
+            '3' => self::MANAGER,
+            '4' => self::USER,
+            '5' => self::VIEWER,
+            'break-glass' => 'break-glass',
+            self::SITE_ADMINISTRATOR => self::SITE_ADMINISTRATOR,
+            self::ADMINISTRATOR => self::ADMINISTRATOR,
+            self::MANAGER => self::MANAGER,
+            self::USER => self::USER,
+            self::VIEWER => self::VIEWER,
+        ];
+
+        return $map[$raw] ?? self::VIEWER;
+    }
+
+    /**
+     * True when $person is at least as strong as $limit.
+     */
+    public static function reaches(string $person, string $limit): bool
+    {
+        return self::power($person) <= self::power($limit);
+    }
+
+    /**
+     * Note audiences this person can read. An empty string is a note for everyone.
+     *
+     * @return list<string>
+     */
+    public static function visibleAudiences(int $userId): array
+    {
+        $mine = self::power(self::strength($userId));
+        $out = [''];
+        foreach ([
             self::SITE_ADMINISTRATOR => 1,
             self::ADMINISTRATOR => 2,
             self::MANAGER => 3,
             self::USER => 4,
-            self::VIEWER => 5,
-        ];
+        ] as $slug => $rank) {
+            if ($rank >= $mine) {
+                $out[] = $slug;
+            }
+        }
 
-        return $map[$raw] ?? 5;
+        return $out;
+    }
+
+    private static function power(string $slug): int
+    {
+        return match ($slug) {
+            'break-glass' => 0,
+            self::SITE_ADMINISTRATOR => 1,
+            self::ADMINISTRATOR => 2,
+            self::MANAGER => 3,
+            self::USER => 4,
+            default => 5,
+        };
     }
 
     /**
@@ -330,7 +479,7 @@ final class Role
      */
     public static function ownerMenu(bool $activeOnly): array
     {
-        $ceiling = self::ownerCeiling();
+        $limit = self::ownerLimit();
         $where = $activeOnly ? "lastactive <> 'inactive' ORDER BY user_name ASC" : 'ORDER BY user_name ASC';
         $ids = [];
         $names = [];
@@ -338,7 +487,7 @@ final class Role
             return ['ids' => $ids, 'names' => $names];
         }
         foreach (Database::select('users', ['user_id', 'user_name'], $where) as $row) {
-            if (self::strength((int) $row['user_id']) <= $ceiling) {
+            if (self::reaches(self::strength((int) $row['user_id']), $limit)) {
                 $ids[] = $row['user_id'];
                 $names[] = (string) ($row['user_name'] ?? '');
             }
@@ -348,25 +497,21 @@ final class Role
     }
 
     /**
-     * A lower number is a stronger person. No group counts as Viewer.
+     * The strongest standing a person holds. No group counts as Viewer.
      */
-    public static function strength(int $userId): int
+    public static function strength(int $userId): string
     {
         if (self::isBreakGlass($userId)) {
-            return 0;
+            return 'break-glass';
         }
-        $best = 5;
-        if (!Database::tableExists('user_groups') || !Database::columnExists('groups', 'role_id')) {
+        $best = self::VIEWER;
+        if (!Database::tableExists('user_groups')) {
             return $best;
         }
         foreach (Database::select('user_groups', ['group_id'], 'user_id = ?', [$userId]) as $link) {
-            $group = Database::first('groups', ['role_id'], 'group_id = ?', [(int) $link['group_id']]);
-            if ($group === null) {
-                continue;
-            }
-            $role = Database::first('roles', ['sort_order'], 'role_id = ?', [(int) $group['role_id']]);
-            if ($role !== null) {
-                $best = min($best, (int) $role['sort_order']);
+            $rank = self::holderRank(self::permissionsForGroup((int) $link['group_id']));
+            if (self::reaches($rank, $best)) {
+                $best = $rank;
             }
         }
 
