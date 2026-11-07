@@ -239,33 +239,8 @@ $unusedImportCounts = static function () use ($root): array {
     return $counts;
 };
 
-/** Scan ceiling. Lower a number in the same commit that removes imports. */
+/** Scan ceiling. A file absent from this list may not have an unused import. */
 $importCeiling = [
-    'src/Application/BlueprintCatalog.php' => 4,
-    'src/Application/Rules.php' => 2,
-    'src/Auth/AuthSession.php' => 1,
-    'src/Http/RenderNavigation.php' => 2,
-    'src/Screen/BuilderScreen.php' => 1,
-    'src/Screen/ItemAccess.php' => 17,
-    'src/Screen/ItemFiles.php' => 18,
-    'src/Screen/ItemList.php' => 13,
-    'src/Screen/ItemLog.php' => 18,
-    'src/Screen/ItemScreen.php' => 16,
-    'src/Screen/ItemSheet.php' => 9,
-    'src/Screen/ItemWrite.php' => 15,
-    'src/Screen/PrintScreen.php' => 1,
-    'src/Screen/RecordCensus.php' => 13,
-    'src/Screen/RecordPeople.php' => 19,
-    'src/Screen/RecordPlan.php' => 18,
-    'src/Screen/RecordRegister.php' => 7,
-    'src/Screen/RecordScreens.php' => 12,
-    'src/Screen/SearchForm.php' => 6,
-    'src/Screen/SearchLibrary.php' => 6,
-    'src/Screen/SearchResults.php' => 6,
-    'src/Screen/SearchScreen.php' => 9,
-    'src/Screen/WorkBoard.php' => 6,
-    'src/Screen/WorkList.php' => 7,
-    'src/Screen/WorkScreen.php' => 3,
 ];
 $importCounts = $unusedImportCounts();
 $importProblems = [];
@@ -275,11 +250,14 @@ foreach ($importCounts as $rel => $count) {
         $importProblems[] = $rel . ' has ' . $count . ' (ceiling ' . $ceiling . ')';
     }
 }
-$check(
-    $importProblems === [],
-    'unused imports stayed within the scan ceiling of ' . array_sum($importCeiling)
-    . ($importProblems === [] ? '' : ': ' . implode('; ', $importProblems))
-);
+$ceiling = array_sum($importCeiling);
+$message = $ceiling === 0
+    ? 'src has no unused imports'
+    : 'unused imports stayed within the scan ceiling of ' . $ceiling;
+if ($importProblems !== []) {
+    $message .= ': ' . implode('; ', $importProblems);
+}
+$check($importProblems === [], $message);
 
 $imageAllowed = [
     'actions.png',

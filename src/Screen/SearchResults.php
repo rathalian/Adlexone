@@ -5,16 +5,10 @@ namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
 use Adlexone\Database\RecordListQuery;
-use Adlexone\Auth\Permission;
-use Adlexone\Application\ApplicationAccess;
-use Adlexone\Application\ApplicationSettings;
 use Adlexone\Database\Database;
-use Adlexone\Http\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
-use Adlexone\Http\Router;
 use Adlexone\Html\Blocks;
-use Adlexone\Html\Form;
 use Adlexone\Http\View;
 use Adlexone\Text\Wording;
 use Adlexone\Html\Html;

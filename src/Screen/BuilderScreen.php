@@ -16,7 +16,6 @@ use Adlexone\Http\Router;
 use Adlexone\Database\Database;
 use Adlexone\Http\RenderNavigation;
 use Adlexone\Http\Page;
-use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
 

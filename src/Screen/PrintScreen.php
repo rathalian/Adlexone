@@ -7,7 +7,6 @@ use Adlexone\Auth\Access;
 
 use Adlexone\Database\Database;
 use Adlexone\Data\FieldTypes;
-use Adlexone\Platform\SharedMethods;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;

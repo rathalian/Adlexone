@@ -6,8 +6,6 @@ namespace Adlexone\Http;
 use Adlexone\Auth\Permission;
 use Adlexone\Http\Page;
 use DOMDocument;
-use DOMElement;
-use RuntimeException;
 use function libxml_clear_errors;
 use function libxml_use_internal_errors;
 use Adlexone\Auth\Access;

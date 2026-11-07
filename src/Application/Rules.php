@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
-use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
-use Adlexone\Application\Communications;
 use Adlexone\Database\Database;
 
 /**

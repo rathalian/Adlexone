@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Adlexone\Auth;
 
-use Adlexone\Database\Database;
-
 /**
  * Establishes the session contract the rest of Adlexone already expects.
  * Authorization is permission-based; access_role_id is derived for legacy checks.

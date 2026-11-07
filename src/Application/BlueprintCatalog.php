@@ -3,10 +3,6 @@ declare(strict_types=1);
 
 namespace Adlexone\Application;
 
-use Adlexone\Auth\Permission;
-use Adlexone\Data\GroupMembership;
-use Adlexone\Data\ItemFields;
-use Adlexone\Database\Database;
 use Adlexone\Data\FieldTypes;
 
 
