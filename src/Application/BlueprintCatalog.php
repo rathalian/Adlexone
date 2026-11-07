@@ -437,6 +437,72 @@ final class BlueprintCatalog
                 ['Signed', 'Declined'],
                 self::contractsGuide()
             ),
+            ApplicationBuilder::BLUEPRINT_REPAIRS => self::shape(
+                'Repairs',
+                'A repair from the day it is reported until it is fixed or called off.',
+                'Repair',
+                'ic-wrench',
+                'Reported by',
+                'Posts a notice and stamps the fixed date when a repair is fixed.',
+                [
+                    $status(['Reported', 'Under repair', 'Waiting on a part', 'Fixed', 'Called off'], ['Waiting on a part']),
+                    self::text('Where'),
+                    ['name' => 'What is wrong', 'type' => FieldTypes::TEXT_AREA],
+                    self::menu('Priority', ['When you can', 'Today', 'Now']),
+                    self::text('Reported by'),
+                    self::text('Next step'),
+                    self::date('Part due'),
+                    self::number('Cost'),
+                    self::date('Reported on'),
+                    self::date('Fixed on'),
+                    self::date('Called off on'),
+                ],
+                [
+                    self::when('Note the report', Rules::EVENT_CREATE, '', Rules::OP_ALWAYS, '', [
+                        self::stamp('Reported on'),
+                        self::logLine('Reported ITEM_TITLE.'),
+                        self::setField('Next step', 'Assign someone.'),
+                    ]),
+                    self::when('Start the repair', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Under repair', [
+                        self::email('Under repair: ITEM_TITLE', 'ITEM_TITLE is under repair.'),
+                        self::logLine('ITEM_TITLE is under repair.'),
+                        self::setField('Next step', 'Fix it.'),
+                    ]),
+                    self::when('Wait on a part', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Waiting on a part', [
+                        self::email('Waiting on a part: ITEM_TITLE', 'ITEM_TITLE is waiting on a part.'),
+                        self::logLine('ITEM_TITLE is waiting on a part.'),
+                        self::setField('Next step', 'Waiting on the part.'),
+                    ]),
+                    self::when('Note a photo on a new report', Rules::EVENT_ATTACHMENT, 'Status', Rules::OP_EQ, 'Reported', [
+                        self::logLine('A photo was added to ITEM_TITLE.'),
+                    ]),
+                    self::when('Fix the repair', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Fixed', [
+                        self::stamp('Fixed on'),
+                        self::logLine('Fixed ITEM_TITLE.'),
+                        self::notice('Fixed: ITEM_TITLE', 'ITEM_TITLE has been fixed.'),
+                        self::email('Fixed: ITEM_TITLE', 'ITEM_TITLE has been fixed.'),
+                        self::setField('Next step', ''),
+                    ]),
+                    self::when('Call off the repair', Rules::EVENT_UPDATE, 'Status', Rules::OP_BECOMES, 'Called off', [
+                        self::stamp('Called off on'),
+                        self::logLine('Called off ITEM_TITLE.'),
+                        self::setField('Next step', ''),
+                    ]),
+                ],
+                [
+                    ScreenCatalog::WORK,
+                    ScreenCatalog::CREATE,
+                    ScreenCatalog::DIARY,
+                    ScreenCatalog::PARTIES,
+                    ScreenCatalog::FILES,
+                    ScreenCatalog::ANNOUNCEMENTS,
+                    ScreenCatalog::SEARCH_ADVANCED,
+                    ScreenCatalog::SEARCH_LIST,
+                ],
+                self::search('Under repair', 'Repairs under repair.', 'Under repair'),
+                ['Fixed', 'Called off'],
+                self::repairsGuide()
+            ),
             ApplicationBuilder::BLUEPRINT_BLANK => self::shape(
                 'Blank',
                 'An empty application and one record type. Add fields when you are ready.',
@@ -471,6 +537,20 @@ final class BlueprintCatalog
                 'notice' => [
                     'subject' => 'Home to Roost',
                     'message' => 'Home to Roost has been approved for publication.',
+                ],
+            ],
+            'repairs' => [
+                'blueprint' => ApplicationBuilder::BLUEPRINT_REPAIRS,
+                'sort' => 8,
+                'cards' => [
+                    ['title' => 'Store door', 'fields' => ['Status' => 'Reported', 'Where' => 'Store', 'What is wrong' => 'The door sticks.', 'Priority' => 'When you can', 'Reported by' => 'Nguyen', 'Next step' => 'Assign someone.', 'Reported on' => '06-11-2026']],
+                    ['title' => 'Kitchen light', 'fields' => ['Status' => 'Under repair', 'Where' => 'Kitchen', 'What is wrong' => 'The light over the bench is out.', 'Priority' => 'Today', 'Reported by' => 'Reid', 'Next step' => 'Fix it.', 'Reported on' => '04-11-2026']],
+                    ['title' => 'West stair rail', 'fields' => ['Status' => 'Waiting on a part', 'Where' => 'West stair', 'What is wrong' => 'The rail is loose.', 'Priority' => 'Now', 'Reported by' => 'Reid', 'Next step' => 'Waiting on the part.', 'Part due' => '14-11-2026', 'Reported on' => '01-11-2026']],
+                    ['title' => 'Civic tap', 'fields' => ['Status' => 'Fixed', 'Where' => 'Civic', 'What is wrong' => 'The tap was dripping.', 'Priority' => 'Today', 'Reported by' => 'Walsh', 'Cost' => '45', 'Reported on' => '20-10-2026', 'Fixed on' => '28-10-2026']],
+                ],
+                'notice' => [
+                    'subject' => 'Civic tap',
+                    'message' => 'Civic tap has been fixed.',
                 ],
             ],
             'matters' => [
@@ -800,6 +880,20 @@ Move Status as the search moves. Listed means the candidate is on the list. Shor
 Set Reply due when you make an offer, then write to the candidate yourself. The application stamps Listed on when the record is created, writes the log, and emails you when they reach the shortlist. Parties lists every candidate under the client's name. The diary shows an offer that is overdue.
 
 A notice is posted when a candidate is placed. A withdrawal is written in the log and stays off the wall.
+TEXT;
+    }
+
+
+    private static function repairsGuide(): string
+    {
+        return <<<'TEXT'
+Each record is one repair. The name of the record is the thing to fix. The person who reported it is named on the card, and the person doing the repair is the owner.
+
+Move Status as the repair moves. Reported means it has come in. Under repair means someone is fixing it. Waiting on a part means the work has stopped until a part arrives. Fixed means it is done. Called off means it will not be done.
+
+Set Part due when you are waiting on a part, then order the part yourself. The application stamps Reported on when the repair is created and writes the log. It emails you when the repair goes under repair, when it is waiting on a part, and when it is fixed. Add a photo while it is reported. The photo is written in the log. Parties lists every repair under the name of the person who reported it. The diary shows a part that is overdue.
+
+A notice is posted when a repair is fixed. A repair that is called off is written in the log and stays off the wall.
 TEXT;
     }
 

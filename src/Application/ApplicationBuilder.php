@@ -28,6 +28,7 @@ final class ApplicationBuilder
     public const BLUEPRINT_CANDIDATES = 'candidates';
     public const BLUEPRINT_CONTRACTS = 'contracts';
     public const BLUEPRINT_PUBLISHING = 'publishing';
+    public const BLUEPRINT_REPAIRS = 'repairs';
     public static function blueprints(): array
     {
         return BlueprintCatalog::blueprints();

@@ -24,38 +24,44 @@ foreach ([
     'The screen a person uses',
     'What you set',
     'id="you-set"',
-    'See Publishing in use',
-    'Building an application',
+    'See Repairs in use',
+    'Kitchen light',
+    'You can <a href="hosting.html">host it yourself</a>, or it can be <a href="ask.html">cloud hosted</a> by Adlexone.',
     'Blank starts with no fields.',
-    'a day off',
-    'id="publishing-demo"',
-    'id="build-demo"',
-    'href="#publishing-demo"',
-    'href="#build-demo"',
+    'id="repairs-demo"',
+    'href="#repairs-demo"',
 ] as $needle) {
     if (!str_contains($home, $needle)) {
-        fwrite(STDERR, "The home page must say what an application is, then offer Publishing as the example ({$needle}).\n");
+        fwrite(STDERR, "The home page must say what an application is, then offer Repairs as the example ({$needle}).\n");
         exit(1);
     }
 }
-if (str_contains($home, 'id="leave-demo"') || str_contains($home, 'id="admin-demo"') || str_contains($home, 'Using Leave requests')) {
-    fwrite(STDERR, "Leave requests is one sentence. It is not a second tour.\n");
+if (
+    str_contains($home, 'id="leave-demo"')
+    || str_contains($home, 'id="admin-demo"')
+    || str_contains($home, 'id="publishing-demo"')
+    || str_contains($home, 'id="build-demo"')
+    || str_contains($home, 'You run it on your server')
+    || str_contains($home, 'You run the software on your server')
+) {
+    fwrite(STDERR, "The home page is the two beats and the Repairs tour. Hosting is the byline.\n");
     exit(1);
 }
 $homeShots = [
-    'publishing-1.png',
-    'publishing-2.png',
-    'publishing-3.png',
-    'publishing-4.png',
-    'publishing-admin-1.png',
-    'publishing-admin-2.png',
-    'publishing-admin-3.png',
+    'repairs-1.png',
+    'repairs-2.png',
+    'repairs-3.png',
+    'repairs-4.png',
 ];
 foreach ($homeShots as $shot) {
     if (!str_contains($home, 'assets/demo/' . $shot) || !is_file($root . '/website/assets/demo/' . $shot)) {
         fwrite(STDERR, "The home page is missing the demo picture {$shot}.\n");
         exit(1);
     }
+}
+if (str_contains($home, 'publishing-1.png') || str_contains($home, 'publishing-admin-1.png')) {
+    fwrite(STDERR, "The home page uses the Repairs stills.\n");
+    exit(1);
 }
 $kept = ['user-1.png', 'user-2.png', 'user-3.png', 'user-4.png'];
 foreach ($kept as $shot) {
@@ -65,9 +71,32 @@ foreach ($kept as $shot) {
     }
 }
 $work = (string) file_get_contents($root . '/website/work.html');
-if (!str_contains($work, 'Applications you can start from.') || str_contains($work, 'index.html#leave-demo')) {
-    fwrite(STDERR, "The applications page lists lines of work and does not open a leave tour.\n");
+if (
+    !str_contains($work, 'Ways to start.')
+    || !str_contains($work, 'index.html#repairs-demo')
+    || str_contains($work, 'index.html#leave-demo')
+    || str_contains($work, 'index.html#publishing-demo')
+    || str_contains($work, 'Publishing is the example')
+) {
+    fwrite(STDERR, "The applications page lists ways to start, with Repairs as the home example.\n");
     exit(1);
+}
+$ask = (string) file_get_contents($root . '/website/ask.html');
+$hosting = (string) file_get_contents($root . '/website/hosting.html');
+if (!str_contains($ask, 'host it yourself') || !str_contains($ask, 'Adlexone FlowIQ Licence') || !str_contains($ask, 'Health')) {
+    fwrite(STDERR, "Ask stays a letter for a zip, with the licence and the Health example.\n");
+    exit(1);
+}
+if (!str_contains($hosting, 'Host it yourself.') || !str_contains($hosting, 'health.example.com') || !str_contains($hosting, 'cloud hosted')) {
+    fwrite(STDERR, "Hosting is the steps for running it yourself, opened from the byline.\n");
+    exit(1);
+}
+foreach (['index.html', 'work.html', 'ask.html', 'hosting.html'] as $page) {
+    $nav = (string) file_get_contents($root . '/website/' . $page);
+    if (str_contains($nav, '>Hosting<')) {
+        fwrite(STDERR, "website/{$page} must not put Hosting in the navigation.\n");
+        exit(1);
+    }
 }
 if (str_contains($home, 'Approve Home to Roost') || str_contains($home, 'id="approved"') || str_contains($home, 'id="view-parties"')) {
     fwrite(STDERR, "The home page uses stills. It does not embed the old Publishing specimen.\n");

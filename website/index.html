@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Adlexone</title>
-    <meta name="description" content="Adlexone is the software you use to build an application for a line of work. You choose the fields, the statuses, and the rules. A person opens a record and moves the status. You run it on your server.">
+    <meta name="description" content="Adlexone is the software you use to build an application for a line of work. You choose the fields, the statuses, and the rules. A person opens a record and moves the status.">
     <meta name="theme-color" content="#f7f8fa">
     <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/site.css">
@@ -27,7 +27,6 @@
                 </label>
                 <nav class="nav" aria-label="Pages">
                     <a href="work.html">Applications</a>
-                    <a href="hosting.html">Hosting</a>
                     <a class="ask" href="ask.html">Ask for a copy</a>
                 </nav>
             </div>
@@ -38,15 +37,16 @@
             <div class="hero">
                 <div class="hero__copy">
                     <h1>Build an application for a line of work.</h1>
-                    <p class="lede">Adlexone is the software you use to build it. You choose the fields on each record, the statuses that record moves through, and the rules that run when a status changes. A person opens a record and moves the status. The application writes the date, the log, the notice, and the email. The timeline and the files stay on the record. You run the software on your server.</p>
+                    <p class="lede">Adlexone is the software you use to build it. You choose the fields on each record, the statuses that record moves through, and the rules that run when a status changes. A person opens a record and moves the status. The application writes the date, the log, the notice, and the email. The timeline and the files stay on the record.</p>
+                    <p class="byline">You can <a href="hosting.html">host it yourself</a>, or it can be <a href="ask.html">cloud hosted</a> by Adlexone.</p>
                     <div class="actions">
                         <a class="btn btn--ink" href="#you-set">See what you set</a>
                         <a class="btn btn--line" href="ask.html">Ask for a copy</a>
                     </div>
                 </div>
                 <figure class="picture picture--ui">
-                    <img src="assets/demo/publishing-2.png" width="1265" height="1318" alt="A record in Publishing. Damaged Good is a manuscript. Status is Reading, and the next step is to finish the reading. The timeline says the record was opened.">
-                    <figcaption>Publishing is the example. This record is the manuscript Damaged Good. The fields, the status, the next step, and the timeline are on this screen. Files sit on the record.</figcaption>
+                    <img src="assets/demo/repairs-1.png" width="1480" height="576" alt="The Repairs board. Store door is reported, Kitchen light is under repair, West stair rail is waiting on a part, and Civic tap is fixed.">
+                    <figcaption>Repairs is the example. Each card is one repair. Kitchen light is under repair, and the next step is to fix it.</figcaption>
                 </figure>
             </div>
 
@@ -56,16 +56,16 @@
                 <div class="use">
                     <ul class="points">
                         <li>
-                            <h3>The list</h3>
-                            <p>The list is the work, with the status on each record.</p>
+                            <h3>The board</h3>
+                            <p>The board is the work, with a column for each status.</p>
                         </li>
                         <li>
                             <h3>The fields</h3>
-                            <p>Open a record. The fields are the ones set for that work. On Damaged Good they are the manuscript, the writer, the kind, and the word count.</p>
+                            <p>Open a record. The fields are the ones set for that work. On Kitchen light they are the place, what is wrong, the priority, and who reported it.</p>
                         </li>
                         <li>
                             <h3>The timeline</h3>
-                            <p>The timeline is the log of what has happened. Files sit on the record. Next step says what is waiting, such as finish the reading.</p>
+                            <p>The timeline is the log of what has happened. Files sit on the record. Next step says what is waiting, such as fix it.</p>
                         </li>
                         <li>
                             <h3>The status</h3>
@@ -73,8 +73,8 @@
                         </li>
                     </ul>
                     <figure class="picture picture--ui">
-                        <img src="assets/demo/publishing-1.png" width="1280" height="709" alt="The Publishing list at Health. Four manuscripts are listed, and each row shows a status. Damaged Good is Reading.">
-                        <figcaption>The Publishing list. Each row is a record, and the status is on the row.</figcaption>
+                        <img src="assets/demo/repairs-2.png" width="1480" height="1028" alt="Kitchen light, a repair. Status is Under repair, the next step is Fix it, and the timeline says the record was opened.">
+                        <figcaption>Kitchen light. The fields, the status, the next step, and the timeline are on this screen.</figcaption>
                     </figure>
                 </div>
             </section>
@@ -89,7 +89,7 @@
                     </li>
                     <li>
                         <h3>Statuses</h3>
-                        <p>Where the work stands, and the ways it can finish. Publishing uses Received, Reading, With the writer, Editing, Approved, and Declined.</p>
+                        <p>Where the work stands, and the ways it can finish. Repairs uses Reported, Under repair, Waiting on a part, Fixed, and Called off.</p>
                     </li>
                     <li>
                         <h3>On every record</h3>
@@ -103,199 +103,107 @@
             </section>
 
             <div class="walk">
-                <section class="section" id="example" aria-labelledby="example-title">
+                <section class="section section--last" id="example" aria-labelledby="example-title">
                     <h2 id="example-title">One example</h2>
-                    <p class="intro">Publishing is one application: a manuscript from the day it arrives until it is approved or declined. Leave requests is another: a day off, from the day it is asked until it is approved or declined. Both are a record, a status, and rules.</p>
+                    <p class="intro">Repairs is one application: a repair from the day it is reported until it is fixed or called off. A request is the same kind of record: what someone asked, the thread, and the files. An article is the answer, moving from draft to published. A help desk, a knowledge base, and other lines of work are applications of the same shape.</p>
                     <div class="actions">
-                        <a class="btn btn--line" href="#publishing-demo">See Publishing in use</a>
-                        <a class="btn btn--line" href="#build-demo">See how it is built</a>
-                        <a class="btn btn--line" href="work.html">Other applications</a>
+                        <a class="btn btn--line" href="#repairs-demo">See Repairs in use</a>
+                        <a class="btn btn--line" href="work.html">Ways to start</a>
                     </div>
                 </section>
                 <div class="demos">
-                    <section class="tour tour--publishing" id="publishing-demo" aria-labelledby="publishing-demo-title">
+                    <section class="tour tour--repairs" id="repairs-demo" aria-labelledby="repairs-demo-title">
                         <div class="tour__head">
                             <div>
-                                <h2 id="publishing-demo-title">Publishing in use</h2>
-                                <p>Damaged Good is being read. You approve the manuscript. The application writes the date, the log, the notice, and the email. A leave request is the same kind of record.</p>
+                                <h2 id="repairs-demo-title">Repairs in use</h2>
+                                <p>Kitchen light is under repair. You mark it fixed. The application writes the date, the log, the notice, and the email.</p>
                             </div>
                             <a class="tour__close" href="#example">Close</a>
                         </div>
                         <div class="stage">
-                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-1" checked>
-                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-2">
-                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-3">
-                            <input class="switch" type="radio" name="publishing-step" id="publishing-step-4">
+                            <input class="switch" type="radio" name="repairs-step" id="repairs-step-1" checked>
+                            <input class="switch" type="radio" name="repairs-step" id="repairs-step-2">
+                            <input class="switch" type="radio" name="repairs-step" id="repairs-step-3">
+                            <input class="switch" type="radio" name="repairs-step" id="repairs-step-4">
                             <figure class="shot shot--1">
                                 <figcaption>
-                                    <p>Publishing is the list. Damaged Good is still being read.</p>
+                                    <p>Repairs is the board. Kitchen light is under repair.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
-                                            <label for="publishing-step-1">1 List</label>
-                                            <label for="publishing-step-2">2 Manuscript</label>
-                                            <label for="publishing-step-3">3 Approved</label>
-                                            <label for="publishing-step-4">4 Notice</label>
+                                            <label for="repairs-step-1">1 Board</label>
+                                            <label for="repairs-step-2">2 Record</label>
+                                            <label for="repairs-step-3">3 Fixed</label>
+                                            <label for="repairs-step-4">4 Notice</label>
                                         </div>
                                         <span class="shot__count">1 of 4</span>
-                                        <label class="btn btn--line" for="publishing-step-2">Next</label>
+                                        <label class="btn btn--line" for="repairs-step-2">Next</label>
                                     </div>
                                 </figcaption>
-                                <label class="shot__frame" for="publishing-step-2">
-                                    <img src="assets/demo/publishing-1.png" width="1280" height="709" alt="Publishing at Health. Four manuscripts are listed. Damaged Good is Reading.">
+                                <label class="shot__frame" for="repairs-step-2">
+                                    <img src="assets/demo/repairs-1.png" width="1480" height="576" alt="The Repairs board. Kitchen light is under repair.">
                                 </label>
                             </figure>
                             <figure class="shot shot--2">
                                 <figcaption>
-                                    <p>Open the manuscript. Status is Reading, and the next step is to finish the reading.</p>
+                                    <p>Open Kitchen light. Status is Under repair, and the next step is to fix it. The timeline says the record was opened.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
-                                            <label for="publishing-step-1">1 List</label>
-                                            <label for="publishing-step-2">2 Manuscript</label>
-                                            <label for="publishing-step-3">3 Approved</label>
-                                            <label for="publishing-step-4">4 Notice</label>
+                                            <label for="repairs-step-1">1 Board</label>
+                                            <label for="repairs-step-2">2 Record</label>
+                                            <label for="repairs-step-3">3 Fixed</label>
+                                            <label for="repairs-step-4">4 Notice</label>
                                         </div>
                                         <span class="shot__count">2 of 4</span>
-                                        <label class="btn btn--line" for="publishing-step-1">Back</label>
-                                        <label class="btn btn--line" for="publishing-step-3">Next</label>
+                                        <label class="btn btn--line" for="repairs-step-1">Back</label>
+                                        <label class="btn btn--line" for="repairs-step-3">Next</label>
                                     </div>
                                 </figcaption>
-                                <label class="shot__frame" for="publishing-step-3">
-                                    <img src="assets/demo/publishing-2.png" width="1265" height="1318" alt="Damaged Good. Status is Reading, and the next step is to finish the reading.">
+                                <label class="shot__frame" for="repairs-step-3">
+                                    <img src="assets/demo/repairs-2.png" width="1480" height="1028" alt="Kitchen light. Status is Under repair, and the next step is to fix it.">
                                 </label>
                             </figure>
                             <figure class="shot shot--3">
                                 <figcaption>
-                                    <p>Move Status to Approved and save. The application stamps Approved on, writes the log, and clears Next step.</p>
+                                    <p>Move Status to Fixed and save. The application stamps Fixed on, writes the log, and clears Next step.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
-                                            <label for="publishing-step-1">1 List</label>
-                                            <label for="publishing-step-2">2 Manuscript</label>
-                                            <label for="publishing-step-3">3 Approved</label>
-                                            <label for="publishing-step-4">4 Notice</label>
+                                            <label for="repairs-step-1">1 Board</label>
+                                            <label for="repairs-step-2">2 Record</label>
+                                            <label for="repairs-step-3">3 Fixed</label>
+                                            <label for="repairs-step-4">4 Notice</label>
                                         </div>
                                         <span class="shot__count">3 of 4</span>
-                                        <label class="btn btn--line" for="publishing-step-2">Back</label>
-                                        <label class="btn btn--line" for="publishing-step-4">Next</label>
+                                        <label class="btn btn--line" for="repairs-step-2">Back</label>
+                                        <label class="btn btn--line" for="repairs-step-4">Next</label>
                                     </div>
                                 </figcaption>
-                                <label class="shot__frame" for="publishing-step-4">
-                                    <img src="assets/demo/publishing-3.png" width="1280" height="1237" alt="Damaged Good after it is approved. Approved on is 7 November 2026, Next step is clear, and the log says Approved Damaged Good for publication.">
+                                <label class="shot__frame" for="repairs-step-4">
+                                    <img src="assets/demo/repairs-3.png" width="1480" height="1180" alt="Kitchen light after it is fixed. Fixed on is 7 November 2026, Next step is clear, and the log says Fixed Kitchen light.">
                                 </label>
                             </figure>
                             <figure class="shot shot--4">
                                 <figcaption>
-                                    <p>A notice is posted that Damaged Good has been approved for publication. The same words are the email.</p>
+                                    <p>A notice is posted that Kitchen light has been fixed. The same words are the email.</p>
                                     <div class="shot__nav">
                                         <div class="jumps">
-                                            <label for="publishing-step-1">1 List</label>
-                                            <label for="publishing-step-2">2 Manuscript</label>
-                                            <label for="publishing-step-3">3 Approved</label>
-                                            <label for="publishing-step-4">4 Notice</label>
+                                            <label for="repairs-step-1">1 Board</label>
+                                            <label for="repairs-step-2">2 Record</label>
+                                            <label for="repairs-step-3">3 Fixed</label>
+                                            <label for="repairs-step-4">4 Notice</label>
                                         </div>
                                         <span class="shot__count">4 of 4</span>
-                                        <label class="btn btn--line" for="publishing-step-3">Back</label>
+                                        <label class="btn btn--line" for="repairs-step-3">Back</label>
                                         <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
                                     </div>
                                 </figcaption>
                                 <div class="shot__frame">
-                                    <img src="assets/demo/publishing-4.png" width="1280" height="691" alt="Announcements for Publishing. The latest notice says Damaged Good has been approved for publication.">
-                                </div>
-                            </figure>
-                        </div>
-                    </section>
-                    <section class="tour tour--admin" id="build-demo" aria-labelledby="build-demo-title">
-                        <div class="tour__head">
-                            <div>
-                                <h2 id="build-demo-title">Building an application</h2>
-                                <p>You create the application and choose a blueprint. The fields and the rules are already there. This example is Publishing. Blank starts with no fields.</p>
-                            </div>
-                            <a class="tour__close" href="#example">Close</a>
-                        </div>
-                        <div class="stage">
-                            <input class="switch" type="radio" name="admin-step" id="admin-step-1" checked>
-                            <input class="switch" type="radio" name="admin-step" id="admin-step-2">
-                            <input class="switch" type="radio" name="admin-step" id="admin-step-3">
-                            <figure class="shot shot--1">
-                                <figcaption>
-                                    <p>Create an application. The name in this example is Publishing, and the guide explains how a manuscript moves. Blank starts with no fields.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="admin-step-1">1 Create</label>
-                                            <label for="admin-step-2">2 Blueprint</label>
-                                            <label for="admin-step-3">3 Rules</label>
-                                        </div>
-                                        <span class="shot__count">1 of 3</span>
-                                        <label class="btn btn--line" for="admin-step-2">Next</label>
-                                    </div>
-                                </figcaption>
-                                <label class="shot__frame" for="admin-step-2">
-                                    <img src="assets/demo/publishing-admin-1.png" width="1265" height="1040" alt="Create an application. The name is Publishing, and the preview shows the fields and the approval rule.">
-                                </label>
-                            </figure>
-                            <figure class="shot shot--2">
-                                <figcaption>
-                                    <p>Choose the Publishing blueprint. It sets the fields, and the rule that runs when a manuscript is approved.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="admin-step-1">1 Create</label>
-                                            <label for="admin-step-2">2 Blueprint</label>
-                                            <label for="admin-step-3">3 Rules</label>
-                                        </div>
-                                        <span class="shot__count">2 of 3</span>
-                                        <label class="btn btn--line" for="admin-step-1">Back</label>
-                                        <label class="btn btn--line" for="admin-step-3">Next</label>
-                                    </div>
-                                </figcaption>
-                                <label class="shot__frame" for="admin-step-3">
-                                    <img src="assets/demo/publishing-admin-2.png" width="1280" height="870" alt="The Publishing blueprint is selected. It sets the fields, and the rule that runs when a manuscript is approved.">
-                                </label>
-                            </figure>
-                            <figure class="shot shot--3">
-                                <figcaption>
-                                    <p>Those rules are on the application. Approve the manuscript stamps the date, writes the log, posts the notice, sends the email, and clears Next step.</p>
-                                    <div class="shot__nav">
-                                        <div class="jumps">
-                                            <label for="admin-step-1">1 Create</label>
-                                            <label for="admin-step-2">2 Blueprint</label>
-                                            <label for="admin-step-3">3 Rules</label>
-                                        </div>
-                                        <span class="shot__count">3 of 3</span>
-                                        <label class="btn btn--line" for="admin-step-2">Back</label>
-                                        <a class="btn btn--ink" href="ask.html">Ask for a copy</a>
-                                    </div>
-                                </figcaption>
-                                <div class="shot__frame">
-                                    <img src="assets/demo/publishing-admin-3.png" width="1265" height="975" alt="The rules on Publishing. Approve the manuscript stamps the date, writes the log, posts a notice, sends an email, and clears Next step.">
+                                    <img src="assets/demo/repairs-4.png" width="1480" height="691" alt="Announcements for Repairs. The latest notice says Kitchen light has been fixed.">
                                 </div>
                             </figure>
                         </div>
                     </section>
                 </div>
             </div>
-
-            <section class="section section--last" aria-labelledby="ways">
-                <h2 id="ways">You run it on your server</h2>
-                <div class="tiles">
-                    <a class="tile" href="hosting.html#one-site">
-                        <figure class="picture picture--card">
-                            <img src="assets/pictures/one-folder.jpg" width="1152" height="864" alt="One white folder standing on a desk." loading="lazy">
-                        </figure>
-                        <div class="tile__body">
-                            <h3 class="tile__name">One site</h3>
-                            <p>For an organisation that keeps its own records, such as Health at health.example.com.</p>
-                        </div>
-                    </a>
-                    <a class="tile" href="hosting.html#customers">
-                        <figure class="picture picture--card">
-                            <img src="assets/pictures/many-folders.jpg" width="1152" height="864" alt="A white pigeonhole holding several folders, with a navy notebook and a key." loading="lazy">
-                        </figure>
-                        <div class="tile__body">
-                            <h3 class="tile__name">Several customer sites</h3>
-                            <p>One copy for many hostnames. The operator is at operate.example.com.</p>
-                        </div>
-                    </a>
-                </div>
-            </section>
         </div>
     </main>
     <footer class="colophon">
@@ -312,7 +220,6 @@
                 <nav aria-label="Footer">
                     <a href="index.html">Home</a>
                     <a href="work.html">Applications</a>
-                    <a href="hosting.html">Hosting</a>
                     <a href="ask.html">Ask for a copy</a>
                 </nav>
             </div>
