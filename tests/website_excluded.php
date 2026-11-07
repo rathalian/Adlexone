@@ -28,6 +28,10 @@ foreach ([
     'Kitchen light',
     'You can <a href="hosting.html">host it yourself</a>, or it can be <a href="ask.html">cloud hosted</a> by Adlexone.',
     'Blank starts with no fields.',
+    'given a note, or given a file',
+    'set the owner',
+    'A menu can have a child menu',
+    'The record has an owner',
     'id="repairs-demo"',
     'href="#repairs-demo"',
 ] as $needle) {
@@ -43,6 +47,7 @@ if (
     || str_contains($home, 'id="build-demo"')
     || str_contains($home, 'You run it on your server')
     || str_contains($home, 'You run the software on your server')
+    || str_contains($home, 'when a status changes')
 ) {
     fwrite(STDERR, "The home page is the two beats and the Repairs tour. Hosting is the byline.\n");
     exit(1);
@@ -77,6 +82,9 @@ if (
     || str_contains($work, 'index.html#leave-demo')
     || str_contains($work, 'index.html#publishing-demo')
     || str_contains($work, 'Publishing is the example')
+    || !str_contains($work, '<h3>Search</h3>')
+    || !str_contains($work, 'The name in the corner starts as Adlexone.')
+    || !str_contains($work, 'Up to four actions run in order.')
 ) {
     fwrite(STDERR, "The applications page lists ways to start, with Repairs as the home example.\n");
     exit(1);
