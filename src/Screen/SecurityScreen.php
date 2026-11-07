@@ -5,7 +5,7 @@ namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Database\Database;
-use Adlexone\support\RenderNavigation;
+use Adlexone\Http\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Auth\Access;
@@ -20,7 +20,6 @@ use Adlexone\Platform\DefaultAccount;
 use Adlexone\Http\Router;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class SecurityScreen
 {

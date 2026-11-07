@@ -131,10 +131,9 @@ final class Blocks
     public static function itemActions(int $itemId, string $base): array
     {
         $actions = [];
-        $role = Access::legacyRole();
         $inApplication = \Adlexone\Http\Page::current()->inApplication();
         $record = $base . '&item=' . $itemId;
-        if ($role <= 4) {
+        if (Access::canEditRecords()) {
             $actions[] = [
                 'href' => $inApplication ? $record . '&sheet=notes' : $record . '&option=log_entry',
                 'label' => $inApplication ? 'Notes' : TXT_246,
@@ -144,20 +143,20 @@ final class Blocks
                 'label' => $inApplication ? 'Files' : TXT_389,
             ];
         }
-        if ($role <= 3) {
+        if (Access::canAssignRecords()) {
             $actions[] = [
                 'href' => $inApplication ? $record . '&sheet=access' : $record . '&option=change_security',
                 'label' => $inApplication ? 'Who can see this' : TXT_28,
             ];
         }
-        if ($role <= 5) {
+        if (Access::audienceRank() <= 5) {
             $actions[] = [
                 'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
                 'label' => TXT_625,
                 'target' => '_blank',
             ];
         }
-        if ($role <= 2) {
+        if (Access::canControlRecords()) {
             $actions[] = [
                 'href' => $base . '&item=' . $itemId . '&option=delete_item',
                 'label' => TXT_315,

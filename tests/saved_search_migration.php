@@ -45,14 +45,27 @@ Database::exec(
     'CREATE TABLE applications (
         application_id INTEGER PRIMARY KEY,
         slug TEXT NOT NULL,
-        legacy_controller TEXT NOT NULL DEFAULT ""
+        legacy_controller TEXT NOT NULL DEFAULT "",
+        legacy_key TEXT NOT NULL DEFAULT ""
     )'
 );
-Database::exec("INSERT INTO applications (application_id, slug, legacy_controller) VALUES (1, 'publishing', '')");
+Database::exec("INSERT INTO applications (application_id, slug, legacy_controller, legacy_key) VALUES (1, 'publishing', '', 'app_publishing')");
+Database::exec('CREATE TABLE groups (group_id INTEGER PRIMARY KEY, role INTEGER NOT NULL)');
+Database::exec('INSERT INTO groups (group_id, role) VALUES (1, 3)');
 Database::exec(
-    "INSERT INTO saved_searches (search_id, user, search_name, saved_search_sql, criteria_json) VALUES
-        (1, '1', 'Old statement', 'SELECT item_id FROM items WHERE item_title = ''Reid''', '{\"version\":1,\"legacy_sql\":\"SELECT item_id FROM items\"}'),
-        (2, '1', 'Filters', 'SELECT item_id FROM items', '{\"version\":1,\"filters\":[{\"field\":\"item_title\",\"op\":\"=\",\"value\":\"Walsh fence\",\"andor\":\"AND\"}]}')"
+    'CREATE TABLE group_permissions (
+        group_id INTEGER NOT NULL,
+        permission TEXT NOT NULL,
+        PRIMARY KEY (group_id, permission)
+    )'
+);
+Database::exec("INSERT INTO group_permissions (group_id, permission) VALUES (1, 'app.access')");
+Database::exec('CREATE TABLE users (user_id INTEGER PRIMARY KEY, home_controller TEXT)');
+Database::exec("INSERT INTO users (user_id, home_controller) VALUES (1, 'item_management_manage')");
+Database::exec(
+    "INSERT INTO saved_searches (search_id, user, search_name, saved_search_sql, application, criteria_json) VALUES
+        (1, '1', 'Old statement', 'SELECT item_id FROM items WHERE item_title = ''Reid''', 'app_publishing', '{\"version\":1,\"legacy_sql\":\"SELECT item_id FROM items\"}'),
+        (2, '1', 'Filters', 'SELECT item_id FROM items', 'publishing', '{\"version\":1,\"filters\":[{\"field\":\"item_title\",\"op\":\"=\",\"value\":\"Walsh fence\",\"andor\":\"AND\"}]}')"
 );
 
 SchemaMigrator::migrate();
@@ -69,13 +82,21 @@ check(($kept['filters'][0]['value'] ?? '') === 'Walsh fence', 'a search with fil
 
 $appColumns = array_column(Database::rows('PRAGMA table_info(applications)'), 'name');
 check(!in_array('legacy_controller', $appColumns, true), 'the old controller column is dropped');
+check(!in_array('legacy_key', $appColumns, true), 'the old application key is dropped');
+$searchApp = (string) Database::row('SELECT application FROM saved_searches WHERE search_id = 1')['application'];
+check($searchApp === 'publishing', 'a saved search follows the application slug');
+$grants = array_column(Database::rows('SELECT permission FROM group_permissions WHERE group_id = 1'), 'permission');
+check(in_array('records.edit', $grants, true) && in_array('records.assign', $grants, true), 'a role 3 group can edit and assign');
+check(!in_array('records.control', $grants, true), 'a role 3 group cannot delete every record');
+$home = (string) Database::row("SELECT home_controller FROM users WHERE user_id = 1")['home_controller'];
+check($home === 'home', 'a stored internal home opens the site root');
 check((string) Database::row('SELECT slug FROM applications WHERE application_id = 1')['slug'] === 'publishing', 'an application remains after the controller column is dropped');
 $upgraded = (int) Database::row('SELECT MAX(version) AS v FROM schema_migrations')['v'];
 check($upgraded === SchemaMigrator::version(), 'an upgraded file reaches the current version');
 
 $library = (string) file_get_contents(dirname(__DIR__) . '/src/Screen/SearchLibrary.php');
 $packs = (string) file_get_contents(dirname(__DIR__) . '/src/Application/AppFunctions.php');
-$nav = (string) file_get_contents(dirname(__DIR__) . '/src/support/RenderNavigation.php');
+$nav = (string) file_get_contents(dirname(__DIR__) . '/src/Http/RenderNavigation.php');
 check(!str_contains($library, 'oneorzero.com'), 'a saved-search feed uses the site address');
 check(!str_contains($packs, 'application_functions'), 'screen packs are read from site/apps only');
 check(!str_contains($nav, 'knowledgebase_settings'), 'the menu no longer has a knowledge-base branch');

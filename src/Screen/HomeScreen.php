@@ -13,7 +13,6 @@ use Adlexone\Http\View;
 use Adlexone\Theme\Theme;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class HomeScreen
 {

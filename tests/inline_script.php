@@ -40,15 +40,13 @@ foreach ($directories as $directory) {
     }
 }
 
-$support = new DirectoryIterator($root . '/src/support');
-foreach ($support as $file) {
-    if (!$file->isFile() || !str_ends_with($file->getFilename(), '.php')) {
-        continue;
-    }
-    if ($file->getFilename() === 'RenderNavigation.php') {
-        continue;
-    }
-    $scan($file->getPathname());
+foreach ([
+    '/src/Application/Actions.php',
+    '/src/Application/Communications.php',
+    '/src/Http/RssFeed.php',
+    '/src/Platform/SharedMethods.php',
+] as $path) {
+    $scan($root . $path);
 }
 
 $app = (string) file_get_contents($root . '/layouts/js/app.js');

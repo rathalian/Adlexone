@@ -9,7 +9,7 @@ use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Database\Database;
-use Adlexone\support\RssFeed;
+use Adlexone\Http\RssFeed;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Http\Router;

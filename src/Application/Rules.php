@@ -5,7 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Data\GroupMembership;
 use Adlexone\Data\ItemFields;
-use Adlexone\support\Communications;
+use Adlexone\Application\Communications;
 use Adlexone\Database\Database;
 
 /**

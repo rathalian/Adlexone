@@ -49,7 +49,6 @@ final class ApplicationStore
                 enabled INTEGER NOT NULL DEFAULT 1,
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 entry_mode TEXT NOT NULL DEFAULT "shell",
-                legacy_key TEXT NOT NULL DEFAULT "",
                 settings_json TEXT NOT NULL DEFAULT "{}"
             )'
         );
@@ -200,8 +199,10 @@ final class ApplicationStore
             'enabled' => (int) ($fields['enabled'] ?? 1),
             'sort_order' => (int) ($fields['sort_order'] ?? 0),
             'entry_mode' => $fields['entry_mode'] ?? 'shell',
-            'legacy_key' => $fields['legacy_key'] ?? '',
         ];
+        if (Database::columnExists('applications', 'legacy_key')) {
+            $row['legacy_key'] = (string) ($fields['legacy_key'] ?? '');
+        }
         if (Database::columnExists('applications', 'guide')) {
             $row['guide'] = (string) ($fields['guide'] ?? '');
         }
@@ -478,10 +479,12 @@ final class ApplicationStore
      */
     private static function retireServiceCentreLegacy(): void
     {
-        Database::update('applications', [
-            'legacy_key' => '',
-            'permission' => Permission::APP_ACCESS,
-        ], 'slug = ? AND legacy_key = ?', [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']);
+        if (Database::columnExists('applications', 'legacy_key')) {
+            Database::update('applications', [
+                'legacy_key' => '',
+                'permission' => Permission::APP_ACCESS,
+            ], 'slug = ? AND legacy_key = ?', [self::SERVICE_CENTRE_SLUG, 'app_servicecentre_main']);
+        }
         if (self::tableExists('saved_searches')) {
             Database::update(
                 'saved_searches',
@@ -742,8 +745,7 @@ final class ApplicationStore
 
     public static function scopeKey(array $app): string
     {
-        $legacy = trim((string) ($app['legacy_key'] ?? ''));
-        return $legacy !== '' ? $legacy : (string) $app['slug'];
+        return (string) ($app['slug'] ?? '');
     }
 
     /**
@@ -804,7 +806,6 @@ final class ApplicationStore
             'enabled' => (int) $row['enabled'] === 1,
             'sort_order' => (int) $row['sort_order'],
             'entry_mode' => (string) $row['entry_mode'],
-            'legacy_key' => (string) $row['legacy_key'],
             'settings' => is_array($settings) ? $settings : [],
             'settings_json' => (string) ($row['settings_json'] ?? '{}'),
         ];

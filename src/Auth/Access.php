@@ -338,6 +338,29 @@ final class Access
     }
 
     /**
+     * Rank compared with a stored log audience. A lower number sees more lines.
+     */
+    public static function audienceRank(): int
+    {
+        return self::legacyRole();
+    }
+
+    public static function canEditRecords(): bool
+    {
+        return self::can(Permission::RECORDS_EDIT) || self::audienceRank() <= 4;
+    }
+
+    public static function canAssignRecords(): bool
+    {
+        return self::can(Permission::RECORDS_ASSIGN) || self::audienceRank() <= 3;
+    }
+
+    public static function canControlRecords(): bool
+    {
+        return self::can(Permission::RECORDS_CONTROL) || self::audienceRank() <= 2;
+    }
+
+    /**
      * Derived legacy role for older checks. Lower = more privilege.
      */
     public static function legacyRole(): int

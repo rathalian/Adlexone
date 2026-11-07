@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Adlexone\support;
+namespace Adlexone\Http;
 
 use Adlexone\Html\Html;
 

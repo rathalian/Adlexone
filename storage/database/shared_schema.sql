@@ -191,7 +191,6 @@ CREATE TABLE IF NOT EXISTS applications (
   enabled INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
   entry_mode TEXT NOT NULL DEFAULT 'shell',
-  legacy_key TEXT NOT NULL DEFAULT '',
   settings_json TEXT NOT NULL DEFAULT '{}'
 );
 

@@ -16,7 +16,6 @@ use Adlexone\Http\View;
 use Adlexone\Database\Database;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class ApplicationScreen
 {

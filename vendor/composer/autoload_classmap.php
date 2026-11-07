@@ -6,6 +6,7 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Adlexone\\Application\\Actions' => $baseDir . '/src/Application/Actions.php',
     'Adlexone\\Application\\AppFunctions' => $baseDir . '/src/Application/AppFunctions.php',
     'Adlexone\\Application\\ApplicationAccess' => $baseDir . '/src/Application/ApplicationAccess.php',
     'Adlexone\\Application\\ApplicationBuilder' => $baseDir . '/src/Application/ApplicationBuilder.php',
@@ -13,6 +14,7 @@ return array(
     'Adlexone\\Application\\ApplicationSettings' => $baseDir . '/src/Application/ApplicationSettings.php',
     'Adlexone\\Application\\ApplicationStore' => $baseDir . '/src/Application/ApplicationStore.php',
     'Adlexone\\Application\\Capabilities' => $baseDir . '/src/Application/Capabilities.php',
+    'Adlexone\\Application\\Communications' => $baseDir . '/src/Application/Communications.php',
     'Adlexone\\Application\\RecordQuery' => $baseDir . '/src/Application/RecordQuery.php',
     'Adlexone\\Application\\Rules' => $baseDir . '/src/Application/Rules.php',
     'Adlexone\\Application\\ScreenCatalog' => $baseDir . '/src/Application/ScreenCatalog.php',
@@ -57,8 +59,10 @@ return array(
     'Adlexone\\Html\\Timeline' => $baseDir . '/src/Html/Timeline.php',
     'Adlexone\\Http\\Page' => $baseDir . '/src/Http/Page.php',
     'Adlexone\\Http\\PublicBaseUrl' => $baseDir . '/src/Http/PublicBaseUrl.php',
+    'Adlexone\\Http\\RenderNavigation' => $baseDir . '/src/Http/RenderNavigation.php',
     'Adlexone\\Http\\Request' => $baseDir . '/src/Http/Request.php',
     'Adlexone\\Http\\Router' => $baseDir . '/src/Http/Router.php',
+    'Adlexone\\Http\\RssFeed' => $baseDir . '/src/Http/RssFeed.php',
     'Adlexone\\Http\\TopNav' => $baseDir . '/src/Http/TopNav.php',
     'Adlexone\\Http\\View' => $baseDir . '/src/Http/View.php',
     'Adlexone\\Platform\\DefaultAccount' => $baseDir . '/src/Platform/DefaultAccount.php',
@@ -73,6 +77,7 @@ return array(
     'Adlexone\\Platform\\SaasInstallScreen' => $baseDir . '/src/Platform/SaasInstallScreen.php',
     'Adlexone\\Platform\\SetupScreen' => $baseDir . '/src/Platform/SetupScreen.php',
     'Adlexone\\Platform\\SetupToken' => $baseDir . '/src/Platform/SetupToken.php',
+    'Adlexone\\Platform\\SharedMethods' => $baseDir . '/src/Platform/SharedMethods.php',
     'Adlexone\\Platform\\SiteUsage' => $baseDir . '/src/Platform/SiteUsage.php',
     'Adlexone\\Platform\\StaticFiles' => $baseDir . '/src/Platform/StaticFiles.php',
     'Adlexone\\Platform\\StatusScreen' => $baseDir . '/src/Platform/StatusScreen.php',
@@ -108,10 +113,5 @@ return array(
     'Adlexone\\Screen\\WorkScreen' => $baseDir . '/src/Screen/WorkScreen.php',
     'Adlexone\\Text\\Wording' => $baseDir . '/src/Text/Wording.php',
     'Adlexone\\Theme\\Theme' => $baseDir . '/src/Theme/Theme.php',
-    'Adlexone\\support\\Actions' => $baseDir . '/src/support/Actions.php',
-    'Adlexone\\support\\Communications' => $baseDir . '/src/support/Communications.php',
-    'Adlexone\\support\\RenderNavigation' => $baseDir . '/src/support/RenderNavigation.php',
-    'Adlexone\\support\\RssFeed' => $baseDir . '/src/support/RssFeed.php',
-    'Adlexone\\support\\SharedMethods' => $baseDir . '/src/support/SharedMethods.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
 );

@@ -282,7 +282,7 @@ final class HomeDashboard
             $byType[(int) $row['item_type_id']][(int) $row['item_id']] = $row;
         }
 
-        $role = Access::legacyRole();
+        $role = Access::audienceRank();
         $others = [];
         if ($rows !== []) {
             $ids = implode(',', array_map(static fn (array $row): int => (int) $row['item_id'], $rows));
@@ -767,10 +767,10 @@ final class HomeDashboard
         }
         $list = implode(',', array_map('intval', $typeIds));
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
-        $role = Access::legacyRole();
+        $role = Access::audienceRank();
         $visible = '';
         $visibleLog = '';
-        if ($role > 2) {
+        if (!Access::canControlRecords()) {
             $ids = WorkScreen::applicationAccessibleItemIds();
             if ($ids === []) {
                 return [];

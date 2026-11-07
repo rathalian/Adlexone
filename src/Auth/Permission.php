@@ -19,6 +19,10 @@ final class Permission
     public const ADMIN_ACTIONS = 'admin.actions';
     public const ADMIN_ITEMS = 'admin.items';
 
+    public const RECORDS_CONTROL = 'records.control';
+    public const RECORDS_ASSIGN = 'records.assign';
+    public const RECORDS_EDIT = 'records.edit';
+
     public const APP_ACCESS = 'app.access';
 
     public static function appUse(string $slug): string
@@ -64,6 +68,18 @@ final class Permission
             self::ADMIN_ITEMS => [
                 'label' => 'Fields and record types',
                 'legacy_max_role' => 1,
+            ],
+            self::RECORDS_CONTROL => [
+                'label' => 'Delete records and see every record',
+                'legacy_max_role' => 2,
+            ],
+            self::RECORDS_ASSIGN => [
+                'label' => 'Assign an owner',
+                'legacy_max_role' => 3,
+            ],
+            self::RECORDS_EDIT => [
+                'label' => 'Edit records',
+                'legacy_max_role' => 4,
             ],
             self::APP_ACCESS => [
                 'label' => 'Sign in and use applications',

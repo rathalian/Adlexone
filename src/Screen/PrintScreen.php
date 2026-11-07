@@ -7,7 +7,7 @@ use Adlexone\Auth\Access;
 
 use Adlexone\Database\Database;
 use Adlexone\Data\FieldTypes;
-use Adlexone\support\SharedMethods;
+use Adlexone\Platform\SharedMethods;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;
@@ -16,7 +16,6 @@ use Adlexone\Html\Html;
 use Adlexone\Http\View;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class PrintScreen
 {

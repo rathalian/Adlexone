@@ -25,7 +25,7 @@ declare(strict_types=1);
  * Contact info@oneorzero.com if you have any further licensing questions.
  */
 
-namespace Adlexone\support;
+namespace Adlexone\Application;
 
 use Adlexone\Application\Rules;
 use Adlexone\Http\Page;

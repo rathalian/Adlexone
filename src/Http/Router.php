@@ -30,8 +30,8 @@ use Adlexone\Screen\SiteSettingsScreen;
  */
 final class Router
 {
-    public const ITEMS = 'item_management_manage';
-    public const SEARCH = 'search_management_manage';
+    public const ITEMS = 'records';
+    public const SEARCH = 'search';
 
     /** @var list<string> */
     private const ITEM_OPTIONS = [
@@ -75,8 +75,8 @@ final class Router
      */
     private const ALIASES = [
         'print' => 'full_page_view',
-        'records' => 'item_management_manage',
-        'search' => 'search_management_manage',
+        'records' => 'records',
+        'search' => 'search',
         'activity' => 'home_activity',
         'assigned' => 'home_assigned',
         'applications' => 'manage_applications',

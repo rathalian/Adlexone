@@ -78,11 +78,11 @@ final class Runtime
             if (strtolower(basename($jsonFile)) === 'platform.json') {
                 continue;
             }
-            \Adlexone\support\SharedMethods::loadJsonSettingsToConstants($jsonFile);
+            \Adlexone\Platform\SharedMethods::loadJsonSettingsToConstants($jsonFile);
         }
         foreach (glob($configDir . '*', GLOB_ONLYDIR) ?: [] as $subDir) {
             foreach (glob($subDir . '/*.json') ?: [] as $jsonFile) {
-                \Adlexone\support\SharedMethods::loadJsonSettingsToConstants($jsonFile);
+                \Adlexone\Platform\SharedMethods::loadJsonSettingsToConstants($jsonFile);
             }
         }
     }

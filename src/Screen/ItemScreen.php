@@ -13,7 +13,7 @@ use Adlexone\Application\Rules;
 use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
-use Adlexone\support\Actions;
+use Adlexone\Application\Actions;
 use Adlexone\Data\AttachmentUpload;
 use Adlexone\Html\FieldControl;
 use Adlexone\Data\FieldCheck;
@@ -207,9 +207,10 @@ final class ItemScreen
      */
     public static function itemRole(int $itemId): int
     {
-        $sessionRole = Access::legacyRole();
-        if ($sessionRole <= 2) {
-            return $sessionRole;
+        if (Access::canControlRecords()) {
+            $rank = Access::audienceRank();
+
+            return $rank <= 2 ? $rank : 2;
         }
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
         $role = 5;
@@ -241,8 +242,7 @@ final class ItemScreen
      */
     public static function userCanAccessItem(int $itemId): bool
     {
-        $role = Access::legacyRole();
-        if ($role <= 2) {
+        if (Access::canControlRecords()) {
             return true;
         }
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);

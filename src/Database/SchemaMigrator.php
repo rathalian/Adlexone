@@ -15,7 +15,7 @@ use Adlexone\Data\SavedSearch;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 16;
+    private const VERSION = 19;
 
     private static bool $done = false;
 
@@ -117,6 +117,21 @@ final class SchemaMigrator
         if ($current < 16) {
             self::applyV16();
             self::mark(16);
+            $current = 16;
+        }
+        if ($current < 17) {
+            self::applyV17();
+            self::mark(17);
+            $current = 17;
+        }
+        if ($current < 18) {
+            self::applyV18();
+            self::mark(18);
+            $current = 18;
+        }
+        if ($current < 19) {
+            self::applyV19();
+            self::mark(19);
         }
     }
 
@@ -1118,5 +1133,66 @@ final class SchemaMigrator
         if (Database::tableExists('applications') && Database::columnExists('applications', 'legacy_controller')) {
             Database::exec('ALTER TABLE applications DROP COLUMN legacy_controller');
         }
+    }
+
+    /**
+     * Groups keep the record permissions their stored role already implied.
+     */
+    private static function applyV17(): void
+    {
+        if (!Database::tableExists('groups') || !Database::tableExists('group_permissions')) {
+            return;
+        }
+        foreach (Database::select('groups', ['group_id', 'role']) as $group) {
+            $role = (int) ($group['role'] ?? 5);
+            foreach (\Adlexone\Auth\Permission::forLegacyRole($role) as $permission) {
+                if (!str_starts_with($permission, 'records.')) {
+                    continue;
+                }
+                Database::insertIgnore('group_permissions', [
+                    'group_id' => (int) $group['group_id'],
+                    'permission' => $permission,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Stored homes that named an internal screen now use the public home value.
+     * Those internal names already opened the site root.
+     */
+    private static function applyV18(): void
+    {
+        if (!Database::tableExists('users') || !Database::columnExists('users', 'home_controller')) {
+            return;
+        }
+        Database::exec(
+            "UPDATE users SET home_controller = 'home'
+             WHERE home_controller IN ('item_management_manage', 'search_management_manage')"
+        );
+    }
+
+    /**
+     * Saved searches follow the application slug. The old scope key can go.
+     */
+    private static function applyV19(): void
+    {
+        if (!Database::tableExists('applications') || !Database::columnExists('applications', 'legacy_key')) {
+            return;
+        }
+        foreach (Database::select('applications', ['slug', 'legacy_key']) as $app) {
+            $slug = (string) ($app['slug'] ?? '');
+            $legacy = trim((string) ($app['legacy_key'] ?? ''));
+            if ($slug === '' || $legacy === '' || $legacy === $slug) {
+                continue;
+            }
+            foreach (['saved_searches', 'announcements'] as $table) {
+                if (!Database::tableExists($table) || !Database::columnExists($table, 'application')) {
+                    continue;
+                }
+                Database::update($table, ['application' => $slug], 'application = ?', [$legacy]);
+            }
+        }
+        Database::exec('ALTER TABLE applications DROP COLUMN legacy_key');
     }
 }

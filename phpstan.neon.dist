@@ -49,12 +49,11 @@ parameters:
         - src/Http
         - src/Auth
         - src/Database
-        - src/support
         - src/Screen
         - src/Platform
         - src/Application
         - src/Data
         - src/Html
     excludePaths:
-        - src/support/SharedMethods.php
+        - src/Platform/SharedMethods.php
     treatPhpDocTypesAsCertain: false

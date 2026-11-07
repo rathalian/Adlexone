@@ -68,6 +68,37 @@ foreach ($named as $ceiling => $method) {
 $check(Access::show('save', 1) === 'save', 'an administrator sees an administer-only action');
 $check(Access::show('save', 0) === null, 'an administrator does not see a system-only action');
 
+$recordGrants = [
+    0 => [Permission::RECORDS_CONTROL, Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT],
+    1 => [Permission::RECORDS_CONTROL, Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT],
+    2 => [Permission::RECORDS_CONTROL, Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT],
+    3 => [Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT],
+    4 => [Permission::RECORDS_EDIT],
+    5 => [],
+];
+foreach ($recordGrants as $role => $expected) {
+    $granted = Permission::forLegacyRole($role);
+    foreach ([Permission::RECORDS_CONTROL, Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT] as $permission) {
+        $check(
+            in_array($permission, $granted, true) === in_array($permission, $expected, true),
+            'role ' . $role . ' ' . ($expected === [] || in_array($permission, $expected, true) ? 'keeps' : 'does not keep') . ' ' . $permission
+        );
+    }
+    $_SESSION['access_role_id'] = $role;
+    $_SESSION['access_permissions'] = $granted;
+    $check(Access::canEditRecords() === ($role <= 4), 'role ' . $role . ' edit follows the record permission');
+    $check(Access::canAssignRecords() === ($role <= 3), 'role ' . $role . ' assign follows the record permission');
+    $check(Access::canControlRecords() === ($role <= 2), 'role ' . $role . ' control follows the record permission');
+}
+$_SESSION['access_role_id'] = 4;
+$_SESSION['access_permissions'] = [Permission::APP_ACCESS];
+$check(Access::canEditRecords() === true, 'a rank of 4 can still save');
+$check(Access::canAssignRecords() === false, 'a rank of 4 cannot assign an owner');
+$_SESSION['access_role_id'] = 5;
+$_SESSION['access_permissions'] = [Permission::RECORDS_EDIT];
+$check(Access::canEditRecords() === true, 'the edit permission saves a record without a low rank');
+$check(Access::canAssignRecords() === false, 'the edit permission does not assign an owner');
+
 $_GET = ['name' => '  Reid  ', 'go' => '', 'f' => ['a' => '1'], 'n' => '0'];
 $_POST = ['title' => '  Note  ', 'empty' => ''];
 $check(Request::queryValue('missing') === null, 'a missing query key stays missing');
@@ -86,29 +117,36 @@ Request::forgetPosted('title');
 $check(Request::hasPostedKey('title') === false, 'a posted value can be dropped');
 
 $screen = '';
-$iterator = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator(dirname(__DIR__) . '/src/Screen', FilesystemIterator::SKIP_DOTS)
-);
-foreach ($iterator as $file) {
-    if (!$file->isFile() || $file->getExtension() !== 'php') {
-        continue;
-    }
-    $chunk = file_get_contents($file->getPathname());
-    if (!is_string($chunk)) {
-        continue;
-    }
-    foreach (explode("\n", $chunk) as $line) {
-        $trim = ltrim($line);
-        if (str_starts_with($trim, '//') || str_starts_with($trim, '*') || str_starts_with($trim, '#')) {
+$product = '';
+foreach (['Screen', 'Html', 'Data'] as $dir) {
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(dirname(__DIR__) . '/src/' . $dir, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($iterator as $file) {
+        if (!$file->isFile() || $file->getExtension() !== 'php') {
             continue;
         }
-        $screen .= $line . "\n";
+        $chunk = file_get_contents($file->getPathname());
+        if (!is_string($chunk)) {
+            continue;
+        }
+        foreach (explode("\n", $chunk) as $line) {
+            $trim = ltrim($line);
+            if (str_starts_with($trim, '//') || str_starts_with($trim, '*') || str_starts_with($trim, '#')) {
+                continue;
+            }
+            if ($dir === 'Screen') {
+                $screen .= $line . "\n";
+            }
+            $product .= $line . "\n";
+        }
     }
 }
 $check(!str_contains($screen, 'access_role_id'), 'screens do not read the session role number');
 $check(!str_contains($screen, '$_GET'), 'screens do not read the query superglobal');
 $check(!str_contains($screen, '$_POST'), 'screens do not read the posted superglobal');
 $check(!str_contains($screen, 'terminateIfRoleNotAllowed'), 'screens do not call the numbered role gate');
+$check(!str_contains($product, 'legacyRole('), 'record checks do not call the role number');
 
 echo $failed === 0 ? "all checks passed\n" : "{$failed} check(s) failed\n";
 exit($failed === 0 ? 0 : 1);

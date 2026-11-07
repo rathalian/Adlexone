@@ -601,7 +601,6 @@ final class ApplicationBuilder
             'enabled' => 1,
             'sort_order' => $max + 10,
             'entry_mode' => 'shell',
-            'legacy_key' => '',
             'settings_json' => json_encode($applicationSettings, JSON_UNESCAPED_SLASHES),
         ]);
         $grantedGroups = Permission::grantAppToGroups($slug, $groupIds, $permLevels);

@@ -22,7 +22,6 @@ use Adlexone\Html\Html;
 use Adlexone\Html\Presence;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class WorkScreen
 {

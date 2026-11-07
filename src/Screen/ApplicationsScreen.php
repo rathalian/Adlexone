@@ -14,7 +14,7 @@ use Adlexone\Screen\RecordScreens;
 use Adlexone\Auth\Permission;
 use Adlexone\Database\Database;
 use Adlexone\Data\FieldTypes;
-use Adlexone\support\RenderNavigation;
+use Adlexone\Http\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Auth\Access;
 use Adlexone\Html\Blocks;
@@ -24,7 +24,6 @@ use Adlexone\Html\Html;
 use Adlexone\Http\Router;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class ApplicationsScreen
 {

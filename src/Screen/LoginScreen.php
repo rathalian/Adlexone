@@ -6,7 +6,6 @@ namespace Adlexone\Screen;
 use Adlexone\Auth\AuthRouter;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class LoginScreen
 {

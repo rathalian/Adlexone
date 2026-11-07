@@ -13,7 +13,7 @@ use Adlexone\Application\Rules;
 use Adlexone\Application\WorkflowFields;
 use Adlexone\Auth\Csrf;
 use Adlexone\Database\Database;
-use Adlexone\support\Actions;
+use Adlexone\Application\Actions;
 use Adlexone\Data\AttachmentUpload;
 use Adlexone\Html\FieldControl;
 use Adlexone\Data\FieldCheck;
@@ -760,7 +760,7 @@ final class ItemSheet
             if ($row['enabled'] != 'Yes') {
                 continue;
             }
-            if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and Access::legacyRole() > 3) {
+            if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and !Access::canAssignRecords()) {
                 continue;
             }
             if (MenuOptions::coveredByParentOnItemType((int)$row['custom_field_id'], (int)$itemTypeID)) {
@@ -925,7 +925,7 @@ final class ItemSheet
                 if ($inApplication) {
                     $peopleHidden = Form::hidden('creator_security', (string) ($itemFields['creator_security'] ?? ''))
                         . Form::hidden('user_security', (string) ($itemFields['user_security'] ?? ''));
-                } elseif (Access::legacyRole() < 4) {//Managers, admins and oneorzero admins and global admins
+                } elseif (Access::canAssignRecords()) {//Managers, admins and oneorzero admins and global admins
                     // Build table array
                     // Security is setup by default from the item
                     $columnArray = array('user_id', 'user_name');
@@ -968,7 +968,7 @@ final class ItemSheet
                 $html = '';
                 //Override at a user level if we have to
                 if (Access::allowsControl()) {//Admin, Adlexone Admin, Global Adlexone Admin and owners have write access
-                    $itemRole = Access::legacyRole();
+                    $itemRole = Access::audienceRank();
                     //they are the administrator so give them administrator rights
                 }
                 //Set at a manager level if the user is the owner but not an administrator
@@ -1026,7 +1026,7 @@ final class ItemSheet
                     if ($row['enabled'] != 'Yes') {
                         continue;
                     }
-                    if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and Access::legacyRole() > 3) {
+                    if (($row['field_type'] == 'workerField' or $row['field_type'] == 'workerFieldMenu') and !Access::canAssignRecords()) {
                         continue;
                     }
                     if ($itemRole < 4 && MenuOptions::coveredByParentOnItemType((int)$row['custom_field_id'], (int)($itemFields['item_type_id'] ?? 0))) {
@@ -1207,7 +1207,7 @@ final class ItemSheet
                 $javascript = $fieldCheck->withTitle()->onclick();
                 $formOptions = self::withFormErrors($formOptions);
                 $buttons = [];
-                if (Access::legacyRole() <= 4) {
+                if (Access::canEditRecords()) {
                     $buttons[] = Form::button('submit', 'submit_button', 'Save', $javascript);
                 }
 
@@ -1306,7 +1306,7 @@ final class ItemSheet
     {
         $me = (int) ($_SESSION['access_user_id'] ?? 0);
         $owner = trim((string) ($post['user_security'] ?? ''));
-        $canAssign = Access::legacyRole() < 4
+        $canAssign = Access::canAssignRecords()
             || self::typeRole((int) ($post['item_type_id'] ?? 0)) < 4;
         if ($canAssign && $owner === '0') {
             $chosen = 0;

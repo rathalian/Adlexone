@@ -14,14 +14,13 @@ use Adlexone\Auth\Permission;
 use Adlexone\Application\ScreenCatalog;
 use Adlexone\Http\Router;
 use Adlexone\Database\Database;
-use Adlexone\support\RenderNavigation;
+use Adlexone\Http\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Form;
 use Adlexone\Html\Html;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class BuilderScreen
 {

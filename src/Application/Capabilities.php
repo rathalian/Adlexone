@@ -5,7 +5,7 @@ namespace Adlexone\Application;
 
 use Adlexone\Auth\Access;
 use Adlexone\Screen\RecordScreens;
-use Adlexone\support\RenderNavigation;
+use Adlexone\Http\RenderNavigation;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Html\Blocks;
@@ -263,8 +263,8 @@ final class Capabilities
         }
 
         match ($capability) {
-            ScreenCatalog::CREATE => self::includeShared('item_management_manage'),
-            ScreenCatalog::SEARCH_QUICK, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::SEARCH_SAVED, ScreenCatalog::SEARCH_LIST => self::includeShared('search_management_manage'),
+            ScreenCatalog::CREATE => self::includeShared(\Adlexone\Http\Router::ITEMS),
+            ScreenCatalog::SEARCH_QUICK, ScreenCatalog::SEARCH_ADVANCED, ScreenCatalog::SEARCH_SAVED, ScreenCatalog::SEARCH_LIST => self::includeShared(\Adlexone\Http\Router::SEARCH),
             default => View::respond('This screen is not available.'),
         };
     }

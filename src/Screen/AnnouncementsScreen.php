@@ -15,7 +15,6 @@ use Adlexone\Http\View;
 use Adlexone\Html\Html;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class AnnouncementsScreen
 {

@@ -5,8 +5,8 @@ namespace Adlexone\Screen;
 
 use Adlexone\Application\ApplicationStore;
 use Adlexone\Database\Database;
-use Adlexone\support\RenderNavigation;
-use Adlexone\support\SharedMethods;
+use Adlexone\Http\RenderNavigation;
+use Adlexone\Platform\SharedMethods;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Http\Router;
@@ -17,7 +17,6 @@ use Adlexone\Http\View;
 use Adlexone\Html\Html;
 
 /**
- * Screen formerly loaded from legacy/.
  */
 final class SiteSettingsScreen
 {
