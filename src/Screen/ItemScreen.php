@@ -71,7 +71,7 @@ final class ItemScreen
                 break;
             case 'add_item' :
                 Access::requireEditRecords();
-                ItemSheet::addItem();
+                ItemWrite::addItem();
                 break;
             case 'show_item' :
                 Access::require(Permission::APP_ACCESS);
@@ -92,7 +92,7 @@ final class ItemScreen
                 break;
             case 'update_item' :
                 Access::requireEditRecords();
-                ItemSheet::updateItem(Request::postedValue('item_id'));
+                ItemWrite::updateItem(Request::postedValue('item_id'));
                 break;
             case 'update_owner' :
                 Access::requireAssignRecords();
@@ -126,11 +126,11 @@ final class ItemScreen
                 break;
             case 'delete_item' :
                 Access::requireControlRecords();
-                ItemSheet::deleteItem(Request::queryValue('item_id'));
+                ItemWrite::deleteItem(Request::queryValue('item_id'));
                 break;
             case 'transform_item' :
                 Access::requireControlRecords();
-                ItemSheet::transformItem(Request::postedValue('item_id'), Request::postedValue('transform_type'), Request::postedValue('item_type_id'));
+                ItemWrite::transformItem(Request::postedValue('item_id'), Request::postedValue('transform_type'), Request::postedValue('item_type_id'));
                 break;
             default :
                 Access::require(Permission::APP_ACCESS);

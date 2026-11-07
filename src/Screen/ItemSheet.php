@@ -1223,24 +1223,5 @@ final class ItemSheet
 
         return Role::levelAtLeast($level, 'assign');
     }
-    public static function addItem()
-    {
-        ItemWrite::addItem();
-    }
-
-    public static function transformItem($itemID, $transformType, $targetItemTypeID)
-    {
-        ItemWrite::transformItem($itemID, $transformType, $targetItemTypeID);
-    }
-
-    public static function updateItem($itemID)
-    {
-        ItemWrite::updateItem($itemID);
-    }
-
-    public static function deleteItem($itemID)
-    {
-        ItemWrite::deleteItem($itemID);
-    }
 
 }
