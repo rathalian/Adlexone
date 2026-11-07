@@ -68,11 +68,10 @@ if (isset($excludeMatch[1])) {
     preg_match_all('/^        - (\S+)\s*$/m', $excludeMatch[1], $excludeLines);
     $excludes = $excludeLines[1];
 }
-$extraExcludes = array_values(array_diff($excludes, ['src/Platform/SharedMethods.php']));
 $check(
-    $extraExcludes === [],
-    'PHPStan excludes SharedMethods.php only'
-    . ($extraExcludes === [] ? '' : ': ' . implode(', ', $extraExcludes))
+    $excludes === [],
+    'PHPStan excludes no files'
+    . ($excludes === [] ? '' : ': ' . implode(', ', $excludes))
 );
 
 /** @param '$_GET'|'$_POST' $name */
