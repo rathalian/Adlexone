@@ -11,7 +11,7 @@ Checked before the register was written:
 - `php -l` on 133 PHP files under `src`, `layouts`, `bootstrap`, `public`, `bin`, and `site`. No syntax errors.
 - `php tests/run.php`. 36 checks passed before `tests/code_health.php` was added. That check runs with them.
 - PHPStan 2.1.22 at level 5, using `phpstan.neon.dist`. No errors.
-- `phpstan-baseline.neon` ignored 55 errors in 23 files when the scan was written. The largest groups are `return.type` in `src/Application/RecordQuery.php` (10) and path and type noise in `src/Platform/InstallLayout.php` (6). The unused `ApplicationBuilder::check()` entry has since been removed, leaving 54.
+- `phpstan-baseline.neon` ignored 55 errors in 23 files when the scan was written. The largest groups were `return.type` in `src/Application/RecordQuery.php` (10) and path and type noise in `src/Platform/InstallLayout.php` (6). The unused `ApplicationBuilder::check()` entry and those ten field-helper entries have since been removed, leaving 44.
 
 `src/Text` and `src/Theme` are on the PHPStan paths. The check fails if any `src/` directory is left out.
 
@@ -51,9 +51,12 @@ An application link is `?application=`. `Capabilities::open()` resolves `ScreenC
 
 - The 229 unused `use` lines are gone. `tests/code_health.php` fails if `src/` grows another one.
 - `src/Text` and `src/Theme` are analysed with the rest of `src/`.
-- Private `ApplicationBuilder::check()` is deleted, and so is its PHPStan baseline entry. The baseline now ignores 54 errors.
+- Private `ApplicationBuilder::check()` is deleted, and so is its PHPStan baseline entry.
 - `ItemScreen` calls `ItemWrite` for add, update, delete, and transform. The four `ItemSheet` wrappers are gone.
 - The record list and the duplicate menu-value message use `Blocks::link`. `class="URL"` remains on `Form::sortButton()` and `Form::pageButton()` only.
+- `SharedMethods.php` is analysed with the rest of `src/`. PHPStan excludes no files. The settings loader refuses a file it cannot read, and the ini writer accepts only text and numbers.
+- `RecordQuery::dueDate()`, `firstOf()`, `prefer()`, and `party()` take the full field shape. The ten baseline entries for those returns are gone.
+- `SetupScreen`, `SaasInstallScreen`, and `OperatorScreen` call `Theme::defineInstallDefaults()`. `StatusScreen` calls it with `false`, so it still does not set `SET_DEFAULT_LANGUAGE`.
 
 ## Still safe, once a live database is searched
 
@@ -69,9 +72,7 @@ The behaviour stays. The local pattern moves to the one the rules already name.
 2. **Direct `$_GET` and `$_POST`. Tag: standardise.** Token scan, so a comment does not count. `$_GET` is read in `bootstrap/bootstrap.php`, `ApplicationAccess`, `Capabilities`, `AuthRouter`, `RenderNavigation`, `Request`, and `Theme::forLogin()`. `$_POST` is read in `bootstrap/bootstrap.php`, `RecordQuery`, `RuleRunner`, `AuthRouter`, `Csrf`, and `Request`. New files are rejected. `Request` remains the reader for screens. The writers in `RuleRunner` and `RecordQuery` stay until a rule can return the value without writing the superglobal.
 3. **Integer `IN (...)` lists. Tag: standardise.** `RecordListQuery::idWhere()` binds the list. `RecordQuery::intList()`, `GroupMembership`, `HomeDashboard`, `ItemSheet`, `SearchForm`, `SearchResults`, `ApplicationSearch`, `WorkScreen`, `WorkList`, `WorkBoard`, `MenuOptions`, and `SavedSearch` still concatenate ids after `intval`. The values are integers, so this is consistency, not an open injection. New SQL should use `RecordListQuery` or `BoundQuery`.
 4. **Hand-built `<form>` tags. Tag: standardise.** `Form::form()` is the rule for a manage form. Literal forms remain where the markup is not that card: install and operator (`SetupScreen`, `SaasInstallScreen`, `OperatorScreen`, `HostConsole`), the record composer and owner assigner (`ItemSheet`, `RecordScreens::editor()`), and the in-application finder (`ApplicationSearch`, `WorkBoard`, `WorkList`). Leave the install forms. A manage screen that grows a new card uses `Form::form()`.
-5. **Install theme block. Tag: simplify.** `SetupScreen`, `SaasInstallScreen`, `OperatorScreen`, and `StatusScreen` each define `SET_DEFAULT_THEME` as `inlay-slate` when it is missing. One helper can own that default. `StatusScreen` is 33 lines; the others are the install wizards.
-6. **`SharedMethods.php`. Tag: standardise.** It is 260 lines and the only PHPStan exclusion. Bring it under analysis in slices. Do not add another exclusion; the check rejects one.
-7. **Manage record lists. Tag: consolidate.** `ItemTypesScreen::typeRecordList()` and `FieldsScreen::fieldRecordList()` share the unused-toggle toolbar. `SecurityScreen::userRecordList()` and `groupRecordList()` are the same `Blocks::recordList` call with different columns. The seam already exists. A further helper is only worth it for the toggle, not a new list type.
+5. **Manage record lists. Tag: consolidate.** `ItemTypesScreen::typeRecordList()` and `FieldsScreen::fieldRecordList()` share the unused-toggle toolbar. `SecurityScreen::userRecordList()` and `groupRecordList()` are the same `Blocks::recordList` call with different columns. The seam already exists. A further helper is only worth it for the toggle, not a new list type.
 
 Copy in `translations/English.lang.php` and `src/` did not contain the brochure words or the template names named in `.cursor/rules/writing-style.mdc`.
 
