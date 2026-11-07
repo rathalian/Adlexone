@@ -658,6 +658,23 @@
         dialog.addEventListener('close', () => syncMeta(dialog));
     });
 
+    document.querySelectorAll('[data-role-grants]').forEach((select) => {
+        let grants = {};
+        try {
+            grants = JSON.parse(select.getAttribute('data-role-grants') || '{}');
+        } catch (error) {
+            grants = {};
+        }
+        select.addEventListener('change', () => {
+            const form = select.closest('form');
+            const wanted = grants[select.value] || [];
+            if (!form) return;
+            form.querySelectorAll('input[name="permissions[]"]').forEach((box) => {
+                box.checked = wanted.indexOf(box.value) !== -1;
+            });
+        });
+    });
+
     const sheet = new URLSearchParams(location.search).get('sheet');
     if (sheet === 'access' || sheet === 'files' || sheet === 'notes') {
         const dialog = asDialog(document.getElementById('sheet-pop-' + sheet));

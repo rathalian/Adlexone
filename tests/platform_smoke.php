@@ -78,6 +78,20 @@ $hash = (string) $pdo->query("SELECT password FROM users WHERE user_name = 'reid
 if (!password_verify('correct-horse', $hash)) {
     $fail('Admin password did not verify');
 }
+$glass = (int) $pdo->query("SELECT break_glass FROM users WHERE user_name = 'reid'")->fetchColumn();
+if ($glass !== 1) {
+    $fail('The first administrator is not the break-glass account');
+}
+$role = (string) $pdo->query(
+    'SELECT r.slug FROM groups g INNER JOIN roles r ON r.role_id = g.role_id WHERE g.group_id = 1'
+)->fetchColumn();
+if ($role !== 'site-administrator') {
+    $fail('The first group is ' . $role);
+}
+$roleColumn = $pdo->query("SELECT 1 FROM pragma_table_info('users') WHERE name = 'role'")->fetchColumn();
+if ($roleColumn !== false) {
+    $fail('A new database still stores a role number on a person');
+}
 $adminTheme = (string) $pdo->query("SELECT theme FROM users WHERE user_name = 'reid'")->fetchColumn();
 if ($adminTheme !== '') {
     $fail('The first administrator should follow the site theme, not store one: ' . $adminTheme);

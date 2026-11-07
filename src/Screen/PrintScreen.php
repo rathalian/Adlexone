@@ -52,7 +52,7 @@ final class PrintScreen
     	}
 
     	$i = 0;
-    	if (Access::allowsControl()){//Admin, Adlexone Admin, Global Adlexone Admin have access
+    	if (Access::canControlRecords()){
     		$i++;
     	}else{
     		if (\Adlexone\Data\GroupMembership::userSharesItemGroup((int) $_SESSION['access_user_id'], (int) $itemID)

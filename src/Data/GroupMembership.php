@@ -83,7 +83,7 @@ final class GroupMembership
 
             return in_array($groupId, self::userGroupIds($userId), true);
         }
-        $session = Access::audienceRank();
+        $session = Access::logAudience();
 
         return $roleId <= 0 || $session <= $roleId;
     }

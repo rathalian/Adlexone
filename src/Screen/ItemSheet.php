@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Role;
 use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
@@ -691,14 +692,9 @@ final class ItemSheet
                     $userArray[] = $row['user_name'];
                 }// while
                 $fields[Wording::get('LA_551', 'TXT_551')] = Form::select('creator_security', $userIDArray, $userArray, $itemTypeFields['creator_security']);
-                $columnArray = array('user_id', 'user_name');
-                $condition = "WHERE lastactive <> 'inactive' AND role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
-                $filterdUserIDArray = [];
-                $filteredUserArray = [];
-                foreach (Database::select('users', $columnArray, $condition) as $row) {
-                    $filterdUserIDArray[] = $row['user_id'];
-                    $filteredUserArray[] = $row['user_name'];
-                }// while
+                $owners = Role::ownerMenu(true);
+                $filterdUserIDArray = $owners['ids'];
+                $filteredUserArray = $owners['names'];
                 $fields[Wording::get('LA_269', 'TXT_269')] = Form::select('user_security', $filterdUserIDArray, $filteredUserArray, $itemTypeFields['user_security']);
             }
         } elseif ($inApplication) {
@@ -921,14 +917,9 @@ final class ItemSheet
                         $userArray[] = $row['user_name'];
                     }// while
                     $itemField[Wording::get('LA_551', 'TXT_551')] = Form::select('creator_security', $userIDArray, $userArray, $itemFields['creator_security']);
-                    $columnArray = array('user_id', 'user_name');
-                    $condition = "WHERE role <= " . SET_OWNER_MENU . " ORDER BY user_name ASC";
-                    $filterdUserIDArray = [];
-                    $filteredUserArray = [];
-                    foreach (Database::select('users', $columnArray, $condition) as $row) {
-                        $filterdUserIDArray[] = $row['user_id'];
-                        $filteredUserArray[] = $row['user_name'];
-                    }// while
+                    $owners = Role::ownerMenu(false);
+                    $filterdUserIDArray = $owners['ids'];
+                    $filteredUserArray = $owners['names'];
                     $itemField[Wording::get('LA_269', 'TXT_269')] = Form::select('user_security', $filterdUserIDArray, $filteredUserArray, $itemFields['user_security']);
                 } else {
                     $columnArray = array('user_name');
@@ -940,26 +931,9 @@ final class ItemSheet
                     $row = Database::first('users', $columnArray, $condition);
                     $itemField[TXT_269] = Form::hidden('user_security', $itemFields['user_security']) . $row['user_name'];
                 }
-                $itemRole = 5;
-                $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
                 $itemGroupIds = GroupMembership::itemGroupIds((int) $itemID);
-                foreach (array_intersect($userGroupIds, $itemGroupIds) as $groupId) {
-                    $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
-                    if ($groupRow !== null) {
-                        $itemRole = ((int) $groupRow['role'] < $itemRole) ? (int) $groupRow['role'] : $itemRole;
-                    }
-                }
+                $itemRole = ItemScreen::itemRole((int) $itemID);
                 $html = '';
-                //Override at a user level if we have to
-                if (Access::allowsControl()) {//Admin, Adlexone Admin, Global Adlexone Admin and owners have write access
-                    $itemRole = Access::audienceRank();
-                    //they are the administrator so give them administrator rights
-                }
-                //Set at a manager level if the user is the owner but not an administrator
-                if ($_SESSION['access_user_id'] == $itemFields['user_security'] and $itemRole > 3) {
-                    $itemRole = 3;
-                    //they are owner so give them manager rights
-                }
                 if (!$inApplication && $itemRole < 4) {
                     // Create group membership list
                     $groupArray = array_values(array_filter(array_map('intval', $itemGroupIds)));
@@ -1214,7 +1188,7 @@ final class ItemSheet
                 $html .= Form::form($formTitle, ItemScreen::recordUrl('option=update_item'), $itemField, $buttons, $formOptions);
 
                 //Show transform option
-                if (!$inApplication && Access::allowsControl()) {//Administrator, Adlexone Administrator or Global Administrator
+                if (!$inApplication && Access::canControlRecords()) {
                     // Administrative functions
                     $columnArray = array('item_type_id', 'item_type_name');
                     $result = Database::select('item_types', $columnArray);
@@ -1255,21 +1229,18 @@ final class ItemSheet
         }
     }
 
-/**
-     * The signed-in person's role on a record type. An administrator stays an administrator.
+    /**
+     * The signed-in person's power on a record type. 2 controls, 3 assigns, 4 edits, 5 views.
      */
     public static function typeRole(int $typeId): int
     {
-        if (Access::allowsControl()) {
+        if (Access::canControlRecords()) {
             return 2;
         }
         $itemRole = 5;
         $userGroupIds = GroupMembership::userGroupIds((int) ($_SESSION['access_user_id'] ?? 0));
         foreach (array_intersect($userGroupIds, GroupMembership::itemTypeGroupIds($typeId)) as $groupId) {
-            $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
-            if ($groupRow !== null) {
-                $itemRole = min($itemRole, (int) $groupRow['role']);
-            }
+            $itemRole = min($itemRole, Role::recordRankForGroup((int) $groupId));
         }
 
         return $itemRole;

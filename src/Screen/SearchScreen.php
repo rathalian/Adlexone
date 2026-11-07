@@ -41,22 +41,22 @@ final class SearchScreen
             case 'show_item_search' :
             case 'show_search_results' :
                 if (Page::current()->inApplication()) {
-                    Access::permitUse();
+                    Access::require(Permission::APP_ACCESS);
                     ApplicationSearch::open();
                     break;
                 }
                 if ($option === 'show_search_results') {
-                    Access::permitUse();
+                    Access::require(Permission::APP_ACCESS);
                     SearchResults::searchResults();
                     break;
                 }
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 $itemTypes = preg_replace('/[^0-9,]/', '', Request::query('item_types')) ?? '';
                 $filter = (stristr($itemTypes, ',') !== false) ? explode(',', $itemTypes) : $itemTypes;
                 SearchForm::showAdvancedItemSearch($filter);
                 break;
             case 'show_saved_searches' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 $application = Request::query('application');
                 if ($application === '' && Page::current()->inApplication()) {
                     $application = Page::current()->applicationSlug();
@@ -64,31 +64,31 @@ final class SearchScreen
                 SearchLibrary::showSavedSearches($_SESSION['access_user_id'], $application);
                 break;
             case 'saved_search' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 SearchLibrary::savedSearch(Request::queryValue('id'), $_SESSION['access_user_id'], Request::query('global'));
                 break;
             case 'delete_saved_search' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 SearchLibrary::deleteSavedSearch(Request::queryValue('id'), $_SESSION['access_user_id'], Request::query('scope'));
                 break;
             case 'quick_search' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 SearchForm::quickSearch();
                 break;
             case 'show_quick_search' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 SearchForm::showQuickSearch();
                 break;
             case 'edit_saved_search' :
-                Access::permitSystem();
+                Access::require(Permission::ADMIN_SYSTEM);
                 SearchLibrary::editSavedSearch(Request::queryValue('id'));
                 break;
             case 'update_saved_search' :
-                Access::permitSystem();
+                Access::require(Permission::ADMIN_SYSTEM);
                 SearchLibrary::updateSavedSearch(Request::queryValue('id'));
                 break;
             default :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 SearchForm::showQuickSearch();
                 break;
         }

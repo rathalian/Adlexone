@@ -194,7 +194,7 @@ final class SearchForm
 
         $fields[Wording::get('LA_310', 'TXT_310')] = Form::text('search_name', '');
         $fields[Wording::get('LA_312', 'TXT_312')] = Form::textarea('search_description', '', SET_FORM_FIELD_HEIGHT);
-        if (Access::allowsAdminister()) {
+        if (Access::canAdministerSite()) {
             $fields[TXT_403] = Form::select('security', array('mine', 'all', 'system'), array(TXT_402, TXT_401, TXT_482), '1');
         } else {
             $fields[''] = Form::hidden('security', 'mine');

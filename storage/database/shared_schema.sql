@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS users (
   show_graphics TEXT,
   home_controller TEXT,
   home_controller_name TEXT,
-  role INTEGER,
+  break_glass INTEGER NOT NULL DEFAULT 0,
   settings TEXT
 );
 
@@ -49,8 +49,51 @@ CREATE TABLE IF NOT EXISTS groups (
   group_id INTEGER NOT NULL PRIMARY KEY,
   group_name TEXT NOT NULL,
   description TEXT,
-  role TEXT NOT NULL
+  role_id INTEGER NOT NULL DEFAULT 5
 );
+
+CREATE TABLE IF NOT EXISTS roles (
+  role_id INTEGER NOT NULL PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  system INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 5
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_id INTEGER NOT NULL,
+  permission TEXT NOT NULL,
+  PRIMARY KEY (role_id, permission)
+);
+
+INSERT OR IGNORE INTO roles (role_id, slug, name, system, sort_order) VALUES
+  (1, 'site-administrator', 'Site administrator', 1, 1),
+  (2, 'administrator', 'Administrator', 1, 2),
+  (3, 'manager', 'Manager', 1, 3),
+  (4, 'user', 'User', 1, 4),
+  (5, 'viewer', 'Viewer', 1, 5);
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
+  (1, 'admin.settings'),
+  (1, 'admin.security'),
+  (1, 'admin.actions'),
+  (1, 'admin.items'),
+  (1, 'records.control'),
+  (1, 'records.assign'),
+  (1, 'records.edit'),
+  (1, 'app.access'),
+  (2, 'records.control'),
+  (2, 'records.assign'),
+  (2, 'records.edit'),
+  (2, 'app.access'),
+  (3, 'records.assign'),
+  (3, 'records.edit'),
+  (3, 'app.access'),
+  (4, 'records.edit'),
+  (4, 'app.access'),
+  (5, 'app.access');
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_one_break_glass ON users (break_glass) WHERE break_glass = 1;
 
 CREATE TABLE IF NOT EXISTS user_groups (
   user_id INTEGER NOT NULL,

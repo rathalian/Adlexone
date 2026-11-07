@@ -156,13 +156,19 @@ final class Permission
         if (!Database::tableExists('applications')) {
             return [];
         }
+        $columns = ['slug'];
+        $order = 'slug ASC';
+        if (Database::columnExists('applications', 'name')) {
+            $columns[] = 'name';
+            $order = 'name ASC';
+        }
         $out = [];
-        foreach (Database::select('applications', ['slug', 'name'], '', [], 'name ASC') as $app) {
+        foreach (Database::select('applications', $columns, '', [], $order) as $app) {
             $slug = self::safeSlug((string) $app['slug']);
             if ($slug === '') {
                 continue;
             }
-            $name = trim((string) $app['name']);
+            $name = trim((string) ($app['name'] ?? ''));
             $out[] = ['slug' => $slug, 'name' => $name !== '' ? $name : $slug];
         }
 
@@ -273,7 +279,12 @@ final class Permission
     {
         Access::ensureReady();
         foreach ([self::appUse($slug), self::appSettings($slug)] as $permission) {
-            Database::delete('group_permissions', 'permission = ?', [$permission]);
+            if (Database::tableExists('role_permissions')) {
+                Database::delete('role_permissions', 'permission = ?', [$permission]);
+            }
+            if (Database::tableExists('group_permissions')) {
+                Database::delete('group_permissions', 'permission = ?', [$permission]);
+            }
         }
     }
 
@@ -290,7 +301,12 @@ final class Permission
             self::appSettings($oldSlug) => self::appSettings($newSlug),
         ];
         foreach ($map as $from => $to) {
-            Database::run('UPDATE group_permissions SET permission = ? WHERE permission = ?', [$to, $from]);
+            if (Database::tableExists('role_permissions')) {
+                Database::run('UPDATE role_permissions SET permission = ? WHERE permission = ?', [$to, $from]);
+            }
+            if (Database::tableExists('group_permissions')) {
+                Database::run('UPDATE group_permissions SET permission = ? WHERE permission = ?', [$to, $from]);
+            }
         }
     }
 
@@ -306,15 +322,12 @@ final class Permission
         ];
         $byGroup = [];
         foreach ($levelMap as $permission => $level) {
-            foreach (Database::select('group_permissions', ['group_id'], 'permission = ?', [$permission]) as $row) {
-                $gid = (int) $row['group_id'];
-                $group = Database::first('groups', ['group_name'], 'group_id = ?', [$gid]);
-                if ($group === null) {
-                    continue;
+            foreach (Database::select('role_permissions', ['role_id'], 'permission = ?', [$permission]) as $row) {
+                foreach (Database::select('groups', ['group_name'], 'role_id = ?', [(int) $row['role_id']]) as $group) {
+                    $name = (string) $group['group_name'];
+                    $byGroup[$name] ??= [];
+                    $byGroup[$name][] = $level;
                 }
-                $name = (string) $group['group_name'];
-                $byGroup[$name] ??= [];
-                $byGroup[$name][] = $level;
             }
         }
         $out = [];

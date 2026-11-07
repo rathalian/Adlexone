@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Role;
 use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
@@ -57,15 +58,15 @@ final class ItemScreen
          */
         switch ($option) {
             case 'my_items' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 ItemList::showMyItems($_SESSION['access_user_id'], Request::query('item_id'));
                 break;
             case 'show_item_types' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 ItemList::showItemTypes(Request::query('default_item_type'));
                 break;
             case 'new_item' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 $itemTypeId = Request::posted('item_type_id');
                 if ($itemTypeId === '') {
                     $itemTypeId = Request::query('item_type_id');
@@ -85,70 +86,70 @@ final class ItemScreen
                 ItemSheet::showItemAdd($itemTypeId, Request::postedAll());
                 break;
             case 'add_item' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 ItemSheet::addItem();
                 break;
             case 'show_item' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 ItemSheet::showItem(Request::queryValue('item_id') ?? '', Request::postedAll(), Request::queryValue('log_entry') ?? 'no', Request::queryValue('attachments') ?? 'no');
                 break;
             case 'log_entry' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 self::returnToItem(Request::queryValue('item_id'), '', 'notes');
                 ItemLog::showLogEntry(Request::queryValue('item_id'));
                 break;
             case 'add_log_entry' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 ItemLog::addLogEntry(Request::postedValue('item_id'));
                 break;
             case 'delete_log' :
-                Access::permitControl();
+                Access::requireControlRecords();
                 ItemLog::deleteLog(Request::queryValue('item_id'), Request::queryValue('log_item_sequence'));
                 break;
             case 'update_item' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 ItemSheet::updateItem(Request::postedValue('item_id'));
                 break;
             case 'update_owner' :
-                Access::permitEdit();
+                Access::requireAssignRecords();
                 ItemAccess::updateOwner();
                 break;
             case 'change_security' :
-                Access::permitEdit();
+                Access::requireAssignRecords();
                 self::returnToItem(Request::queryValue('item_id'), '', 'access');
                 ItemAccess::showSecurityAssignment(Request::queryValue('item_id'));
                 break;
             case 'update_security' :
-                Access::permitEdit();
+                Access::requireAssignRecords();
                 ItemAccess::updateSecurityAssignment(Request::queryValue('item_id'));
                 break;
             case 'show_attachments' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 self::returnToItem(Request::queryValue('item_id'), '', 'files');
                 ItemFiles::showAttachments(Request::queryValue('item_id'));
                 break;
             case 'add_attachment' :
-                Access::permitOpen();
+                Access::requireEditRecords();
                 ItemFiles::addAttachment(Request::queryValue('item_id'));
                 break;
             case 'download_attachment' :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 ItemFiles::downloadAttachment(Request::queryValue('id'));
                 break;
             case 'delete_attachment' :
-                Access::permitControl();
+                Access::requireControlRecords();
                 ItemFiles::deleteAttachment(Request::queryValue('id'), Request::queryValue('item_id'));
                 break;
             case 'delete_item' :
-                Access::permitControl();
+                Access::requireControlRecords();
                 ItemSheet::deleteItem(Request::queryValue('item_id'));
                 break;
             case 'transform_item' :
-                Access::permitControl();
+                Access::requireControlRecords();
                 ItemSheet::transformItem(Request::postedValue('item_id'), Request::postedValue('transform_type'), Request::postedValue('item_type_id'));
                 break;
             default :
-                Access::permitUse();
+                Access::require(Permission::APP_ACCESS);
                 ItemList::showMyItems($_SESSION['access_user_id']);
         }
     }
@@ -202,23 +203,18 @@ final class ItemScreen
     }
 
     /**
-     * The signed-in person's role on one item: the strongest group role, an
-     * administrator role, or manager when they own the item.
+     * The signed-in person's power on one record.
+     * 2 deletes every record, 3 assigns, 4 edits, 5 views. The owner can assign.
      */
     public static function itemRole(int $itemId): int
     {
         if (Access::canControlRecords()) {
-            $rank = Access::audienceRank();
-
-            return $rank <= 2 ? $rank : 2;
+            return 2;
         }
         $userId = (int) ($_SESSION['access_user_id'] ?? 0);
         $role = 5;
         foreach (array_intersect(GroupMembership::userGroupIds($userId), GroupMembership::itemGroupIds($itemId)) as $groupId) {
-            $group = Database::first('groups', ['role'], 'group_id = ?', [(int) $groupId]);
-            if ($group !== null) {
-                $role = min($role, (int) $group['role']);
-            }
+            $role = min($role, Role::recordRankForGroup((int) $groupId));
         }
         if (Database::exists('items', 'item_id = ? AND user_security = ?', [$itemId, $userId])) {
             $role = min($role, 3);

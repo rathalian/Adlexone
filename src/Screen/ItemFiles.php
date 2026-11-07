@@ -45,7 +45,7 @@ final class ItemFiles
 
     public static function attachmentLines(string $itemID): string
     {
-        $canDelete = Access::allowsControl();
+        $canDelete = Access::canControlRecords();
         $rows = Database::select('item_attachments', ['*'], 'item_id = ?', [(int) $itemID], 'create_date DESC');
         if ($rows === []) {
             return '<p class="record-list__empty">No files yet.</p>';
@@ -111,7 +111,7 @@ final class ItemFiles
 
     private static function attachmentListHtml(string $itemID, string $empty): string
     {
-        $canDelete = Access::allowsControl();
+        $canDelete = Access::canControlRecords();
         $sql = 'SELECT * FROM item_attachments WHERE item_id = ' . (int) $itemID;
         $result = Database::rows($sql);
         $rows = [];

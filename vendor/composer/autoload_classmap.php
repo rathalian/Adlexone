@@ -32,6 +32,7 @@ return array(
     'Adlexone\\Auth\\OauthClient' => $baseDir . '/src/Auth/OauthClient.php',
     'Adlexone\\Auth\\OauthConnection' => $baseDir . '/src/Auth/OauthConnection.php',
     'Adlexone\\Auth\\Permission' => $baseDir . '/src/Auth/Permission.php',
+    'Adlexone\\Auth\\Role' => $baseDir . '/src/Auth/Role.php',
     'Adlexone\\Auth\\UserIdentityRepository' => $baseDir . '/src/Auth/UserIdentityRepository.php',
     'Adlexone\\Data\\AttachmentUpload' => $baseDir . '/src/Data/AttachmentUpload.php',
     'Adlexone\\Data\\BoundQuery' => $baseDir . '/src/Data/BoundQuery.php',

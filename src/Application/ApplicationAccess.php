@@ -63,34 +63,6 @@ final class ApplicationAccess
         );
     }
 
-    /**
-     * Whether named permissions satisfy an older role threshold.
-     * A lower allowed role number requires more privilege.
-     */
-    public static function satisfiesLegacyRole(int $allowedRole): bool
-    {
-        if ($allowedRole >= 5) {
-            return self::canUse() || Access::can(Permission::APP_ACCESS);
-        }
-        if ($allowedRole >= 4) {
-            return self::canUse();
-        }
-        if ($allowedRole >= 3) {
-            return self::canUse() || Access::can(Permission::ADMIN_ITEMS);
-        }
-        if ($allowedRole >= 2) {
-            return Access::can(
-                Permission::ADMIN_ITEMS,
-                Permission::ADMIN_SETTINGS,
-                Permission::ADMIN_SECURITY
-            );
-        }
-        if ($allowedRole >= 1) {
-            return Access::can(Permission::ADMIN_SETTINGS, Permission::ADMIN_SYSTEM);
-        }
-        return Access::can(Permission::ADMIN_SYSTEM);
-    }
-
     public static function requireUse(): void
     {
         if (!self::canUse()) {

@@ -65,10 +65,23 @@ final class SiteSettingsScreen
                 $problem = 'Choose how many search fields to include from the list.';
                 return null;
             case 'SET_OWNER_MENU':
-                if (preg_match('/^[0-5]$/', $value) === 1) {
-                    return $value;
+                $roles = [
+                    '0' => '0',
+                    '1' => 'site-administrator',
+                    '2' => 'administrator',
+                    '3' => 'manager',
+                    '4' => 'user',
+                    '5' => 'viewer',
+                    'site-administrator' => 'site-administrator',
+                    'administrator' => 'administrator',
+                    'manager' => 'manager',
+                    'user' => 'user',
+                    'viewer' => 'viewer',
+                ];
+                if (isset($roles[$value])) {
+                    return $roles[$value];
                 }
-                $problem = 'Choose the role shown on a record from the list.';
+                $problem = 'Choose the weakest role that can be an owner.';
                 return null;
             case 'SET_FORM_FIELD_HEIGHT':
                 if ($whole(1, 50)) {

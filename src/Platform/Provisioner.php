@@ -224,12 +224,12 @@ final class Provisioner
     private static function seedAdmin(\PDO $pdo, array $admin): void
     {
         $pdo->prepare(
-            'INSERT OR IGNORE INTO groups (group_id, group_name, description, role) VALUES (1, ?, ?, ?)'
-        )->execute(['Administrator', 'Full access to this site.', '0']);
+            'INSERT OR IGNORE INTO groups (group_id, group_name, description, role_id) VALUES (1, ?, ?, ?)'
+        )->execute(['Administrator', 'Site administrator for this site.', 1]);
         $pdo->prepare(
             'INSERT INTO users (
                 user_name, password, first_name, last_name, email, theme, lastactive, language,
-                role, home_controller, home_controller_name, settings
+                break_glass, home_controller, home_controller_name, settings
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )->execute([
             $admin['username'],
@@ -240,7 +240,7 @@ final class Provisioner
             '',
             'active',
             'English',
-            0,
+            1,
             'home',
             'Home',
             '',

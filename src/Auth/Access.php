@@ -8,12 +8,8 @@ use Adlexone\Database\Database;
 /**
  * Permission-based access control.
  *
- * Groups grant named permissions. A user's effective set is the union of
- * permissions from every group they belong to. A user record with role 0
- * remains a break-glass superuser and receives every permission.
- *
- * access_role_id in the session is derived from permissions only so older
- * role-number checks keep working during migration.
+ * A person's permissions are the union of the roles on every group they
+ * belong to. One break-glass account receives every permission.
  */
 final class Access
 {
@@ -25,7 +21,7 @@ final class Access
             return;
         }
         self::ensureSchema();
-        self::seedIfEmpty();
+        Role::seedSystem();
         self::$ready = true;
     }
 
@@ -42,44 +38,14 @@ final class Access
     }
 
     /**
-     * First-time seed from legacy groups.role values.
-     * Administrator group always receives the full admin set.
-     */
-    public static function seedIfEmpty(): void
-    {
-        if (Database::count('group_permissions') > 0) {
-            return;
-        }
-
-        $groups = Database::select('groups', ['group_id', 'group_name', 'role']);
-        foreach ($groups as $group) {
-            $groupId = (int) $group['group_id'];
-            $legacyRole = (int) ($group['role'] ?? 5);
-            $name = strtolower((string) ($group['group_name'] ?? ''));
-
-            $permissions = Permission::forLegacyRole($legacyRole);
-            if ($name === 'administrator' || $groupId === 3) {
-                $permissions = Permission::all();
-            }
-
-            foreach ($permissions as $permission) {
-                Database::insertIgnore('group_permissions', [
-                    'group_id' => $groupId,
-                    'permission' => $permission,
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Load permissions into the session and refresh derived legacy role.
+     * Load permissions into the session.
      */
     public static function hydrateSession(int $userId): void
     {
         self::ensureReady();
         $permissions = self::permissionsForUser($userId);
         $_SESSION['access_permissions'] = $permissions;
-        $_SESSION['access_role_id'] = self::legacyRoleFromPermissions($permissions);
+        unset($_SESSION['access_role_id']);
         $identity = Database::first('users', ['user_name', 'first_name', 'last_name', 'theme'], 'user_id = ?', [$userId]);
         if ($identity !== null) {
             $_SESSION['access_user_name'] = (string) ($identity['user_name'] ?? '');
@@ -99,21 +65,20 @@ final class Access
     {
         self::ensureReady();
 
-        $user = Database::first('users', ['role'], 'user_id = ?', [$userId]);
+        $user = Database::first('users', ['break_glass'], 'user_id = ?', [$userId]);
         if ($user === null) {
             return [];
         }
 
-        // Break-glass: legacy global administrator on the user record.
-        if ((int) ($user['role'] ?? 5) === 0) {
+        if ((int) ($user['break_glass'] ?? 0) === 1) {
             return Permission::all();
         }
 
         $granted = [];
 
         foreach (self::groupIdsForUser($userId) as $groupId) {
-            foreach (Database::select('group_permissions', ['permission'], 'group_id = ?', [$groupId]) as $row) {
-                $granted[$row['permission']] = true;
+            foreach (Role::permissionsForGroup($groupId) as $permission) {
+                $granted[$permission] = true;
             }
         }
 
@@ -179,154 +144,6 @@ final class Access
         return self::can(...$permissions) ? $value : null;
     }
 
-    /**
-     * Whether the signed-in person meets a privilege ceiling.
-     * Named permissions are checked first. The derived role is the fallback.
-     * A lower ceiling number requires more privilege.
-     */
-    public static function allows(int $ceiling): bool
-    {
-        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($ceiling)) {
-            return true;
-        }
-
-        return self::legacyRole() <= $ceiling;
-    }
-
-    public static function permit(int $ceiling): void
-    {
-        if (!self::allows($ceiling)) {
-            self::deny();
-        }
-    }
-
-    public static function show(mixed $value, int $ceiling): mixed
-    {
-        return self::allows($ceiling) ? $value : null;
-    }
-
-    public static function allowsUse(): bool
-    {
-        return self::allows(5);
-    }
-
-    public static function allowsOpen(): bool
-    {
-        return self::allows(4);
-    }
-
-    public static function allowsEdit(): bool
-    {
-        return self::allows(3);
-    }
-
-    public static function allowsControl(): bool
-    {
-        return self::allows(2);
-    }
-
-    public static function allowsAdminister(): bool
-    {
-        return self::allows(1);
-    }
-
-    public static function allowsSystem(): bool
-    {
-        return self::allows(0);
-    }
-
-    public static function permitUse(): void
-    {
-        self::permit(5);
-    }
-
-    public static function permitOpen(): void
-    {
-        self::permit(4);
-    }
-
-    public static function permitEdit(): void
-    {
-        self::permit(3);
-    }
-
-    public static function permitControl(): void
-    {
-        self::permit(2);
-    }
-
-    public static function permitAdminister(): void
-    {
-        self::permit(1);
-    }
-
-    public static function permitSystem(): void
-    {
-        self::permit(0);
-    }
-
-    public static function showUse(mixed $value): mixed
-    {
-        return self::show($value, 5);
-    }
-
-    public static function showOpen(mixed $value): mixed
-    {
-        return self::show($value, 4);
-    }
-
-    public static function showEdit(mixed $value): mixed
-    {
-        return self::show($value, 3);
-    }
-
-    public static function showControl(mixed $value): mixed
-    {
-        return self::show($value, 2);
-    }
-
-    public static function showAdminister(mixed $value): mixed
-    {
-        return self::show($value, 1);
-    }
-
-    public static function showSystem(mixed $value): mixed
-    {
-        return self::show($value, 0);
-    }
-
-    /**
-     * Return $value when the legacy role check passes. Lower role numbers are higher privilege.
-     */
-    public static function outputIfRoleAllowed(mixed $value, int $userRole, int $allowedRole): mixed
-    {
-        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($allowedRole)) {
-            return $value;
-        }
-        $effective = self::legacyRole();
-        if ($effective !== $userRole && isset($_SESSION['access_permissions'])) {
-            $userRole = $effective;
-        }
-
-        return $allowedRole >= $userRole ? $value : null;
-    }
-
-    /**
-     * Stop the request when the legacy role is not sufficient.
-     */
-    public static function terminateIfRoleNotAllowed(int $userRole, int $allowedRole): void
-    {
-        if (\Adlexone\Application\ApplicationAccess::satisfiesLegacyRole($allowedRole)) {
-            return;
-        }
-        if (isset($_SESSION['access_permissions'])) {
-            $userRole = self::legacyRole();
-        }
-        if ($allowedRole < $userRole) {
-            self::deny();
-        }
-    }
-
     public static function deny(): never
     {
         $message = defined('TXT_356')
@@ -340,57 +157,56 @@ final class Access
     /**
      * Rank compared with a stored log audience. A lower number sees more lines.
      */
-    public static function audienceRank(): int
+    public static function logAudience(): int
     {
-        return self::legacyRole();
+        return Role::audience(self::currentPermissions());
     }
 
     public static function canEditRecords(): bool
     {
-        return self::can(Permission::RECORDS_EDIT) || self::audienceRank() <= 4;
+        return self::can(Permission::RECORDS_EDIT);
     }
 
     public static function canAssignRecords(): bool
     {
-        return self::can(Permission::RECORDS_ASSIGN) || self::audienceRank() <= 3;
+        return self::can(Permission::RECORDS_ASSIGN);
     }
 
     public static function canControlRecords(): bool
     {
-        return self::can(Permission::RECORDS_CONTROL) || self::audienceRank() <= 2;
+        return self::can(Permission::RECORDS_CONTROL);
     }
 
-    /**
-     * Derived legacy role for older checks. Lower = more privilege.
-     */
-    public static function legacyRole(): int
+    public static function canAdministerSite(): bool
     {
-        if (isset($_SESSION['access_role_id'])) {
-            return (int) $_SESSION['access_role_id'];
-        }
-        return self::legacyRoleFromPermissions(self::currentPermissions());
+        return self::can(
+            Permission::ADMIN_SYSTEM,
+            Permission::ADMIN_SETTINGS,
+            Permission::ADMIN_SECURITY,
+            Permission::ADMIN_ACTIONS,
+            Permission::ADMIN_ITEMS
+        );
     }
 
-    /**
-     * @param list<string> $permissions
-     */
-    public static function legacyRoleFromPermissions(array $permissions): int
+    public static function requireEditRecords(): void
     {
-        if ($permissions === []) {
-            return 5;
+        if (!self::canEditRecords()) {
+            self::deny();
         }
-        $lookup = array_fill_keys($permissions, true);
-        $best = 5;
-        foreach (Permission::catalog() as $key => $meta) {
-            if (!isset($lookup[$key])) {
-                continue;
-            }
-            $role = (int) $meta['legacy_max_role'];
-            if ($role < $best) {
-                $best = $role;
-            }
+    }
+
+    public static function requireAssignRecords(): void
+    {
+        if (!self::canAssignRecords()) {
+            self::deny();
         }
-        return $best;
+    }
+
+    public static function requireControlRecords(): void
+    {
+        if (!self::canControlRecords()) {
+            self::deny();
+        }
     }
 
     /**
@@ -399,11 +215,8 @@ final class Access
     public static function permissionsForGroup(int $groupId): array
     {
         self::ensureReady();
-        $list = [];
-        foreach (Database::select('group_permissions', ['permission'], 'group_id = ?', [$groupId], 'permission') as $row) {
-            $list[] = (string) $row['permission'];
-        }
-        return $list;
+
+        return Role::permissionsForGroup($groupId);
     }
 
     /**
@@ -414,18 +227,8 @@ final class Access
     public static function setGroupPermissions(int $groupId, array $permissions): void
     {
         self::ensureReady();
-        Database::delete('group_permissions', 'group_id = ?', [$groupId]);
-        $allowed = array_fill_keys(Permission::all(), true);
-        foreach ($permissions as $permission) {
-            $permission = (string) $permission;
-            if (!isset($allowed[$permission])) {
-                continue;
-            }
-            Database::insertIgnore('group_permissions', [
-                'group_id' => $groupId,
-                'permission' => $permission,
-            ]);
-        }
+        $group = Database::first('groups', ['group_name'], 'group_id = ?', [$groupId]);
+        Role::assign($groupId, $permissions, (string) ($group['group_name'] ?? ''));
     }
 
     /**

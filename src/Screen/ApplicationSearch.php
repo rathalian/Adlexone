@@ -718,7 +718,7 @@ final class ApplicationSearch
     private static function saveForm(array $state): string
     {
         $scope = '';
-        if (Access::allowsAdminister()) {
+        if (Access::canAdministerSite()) {
             $scope = '<label class="finder__filter"><span class="finder__label">Visible to</span>'
                 . '<select class="select" name="security"><option value="mine">Only me</option><option value="all">Everyone with access</option></select></label>';
         }
@@ -919,7 +919,7 @@ final class ApplicationSearch
             View::flash('You already have a saved search called "' . $name . '". Choose another name.', 'danger');
         } else {
             $criteria = self::criteria($state);
-            $everyone = (string) (Request::postedValue('security') ?? '') === 'all' && Access::allowsAdminister();
+            $everyone = (string) (Request::postedValue('security') ?? '') === 'all' && Access::canAdministerSite();
             Database::insert('saved_searches', [
                 'user' => $everyone ? 'all' : $userId,
                 'search_name' => mb_substr($name, 0, 80),

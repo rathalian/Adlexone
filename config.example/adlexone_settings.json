@@ -1,6 +1,6 @@
 {
     "SET_CUSTOM_FIELDS_IN_SEARCH": "5",
-    "SET_OWNER_MENU": "5",
+    "SET_OWNER_MENU": "viewer",
     "SET_ITEMS_PAGE": "10",
     "SET_FORM_FIELD_HEIGHT": "5",
     "SET_SECURE_TYPE": "no",

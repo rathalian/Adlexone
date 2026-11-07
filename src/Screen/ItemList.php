@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Role;
 use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
 use Adlexone\Application\ApplicationAccess;
@@ -91,13 +92,13 @@ final class ItemList
         $sortLinks = '';
         if ($countrecs > 1) {
             $sortLinks = '<div>'
-                . Access::showOpen(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')))
+                . Access::outputIfAllowed(Form::sortButton('item_id', Wording::get('LA_102', 'TXT_102')), Permission::RECORDS_EDIT)
                 . ' '
-                . Access::showOpen(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')))
+                . Access::outputIfAllowed(Form::sortButton('item_title', Wording::get('LA_84', 'TXT_84')), Permission::RECORDS_EDIT)
                 . ' '
-                . Access::showOpen(Form::sortButton('create_date', TXT_225))
+                . Access::outputIfAllowed(Form::sortButton('create_date', TXT_225), Permission::RECORDS_EDIT)
                 . ' '
-                . Access::showOpen(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')))
+                . Access::outputIfAllowed(Form::sortButton('item_type_id', Wording::get('LA_226', 'TXT_226')), Permission::RECORDS_EDIT)
                 . '</div>';
         }
 
@@ -118,11 +119,11 @@ final class ItemList
                     $itemTypeID = $row['item_type_id'];
                 }
                 $itemId = (int) $row['item_id'];
-                $action = Access::showOpen('<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>');
-                $action .= Access::showEdit(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>');
-                $action .= Access::showOpen(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>');
-                $action .= Access::showUse(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'));
-                $action .= Access::showControl(
+                $action = Access::outputIfAllowed('<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_attachments')) . '" class="URL">' . TXT_389 . '</a>', Permission::RECORDS_EDIT);
+                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=change_security')) . '" class="URL">' . TXT_28 . '</a>', Permission::RECORDS_ASSIGN);
+                $action .= Access::outputIfAllowed(' - <a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=log_entry')) . '" class="URL">' . TXT_246 . '</a>', Permission::RECORDS_EDIT);
+                $action .= Access::outputIfAllowed(' - ' . Blocks::link(Router::manageUrl('print', 'item=' . $itemId), TXT_625, 'URL', '', '', '_blank'), Permission::APP_ACCESS);
+                $action .= Access::outputIfAllowed(
                     ' - ' . Blocks::link(
                         ItemScreen::recordUrl('item=' . $itemId . '&option=delete_item'),
                         TXT_315,
@@ -131,7 +132,9 @@ final class ItemList
                         '',
                         '_parent',
                         TXT_400
-                    ));
+                    ),
+                    Permission::RECORDS_CONTROL
+                );
                 $listHtml .= Form::fields([
                     Wording::get('LA_102', 'TXT_102') => (string)$row['item_id'],
                     Wording::get('LA_84', 'TXT_84') => '<a href="' . Html::e(ItemScreen::recordUrl('item=' . $itemId . '&option=show_item' . $logEntry . $attachments)) . '" class="URL">' . Html::e((string) $title) . '</a>',
@@ -224,11 +227,8 @@ final class ItemList
                         foreach ($userGroupIds as $group) {
                             if (in_array((int) $group, $typeGroupIds, true)) {
                                 $typeFound = true;
-                                if (!Access::allowsControl()) {
-                                    $groupRow = Database::first('groups', ['role'], 'group_id = ?', [(int) $group]);
-                                    if ($groupRow !== null && (string) $groupRow['role'] === '5') {
-                                        $viewerGroupFound = true;
-                                    }
+                                if (!Access::canControlRecords() && Role::recordRankForGroup((int) $group) === 5) {
+                                    $viewerGroupFound = true;
                                 }
                             }
                         }

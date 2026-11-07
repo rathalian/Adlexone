@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
+use Adlexone\Auth\Permission;
 use Adlexone\Database\RecordListQuery;
 use Adlexone\Html\Form;
 use Adlexone\Database\Database;
@@ -41,7 +42,7 @@ final class RecordList
         $html = '<div class="pagination pagination-centered "><ul>';
         $page = $postedPage;
         if ($page > 1) {
-            $html .= Access::showUse('<li>' . Form::pageButton('prev', 'Prev') . '</li>');
+            $html .= Access::outputIfAllowed('<li>' . Form::pageButton('prev', 'Prev') . '</li>', Permission::APP_ACCESS);
         }
         $start = max(1, ($page - 3));
         $end = max(10, $page + 3);
@@ -53,11 +54,11 @@ final class RecordList
             if ($i == $page) {
                 $html .= '<li class="active"><a href ="#">' . $i . '</a></li>';
             } else {
-                $html .= Access::showUse('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>');
+                $html .= Access::outputIfAllowed('<li>' . Form::pageButton((string) $i, (string) $i) . '</li>', Permission::APP_ACCESS);
             }
         }
         if ($page != $end) {
-            $html .= Access::showUse('<li>' . Form::pageButton('next', 'Next') . '</li>');
+            $html .= Access::outputIfAllowed('<li>' . Form::pageButton('next', 'Next') . '</li>', Permission::APP_ACCESS);
         }
 
         return ['html' => $html, 'page' => $page];

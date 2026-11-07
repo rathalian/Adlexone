@@ -119,7 +119,6 @@ final class UserIdentityRepository
             'language' => defined('SET_DEFAULT_LANGUAGE') ? SET_DEFAULT_LANGUAGE : 'English',
             'show_header' => 'Yes',
             'show_graphics' => 'Yes',
-            'role' => 4,
             'home_controller' => $defaultApplicationArray[0] ?? 'home',
             'home_controller_name' => $defaultApplicationArray[1] ?? 'Home',
             'lastactive' => 'active',

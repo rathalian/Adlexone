@@ -149,13 +149,11 @@ final class Blocks
                 'label' => $inApplication ? 'Who can see this' : TXT_28,
             ];
         }
-        if (Access::audienceRank() <= 5) {
-            $actions[] = [
-                'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
-                'label' => TXT_625,
-                'target' => '_blank',
-            ];
-        }
+        $actions[] = [
+            'href' => \Adlexone\Http\Router::manageUrl('print', 'item=' . $itemId),
+            'label' => TXT_625,
+            'target' => '_blank',
+        ];
         if (Access::canControlRecords()) {
             $actions[] = [
                 'href' => $base . '&item=' . $itemId . '&option=delete_item',

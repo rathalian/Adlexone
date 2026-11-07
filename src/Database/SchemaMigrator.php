@@ -15,7 +15,7 @@ use Adlexone\Data\SavedSearch;
  */
 final class SchemaMigrator
 {
-    private const VERSION = 19;
+    private const VERSION = 21;
 
     private static bool $done = false;
 
@@ -132,6 +132,16 @@ final class SchemaMigrator
         if ($current < 19) {
             self::applyV19();
             self::mark(19);
+            $current = 19;
+        }
+        if ($current < 20) {
+            self::applyV20();
+            self::mark(20);
+            $current = 20;
+        }
+        if ($current < 21) {
+            self::applyV21();
+            self::mark(21);
         }
     }
 
@@ -1194,5 +1204,21 @@ final class SchemaMigrator
             }
         }
         Database::exec('ALTER TABLE applications DROP COLUMN legacy_key');
+    }
+
+    /**
+     * Groups point at a named role. One person is the break-glass administrator.
+     */
+    private static function applyV20(): void
+    {
+        \Adlexone\Auth\Role::migrateLegacyGroups();
+    }
+
+    /**
+     * The 0–5 number is no longer stored on a person or a group.
+     */
+    private static function applyV21(): void
+    {
+        \Adlexone\Auth\Role::dropLegacyColumns();
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Adlexone\Screen;
 
 use Adlexone\Auth\Access;
-use Adlexone\Database\RecordListQuery;
 use Adlexone\Auth\Permission;
+use Adlexone\Database\RecordListQuery;
 use Adlexone\Application\ApplicationAccess;
 use Adlexone\Application\ApplicationSettings;
 use Adlexone\Database\Database;
@@ -23,7 +23,7 @@ final class SearchLibrary
 {
     public static function showSavedSearches($userID, $application = '')
     {
-        if (Access::allowsAdminister()) {
+        if (Access::canAdministerSite()) {
             $applicationClause = ($application != '') ? " WHERE application = ?" : "";
             $params = ($application != '') ? [$application] : [];
             $sql = "SELECT * FROM saved_searches $applicationClause ORDER BY search_name ASC";
@@ -44,7 +44,7 @@ final class SearchLibrary
                     $name .= ' (' . TXT_408 . ')';
                 }
                 $actions = [];
-                $canDeleteGlobal = ($row['user'] == 'all' || $row['user'] == 'system') && Access::allowsAdminister();
+                $canDeleteGlobal = ($row['user'] == 'all' || $row['user'] == 'system') && Access::canAdministerSite();
                 $canDeleteOwn = (string)$row['user'] === (string)$_SESSION['access_user_id'];
                 if ($canDeleteGlobal || $canDeleteOwn) {
                     $deleteHref = $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=delete_saved_search';
@@ -58,7 +58,7 @@ final class SearchLibrary
                         'confirm' => TXT_400,
                     ];
                 }
-                if (Access::allowsSystem()) {
+                if (Access::can(Permission::ADMIN_SYSTEM)) {
                     $actions[] = [
                         'href' => $base . '&search=' . rawurlencode((string)$row['search_id']) . '&option=edit_saved_search',
                         'label' => TXT_626,
@@ -147,7 +147,7 @@ final class SearchLibrary
         $searchID = (int) $searchID;
         if ($global == true) {
             $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND user = 'all'", [$searchID]);
-        } elseif (Access::allowsControl()) {
+        } elseif (Access::canControlRecords()) {
             $result = Database::rows('SELECT * FROM saved_searches WHERE search_id = ?', [$searchID]);
         } else {
             $result = Database::rows("SELECT * FROM saved_searches WHERE search_id = ? AND (user = 'system' OR user = 'all' OR user = ?)", [$searchID, (string) $userID]);
@@ -211,7 +211,7 @@ final class SearchLibrary
     {
         // Delete favourite search
         $searchID = (int) $searchID;
-        if ($scope == 'global' and Access::allowsAdminister()) {
+        if ($scope == 'global' and Access::canAdministerSite()) {
             Database::delete('saved_searches', 'search_id = ?', [$searchID]);
         } else {
             Database::delete('saved_searches', 'search_id = ? AND user = ?', [$searchID, (string) $userID]);

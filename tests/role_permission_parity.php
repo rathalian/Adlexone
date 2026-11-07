@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use Adlexone\Application\ApplicationAccess;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\Auth\Role;
 use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 
@@ -25,48 +25,24 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 Page::reset();
 unset($_GET['app'], $_SESSION['application_slug']);
 
-$previous = static function (int $userRole, int $ceiling): bool {
-    if (ApplicationAccess::satisfiesLegacyRole($ceiling)) {
-        return true;
-    }
-    if (isset($_SESSION['access_permissions'])) {
-        $userRole = Access::legacyRole();
-    }
+unset($_SESSION['access_user_id'], $_SESSION['access_role_id'], $_SESSION['access_permissions']);
+$check(Access::logAudience() === 5, 'a person with no permissions sees only the widest old notes');
+$check(Access::canEditRecords() === false, 'a person with no permissions cannot edit');
+$check(Access::canAdministerSite() === false, 'a person with no permissions cannot administer the site');
 
-    return $ceiling >= $userRole;
-};
-
-foreach ([0, 1, 2, 3, 4, 5] as $role) {
-    $_SESSION['access_role_id'] = $role;
-    $_SESSION['access_permissions'] = Permission::forLegacyRole($role);
-    foreach ([0, 1, 2, 3, 4, 5] as $ceiling) {
-        $check(
-            Access::allows($ceiling) === $previous($role, $ceiling),
-            "role {$role} ceiling {$ceiling} matches the previous gate"
-        );
-    }
-}
-
-$_SESSION['access_role_id'] = 5;
-unset($_SESSION['access_permissions']);
-$check(Access::allows(5) === true, 'a signed-in person with no permission list can open an ordinary page');
-$check(Access::allows(2) === false, 'a signed-in person with no permission list cannot administer');
-
-$named = [
-    5 => 'allowsUse',
-    4 => 'allowsOpen',
-    3 => 'allowsEdit',
-    2 => 'allowsControl',
-    1 => 'allowsAdminister',
-    0 => 'allowsSystem',
-];
-$_SESSION['access_role_id'] = 1;
 $_SESSION['access_permissions'] = Permission::forLegacyRole(1);
-foreach ($named as $ceiling => $method) {
-    $check(Access::$method() === Access::allows($ceiling), $method . ' uses ceiling ' . $ceiling);
-}
-$check(Access::show('save', 1) === 'save', 'an administrator sees an administer-only action');
-$check(Access::show('save', 0) === null, 'an administrator does not see a system-only action');
+$check(Access::logAudience() === 1, 'a site administrator has audience 1');
+$check(Access::canAdministerSite() === true, 'a site administrator can administer the site');
+$check(Access::can(Permission::ADMIN_SYSTEM) === false, 'a site administrator does not hold sign-in settings');
+$check(Access::canControlRecords() === true, 'a site administrator can delete records');
+
+$_SESSION['access_permissions'] = Permission::forLegacyRole(0);
+$check(Access::logAudience() === 0, 'full access has audience 0');
+$check(Access::can(Permission::ADMIN_SYSTEM) === true, 'full access holds sign-in settings');
+
+$_SESSION['access_permissions'] = [Permission::RECORDS_EDIT, Permission::APP_ACCESS];
+$check(Access::outputIfAllowed('save', Permission::RECORDS_EDIT) === 'save', 'edit permission shows a save action');
+$check(Access::outputIfAllowed('save', Permission::RECORDS_ASSIGN) === null, 'edit permission hides an assign action');
 
 $recordGrants = [
     0 => [Permission::RECORDS_CONTROL, Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT],
@@ -79,25 +55,28 @@ $recordGrants = [
 foreach ($recordGrants as $role => $expected) {
     $granted = Permission::forLegacyRole($role);
     foreach ([Permission::RECORDS_CONTROL, Permission::RECORDS_ASSIGN, Permission::RECORDS_EDIT] as $permission) {
+        $keeps = in_array($permission, $expected, true);
         $check(
-            in_array($permission, $granted, true) === in_array($permission, $expected, true),
-            'role ' . $role . ' ' . ($expected === [] || in_array($permission, $expected, true) ? 'keeps' : 'does not keep') . ' ' . $permission
+            in_array($permission, $granted, true) === $keeps,
+            'role ' . $role . ' ' . ($keeps ? 'keeps' : 'does not keep') . ' ' . $permission
         );
     }
-    $_SESSION['access_role_id'] = $role;
     $_SESSION['access_permissions'] = $granted;
-    $check(Access::canEditRecords() === ($role <= 4), 'role ' . $role . ' edit follows the record permission');
-    $check(Access::canAssignRecords() === ($role <= 3), 'role ' . $role . ' assign follows the record permission');
-    $check(Access::canControlRecords() === ($role <= 2), 'role ' . $role . ' control follows the record permission');
+    $check(Access::canEditRecords() === in_array(Permission::RECORDS_EDIT, $granted, true), 'role ' . $role . ' edit follows the record permission');
+    $check(Access::canAssignRecords() === in_array(Permission::RECORDS_ASSIGN, $granted, true), 'role ' . $role . ' assign follows the record permission');
+    $check(Access::canControlRecords() === in_array(Permission::RECORDS_CONTROL, $granted, true), 'role ' . $role . ' control follows the record permission');
+    $check(Access::logAudience() === $role, 'role ' . $role . ' keeps its log audience');
 }
-$_SESSION['access_role_id'] = 4;
 $_SESSION['access_permissions'] = [Permission::APP_ACCESS];
-$check(Access::canEditRecords() === true, 'a rank of 4 can still save');
-$check(Access::canAssignRecords() === false, 'a rank of 4 cannot assign an owner');
-$_SESSION['access_role_id'] = 5;
+$check(Access::canEditRecords() === false, 'signing in does not edit a record');
+$check(Access::canAssignRecords() === false, 'signing in does not assign an owner');
 $_SESSION['access_permissions'] = [Permission::RECORDS_EDIT];
-$check(Access::canEditRecords() === true, 'the edit permission saves a record without a low rank');
+$check(Access::canEditRecords() === true, 'the edit permission saves a record');
 $check(Access::canAssignRecords() === false, 'the edit permission does not assign an owner');
+$check(Role::recordRank([Permission::RECORDS_EDIT, Permission::ADMIN_ITEMS]) === 4, 'a field permission does not widen record power');
+$check(Role::recordRank([Permission::RECORDS_ASSIGN]) === 3, 'assign is record rank 3');
+$check(Role::recordRank([Permission::RECORDS_CONTROL]) === 2, 'control is record rank 2');
+$check(Role::ownerCeiling() === 5 || Role::ownerCeiling() === 4 || Role::ownerCeiling() === 3 || Role::ownerCeiling() === 2 || Role::ownerCeiling() === 1 || Role::ownerCeiling() === 0, 'the owner setting is a rank');
 
 $_GET = ['name' => '  Reid  ', 'go' => '', 'f' => ['a' => '1'], 'n' => '0'];
 $_POST = ['title' => '  Note  ', 'empty' => ''];
@@ -147,6 +126,9 @@ $check(!str_contains($screen, '$_GET'), 'screens do not read the query superglob
 $check(!str_contains($screen, '$_POST'), 'screens do not read the posted superglobal');
 $check(!str_contains($screen, 'terminateIfRoleNotAllowed'), 'screens do not call the numbered role gate');
 $check(!str_contains($product, 'legacyRole('), 'record checks do not call the role number');
+$check(!str_contains($product, 'audienceRank('), 'record checks do not call the old audience rank');
+$check(!str_contains($screen, 'Access::allows('), 'screens do not use a numbered ceiling');
+$check(!str_contains($screen, "['role']"), 'screens do not read the stored role number');
 
 echo $failed === 0 ? "all checks passed\n" : "{$failed} check(s) failed\n";
 exit($failed === 0 ? 0 : 1);

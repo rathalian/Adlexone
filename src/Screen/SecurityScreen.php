@@ -10,6 +10,7 @@ use Adlexone\Http\Page;
 use Adlexone\Http\Request;
 use Adlexone\Auth\Access;
 use Adlexone\Auth\Permission;
+use Adlexone\Auth\Role;
 use Adlexone\Html\Blocks;
 use Adlexone\Html\Breadcrumb;
 use Adlexone\Html\Form;
@@ -200,40 +201,34 @@ final class SecurityScreen
         }
 
         $option = $userID === '' ? 'add_user' : 'update_user';
+        $breakGlass = $userID !== '' && (int) ($fieldValues['break_glass'] ?? 0) === 1;
+        $lockBreakGlass = $breakGlass && $adminEdit && (int) $userID !== (int) ($_SESSION['access_user_id'] ?? 0);
 
         $fields = [];
-        if ($adminEdit) {
+        if ($adminEdit && !$lockBreakGlass) {
             $fields[TXT_149] = Form::text('user_name', @$fieldValues['user_name']);
         } else {
             $fields[TXT_149] = Form::hidden('user_name', @$fieldValues['user_name']) . @$fieldValues['user_name'];
         }
-        $message = $userID !== '' ? TXT_159 : '';
-        $fields[TXT_165] = Form::password('password_ftype', '') . ' ' . $message;
-        if ($userID === '') {
-            $fields[TXT_166] = Form::password('password_confirm', '') . ' ' . $message;
+        if (!$lockBreakGlass) {
+            $message = $userID !== '' ? TXT_159 : '';
+            $fields[TXT_165] = Form::password('password_ftype', '') . ' ' . $message;
+            if ($userID === '') {
+                $fields[TXT_166] = Form::password('password_confirm', '') . ' ' . $message;
+            }
         }
         $fields[TXT_167] = Form::text('first_name', @$fieldValues['first_name']);
         $fields[TXT_168] = Form::text('last_name', @$fieldValues['last_name']);
         $fields[TXT_169] = Form::text('email', @$fieldValues['email']);
 
-        if (!\Adlexone\Auth\Access::can(\Adlexone\Auth\Permission::ADMIN_SYSTEM)) {
-            $roleIDs = [1, 2, 3, 4, 5];
-            $roleNames = [TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
-        } else {
-            $roleIDs = [0, 1, 2, 3, 4, 5];
-            $roleNames = [TXT_190, TXT_191, TXT_192, TXT_193, TXT_194, TXT_303];
+        if ($breakGlass) {
+            $fields['Account'] = 'Break-glass administrator. Only this account can change its username or password.';
         }
-
-        $fields[TXT_187] = Access::outputIfAllowed(
-            Form::select('role', $roleIDs, $roleNames, @$fieldValues['role']),
-            \Adlexone\Auth\Permission::ADMIN_SECURITY
-        );
-        $fields[TXT_653] = Access::outputIfAllowed(
-            Form::select('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
-            \Adlexone\Auth\Permission::ADMIN_SECURITY
-        );
-        if (empty($fields[TXT_187])) {
-            unset($fields[TXT_187]);
+        if (!$breakGlass) {
+            $fields[TXT_653] = Access::outputIfAllowed(
+                Form::select('lastactive', ['active', 'inactive'], [TXT_93, TXT_94], @$fieldValues['lastactive']),
+                Permission::ADMIN_SECURITY
+            );
         }
         if (empty($fields[TXT_653])) {
             unset($fields[TXT_653]);
@@ -319,7 +314,7 @@ final class SecurityScreen
             $action = self::url('option=add_group');
             $selectedPermissions = [];
         } else {
-            $columnArray = array('group_id', 'group_name', 'description', 'role');
+            $columnArray = array('group_id', 'group_name', 'description', 'role_id');
             $fieldValues = Database::first('groups', $columnArray, 'group_id = ?', [(int) $groupID]);
             if ($fieldValues === null) {
                 View::respond('That group was not found.', Blocks::link(self::url('option=manage_groups'), TXT_160, 'URL'));
@@ -328,14 +323,32 @@ final class SecurityScreen
             $action = self::url('option=update_group');
             $selectedPermissions = \Adlexone\Auth\Access::permissionsForGroup((int) $groupID);
         }
-        $roleIDs = array(1, 2, 3, 4, 5);
-        $roleNames = array(TXT_191, TXT_192, TXT_193, TXT_194, TXT_303);
+        $roleIDs = [];
+        $roleNames = [];
+        foreach (Role::formChoices($isNew ? 0 : (int) $groupID) as $role) {
+            $roleIDs[] = (string) $role['role_id'];
+            $roleNames[] = $role['name'];
+        }
+        $selectedRole = (string) ($fieldValues['role_id'] ?? Role::id(Role::VIEWER));
+        $grants = [];
+        foreach ($roleIDs as $roleId) {
+            $grants[$roleId] = array_values(array_filter(
+                Role::permissions((int) $roleId),
+                static fn (string $permission): bool => $permission !== Permission::APP_ACCESS
+            ));
+        }
         $fields = [
             TXT_150 => Form::text('group_name', $fieldValues['group_name'] ?? ''),
             TXT_186 => Form::textarea('description', $fieldValues['description'] ?? '', SET_FORM_FIELD_HEIGHT),
             TXT_187 => '<div class="field-stack">'
-                . Form::select('role', $roleIDs, $roleNames, $fieldValues['role'] ?? '')
-                . '<p class="form-help">' . Html::e(TXT_697) . '</p>'
+                . Form::select(
+                    'role_id',
+                    $roleIDs,
+                    $roleNames,
+                    $selectedRole,
+                    'data-role-grants="' . Html::e((string) json_encode($grants)) . '"'
+                )
+                . '<p class="form-help">The role sets these permissions. A change to the ticks is saved as a custom role for this group.</p>'
                 . '</div>',
             'Site permissions' => self::sitePermissionsField($selectedPermissions),
             'Application permissions' => self::applicationPermissionsField($selectedPermissions),
@@ -447,7 +460,7 @@ final class SecurityScreen
             'columns' => [
                 ['key' => 'username', 'label' => TXT_38],
                 ['key' => 'email', 'label' => TXT_514],
-                ['key' => 'role', 'label' => TXT_187],
+                ['key' => 'role', 'label' => 'Groups'],
                 ['key' => 'active', 'label' => TXT_653],
             ],
             'searchLabel' => TXT_3,
@@ -497,6 +510,27 @@ final class SecurityScreen
         }
         $id = rawurlencode((string)$row['user_id']);
         $active = ((string)($row['lastactive'] ?? '') === 'inactive') ? TXT_94 : TXT_93;
+        $breakGlass = (int) ($row['break_glass'] ?? 0) === 1;
+        $actions = [
+            [
+                'href' => self::url('option=admin_modify_user&user_id=') . $id,
+                'label' => TXT_626,
+                'tone' => 'quiet',
+            ],
+            [
+                'href' => self::url('option=modify_group_membership&user_id=') . $id,
+                'label' => TXT_239,
+                'tone' => 'quiet',
+            ],
+        ];
+        if (!$breakGlass) {
+            $actions[] = [
+                'href' => self::url('option=delete_user&user_id=') . $id,
+                'label' => TXT_47,
+                'tone' => 'danger',
+                'confirm' => $name . "\n" . TXT_400,
+            ];
+        }
         return [
             'name' => $name,
             'mark' => $name,
@@ -504,27 +538,10 @@ final class SecurityScreen
             'cells' => [
                 'username' => $userName,
                 'email' => (string)($row['email'] ?? ''),
-                'role' => self::securityRoleLabel($row['role'] ?? ''),
+                'role' => self::personAccessLabel($row),
                 'active' => $active,
             ],
-            'actions' => [
-                [
-                    'href' => self::url('option=admin_modify_user&user_id=') . $id,
-                    'label' => TXT_626,
-                    'tone' => 'quiet',
-                ],
-                [
-                    'href' => self::url('option=modify_group_membership&user_id=') . $id,
-                    'label' => TXT_239,
-                    'tone' => 'quiet',
-                ],
-                [
-                    'href' => self::url('option=delete_user&user_id=') . $id,
-                    'label' => TXT_47,
-                    'tone' => 'danger',
-                    'confirm' => $name . "\n" . TXT_400,
-                ],
-            ],
+            'actions' => $actions,
         ];
     }
 
@@ -542,7 +559,7 @@ final class SecurityScreen
             'href' => self::url('option=modify_group&group_id=') . $id,
             'cells' => [
                 'description' => $description,
-                'role' => self::securityRoleLabel($row['role'] ?? ''),
+                'role' => Role::nameForGroup((int) ($row['group_id'] ?? 0)),
             ],
             'actions' => [
                 [
@@ -560,18 +577,25 @@ final class SecurityScreen
         ];
     }
 
-    public static function securityRoleLabel(mixed $role): string
+    /**
+     * Groups this person belongs to. The break-glass account is named on its own.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function personAccessLabel(array $row): string
     {
-        $labels = [
-            '0' => TXT_190,
-            '1' => TXT_191,
-            '2' => TXT_192,
-            '3' => TXT_193,
-            '4' => TXT_194,
-            '5' => TXT_303,
-        ];
+        if ((int) ($row['break_glass'] ?? 0) === 1) {
+            return 'Break-glass administrator';
+        }
+        $names = [];
+        foreach (Database::select('user_groups', ['group_id'], 'user_id = ?', [(int) ($row['user_id'] ?? 0)]) as $link) {
+            $group = Database::first('groups', ['group_name'], 'group_id = ?', [(int) $link['group_id']]);
+            if ($group !== null && (string) ($group['group_name'] ?? '') !== '') {
+                $names[] = (string) $group['group_name'];
+            }
+        }
 
-        return $labels[trim((string)$role)] ?? '';
+        return $names === [] ? 'No group' : implode(', ', $names);
     }
 
     /**
@@ -589,7 +613,7 @@ final class SecurityScreen
      *
      * @var list<string>
      */
-    private const ADMIN_COLUMNS = ['user_name', 'theme', 'role', 'lastactive'];
+    private const ADMIN_COLUMNS = ['user_name', 'theme', 'lastactive'];
 
     /**
      * Columns of the users table taken from the posted form.
@@ -605,11 +629,6 @@ final class SecurityScreen
                 continue;
             }
             $columns[$name] = trim((string) Request::postedValue($name));
-        }
-        if (isset($columns['role'])) {
-            $role = (int) $columns['role'];
-            $min = Access::can(Permission::ADMIN_SYSTEM) ? 0 : 1;
-            $columns['role'] = max($min, min(5, $role));
         }
         if (isset($columns['lastactive']) && !in_array($columns['lastactive'], ['active', 'inactive'], true)) {
             unset($columns['lastactive']);
@@ -703,9 +722,6 @@ final class SecurityScreen
         $insertData['home_controller'] = $homeController;
         $insertData['home_controller_name'] = $homeControllerName;
         $insertData['settings'] = self::userSettings();
-        if (!isset($insertData['role'])) {
-            $insertData['role'] = 5;
-        }
         $userId = Database::insert('users', $insertData);
         self::showGroupMembership($userId);
     }
@@ -719,7 +735,7 @@ final class SecurityScreen
     {
         $admin = Access::can(Permission::ADMIN_SECURITY);
         $userID = $admin ? (int) $userID : (int) ($_SESSION['access_user_id'] ?? 0);
-        $current = Database::first('users', ['user_id', 'user_name', 'settings', 'role'], 'user_id = ?', [$userID]);
+        $current = Database::first('users', ['user_id', 'user_name', 'settings', 'break_glass'], 'user_id = ?', [$userID]);
         $list = Blocks::link(
             self::url($admin ? 'option=manage_users' : 'option=modify_user'),
             $admin ? TXT_160 : 'Return to your profile',
@@ -731,8 +747,16 @@ final class SecurityScreen
         }
 
         $columns = self::postedUserColumns($admin);
-        if ((int) ($current['role'] ?? 5) === 0 && !Access::can(Permission::ADMIN_SYSTEM)) {
-            unset($columns['role'], $columns['lastactive'], $columns['user_name']);
+        $breakGlass = (int) ($current['break_glass'] ?? 0) === 1;
+        if ($breakGlass) {
+            unset($columns['lastactive']);
+            if ($userID !== (int) ($_SESSION['access_user_id'] ?? 0)) {
+                unset($columns['user_name']);
+                if ((string) (Request::postedValue('password_ftype') ?? '') !== '') {
+                    View::respond('Only the break-glass administrator can change that username or password.', $list);
+                    return;
+                }
+            }
         }
 
         if (isset($columns['user_name'])) {
@@ -782,14 +806,17 @@ final class SecurityScreen
     }
 
     /**
-     * @return array{group_name: string, description: string, role: int}
+     * @return array{group_name: string, description: string, role_id: int}
      */
     private static function postedGroupColumns(): array
     {
+        $posted = (int) (Request::postedValue('role_id') ?? 0);
+        $role = Database::first('roles', ['role_id'], 'role_id = ?', [$posted]);
+
         return [
             'group_name' => trim((string) (Request::postedValue('group_name') ?? '')),
             'description' => trim((string) (Request::postedValue('description') ?? '')),
-            'role' => max(1, min(5, (int) (Request::postedValue('role') ?? 5))),
+            'role_id' => $role === null ? Role::id(Role::VIEWER) : (int) $role['role_id'],
         ];
     }
 
@@ -818,7 +845,7 @@ final class SecurityScreen
             return;
         }
         $groupId = Database::insert('groups', $columns);
-        Access::setGroupPermissions($groupId, self::postedPermissions());
+        Role::assign($groupId, self::postedPermissions(), $columns['group_name']);
         View::respond($columns['group_name'] . ' ' . TXT_162, Blocks::link(self::url('option=manage_groups'), TXT_160, 'URL'));
     }
 
@@ -845,7 +872,7 @@ final class SecurityScreen
             return;
         }
         Database::update('groups', $columns, 'group_id = ?', [$groupID]);
-        Access::setGroupPermissions($groupID, self::postedPermissions());
+        Role::assign($groupID, self::postedPermissions(), $columns['group_name']);
         View::respond($columns['group_name'] . ' ' . TXT_164, $list);
     }
 
@@ -963,9 +990,10 @@ final class SecurityScreen
     private static function systemAdminsRemaining(int $exceptUser, int $exceptGroup): int
     {
         $rows = Database::rows(
-            'SELECT COUNT(*) AS n FROM users WHERE user_id <> ? AND (role = 0 OR user_id IN ('
-            . 'SELECT ug.user_id FROM user_groups ug INNER JOIN group_permissions gp ON gp.group_id = ug.group_id '
-            . 'WHERE gp.permission = ? AND ug.group_id <> ?))',
+            'SELECT COUNT(*) AS n FROM users WHERE user_id <> ? AND (break_glass = 1 OR user_id IN ('
+            . 'SELECT ug.user_id FROM user_groups ug INNER JOIN groups g ON g.group_id = ug.group_id '
+            . 'INNER JOIN role_permissions rp ON rp.role_id = g.role_id '
+            . 'WHERE rp.permission = ? AND ug.group_id <> ?))',
             [$exceptUser, Permission::ADMIN_SYSTEM, $exceptGroup]
         );
         return (int) ($rows[0]['n'] ?? 0);
@@ -981,6 +1009,10 @@ final class SecurityScreen
     public static function deleteUser($userID = '')
     {
         $userID = (int) $userID;
+        if (Role::isBreakGlass($userID)) {
+            View::respond('The break-glass administrator cannot be deleted.', Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
+            return;
+        }
         if ($userID === (int) ($_SESSION['access_user_id'] ?? 0)) {
             View::respond('You cannot delete the account you are signed in with.', Blocks::link(self::url('option=manage_users'), TXT_160, 'URL'));
             return;
