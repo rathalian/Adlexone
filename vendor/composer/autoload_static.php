@@ -112,6 +112,7 @@ class ComposerStaticInit09c15b1e35a43aaab1e6f4d20588640b
         'Adlexone\\Screen\\BuilderScreen' => __DIR__ . '/../..' . '/src/Screen/BuilderScreen.php',
         'Adlexone\\Screen\\FieldsScreen' => __DIR__ . '/../..' . '/src/Screen/FieldsScreen.php',
         'Adlexone\\Screen\\HomeDashboard' => __DIR__ . '/../..' . '/src/Screen/HomeDashboard.php',
+        'Adlexone\\Screen\\HomeRecords' => __DIR__ . '/../..' . '/src/Screen/HomeRecords.php',
         'Adlexone\\Screen\\HomeScreen' => __DIR__ . '/../..' . '/src/Screen/HomeScreen.php',
         'Adlexone\\Screen\\ItemAccess' => __DIR__ . '/../..' . '/src/Screen/ItemAccess.php',
         'Adlexone\\Screen\\ItemFiles' => __DIR__ . '/../..' . '/src/Screen/ItemFiles.php',

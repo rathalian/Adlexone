@@ -160,7 +160,7 @@ final class AnnouncementsScreen
                 . '<div class="notice__copy">'
                 . ($kicker !== '' ? '<p class="notice__kicker">' . $kicker . '</p>' : '')
                 . '<h2 class="notice__subject">' . Html::e((string) $row['subject']) . '</h2>'
-                . '<div class="notice__body">' . $row['message'] . '</div>'
+                . '<div class="notice__body">' . nl2br(Html::e((string) $row['message']), false) . '</div>'
                 . '<div class="notice__meta"><time datetime="' . date('c', (int) $row['time']) . '">' . Html::e(date(SET_DATE_FORMAT, (int) $row['time'])) . '</time>' . $actions . '</div>'
                 . '</div></article>';
             $index++;
