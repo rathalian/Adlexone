@@ -68,8 +68,8 @@ final class MenuOptions
             return false;
         }
         $row = Database::row(
-            "SELECT custom_field_id FROM item_type_custom_fields WHERE item_type_id = " . $itemTypeId
-            . " AND custom_field_id = " . $parentId . " LIMIT 1"
+            'SELECT custom_field_id FROM item_type_custom_fields WHERE item_type_id = ? AND custom_field_id = ? LIMIT 1',
+            [$itemTypeId, $parentId]
         );
         return $row !== null;
     }
@@ -344,8 +344,11 @@ final class MenuOptions
         self::prepare();
         $ids = [$valueId];
         self::collectDescendants($fieldId, $valueId, $ids);
-        $list = implode(', ', array_map(static fn(int $id): string => (string)$id, $ids));
-        Database::run("DELETE FROM custom_field_menu_values WHERE custom_field_id = " . $fieldId . " AND menu_value_id IN (" . $list . ")");
+        $marks = implode(', ', array_fill(0, count($ids), '?'));
+        Database::run(
+            'DELETE FROM custom_field_menu_values WHERE custom_field_id = ? AND menu_value_id IN (' . $marks . ')',
+            array_merge([$fieldId], $ids)
+        );
         unset(self::$nodeCache[$fieldId]);
     }
 
@@ -370,7 +373,8 @@ final class MenuOptions
             $parentId = (int)$row['menu_value_id'];
             $fieldId = (int)$row['custom_field_id'];
             $existingChild = Database::row(
-                "SELECT menu_value_id FROM custom_field_menu_values WHERE parent_menu_value_id = " . $parentId . " LIMIT 1"
+                'SELECT menu_value_id FROM custom_field_menu_values WHERE parent_menu_value_id = ? LIMIT 1',
+                [$parentId]
             );
             if ($existingChild === null) {
                 foreach (explode(',', (string)$row['sub_menu_values']) as $label) {
@@ -405,7 +409,7 @@ final class MenuOptions
             $fieldId = (int)$menu['custom_field_id'];
             self::ensureItemColumn($fieldId);
             $order = self::relationshipOrder((string)($menu['menu_relationship'] ?? ''));
-            $links = @unserialize((string)($menu['menu_value_links'] ?? ''));
+            $links = @unserialize((string)($menu['menu_value_links'] ?? ''), ['allowed_classes' => false]);
             if ($order === [] || !is_array($links)) {
                 continue;
             }
@@ -420,7 +424,8 @@ final class MenuOptions
                         continue;
                     }
                     $source = Database::row(
-                        "SELECT menu_value FROM custom_field_menu_values WHERE menu_value_id = " . $valueId
+                        'SELECT menu_value FROM custom_field_menu_values WHERE menu_value_id = ?',
+                        [$valueId]
                     );
                     $label = is_array($source) ? trim((string)($source['menu_value'] ?? '')) : '';
                     if ($label === '') {
@@ -479,7 +484,8 @@ final class MenuOptions
             Database::update(
                 'items',
                 [$target => $leaf],
-                "WHERE item_id = '" . (int)$item['item_id'] . "'"
+                'WHERE item_id = ?',
+                [(int) $item['item_id']]
             );
         }
     }
@@ -651,8 +657,8 @@ final class MenuOptions
     {
         if (!isset(self::$nodeCache[$fieldId])) {
             $rows = Database::rows(
-                "SELECT menu_value_id, custom_field_id, menu_value, parent_menu_value_id FROM custom_field_menu_values WHERE custom_field_id = "
-                . $fieldId . " ORDER BY menu_value_id ASC"
+                'SELECT menu_value_id, custom_field_id, menu_value, parent_menu_value_id FROM custom_field_menu_values WHERE custom_field_id = ? ORDER BY menu_value_id ASC',
+                [$fieldId]
             );
             $indexed = [];
             foreach ($rows as $row) {

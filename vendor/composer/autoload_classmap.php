@@ -94,6 +94,7 @@ return array(
     'Adlexone\\Screen\\BuilderScreen' => $baseDir . '/src/Screen/BuilderScreen.php',
     'Adlexone\\Screen\\FieldsScreen' => $baseDir . '/src/Screen/FieldsScreen.php',
     'Adlexone\\Screen\\HomeDashboard' => $baseDir . '/src/Screen/HomeDashboard.php',
+    'Adlexone\\Screen\\HomeRecords' => $baseDir . '/src/Screen/HomeRecords.php',
     'Adlexone\\Screen\\HomeScreen' => $baseDir . '/src/Screen/HomeScreen.php',
     'Adlexone\\Screen\\ItemAccess' => $baseDir . '/src/Screen/ItemAccess.php',
     'Adlexone\\Screen\\ItemFiles' => $baseDir . '/src/Screen/ItemFiles.php',
