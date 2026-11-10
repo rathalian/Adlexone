@@ -1,6 +1,6 @@
 # SaaS installer and manager
 
-This is the shape for the two tools that follow. It does not add the installer, the manager, or a schema. The self-hosted installer in `src/Platform/SetupScreen.php` stays as it is. A customer who still has no administrator finishes on their own hostname, on that same screen. That page is theirs.
+This is the shape for the two tools that follow. It does not add the installer, the manager, or a schema. The self-hosted installer in `src/Platform/SetupScreen.php` uses the same shell: document root, storage directory, then the account. A setup token one folder above the document root is entered once. A customer who still has no administrator finishes on their own hostname, on that same screen, with the token beside that site’s database. That page is theirs.
 
 The person who runs the server gets two pages.
 
@@ -10,7 +10,7 @@ The **site manager** is the signed-in operator page. It creates, reads, updates,
 
 ## Where the installer sits
 
-A new copy with `INLAY_STORES` empty still opens the self-hosted installer at `./`. That flow is introduction, document root, storage directory, account. The SaaS installer is a different page, `./?install=host`, on the same origin, handled by `Adlexone\Platform\SaasInstallScreen` before `SetupScreen`. The welcome page of the self-hosted installer does not link to it.
+A new copy with `INLAY_STORES` empty still opens the self-hosted installer at `./`. That flow is document root, storage directory, account. There is no welcome page. The SaaS installer is a different page, `./?install=host`, on the same origin, handled by `Adlexone\Platform\SaasInstallScreen` before `SetupScreen`. The self-hosted installer does not link to it.
 
 `./?install=host` runs only when all of these are true.
 
@@ -193,10 +193,10 @@ These stay the actions they are now.
 - `src/Platform/SiteUsage.php` — the disk split, the three counts, the snapshot, and the cost multiplication.
 - `src/Platform/PlatformDb.php` — read and write `host_rate` and `store_usage`, and update `label`, `host`, and `admin_email` on one `stores` row. `ensureSchema()` creates the two tables when the operator database opens, the same way it creates `operators` and `stores` today.
 - `src/Platform/OperatorScreen.php` — the host page, the site page, update, the rate, and measure. Create, sign-in, the operator account, suspend, resume, backup, and delete keep their current behaviour.
-- `src/Platform/HelpText.php` — `operator()` describes the installer as the way the two values are written, and describes update, the measurement, and the rate. Environment values still win, and both values empty is still one self-hosted site. A new `hostInstall()` is the help on the installer. `customer()` is unchanged.
+- `src/Platform/HelpText.php` — `operator()` describes the installer as the way the two values are written, and describes update, the measurement, and the rate. Environment values still win, and both values empty is still one self-hosted site. `hostInstall()` is the help on the SaaS installer. `siteInstall()` is the help on the self-hosted installer. `customer()` is unchanged.
 - `README.md` — the “Several customers on one server” paragraph names `./?install=host` for a copy that is not in SaaS mode yet, and keeps the environment as the way that still wins over the file.
 
-`SetupScreen`, `Provisioner::install()`, `Provisioner::checkpoint()`, and `Provisioner::removeTree()` stay. `folderBytes()` can remain as the check that the named parts plus other equal a full walk of the folder.
+`SetupScreen` remains the self-hosted installer and shares the installer shell with `SaasInstallScreen`. `Provisioner::install()`, `Provisioner::checkpoint()`, and `Provisioner::removeTree()` stay. `folderBytes()` can remain as the check that the named parts plus other equal a full walk of the folder.
 
 ## What the implementation has to prove
 

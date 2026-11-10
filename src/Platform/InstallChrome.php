@@ -3,14 +3,134 @@ declare(strict_types=1);
 
 namespace Adlexone\Platform;
 
+use Adlexone\Auth\Csrf;
 use Adlexone\Html\Html;
+use Adlexone\Http\Request;
 
 /**
  * Shared page chrome for the self-hosted installer and the SaaS installer.
- * SetupScreen is the page those helpers were written for.
  */
 final class InstallChrome
 {
+    public const PROVEN_KEY = 'adlexone_install_proven';
+
+    public static function proven(): bool
+    {
+        return !empty($_SESSION[self::PROVEN_KEY]);
+    }
+
+    /**
+     * The first POST of either server installer asks for the token. A match is
+     * enough for every later step in this browser session.
+     */
+    public static function proveToken(string $tokenPath): void
+    {
+        if (self::proven()) {
+            return;
+        }
+        if (!SetupToken::check((string) (Request::postedValue('setup_token') ?? ''), $tokenPath)) {
+            throw new \RuntimeException('The setup token does not match ' . $tokenPath . '. Open that file on the server and enter the value. This page does not show it.');
+        }
+        session_regenerate_id(true);
+        $_SESSION[self::PROVEN_KEY] = true;
+    }
+
+    public static function tokenBlockedMessage(): string
+    {
+        return 'The setup token would be saved inside the website, so this page will not write it. Use a document root that is a folder inside the account. The token then sits one folder higher, where a browser cannot read it.';
+    }
+
+    public static function openForm(string $action, string $tokenPath = '', string $idPrefix = 'setup_'): string
+    {
+        $html = '<form method="post" action="' . Html::e($action) . '" class="login-form install-form" autocomplete="off">' . Csrf::field();
+        if ($tokenPath !== '' && !self::proven()) {
+            $html .= self::field(
+                'Setup token',
+                'setup_token',
+                'text',
+                '',
+                true,
+                'Open ' . $tokenPath . ' on the server and paste the value. This page does not show it. One entry is enough for the rest of this installer.',
+                '',
+                'off',
+                false,
+                'spellcheck="false" autocapitalize="off"',
+                $idPrefix
+            );
+        }
+
+        return $html;
+    }
+
+    public static function outsideRootHelp(string $name, string $example): string
+    {
+        $web = InstallLayout::publicRoot();
+        $where = $web !== '' ? ', which is ' . $web : '';
+
+        return 'The ' . $name . ' must sit outside the public document root' . $where . '. Create it one directory up, then check it. For example, ' . $example . '.';
+    }
+
+    /**
+     * Document root step shared by both installers.
+     *
+     * @param array<string, string> $paths
+     */
+    public static function placementForm(
+        array $paths,
+        bool $focus,
+        string $action,
+        string $idPrefix,
+        string $helpHtml,
+        string $tokenPath = ''
+    ): string {
+        $install = rtrim($paths['install'], '/\\');
+        $package = InstallLayout::canonical($install);
+        $public = InstallLayout::canonical($install . DIRECTORY_SEPARATOR . 'public');
+        $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $detected = InstallLayout::detect($paths['install']);
+        $selected = (string) (Request::postedValue('placement') ?? '');
+        if ($selected === '' && ($detected === InstallLayout::PACKAGE || $detected === InstallLayout::PUBLIC_FOLDER)) {
+            $selected = $detected;
+        }
+
+        $html = self::openForm($action, $tokenPath, $idPrefix);
+        $html .= '<p class="install-section">Prerequisite</p>';
+        $html .= self::facts([
+            'Package' => $package !== '' ? $package : $install,
+            'public folder' => $public !== '' ? $public : $install . DIRECTORY_SEPARATOR . 'public',
+            'Document root' => $doc !== '' ? $doc : 'Not reported',
+        ]);
+        $html .= self::matchLine($detected);
+        $note = InstallLayout::publicFolderNote($paths['install']);
+        if ($note !== '') {
+            $html .= '<p class="install-match">' . Html::e($note) . '</p>';
+        }
+        $html .= self::options(
+            'Where is this copy of Adlexone?',
+            'placement',
+            [
+                InstallLayout::PACKAGE => [
+                    'The package is in the document root',
+                    'The website folder is the unzipped package. This is the usual shared-hosting layout.',
+                ],
+                InstallLayout::PUBLIC_FOLDER => [
+                    'The document root is the public folder',
+                    'The website folder is public, inside the package. The rest of the package is off the website.',
+                ],
+            ],
+            $selected,
+            $focus,
+            $idPrefix
+        );
+        $html .= self::actions('Continue', 'placement');
+        $html .= '</form>';
+        if ($helpHtml !== '') {
+            $html .= self::dialog('install-help-root', 'Document root', $helpHtml);
+        }
+
+        return $html;
+    }
+
     /**
      * @param array<string, string> $items id => label, in order
      * @param list<string> $plain ids that stay plain text even after they are done

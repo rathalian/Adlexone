@@ -7,11 +7,14 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 
+use Adlexone\Platform\HelpText;
+use Adlexone\Platform\InstallChrome;
 use Adlexone\Platform\InstallLayout;
 use Adlexone\Platform\PlatformDb;
 use Adlexone\Platform\Provisioner;
 use Adlexone\Platform\Runtime;
 use Adlexone\Platform\SaasInstallScreen;
+use Adlexone\Platform\SetupToken;
 use Adlexone\Platform\SiteUsage;
 
 $fail = static function (string $message): void {
@@ -460,5 +463,61 @@ $_SERVER['DOCUMENT_ROOT'] = '/home/health/public_html';
 $tokenPath = SaasInstallScreen::installTokenPath('/home/health/public_html/');
 $check($tokenPath === '/home/health/adlexone-install-token.txt', 'the installer token sits one folder above the document root, got ' . $tokenPath);
 $check(InstallLayout::inWebFolder($tokenPath, '/home/health/public_html') === false, 'the installer token is outside the website');
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+unset($_SESSION[InstallChrome::PROVEN_KEY]);
+$first = InstallChrome::openForm('?step=storage', $tokenPath, 'setup_');
+$check(str_contains($first, 'name="setup_token"'), 'the first self-hosted step asks for the server token');
+$check(str_contains($first, $tokenPath), 'the form names the token file above the document root');
+$check(str_contains($first, 'action="?step=storage"'), 'the self-hosted form posts to the step');
+
+$proveDir = sys_get_temp_dir() . '/adlexone-prove-' . bin2hex(random_bytes(4));
+if (!mkdir($proveDir, 0700, true) && !is_dir($proveDir)) {
+    $fail('Cannot create ' . $proveDir);
+}
+$proveFile = $proveDir . '/adlexone-install-token.txt';
+$proveToken = SetupToken::issue($proveFile);
+$_POST['setup_token'] = 'not-the-token';
+$refused = false;
+try {
+    InstallChrome::proveToken($proveFile);
+} catch (\Throwable) {
+    $refused = true;
+}
+$check($refused, 'a wrong server token is refused');
+$check(InstallChrome::proven() === false, 'a refused token does not unlock the later steps');
+$_POST['setup_token'] = $proveToken;
+InstallChrome::proveToken($proveFile);
+$check(InstallChrome::proven() === true, 'the matching server token is enough for the rest of the installer');
+unset($_POST['setup_token']);
+$later = InstallChrome::openForm('?step=account', $tokenPath, 'setup_');
+$check(!str_contains($later, 'name="setup_token"'), 'a later step does not ask for the token again');
+$rootForm = InstallChrome::placementForm(
+    ['install' => '/home/health/public_html'],
+    false,
+    '?step=root',
+    'setup_',
+    '<p>Help</p>',
+    $tokenPath
+);
+$check(str_contains($rootForm, 'The package is in the document root'), 'both installers offer the package layout');
+$check(str_contains($rootForm, 'The document root is the public folder'), 'both installers offer the public folder');
+$check(str_contains($rootForm, 'action="?step=root"'), 'the document root form posts to its step');
+$check(!str_contains($rootForm, 'name="setup_token"'), 'a proved session does not put the token on the document root step');
+SetupToken::clear($proveFile);
+unset($_SESSION[InstallChrome::PROVEN_KEY]);
+@rmdir($proveDir);
+
+$help = HelpText::siteInstall(['install' => '/home/health/public_html', 'php_user' => 'health']);
+$check(str_contains($help, 'nothing is saved until the last one'), 'the self-hosted help keeps the setup notes');
+$check(str_contains($help, 'strongly recommended against'), 'storage inside the website still depends on the private check');
+$check(str_contains($help, 'adlexone-install-token.txt'), 'the self-hosted help names the server token');
+
+$rail = SaasInstallScreen::accountSteps();
+$check(str_contains($rail, 'Operator account'), 'the operator account is on the installer rail');
+$check(str_contains($rail, 'aria-current="step"'), 'the operator account is the current step');
+$check(!str_contains($rail, 'href='), 'finished installer steps are not links once the stores directory is saved');
 
 echo "saas manager checks passed\n";

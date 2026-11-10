@@ -151,6 +151,103 @@ final class HelpText
         ]);
     }
 
+    /**
+     * Help for the self-hosted installer. The same notes are the Details on each step.
+     *
+     * @param array<string, string> $paths
+     */
+    public static function siteInstall(array $paths, string $directory = '', string $shape = 'children', bool $record = true): string
+    {
+        $user = $paths['php_user'] ?? Runtime::phpUser();
+        $install = rtrim((string) ($paths['install'] ?? ''), '/\\');
+        $public = $paths['public'] ?? '';
+        $publicShow = $public !== '' ? $public : ($install !== '' ? $install . DIRECTORY_SEPARATOR . 'public' : 'public');
+        $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $docShow = $doc !== '' ? $doc : 'not reported';
+        $chosen = $directory !== '' ? $directory : ($install !== '' ? InstallLayout::suggest($install) : '');
+        $planned = $shape === 'legacy' ? InstallLayout::legacyPaths($chosen) : InstallLayout::storagePaths($chosen);
+        $pointer = $install !== '' ? InstallLayout::pointerFile($install) : 'config/platform.json';
+        $tokenPath = $install !== '' ? SaasInstallScreen::installTokenPath($install) : 'adlexone-install-token.txt';
+
+        $blocks = [
+            self::p('Adlexone keeps the applications, records, and rules for the work. An application is one kind of work, with its own fields and steps. A record is one piece of that work. When a record moves, a rule can write the log, the next step, and the date.'),
+            self::p('Use it when the work is records moving through known steps, and more than one person needs to see them. People sign in and open the application they use. The record holds the files. The database is one SQLite file on this server.'),
+            self::p('Setup installs the system. It does not configure the day-to-day work. There are three steps, and nothing is saved until the last one.'),
+            self::list([
+                '<strong>Document root.</strong> Confirm which folder the website uses.',
+                '<strong>Storage directory.</strong> Choose where the database, settings, and uploads are kept. PHP must be able to use the folder, and a browser must not be able to read it.',
+                '<strong>Account.</strong> Set the name on the sign-in page, create the first administrator, and choose whether to install sample applications.',
+            ]),
+            self::p('Opening this page writes a setup token at ' . self::code($tokenPath) . ', one folder above the document root. Enter that value on the first step. The page does not show it. One entry is enough for the rest of this installer. The file is removed when the account is created.'),
+            self::h('Document root'),
+            self::p('The document root is the folder the website serves. Shared hosting, such as cPanel, often cannot change that folder. Unzip Adlexone into it. The package and the document root are the same folder. A file named .htaccess in the package refuses requests for the database, settings, and code, and only index.php runs. The host must be Apache with mod_rewrite, and it must allow .htaccess (AllowOverride All).'),
+            self::p('If you can set the document root, set it to the public folder inside the package. For a package at ' . self::code($install !== '' ? $install : 'the package') . ', the document root is ' . self::code($publicShow) . '. Browsers can then open only the files in public. The database, settings, and code are not on the website.'),
+            self::p('This page reads the document root from the server and selects that choice. When it is not the public folder, the public folder is the better document root. Continue accepts the detected document root.'),
+            self::p('Package: ' . self::code($install !== '' ? $install : 'not reported') . '. public folder: ' . self::code($publicShow) . '. Document root: ' . self::code($docShow) . '.'),
+            self::h('Storage directory'),
+            self::p('The storage directory holds the database, the settings, and the uploaded files. A browser must not be able to open it. Create the directory before you check it. This page does not create it.'),
+        ];
+        if ($shape === 'legacy') {
+            $blocks[] = self::p('This server chose the directory. Settings are in ' . self::code($planned['config']) . '. The database is ' . self::code($planned['sqlite']) . '. Uploads are in ' . self::code($planned['attachments']) . '.');
+        } else {
+            $blocks[] = self::p('Adlexone creates three folders inside the directory you enter. Settings go in ' . self::code('config') . '. The database is ' . self::code('database/adlexone.sqlite') . '. Uploads go in ' . self::code('attachments') . '.');
+        }
+        $blocks[] = self::p('Check this folder creates a file, reads it, changes it, deletes it, and creates then removes a folder. PHP does this as ' . self::code($user) . '. The trial files are removed before the page answers.');
+        $blocks[] = self::p('The folder should sit outside the website. A folder outside the web folder has no public address. A folder inside the web folder is strongly recommended against. Setup still writes a trial file there and requests it from the website. Continue is available only when that request does not return the file. On shared hosting the package rules can refuse a folder named storage, but the check is what decides.');
+        if ($record) {
+            $blocks[] = self::p('Adlexone writes the path into ' . self::code($pointer) . '. That file stays next to the code so the next visit uses the same folder. It does not hold records. If the code folder cannot be written, set INLAY_STORAGE to this path in the server environment and reload. The environment wins over the file.');
+        }
+        $blocks[] = self::p('Adlexone sets mode 700 on the folders it creates inside this directory, and mode 600 on the database file and the settings files. It does not change this directory or any folder above it. If you set the permissions yourself, use those modes, and use ' . self::code($user) . ', not root.');
+        $blocks[] = self::pre(self::commands($user, [$planned['config'], $planned['database_dir'], $planned['attachments']], [$planned['sqlite']]));
+        $blocks[] = self::p('While the site is open, SQLite may add ' . self::code('adlexone.sqlite-wal') . ' and ' . self::code('adlexone.sqlite-shm') . ' beside the database. They are part of the live database. Copy them with the database if you take a manual backup.');
+        $blocks[] = self::h('After you sign in');
+        $blocks[] = self::p('Configuration comes after installation. Sign in with the administrator you create here. The rest is under Configure.');
+        $blocks[] = self::list([
+            '<strong>Applications.</strong> Create an application for the work, or remove the samples.',
+            '<strong>People.</strong> Add a person when they need access.',
+            '<strong>Settings.</strong> Set the time zone, the date format, and the introduction on the home page.',
+            '<strong>Sign-in and email.</strong> Turn on username sign-in, an organisation directory, or mail when you need them.',
+        ]);
+
+        return self::article('Self-hosted installer', $blocks);
+    }
+
+    public static function loginName(): string
+    {
+        return self::p('This name is shown on the sign-in page and in the header after sign-in. It is not a username.')
+            . self::p('You can use the organisation name, the name of the system, or leave Adlexone. For example, Health. Use 80 characters or fewer.');
+    }
+
+    public static function publicUrl(): string
+    {
+        return self::p('For example, https://health.example.com. Leave this blank and Adlexone uses the address in the browser. Set it when a proxy or load balancer sits in front of the site.');
+    }
+
+    public static function accountPassword(): string
+    {
+        $html = self::p('The password is stored as a hash in the SQLite file. It is not written into the settings.');
+        if (DefaultAccount::allowed()) {
+            $html .= self::p('The prefilled password is ' . self::code(DefaultAccount::PASSWORD) . '. It is only accepted from this machine or a private address. Any other password must be at least 8 characters.');
+        } else {
+            $html .= self::p('Use at least 12 characters. The prefilled localhost password is not accepted from a public address.');
+        }
+
+        return $html;
+    }
+
+    public static function startingApplications(): string
+    {
+        return self::p('Sample applications installs Publishing, Matters, Conveyancing, Claims, Leave requests, Complaints, Committee, Audit, Incidents, Candidates, and Contracts, with example records. You can delete them. Deleting one does not install it again.')
+            . self::p('Publishing (Example) installs only that application, with its fields, rules, guide, and sample records.')
+            . self::p('No applications leaves the home empty. After you sign in, you create an application.');
+    }
+
+    public static function customerToken(string $path): string
+    {
+        return self::p('Anyone who can open this page before an administrator exists could create the account. The token proves you can read a file beside the database.')
+            . self::p('The file is ' . self::code($path) . '. This page does not show the value. The file is removed when the account is created.');
+    }
+
     public static function customerDns(string $parent): string
     {
         $example = 'health.' . $parent;

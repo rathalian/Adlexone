@@ -96,7 +96,9 @@ final class OperatorScreen
                 'This account manages customer sites. It is stored in the operator database, not in a customer SQLite file.',
                 self::accountForm('Create the operator account', 'create_operator'),
                 $error,
-                $notice
+                $notice,
+                'SaaS installer',
+                SaasInstallScreen::accountSteps()
             );
             return;
         }
@@ -145,19 +147,21 @@ final class OperatorScreen
         string $lead,
         string $body,
         string $error,
-        string $notice
+        string $notice,
+        string $kicker = 'Site manager',
+        string $steps = ''
     ): void {
         Page::current()->useLayout('setup', [
             'title' => $title,
-            'documentTitle' => $title . ' — Site manager',
-            'kicker' => 'Site manager',
+            'documentTitle' => $title . ' — ' . $kicker,
+            'kicker' => $kicker,
             'lead' => $lead,
             'error' => $error,
             'notice' => $notice,
             'helpHtml' => '',
             'formHtml' => $body . self::dialog('manage-help', 'Customer sites', HelpText::operator(Runtime::paths())),
             'installer' => true,
-            'stepsHtml' => '',
+            'stepsHtml' => $steps,
             'headingAction' => self::headingActions(),
         ]);
     }

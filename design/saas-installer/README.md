@@ -16,7 +16,7 @@ The operator can create a site, suspend it, resume it, download a backup, and de
 
 A new customer with no administrator still finishes on their own hostname. That page is theirs. It is not this manager.
 
-The self-hosted installer is the named flow in `SetupScreen`: introduction, document root, storage directory, account. Leave it alone unless a sentence in it would become false.
+The self-hosted installer is the named flow in `SetupScreen`: document root, storage directory, account. It uses the same installer shell as the SaaS installer, including the step rail and a setup token proved once. It does not link to the SaaS installer. A storage directory inside the website can still pass when the trial request does not return the file.
 
 ## What this work is
 

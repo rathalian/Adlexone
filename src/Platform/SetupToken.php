@@ -6,9 +6,10 @@ namespace Adlexone\Platform;
 /**
  * A one-time value the person setting up the site reads from the server.
  *
- * The setup page can be opened by anyone who can reach a new install. The token
- * is written beside the database, which is outside the document root, and the
- * page asks for it. The file is removed once the site has an administrator.
+ * The setup page can be opened by anyone who can reach a new install. A server
+ * installer writes the token one folder above the document root and asks once.
+ * A customer site and the operator account write it beside their database.
+ * The file is removed once that account exists.
  */
 final class SetupToken
 {

@@ -406,7 +406,9 @@ $check($location !== '' && !str_contains($location, '://'), 'the redirect stays 
 $check(is_dir($stores . '/records'), 'the site folder was created');
 $check(is_file($stores . '/records/config/adlexone_settings.json'), 'the site settings were created');
 $customer = $http('GET', $base . '?host=manage', [], [], ['Host: records.example.com']);
-$check(str_contains($customer['body'], 'The files for this site are already on the server.'), 'a customer address with ?host=manage is that site’s setup');
+$check(str_contains($customer['body'], 'The database, settings, and uploads for this site are already in place.'), 'a customer address with ?host=manage is that site’s account setup');
+$check(str_contains($customer['body'], 'name="setup_token"'), 'a customer site still asks for the token beside its database');
+$check(!str_contains($customer['body'], 'install-steps'), 'a customer site has no installer step rail');
 $check(!str_contains($customer['body'], 'Operator sign in'), 'a customer address does not show the operator sign-in');
 $check(!str_contains($customer['body'], 'ADLEXONE_OPERATOR'), 'a customer address does not name the operator cookie');
 

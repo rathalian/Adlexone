@@ -6,7 +6,6 @@ namespace Adlexone\Platform;
 use Adlexone\Http\Request;
 
 use Adlexone\Auth\Csrf;
-use Adlexone\Html\Html;
 use Adlexone\Http\Page;
 
 /**
@@ -172,7 +171,7 @@ final class SaasInstallScreen
         if (InstallLayout::inWebFolder($tokenPath)) {
             self::render(
                 'SaaS installer',
-                'The setup token would be saved inside the website, so this page will not write it. Use a document root that is a folder inside the account. The token then sits one folder higher, where a browser cannot read it.',
+                InstallChrome::tokenBlockedMessage(),
                 '',
                 '',
                 '',
@@ -201,7 +200,7 @@ final class SaasInstallScreen
             } else {
                 $action = (string) (Request::postedValue('setup_action') ?? '');
                 try {
-                    self::proveToken($tokenPath);
+                    InstallChrome::proveToken($tokenPath);
                     if ($action === 'placement') {
                         self::savePlacement($paths);
 
@@ -300,7 +299,7 @@ final class SaasInstallScreen
         }
         InstallLayout::rememberSaaS($paths['install'], $report['directory'], $host, $report['platform_db']);
         SetupToken::clear(self::installTokenPath($paths['install']));
-        unset($_SESSION[self::SESSION_KEY], $_SESSION['adlexone_install_proven']);
+        unset($_SESSION[self::SESSION_KEY], $_SESSION[InstallChrome::PROVEN_KEY]);
         if (strcasecmp(Runtime::requestHost(), $host) === 0) {
             header('Location: ./', true, 303);
             exit;
@@ -478,48 +477,14 @@ final class SaasInstallScreen
      */
     private static function placementForm(array $paths, bool $focus): string
     {
-        $install = rtrim($paths['install'], '/\\');
-        $package = InstallLayout::canonical($install);
-        $public = InstallLayout::canonical($install . DIRECTORY_SEPARATOR . 'public');
-        $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
-        $detected = InstallLayout::detect($paths['install']);
-        $selected = (string) (Request::postedValue('placement') ?? '');
-        if ($selected === '' && ($detected === InstallLayout::PACKAGE || $detected === InstallLayout::PUBLIC_FOLDER)) {
-            $selected = $detected;
-        }
-        $html = self::openForm(self::STEP_ROOT);
-        $html .= '<p class="install-section">Prerequisite</p>';
-        $html .= self::facts([
-            'Package' => $package !== '' ? $package : $install,
-            'public folder' => $public !== '' ? $public : $install . DIRECTORY_SEPARATOR . 'public',
-            'Document root' => $doc !== '' ? $doc : 'Not reported',
-        ]);
-        $html .= self::matchLine($detected);
-        $note = InstallLayout::publicFolderNote($paths['install']);
-        if ($note !== '') {
-            $html .= '<p class="install-match">' . Html::e($note) . '</p>';
-        }
-        $html .= self::options(
-            'Where is this copy of Adlexone?',
-            'placement',
-            [
-                InstallLayout::PACKAGE => [
-                    'The package is in the document root',
-                    'The website folder is the unzipped package. This is the usual shared-hosting layout.',
-                ],
-                InstallLayout::PUBLIC_FOLDER => [
-                    'The document root is the public folder',
-                    'The website folder is public, inside the package. The rest of the package is off the website.',
-                ],
-            ],
-            $selected,
-            $focus
+        return InstallChrome::placementForm(
+            $paths,
+            $focus,
+            '?install=host&step=' . self::STEP_ROOT,
+            'host_',
+            HelpText::hostInstall($paths),
+            self::installTokenPath($paths['install'])
         );
-        $html .= self::actions('Continue', 'placement');
-        $html .= '</form>';
-        $html .= self::dialog('install-help-root', 'Document root', HelpText::hostInstall($paths));
-
-        return $html;
     }
 
     /**
@@ -553,7 +518,7 @@ final class SaasInstallScreen
             'Stores directory',
             'stores_path',
             $path,
-            self::outsideRootHelp('stores directory', InstallLayout::suggestStores($paths['install'])),
+            InstallChrome::outsideRootHelp('stores directory', InstallLayout::suggestStores($paths['install'])),
             $focus
         );
         if ($preview !== '') {
@@ -586,13 +551,19 @@ final class SaasInstallScreen
             'Stores directory' => $state['stores'],
             'Operator database' => $state['platform_db'],
         ]);
-        $html .= '<div class="field">';
-        $html .= '<label class="login-label label" for="host_operator_host">Operator hostname</label>';
-        $html .= '<input class="input" type="text" id="host_operator_host" name="operator_host" value="' . Html::e($host) . '" required'
-            . ($focus ? ' autofocus' : '')
-            . ' spellcheck="false" autocapitalize="off" autocorrect="off">';
-        $html .= '<p class="form-help">The address you will use to manage customer sites. For example, operate.example.com. localhost is accepted on this machine.</p>';
-        $html .= '</div>';
+        $html .= InstallChrome::field(
+            'Operator hostname',
+            'operator_host',
+            'text',
+            $host,
+            true,
+            'The address you will use to manage customer sites. For example, operate.example.com. localhost is accepted on this machine.',
+            '',
+            '',
+            $focus,
+            'spellcheck="false" autocapitalize="off" autocorrect="off"',
+            'host_'
+        );
         $html .= self::actions('Save and continue', 'save_host', '', '', '?install=host&step=stores');
         $html .= '</form>';
         $html .= self::dialog('install-help-host', 'Operator hostname', HelpText::hostInstall(Runtime::paths(), $state['stores'], $state['platform_db']));
@@ -602,33 +573,31 @@ final class SaasInstallScreen
 
     private static function steps(string $current): string
     {
+        return self::stepRail($current, true);
+    }
+
+    /**
+     * The operator account page is the fourth step. Earlier steps are plain,
+     * because the installer route is closed once the stores directory is saved.
+     */
+    public static function accountSteps(): string
+    {
+        return self::stepRail(self::STEP_ACCOUNT, false);
+    }
+
+    private static function stepRail(string $current, bool $linkDone): string
+    {
+        $plain = [self::STEP_ACCOUNT];
+        if (!$linkDone) {
+            $plain = [self::STEP_ROOT, self::STEP_STORES, self::STEP_HOST, self::STEP_ACCOUNT];
+        }
+
         return InstallChrome::steps([
             self::STEP_ROOT => 'Document root',
             self::STEP_STORES => 'Stores directory',
             self::STEP_HOST => 'Operator hostname',
             self::STEP_ACCOUNT => 'Operator account',
-        ], $current, '?install=host&step=', [self::STEP_ACCOUNT], 'install-steps install-steps--four', true);
-    }
-
-    private static function matchLine(string $detected): string
-    {
-        return InstallChrome::matchLine($detected);
-    }
-
-    /**
-     * @param array<string, array{0: string, 1: string}> $options
-     */
-    private static function options(string $legend, string $name, array $options, string $selected, bool $focus): string
-    {
-        return InstallChrome::options($legend, $name, $options, $selected, $focus, 'host_');
-    }
-
-    private static function outsideRootHelp(string $name, string $example): string
-    {
-        $web = InstallLayout::publicRoot();
-        $where = $web !== '' ? ', which is ' . $web : '';
-
-        return 'The ' . $name . ' must sit outside the public document root' . $where . '. Create it one directory up, then check it. For example, ' . $example . '.';
+        ], $current, '?install=host&step=', $plain, 'install-steps install-steps--four', true);
     }
 
     private static function field(string $label, string $name, string $value, string $help, bool $focus): string
@@ -664,33 +633,13 @@ final class SaasInstallScreen
         return InstallChrome::facts($rows);
     }
 
-    private static function proveToken(string $tokenPath): void
-    {
-        if (!empty($_SESSION['adlexone_install_proven'])) {
-            return;
-        }
-        if (!SetupToken::check((string) (Request::postedValue('setup_token') ?? ''), $tokenPath)) {
-            throw new \RuntimeException('The setup token does not match ' . $tokenPath . '. Open that file on the server and enter the value. This page does not show it.');
-        }
-        session_regenerate_id(true);
-        $_SESSION['adlexone_install_proven'] = true;
-    }
-
     private static function openForm(string $step): string
     {
-        $html = '<form method="post" action="?install=host&amp;step=' . Html::e($step) . '" class="login-form install-form" autocomplete="off">' . Csrf::field();
-        if (empty($_SESSION['adlexone_install_proven'])) {
-            $path = self::installTokenPath((string) (Runtime::paths()['install'] ?? ''));
-            $html .= self::field(
-                'Setup token',
-                'setup_token',
-                '',
-                'Open ' . $path . ' on the server and paste the value. This page does not show it. One entry is enough for the rest of this installer.',
-                false
-            );
-        }
-
-        return $html;
+        return InstallChrome::openForm(
+            '?install=host&step=' . $step,
+            self::installTokenPath((string) (Runtime::paths()['install'] ?? '')),
+            'host_'
+        );
     }
 
     private static function actions(

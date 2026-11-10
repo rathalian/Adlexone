@@ -19,8 +19,6 @@ final class SetupScreen
 {
     private const SESSION_KEY = 'adlexone_setup';
 
-    private const STEP_WELCOME = 'welcome';
-
     private const STEP_ROOT = 'root';
 
     private const STEP_STORAGE = 'storage';
@@ -37,27 +35,58 @@ final class SetupScreen
         /** @var array{ok: bool, message: string, user: string, directory: string, created: bool, checks: list<array{id: string, label: string, ok: bool, detail: string, state: string}>}|null $report */
         $report = null;
 
-        if (!$hosted) {
-            $stale = self::dropStalePlacement($paths);
-            if ($stale !== '') {
-                $error = $stale;
+        if ($hosted) {
+            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+                if (!Csrf::valid()) {
+                    $error = 'This form expired. Reload the page and try again.';
+                } else {
+                    try {
+                        self::installHosted($paths);
+
+                        return;
+                    } catch (\Throwable $e) {
+                        $error = $e->getMessage();
+                    }
+                }
             }
+            try {
+                SetupToken::issue();
+            } catch (\Throwable $e) {
+                if ($error === '') {
+                    $error = $e->getMessage();
+                }
+            }
+            self::renderHosted($paths, $error);
+
+            return;
+        }
+
+        $tokenPath = SaasInstallScreen::installTokenPath($paths['install']);
+        if (InstallLayout::inWebFolder($tokenPath)) {
+            self::render('Self-hosted installer', InstallChrome::tokenBlockedMessage(), '', '', '', '');
+
+            return;
+        }
+        try {
+            SetupToken::issue($tokenPath);
+        } catch (\Throwable $e) {
+            self::render('Self-hosted installer', $e->getMessage(), '', '', '', '');
+
+            return;
+        }
+
+        $stale = self::dropStalePlacement($paths);
+        if ($stale !== '') {
+            $error = $stale;
         }
 
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!Csrf::valid()) {
                 $error = 'This form expired. Reload the page and try again.';
-            } elseif ($hosted) {
-                try {
-                    self::installHosted($paths);
-
-                    return;
-                } catch (\Throwable $e) {
-                    $error = $e->getMessage();
-                }
             } else {
                 $action = (string) (Request::postedValue('setup_action') ?? '');
                 try {
+                    InstallChrome::proveToken($tokenPath);
                     if ($action === 'placement') {
                         self::savePlacement($paths);
 
@@ -76,26 +105,6 @@ final class SetupScreen
             }
         }
 
-        if ($hosted) {
-            $hostedStep = (string) (Request::queryValue('step') ?? '');
-            $onAccount = $hostedStep === self::STEP_ACCOUNT || (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST');
-            if (!$onAccount) {
-                self::renderWelcome(true);
-
-                return;
-            }
-            try {
-                SetupToken::issue();
-            } catch (\Throwable $e) {
-                if ($error === '') {
-                    $error = $e->getMessage();
-                }
-            }
-            self::renderHosted($paths, $error);
-
-            return;
-        }
-
         $step = self::currentStep();
         if ($report !== null) {
             $step = self::STEP_STORAGE;
@@ -107,16 +116,6 @@ final class SetupScreen
                 $notice .= ' Continue to create the account.';
             } elseif ($error === '') {
                 $error = $report['checks'] === [] ? $report['message'] : 'This folder cannot be used yet.';
-            }
-        }
-        if ($step === self::STEP_ACCOUNT) {
-            try {
-                $chosen = self::chosenPaths();
-                SetupToken::issue($chosen['database_dir'] . 'setup-token.txt');
-            } catch (\Throwable $e) {
-                if ($error === '') {
-                    $error = $e->getMessage();
-                }
             }
         }
         self::renderStep($paths, $step, $error, $notice, $report);
@@ -203,8 +202,7 @@ final class SetupScreen
         $chosen = $state['shape'] === 'legacy'
             ? InstallLayout::legacyPaths($probe['directory'])
             : InstallLayout::storagePaths($probe['directory']);
-        $token = $chosen['database_dir'] . 'setup-token.txt';
-        $admin = self::adminFromPost($token);
+        $admin = self::adminFromPost();
         if (!$state['locked']) {
             InstallLayout::remember($paths['install'], $probe['directory']);
         }
@@ -215,8 +213,8 @@ final class SetupScreen
             $chosen['attachments'],
             $admin
         );
-        SetupToken::clear($token);
-        unset($_SESSION[self::SESSION_KEY]);
+        SetupToken::clear(SaasInstallScreen::installTokenPath($paths['install']));
+        unset($_SESSION[self::SESSION_KEY], $_SESSION[InstallChrome::PROVEN_KEY]);
         header('Location: ./');
         exit;
     }
@@ -242,7 +240,7 @@ final class SetupScreen
     /**
      * @return array{site_name: string, public_url: string, username: string, password: string, first_name: string, last_name: string, email: string, starting_applications: string}
      */
-    private static function adminFromPost(string $tokenPath): array
+    private static function adminFromPost(string $tokenPath = ''): array
     {
         $site = trim((string) (Request::postedValue('site_name') ?? ''));
         $username = trim((string) (Request::postedValue('user_name') ?? ''));
@@ -269,7 +267,7 @@ final class SetupScreen
         if ($public !== '' && preg_match('#^https?://#', $public) !== 1) {
             throw new \RuntimeException('The public URL should start with https:// or http://, or be left blank.');
         }
-        if (!SetupToken::check((string) (Request::postedValue('setup_token') ?? ''), $tokenPath)) {
+        if ($tokenPath !== '' && !SetupToken::check((string) (Request::postedValue('setup_token') ?? ''), $tokenPath)) {
             throw new \RuntimeException('The setup token does not match the file beside the database. Open that file on the server and enter the value.');
         }
         $starting = (string) (Request::postedValue('starting_applications') ?? '');
@@ -316,13 +314,9 @@ final class SetupScreen
                 $error,
                 self::accountForm($paths, false, $focus),
                 self::steps(self::STEP_ACCOUNT),
-                $notice
+                $notice,
+                self::detailsButton('install-help-account')
             );
-
-            return;
-        }
-        if ($step === self::STEP_WELCOME) {
-            self::renderWelcome(false);
 
             return;
         }
@@ -335,60 +329,6 @@ final class SetupScreen
             $notice,
             self::detailsButton('install-help-root')
         );
-    }
-
-    private static function renderWelcome(bool $hosted): void
-    {
-        $next = '?step=' . ($hosted ? self::STEP_ACCOUNT : self::nextInstallStep());
-        $html = self::welcomeBody($hosted);
-        $html .= '<div class="install-actions"><a class="btn btn--primary" href="' . Html::e($next) . '">Start setup</a></div>';
-        self::render('Welcome', 'This installs Adlexone on this server.', '', $html, '', '', '', !$hosted);
-    }
-
-    private static function welcomeBody(bool $hosted): string
-    {
-        $html = '<div class="install-brief">';
-        $html .= '<h2 class="install-section">What it is</h2>';
-        $html .= '<p>Adlexone keeps the applications, records, and rules for the work.</p>';
-        $html .= '<p>An application is one kind of work, with its own fields and steps. A record is one piece of that work. When a record moves, a rule can write the log, the next step, and the date.</p>';
-        $html .= '<h2 class="install-section">Why it is used</h2>';
-        $html .= '<p>Use it when the work is records moving through known steps, and more than one person needs to see them.</p>';
-        $html .= '<p>People sign in and open the application they use. The record holds the files. The database is one SQLite file on this server.</p>';
-        $html .= '<h2 class="install-section">This setup</h2>';
-        if ($hosted) {
-            $html .= '<p>The files for this site are already on the server. This setup sets the name on the sign-in page and creates the first administrator. Nothing else is configured here.</p>';
-        } else {
-            $html .= '<p>Setup installs the system. It does not configure the day-to-day work. There are three steps, and nothing is saved until the last one.</p>';
-            $html .= '<ol class="install-points">';
-            $html .= '<li><span class="install-points__num">1</span><span><strong>Document root.</strong> Confirm which folder the website uses.</span></li>';
-            $html .= '<li><span class="install-points__num">2</span><span><strong>Storage directory.</strong> Choose where the database, settings, and uploads are kept. PHP must be able to use the folder, and a browser must not be able to read it.</span></li>';
-            $html .= '<li><span class="install-points__num">3</span><span><strong>Account.</strong> Set the name on the sign-in page, create the first administrator, and choose whether to install sample applications.</span></li>';
-            $html .= '</ol>';
-        }
-        $html .= '<h2 class="install-section">After you sign in</h2>';
-        $html .= '<p>Configuration comes after installation. Sign in with the administrator you create here. The rest is under Configure.</p>';
-        $html .= '<ul class="install-points">';
-        $html .= '<li><span><strong>Applications.</strong> Create an application for the work, or remove the samples.</span></li>';
-        $html .= '<li><span><strong>People.</strong> Add a person when they need access.</span></li>';
-        $html .= '<li><span><strong>Settings.</strong> Set the time zone, the date format, and the introduction on the home page.</span></li>';
-        $html .= '<li><span><strong>Sign-in and email.</strong> Turn on username sign-in, an organisation directory, or mail when you need them.</span></li>';
-        $html .= '</ul>';
-        $html .= '</div>';
-
-        return $html;
-    }
-
-    private static function nextInstallStep(): string
-    {
-        $state = self::state();
-        if ($state['placement'] === '') {
-            return self::STEP_ROOT;
-        }
-        if ($state['storage'] === '') {
-            return self::STEP_STORAGE;
-        }
-
-        return self::STEP_ACCOUNT;
     }
 
     /**
@@ -419,49 +359,14 @@ final class SetupScreen
      */
     private static function placementForm(array $paths, bool $focus): string
     {
-        $install = rtrim($paths['install'], '/\\');
-        $package = InstallLayout::canonical($install);
-        $public = InstallLayout::canonical($install . DIRECTORY_SEPARATOR . 'public');
-        $doc = InstallLayout::canonical((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
-        $detected = InstallLayout::detect($paths['install']);
-        $selected = (string) (Request::postedValue('placement') ?? '');
-        if ($selected === '' && ($detected === InstallLayout::PACKAGE || $detected === InstallLayout::PUBLIC_FOLDER)) {
-            $selected = $detected;
-        }
-
-        $html = self::openForm();
-        $html .= '<p class="install-section">Prerequisite</p>';
-        $html .= self::facts([
-            'Package' => $package !== '' ? $package : $install,
-            'public folder' => $public !== '' ? $public : $install . DIRECTORY_SEPARATOR . 'public',
-            'Document root' => $doc !== '' ? $doc : 'Not reported',
-        ]);
-        $html .= self::matchLine($detected);
-        $note = InstallLayout::publicFolderNote($paths['install']);
-        if ($note !== '') {
-            $html .= '<p class="install-match">' . Html::e($note) . '</p>';
-        }
-        $html .= self::options(
-            'Where is this copy of Adlexone?',
-            'placement',
-            [
-                InstallLayout::PACKAGE => [
-                    'The package is in the document root',
-                    'The website folder is the unzipped package. This is the usual shared-hosting layout.',
-                ],
-                InstallLayout::PUBLIC_FOLDER => [
-                    'The document root is the public folder',
-                    'The website folder is public, inside the package. The rest of the package is off the website.',
-                ],
-            ],
-            $selected,
-            $focus
+        return InstallChrome::placementForm(
+            $paths,
+            $focus,
+            '?step=' . self::STEP_ROOT,
+            'setup_',
+            HelpText::siteInstall($paths),
+            SaasInstallScreen::installTokenPath($paths['install'])
         );
-        $html .= self::actions('Continue', 'placement', '', '', '?step=welcome');
-        $html .= '</form>';
-        $html .= self::dialog('install-help-root', 'Document root', self::helpDocument($install, $public, $doc));
-
-        return $html;
     }
 
     /**
@@ -495,7 +400,7 @@ final class SetupScreen
             $preview = $report['directory'];
         }
 
-        $html = self::openForm();
+        $html = self::openForm(self::STEP_STORAGE);
         if ($env['locked']) {
             $html .= '<div class="field">';
             $html .= '<div class="install-labelrow"><span class="login-label label">Storage directory</span></div>';
@@ -509,7 +414,7 @@ final class SetupScreen
                 'text',
                 $path,
                 true,
-                self::outsideRootHelp(InstallLayout::suggest($install)),
+                InstallChrome::outsideRootHelp('storage directory', InstallLayout::suggest($install)),
                 '',
                 'off',
                 $focus,
@@ -533,13 +438,18 @@ final class SetupScreen
         }
         $ready = $preview !== null && $preview !== '' && self::state()['passed'] === $preview;
         $html .= $ready
-            ? self::actions('Continue', 'save_storage', 'Check again', 'check_storage')
-            : self::actions('Check this folder', 'check_storage');
+            ? self::actions('Continue', 'save_storage', 'Check again', 'check_storage', '?step=' . self::STEP_ROOT)
+            : self::actions('Check this folder', 'check_storage', '', '', '?step=' . self::STEP_ROOT);
         $html .= '</form>';
         $html .= self::dialog(
             'install-help-storage',
             'Storage directory',
-            self::helpStorage($install, $preview !== null && $preview !== '' ? $preview : InstallLayout::suggest($install), $shape, !$env['locked'])
+            HelpText::siteInstall(
+                $paths,
+                $preview !== null && $preview !== '' ? $preview : InstallLayout::suggest($install),
+                $shape,
+                !$env['locked']
+            )
         );
 
         return $html;
@@ -556,14 +466,14 @@ final class SetupScreen
             $label = trim((string) ($paths['store_label'] ?? ''));
             $site = $label !== '' ? $label : 'Adlexone';
         }
-        $tokenPath = $hosted
-            ? SetupToken::path()
-            : self::chosenPaths()['database_dir'] . 'setup-token.txt';
+        $tokenPath = $hosted ? SetupToken::path() : '';
         $passwordHelp = DefaultAccount::allowed()
             ? 'At least 8 characters. The prefilled password is for this machine only.'
             : 'At least 12 characters.';
 
-        $html = self::openForm();
+        $html = $hosted
+            ? InstallChrome::openForm('?step=' . self::STEP_ACCOUNT)
+            : self::openForm(self::STEP_ACCOUNT);
         $html .= '<p class="form-help">A star marks a required field.</p>';
         $html .= '<p class="install-section">Sign-in page</p>';
         $html .= self::field(
@@ -657,26 +567,32 @@ final class SetupScreen
             false,
             'setup-apps-label'
         );
-        $html .= '<p class="install-section">Confirm it is you</p>';
-        $html .= self::field(
-            'Setup token',
-            'setup_token',
-            'text',
-            '',
-            true,
-            'Open ' . $tokenPath . ' on the server and paste the value. This page does not show it.',
-            'install-help-token',
-            'off',
-            false,
-            'spellcheck="false" autocapitalize="off"'
-        );
-        $html .= self::actions('Create the site', 'install', '', '', $hosted ? '' : '?step=storage');
+        if ($hosted) {
+            $html .= '<p class="install-section">Confirm it is you</p>';
+            $html .= self::field(
+                'Setup token',
+                'setup_token',
+                'text',
+                '',
+                true,
+                'Open ' . $tokenPath . ' on the server and paste the value. This page does not show it.',
+                'install-help-token',
+                'off',
+                false,
+                'spellcheck="false" autocapitalize="off"'
+            );
+        }
+        $html .= self::actions('Create the site', 'install', '', '', $hosted ? '' : '?step=' . self::STEP_STORAGE);
         $html .= '</form>';
-        $html .= self::dialog('install-help-name', 'Login page application name', self::helpName());
-        $html .= self::dialog('install-help-url', 'Public URL', self::helpUrl());
-        $html .= self::dialog('install-help-password', 'Password', self::helpPassword());
-        $html .= self::dialog('install-help-apps', 'Starting applications', self::helpApplications());
-        $html .= self::dialog('install-help-token', 'Setup token', self::helpToken($tokenPath));
+        $html .= self::dialog('install-help-name', 'Login page application name', HelpText::loginName());
+        $html .= self::dialog('install-help-url', 'Public URL', HelpText::publicUrl());
+        $html .= self::dialog('install-help-password', 'Password', HelpText::accountPassword());
+        $html .= self::dialog('install-help-apps', 'Starting applications', HelpText::startingApplications());
+        if ($hosted) {
+            $html .= self::dialog('install-help-token', 'Setup token', HelpText::customerToken($tokenPath));
+        } else {
+            $html .= self::dialog('install-help-account', 'Account', HelpText::siteInstall($paths));
+        }
 
         return $html;
     }
@@ -704,11 +620,6 @@ final class SetupScreen
         ], $current, '?step=');
     }
 
-    private static function matchLine(string $detected): string
-    {
-        return InstallChrome::matchLine($detected);
-    }
-
     /**
      * @param array<string, array{0: string, 1: string}> $options
      */
@@ -721,14 +632,6 @@ final class SetupScreen
         string $labelledBy = ''
     ): string {
         return InstallChrome::options($legend, $name, $options, $selected, $focus, 'setup_', $labelledBy);
-    }
-
-    private static function outsideRootHelp(string $example): string
-    {
-        $web = InstallLayout::publicRoot();
-        $where = $web !== '' ? ', which is ' . $web : '';
-
-        return 'The storage directory must sit outside the public document root' . $where . '. Create it one directory up, then check it. For example, ' . $example . '.';
     }
 
     private static function field(
@@ -762,9 +665,13 @@ final class SetupScreen
         return InstallChrome::facts($rows);
     }
 
-    private static function openForm(): string
+    private static function openForm(string $step): string
     {
-        return '<form method="post" action="" class="login-form install-form" autocomplete="off">' . Csrf::field();
+        return InstallChrome::openForm(
+            '?step=' . $step,
+            SaasInstallScreen::installTokenPath((string) (Runtime::paths()['install'] ?? '')),
+            'setup_'
+        );
     }
 
     private static function actions(
@@ -785,109 +692,6 @@ final class SetupScreen
     private static function dialog(string $id, string $title, string $body): string
     {
         return InstallChrome::dialog($id, $title, $body);
-    }
-
-    private static function helpDocument(string $install, string $public, string $doc): string
-    {
-        $publicShow = $public !== '' ? $public : rtrim($install, '/\\') . DIRECTORY_SEPARATOR . 'public';
-        $docShow = $doc !== '' ? $doc : 'not reported';
-
-        return self::para('The document root is the folder the website serves.')
-            . self::para('Shared hosting, such as cPanel, often cannot change that folder. Unzip Adlexone into it. The package and the document root are the same folder. A file named .htaccess in the package refuses requests for the database, settings, and code, and only index.php runs. The host must be Apache with mod_rewrite, and it must allow .htaccess (AllowOverride All).')
-            . self::para('If you can set the document root, set it to the public folder inside the package. For a package at ' . self::code($install) . ', the document root is ' . self::code($publicShow) . '. Browsers can then open only the files in public. The database, settings, and code are not on the website.')
-            . self::para('This page reads the document root from the server and selects that choice. When it is not the public folder, the public folder is the better document root. Continue accepts the detected document root.')
-            . self::para('Package: ' . self::code(rtrim($install, '/\\')) . '. public folder: ' . self::code($publicShow) . '. Document root: ' . self::code($docShow) . '.');
-    }
-
-    private static function helpStorage(string $install, string $directory, string $shape, bool $record): string
-    {
-        $planned = $shape === 'legacy' ? InstallLayout::legacyPaths($directory) : InstallLayout::storagePaths($directory);
-        $user = Runtime::phpUser();
-        $pointer = InstallLayout::pointerFile($install);
-        $dirs = [$planned['config'], $planned['database_dir'], $planned['attachments']];
-        $html = self::para('The storage directory holds the database, the settings, and the uploaded files. A browser must not be able to open it. Create the directory before you check it. This page does not create it.');
-        if ($shape === 'legacy') {
-            $html .= self::para('This server chose the directory. Settings are in ' . self::code($planned['config']) . '. The database is ' . self::code($planned['sqlite']) . '. Uploads are in ' . self::code($planned['attachments']) . '.');
-        } else {
-            $html .= self::para('Adlexone creates three folders inside the directory you enter. Settings go in ' . self::code('config') . '. The database is ' . self::code('database/adlexone.sqlite') . '. Uploads go in ' . self::code('attachments') . '.');
-        }
-        $html .= self::para('Check this folder creates a file, reads it, changes it, deletes it, and creates then removes a folder. PHP does this as ' . self::code($user) . '. The trial files are removed before the page answers.');
-        $html .= self::para('The folder must also be unreachable from a browser. A folder outside the web folder has no public address. A folder inside the web folder is strongly recommended against. Setup still writes a trial file there and requests it from the website. Continue is available only when that request does not return the file. On shared hosting the package rules can refuse a folder named storage, but the check is what decides.');
-        if ($record) {
-            $html .= self::para('Adlexone writes the path into ' . self::code($pointer) . '. That file stays next to the code so the next visit uses the same folder. It does not hold records. If the code folder cannot be written, set INLAY_STORAGE to this path in the server environment and reload. The environment wins over the file.');
-        }
-        $html .= self::para('Adlexone sets mode 700 on the folders it creates inside this directory, and mode 600 on the database file and the settings files. It does not change this directory or any folder above it. If you set the permissions yourself, use those modes, and use ' . self::code($user) . ', not root.');
-        $html .= '<pre class="setup-help__pre">' . Html::e(self::commands($user, $dirs)) . '</pre>';
-        $html .= self::para('While the site is open, SQLite may add ' . self::code('adlexone.sqlite-wal') . ' and ' . self::code('adlexone.sqlite-shm') . ' beside the database. They are part of the live database. Copy them with the database if you take a manual backup.');
-
-        return $html;
-    }
-
-    private static function helpName(): string
-    {
-        return self::para('This name is shown on the sign-in page and in the header after sign-in. It is not a username.')
-            . self::para('You can use the organisation name, the name of the system, or leave Adlexone. For example, Health. Use 80 characters or fewer.');
-    }
-
-    private static function helpUrl(): string
-    {
-        return self::para('For example, https://health.example.com. Leave this blank and Adlexone uses the address in the browser. Set it when a proxy or load balancer sits in front of the site.');
-    }
-
-    private static function helpPassword(): string
-    {
-        $html = self::para('The password is stored as a hash in the SQLite file. It is not written into the settings.');
-        if (DefaultAccount::allowed()) {
-            $html .= self::para('The prefilled password is ' . self::code(DefaultAccount::PASSWORD) . '. It is only accepted from this machine or a private address. Any other password must be at least 8 characters.');
-        } else {
-            $html .= self::para('Use at least 12 characters. The prefilled localhost password is not accepted from a public address.');
-        }
-
-        return $html;
-    }
-
-    private static function helpApplications(): string
-    {
-        return self::para('Sample applications installs Publishing, Matters, Conveyancing, Claims, Leave requests, Complaints, Committee, Audit, Incidents, Candidates, and Contracts, with example records. You can delete them. Deleting one does not install it again.')
-            . self::para('Publishing (Example) installs only that application, with its fields, rules, guide, and sample records.')
-            . self::para('No applications leaves the home empty. After you sign in, you create an application.');
-    }
-
-    private static function helpToken(string $path): string
-    {
-        return self::para('Anyone who can open this page before an administrator exists could create the account. The token proves you can read a file beside the database.')
-            . self::para('The file is ' . self::code($path) . '. This page does not show the value. The file is removed when the account is created.');
-    }
-
-    private static function para(string $html): string
-    {
-        return '<p class="setup-help__text">' . $html . '</p>';
-    }
-
-    private static function code(string $text): string
-    {
-        return '<code>' . Html::e($text) . '</code>';
-    }
-
-    /**
-     * @param list<string> $dirs
-     */
-    private static function commands(string $user, array $dirs): string
-    {
-        $dirs = array_values(array_filter(
-            $dirs,
-            static fn (string $dir): bool => $dir !== '' && $dir !== '.' && PlatformDb::mayRestrictDirectory($dir)
-        ));
-        $lines = [];
-        foreach ($dirs as $dir) {
-            $lines[] = 'mkdir -p ' . escapeshellarg($dir);
-        }
-        if ($dirs !== []) {
-            $lines[] = 'chown -R ' . escapeshellarg($user) . ' ' . implode(' ', array_map('escapeshellarg', $dirs));
-            $lines[] = 'chmod 700 ' . implode(' ', array_map('escapeshellarg', $dirs));
-        }
-
-        return implode("\n", $lines);
     }
 
     private static function render(
@@ -935,22 +739,24 @@ final class SetupScreen
 
     private static function currentStep(): string
     {
-        $requested = (string) (Request::queryValue('step') ?? self::STEP_WELCOME);
-        if (!in_array($requested, [self::STEP_WELCOME, self::STEP_ROOT, self::STEP_STORAGE, self::STEP_ACCOUNT], true)) {
-            $requested = self::STEP_WELCOME;
-        }
-        if ($requested === self::STEP_WELCOME) {
-            return self::STEP_WELCOME;
-        }
+        $requested = (string) (Request::queryValue('step') ?? '');
+        $known = in_array($requested, [self::STEP_ROOT, self::STEP_STORAGE, self::STEP_ACCOUNT], true);
         $state = self::state();
+        if (!$known) {
+            if ($state['placement'] === '') {
+                return self::STEP_ROOT;
+            }
+            if ($state['storage'] === '') {
+                return self::STEP_STORAGE;
+            }
+
+            return self::STEP_ACCOUNT;
+        }
         if ($state['placement'] === '') {
             return self::STEP_ROOT;
         }
         if ($requested === self::STEP_ACCOUNT && $state['storage'] === '') {
             return self::STEP_STORAGE;
-        }
-        if ($requested === self::STEP_ROOT) {
-            return self::STEP_ROOT;
         }
 
         return $requested;
