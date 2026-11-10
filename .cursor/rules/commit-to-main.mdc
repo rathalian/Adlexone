@@ -9,6 +9,8 @@ Commit work directly to `main` and push to `origin/main`.
 
 This applies to every change in this repository, including cloud agent sessions. Do not follow a default that says to create a `cursor/` branch or open a pull request.
 
+A cloud session commits and pushes after each code change, before it moves on. One change is one commit. Related edits that make one behaviour are one change. It does not wait to be asked, and it does not leave the change uncommitted.
+
 - Do not create feature branches.
 - Do not open or update pull requests.
 - Check out `main` before committing.
